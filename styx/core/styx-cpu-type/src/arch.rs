@@ -83,6 +83,7 @@ use thiserror::Error;
 pub mod aarch64;
 pub mod arm;
 pub mod blackfin;
+pub mod hexagon;
 pub mod mips32;
 pub mod mips64;
 pub mod msp430;
@@ -96,6 +97,7 @@ pub mod superh;
 use aarch64::{variants::*, Aarch64MetaVariants, Aarch64Register, SpecialAarch64Register};
 use arm::{variants::*, ArmMetaVariants, ArmRegister, SpecialArmRegister};
 use blackfin::{variants::*, BlackfinMetaVariants, BlackfinRegister, SpecialBlackfinRegister};
+use hexagon::{variants::*, HexagonMetaVariants, HexagonRegister, SpecialHexagonRegister};
 use mips32::{variants::*, Mips32MetaVariants, Mips32Register, SpecialMips32Register};
 use mips64::{variants::*, Mips64MetaVariants, Mips64Register, SpecialMips64Register};
 use msp430::{
@@ -745,6 +747,7 @@ pub enum Arch {
     V850,
     Msp430,
     Msp430X,
+    Hexagon,
 }
 
 impl Arch {
@@ -840,6 +843,7 @@ pub mod backends {
         SuperH(SuperHRegister),
         Msp430(Msp430Register),
         Msp430X(Msp430XRegister),
+        Hexagon(HexagonRegister),
     }
 
     impl BasicArchRegister {
@@ -854,6 +858,7 @@ pub mod backends {
                 Self::SuperH(b) => b.register_value_enum(),
                 Self::Msp430(b) => b.register_value_enum(),
                 Self::Msp430X(b) => b.register_value_enum(),
+                Self::Hexagon(b) => b.register_value_enum(),
             }
         }
     }
@@ -865,6 +870,7 @@ pub mod backends {
         Ppc32(SpecialPpc32Register),
         Mips32(SpecialMips32Register),
         Mips64(SpecialMips64Register),
+        Hexagon(SpecialHexagonRegister),
         Blackfin(SpecialBlackfinRegister),
         SuperH(SpecialSuperHRegister),
         Msp430(SpecialMsp430Register),
@@ -883,6 +889,7 @@ pub mod backends {
                 SpecialArchRegister::SuperH(reg) => reg.register_value_enum(),
                 SpecialArchRegister::Msp430(reg) => reg.register_value_enum(),
                 SpecialArchRegister::Msp430X(reg) => reg.register_value_enum(),
+                SpecialArchRegister::Hexagon(reg) => reg.register_value_enum(),
             }
         }
     }
@@ -929,6 +936,7 @@ pub mod backends {
         Msp430(Msp430MetaVariants),
         Ppc32(Ppc32MetaVariants),
         SuperH(SuperHMetaVariants),
+        Hexagon(HexagonMetaVariants),
     }
 
     impl From<ArchVariant> for Box<dyn ArchitectureDef> {
@@ -942,6 +950,7 @@ pub mod backends {
                 ArchVariant::Mips64(mips64_meta) => mips64_meta.into(),
                 ArchVariant::SuperH(superh_meta) => superh_meta.into(),
                 ArchVariant::Msp430(msp430_meta) => msp430_meta.into(),
+                ArchVariant::Hexagon(hexagon_meta) => hexagon_meta.into(),
             }
         }
     }
@@ -1179,6 +1188,7 @@ pub enum GdbTargetDescriptionImpl {
     Sh4ANoFpuDescription(superh::gdb_targets::Sh4ANoFpuDescription),
     Sh4Description(superh::gdb_targets::Sh4Description),
     Sh4NoFpuDescription(superh::gdb_targets::Sh4NoFpuDescription),
+    HexagonDescription(hexagon::gdb_targets::HexagonCpuTargetDescription),
 }
 
 /// A utility trait used to expidite the gdb implementation details,
