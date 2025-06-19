@@ -177,6 +177,7 @@ public:
   virtual void initialize(DocumentStorage &store);
   virtual void registerContext(const string &name,int4 sbit,int4 ebit);
   virtual void setContextDefault(const string &nm,uintm val);
+  virtual void setContextVariableCached(const string &nm,const Address &addrLo, const Address &addrHi, uintm value);
   virtual void allowContextSet(bool val) const;
   virtual int4 instructionLength(const Address &baseaddr) const;
   virtual int4 oneInstruction(PcodeEmit &emit,const Address &baseaddr) const;

@@ -1,19 +1,22 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::PcodeBackend;
+use crate::{PcodeBackend, DEFAULT_REG_ALLOCATION};
+
+use smallvec::SmallVec;
+use styx_pcode::pcode::VarnodeData;
 
 use super::{
     pc_manager::{apply_difference, PcOverflow},
     ArchPcManager, GeneratorHelper,
 };
 
-pub(crate) fn mips_common<Sla>(spec: &mut super::ArchSpecBuilder<Sla>) {
+pub(crate) fn mips_common<Sla>(spec: &mut super::ArchSpecBuilder<Sla, PcodeBackend>) {
     spec.set_pc_manager(StandardMipsPcManager::default().into());
 
     // "Do nothing" generator helper.
     spec.set_generator(GeneratorHelper::default());
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct StandardMipsPcManager {
     isa_pc: u64,
     internal_pc: u64,
@@ -28,7 +31,7 @@ impl ArchPcManager for StandardMipsPcManager {
         self.internal_pc
     }
 
-    fn set_internal_pc(&mut self, value: u64, _backend: &mut PcodeBackend) {
+    fn set_internal_pc(&mut self, value: u64, _backend: &mut PcodeBackend, _from_branch: bool) {
         // i128 here is used so we don't overflow on cast
         let difference = (value as i128 - self.internal_pc as i128) & (!1);
 
@@ -48,6 +51,8 @@ impl ArchPcManager for StandardMipsPcManager {
         &mut self,
         bytes_consumed: u64,
         _backend: &mut PcodeBackend,
+        _regs_written: &mut SmallVec<[VarnodeData; DEFAULT_REG_ALLOCATION]>,
+        _total_pcodes: usize,
     ) -> Result<(), PcOverflow> {
         self.internal_pc = self
             .internal_pc

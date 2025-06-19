@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<language_definitions>
+   <language processor="hexagon"
+            endian="little"
+            size="32"
+            variant="default"
+            version="1.0"
+            slafile="hexagon.sla"
+            processorspec="hexagon.pspec"
+            id="hexagon:LE:32:default">
+    <description>Hexagon Language Module</description>
+    <compiler name="default" spec="hexagon.cspec" id="default"/>
+    <external_name tool="DWARF.register.mapping.file" name="hexagon.dwarf"/>
+  </language> 
+</language_definitions>

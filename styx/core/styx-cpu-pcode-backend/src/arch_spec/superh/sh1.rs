@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
-use crate::arch_spec::ArchSpecBuilder;
+use crate::{arch_spec::ArchSpecBuilder, PcodeBackend};
 use styx_pcode_translator::{sla, sla::Sh1UserOps};
 
-pub fn build() -> ArchSpecBuilder<sla::Sh1> {
+pub fn build() -> ArchSpecBuilder<sla::Sh1, PcodeBackend> {
     let mut spec = ArchSpecBuilder::default();
 
     spec.set_pc_manager(super::StandardPcManager::default().into());

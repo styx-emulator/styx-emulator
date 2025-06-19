@@ -5,7 +5,7 @@ use thiserror::Error;
 /// The Ghidra translator does not expose these errors but they are left for a future translator
 /// that will (or if ghidra translator is modified to report these statuses).
 #[allow(dead_code)]
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Clone)]
 pub enum GeneratePcodeError {
     #[error("address is not valid")]
     InvalidAddress,

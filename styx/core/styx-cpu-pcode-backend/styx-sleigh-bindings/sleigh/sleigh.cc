@@ -658,6 +658,23 @@ void Sleigh::resolve(ParserContext &pos) const
   pos.setParserState(ParserContext::disassembly);
 }
 
+/// This method sets a context variable for a specified address range
+/// and also ensures that the context variable change invalidates the
+/// context variable cache to ensure use of the new value.
+void Sleigh::setContextVariableCached(const string &nm,const Address &addrLo,
+					const Address &addrHi, uintm value)
+{
+  const ContextBitRange &bitrange( context_db->getVariable(nm) );
+  int4 num = bitrange.getWord();
+  uintm mask = bitrange.getMask()<<bitrange.getShift();
+  // the value has to be shifted
+  value = value << bitrange.getShift();
+
+
+
+  cache->setContext(addrLo, addrHi, num, mask, value);
+}
+
 /// Resolve handle templates for the given parse tree, assuming Constructors
 /// are already resolved.
 /// \param pos is the given parse tree

@@ -8,14 +8,19 @@ mod helpers;
 mod register;
 
 use super::{
+    generator_helper::CONTEXT_OPTION_LEN,
     pc_manager::{apply_difference, PcOverflow},
     ArchPcManager, ArchSpecBuilder, GeneratorHelp,
 };
-use crate::{arch_spec::ArchSpec, call_other::handlers::TraceCallOther, PcodeBackend};
+use crate::{
+    arch_spec::ArchSpec, call_other::handlers::TraceCallOther, pcode_gen::GeneratePcodeError,
+    PcodeBackend, DEFAULT_REG_ALLOCATION,
+};
 use call_other::*;
 use helpers::StackPointerManager;
 use log::debug;
 use register::*;
+use smallvec::{smallvec, SmallVec};
 use std::str::FromStr;
 use styx_cpu_type::{
     arch::{
@@ -24,7 +29,7 @@ use styx_cpu_type::{
     },
     ArchEndian,
 };
-use styx_pcode::sla::SlaUserOps;
+use styx_pcode::{pcode::VarnodeData, sla::SlaUserOps};
 use styx_pcode_translator::{sla::Arm7LeUserOps, ContextOption};
 use styx_processor::cpu::CpuBackendExt;
 use styx_sync::sync::Arc;
@@ -33,7 +38,7 @@ pub fn arm_arch_spec(
     arch: &ArchVariant,
     variant: &ArmMetaVariants,
     endian: ArchEndian,
-) -> ArchSpec {
+) -> ArchSpec<PcodeBackend> {
     match endian {
         ArchEndian::LittleEndian => match variant {
             ArmMetaVariants::ArmCortexM3(_) => cortex_m3::build_le().build(arch),
@@ -52,7 +57,7 @@ pub fn arm_arch_spec(
     }
 }
 
-fn armv7_common<T: SlaUserOps<UserOps: FromStr>>(spec: &mut ArchSpecBuilder<T>) {
+fn armv7_common<T: SlaUserOps<UserOps: FromStr>>(spec: &mut ArchSpecBuilder<T, PcodeBackend>) {
     let call_other_manager = &mut spec.call_other_manager;
     let register_manager = &mut spec.register_manager;
 
@@ -164,7 +169,7 @@ fn armv7_common<T: SlaUserOps<UserOps: FromStr>>(spec: &mut ArchSpecBuilder<T>) 
         .unwrap();
 }
 
-fn armv7m_common<S>(spec: &mut ArchSpecBuilder<S>) {
+fn armv7m_common<S>(spec: &mut ArchSpecBuilder<S, PcodeBackend>) {
     let register_manager = &mut spec.register_manager;
 
     register_manager
@@ -178,7 +183,7 @@ fn armv7m_common<S>(spec: &mut ArchSpecBuilder<S>) {
         .unwrap();
 }
 
-fn armv7a_common<S>(spec: &mut ArchSpecBuilder<S>) {
+fn armv7a_common<S>(spec: &mut ArchSpecBuilder<S, PcodeBackend>) {
     let register_manager = &mut spec.register_manager;
     register_manager
         .add_handler(ArmRegister::Cpsr, CpsrHandler)
@@ -186,7 +191,7 @@ fn armv7a_common<S>(spec: &mut ArchSpecBuilder<S>) {
 }
 
 /// Program Counter manager for the thumb-only ARM processors.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ThumbPcManager {
     isa_pc: u64,
     internal_pc: u64,
@@ -200,7 +205,7 @@ impl ArchPcManager for ThumbPcManager {
         self.internal_pc
     }
 
-    fn set_internal_pc(&mut self, value: u64, _backend: &mut PcodeBackend) {
+    fn set_internal_pc(&mut self, value: u64, _backend: &mut PcodeBackend, _from_branch: bool) {
         // i128 here is used so we don't overflow on cast
         let difference = (value as i128 - self.internal_pc as i128) & (!1);
 
@@ -224,6 +229,8 @@ impl ArchPcManager for ThumbPcManager {
         &mut self,
         bytes_consumed: u64,
         _backend: &mut PcodeBackend,
+        _regs_written: &mut SmallVec<[VarnodeData; DEFAULT_REG_ALLOCATION]>,
+        _total_pcodes: usize,
     ) -> Result<(), PcOverflow> {
         self.internal_pc = self
             .internal_pc
@@ -246,7 +253,7 @@ impl Default for ThumbPcManager {
 /// Program Counter manager for Armv7-A processors.
 ///
 /// Controls thumb mode base on bit 5 of the CPSR.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct StandardPcManager {
     isa_pc: u64,
     internal_pc: u64,
@@ -283,7 +290,7 @@ impl ArchPcManager for StandardPcManager {
         self.internal_pc
     }
 
-    fn set_internal_pc(&mut self, value: u64, _backend: &mut PcodeBackend) {
+    fn set_internal_pc(&mut self, value: u64, _backend: &mut PcodeBackend, _from_branch: bool) {
         // i128 here is used so we don't overflow on cast
         let difference = (value as i128 - self.internal_pc as i128) & (!1);
 
@@ -306,6 +313,8 @@ impl ArchPcManager for StandardPcManager {
         &mut self,
         bytes_consumed: u64,
         backend: &mut PcodeBackend,
+        _regs_written: &mut SmallVec<[VarnodeData; DEFAULT_REG_ALLOCATION]>,
+        _total_pcodes: usize,
     ) -> Result<(), PcOverflow> {
         self.internal_pc = self
             .internal_pc
@@ -361,22 +370,25 @@ impl ArmCpuMode {
 /// Thumb mode switching for Armv7-A processors,
 ///
 /// Thumb mode bit is bit 5 of the CPSR register.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct StandardGeneratorHelper {
     /// Stores the previous cpu mode, [None] at start of running when no mode is stored.
     previous_mode: Option<ArmCpuMode>,
 }
 
 impl GeneratorHelp for StandardGeneratorHelper {
-    fn pre_fetch(&mut self, backend: &mut PcodeBackend) -> Box<[ContextOption]> {
-        let mut ret = Vec::new();
+    fn pre_fetch(
+        &mut self,
+        backend: &mut PcodeBackend,
+    ) -> Result<SmallVec<[ContextOption; CONTEXT_OPTION_LEN]>, GeneratePcodeError> {
+        let mut ret = SmallVec::new();
         let cpsr = backend.read_register::<u32>(ArmRegister::Cpsr).unwrap();
         let new_mode = ArmCpuMode::from_cpsr(cpsr);
 
         // only write context variable if thumb mode changed
         if let Some(previous_mode) = self.previous_mode {
             if previous_mode == new_mode {
-                return Vec::new().into_boxed_slice();
+                return Ok(SmallVec::new());
             }
         }
 
@@ -387,27 +399,29 @@ impl GeneratorHelp for StandardGeneratorHelper {
 
         self.previous_mode = Some(new_mode);
 
-        ret.into_boxed_slice()
+        Ok(ret)
     }
 }
 
 /// Thumb mode enabling for the Armv7-M processors.
 ///
 /// Sets the thumb mode context variable on first execution.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct ThumbOnlyGeneratorHelper {
     /// `false` on creation, changed to true after setting the thumb mode context on first call.
     thumb_already_set: bool,
 }
 
 impl GeneratorHelp for ThumbOnlyGeneratorHelper {
-    fn pre_fetch(&mut self, _backend: &mut PcodeBackend) -> Box<[ContextOption]> {
+    fn pre_fetch(
+        &mut self,
+        _backend: &mut PcodeBackend,
+    ) -> Result<SmallVec<[ContextOption; CONTEXT_OPTION_LEN]>, GeneratePcodeError> {
         if !self.thumb_already_set {
             self.thumb_already_set = true;
-            vec![ContextOption::ThumbMode(true)]
+            Ok(smallvec![ContextOption::ThumbMode(true)])
         } else {
-            Vec::new()
+            Ok(SmallVec::new())
         }
-        .into_boxed_slice()
     }
 }

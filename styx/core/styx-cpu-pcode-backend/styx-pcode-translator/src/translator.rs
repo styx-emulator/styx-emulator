@@ -154,11 +154,10 @@ impl<L: Loader + LoaderRequires + 'static> PcodeTranslator<L> {
         self.sleigh.endian()
     }
 
-    pub fn set_context_option(&mut self, option: ContextOption) {
+    pub fn set_context_option(&mut self, option: &ContextOption) {
         // FIXME check validity (e.g. does this sla have this variable)
         let (variable_name, variable_value) = option.value();
-        self.sleigh
-            .set_variable_default(variable_name, variable_value)
+        self.sleigh.set_variable(variable_name, variable_value)
     }
 
     pub fn user_ops(&self) -> &[UserOpInfo] {
@@ -166,15 +165,77 @@ impl<L: Loader + LoaderRequires + 'static> PcodeTranslator<L> {
     }
 }
 
-#[derive(Debug)]
+// Clone is required to allow context options to be
+// copied around in the hexagon pcode helper.
+#[derive(Debug, Copy, Clone)]
 pub enum ContextOption {
     ThumbMode(bool),
+
+    /// Mark the start of a Hexagon packet
+    HexagonPktStart(u32),
+    /// Mark the end of a Hexagon packet
+    HexagonPktNext(u32),
+    /// Mark what variant of the Hexagon duplex subinstruction we have
+    // at the current duplex. See Table 10-5/Section 10.3 for details.
+    HexagonSubinsn(u32),
+    /// Stores the current immediate extender value for Hexagon. This is set
+    /// in the SLASPEC when an immediate extender is found. This is
+    /// used in the instruction after the immediate extension. See section
+    /// 10.9. The SLASPEC largely manages this; we only have to set it once
+    /// at the beginning of execution.
+    HexagonImmext(u32),
+    /// Used to indicate to SLASPEC what general-purpose register
+    /// is referenced in this dot-new instruction.
+    ///
+    /// See arch_spec::hexagon::dotnew::parse_dotnew for more info.
+    HexagonDotnew(u32),
+    /// Used in conjunction with HexagonDotnew to mark that
+    /// an instruction has a dot-new value. Since HexagonDotnew
+    /// can have 0 or 1 as values (corresponding to R0 or R1),
+    /// we need another context option to indicate whether
+    /// a dot-new value is present in the first place, before
+    /// looking at the actual register.
+    ///
+    /// See Section 10.10 and 5.6 for reference. Section 6.1.4
+    /// is a different type of dot-new instruction.
+    HexagonHasnew(u32),
+    /// Indicates the end of a hardware loop, and specifies the
+    /// type (0, 1, or both 01) of hardware loop that is ending.
+    ///
+    /// See section 11.2 on end loop instructions for more details
+    /// and section 8.2.
+    HexagonEndloop(u32),
+    /// Used exclusively internally in SLASPEC for different stages
+    /// within decoding.
+    HexagonPhase(u32),
+    /// Used to indicate to a constant extender if the next
+    /// instruction is a duplex. See 10.3 constraints.
+    HexagonDuplexNext(u32),
+    /// Used for some sort of instruction reordering within the SLASPEC.
+    /// However, we handle this ourselves, and instructions with
+    /// part1/part2 have a standalone concatenated version.
+    HexagonPart1(u32),
+    /// Used for some sort of instruction reordering within the SLASPEC.
+    /// However, we handle this ourselves, and instructions with
+    /// part1/part2 have a standalone concatenated version.
+    HexagonPart2(u32),
 }
 
 impl ContextOption {
     fn value(&self) -> (&'static str, u32) {
         match self {
             ContextOption::ThumbMode(enabled) => ("TMode", *enabled as u32),
+            ContextOption::HexagonImmext(value) => ("immext", *value),
+            ContextOption::HexagonPktStart(value) => ("pkt_start", *value),
+            ContextOption::HexagonPktNext(value) => ("pkt_next", *value),
+            ContextOption::HexagonSubinsn(value) => ("subinsn", *value),
+            ContextOption::HexagonEndloop(value) => ("endloop", *value),
+            ContextOption::HexagonDotnew(value) => ("dotnew", *value),
+            ContextOption::HexagonHasnew(value) => ("hasnew", *value),
+            ContextOption::HexagonPhase(value) => ("phase", *value),
+            ContextOption::HexagonDuplexNext(value) => ("duplex_next", *value),
+            ContextOption::HexagonPart1(value) => ("part1", *value),
+            ContextOption::HexagonPart2(value) => ("part2", *value),
         }
     }
 }
@@ -249,7 +310,7 @@ mod arm_tests {
             load_image,
         )
         .unwrap();
-        translator.set_context_option(ContextOption::ThumbMode(true));
+        translator.set_context_option(&ContextOption::ThumbMode(true));
 
         let mut pcodes = Vec::new();
         let bytes_used = translator.get_pcode(start, &mut pcodes, ()).unwrap();
@@ -270,7 +331,7 @@ mod arm_tests {
             load_image,
         )
         .unwrap();
-        translator.set_context_option(ContextOption::ThumbMode(true));
+        translator.set_context_option(&ContextOption::ThumbMode(true));
 
         let mut pcodes = Vec::new();
         let result = translator.get_pcode(start, &mut pcodes, ());

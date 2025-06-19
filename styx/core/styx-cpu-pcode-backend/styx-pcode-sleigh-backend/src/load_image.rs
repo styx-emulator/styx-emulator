@@ -128,7 +128,10 @@ impl<L: Loader> styx_sleigh_bindings::LoadImage for LoaderWrapper<L> {
 }
 
 impl<L: LoaderRequires> LoaderRequires for LoaderWrapper<L> {
-    type LoadRequires<'a> = L::LoadRequires<'a>;
+    type LoadRequires<'a>
+        = L::LoadRequires<'a>
+    where
+        L: 'a;
 
     fn set_data(&mut self, data: Self::LoadRequires<'_>) {
         self.0.set_data(data);
@@ -136,7 +139,9 @@ impl<L: LoaderRequires> LoaderRequires for LoaderWrapper<L> {
 }
 
 pub trait LoaderRequires {
-    type LoadRequires<'a>;
+    type LoadRequires<'a>
+    where
+        Self: 'a;
 
     fn set_data(&mut self, data: Self::LoadRequires<'_>);
 }

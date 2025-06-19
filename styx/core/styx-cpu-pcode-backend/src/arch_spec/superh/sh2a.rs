@@ -2,13 +2,13 @@
 
 use std::str::FromStr;
 
-use crate::arch_spec::ArchSpecBuilder;
+use crate::{arch_spec::ArchSpecBuilder, PcodeBackend};
 use styx_cpu_type::arch::superh::SuperHRegister;
 use styx_pcode_translator::sla::{self, Sh2aUserOps};
 
 use crate::arch_spec::superh::register::*;
 
-pub fn build() -> ArchSpecBuilder<sla::Sh2a> {
+pub fn build() -> ArchSpecBuilder<sla::Sh2a, PcodeBackend> {
     let mut spec = ArchSpecBuilder::default();
 
     spec.set_pc_manager(super::StandardPcManager::default().into());

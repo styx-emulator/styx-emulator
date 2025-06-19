@@ -37,6 +37,7 @@ impl From<ElfMachine> for Arch {
             EM_RISCV => Arch::Riscv,
             EM_SH => Arch::SuperH,
             EM_AVR | EM_AVR32 => Arch::Avr,
+            EM_QDSP6 => Arch::Hexagon,
             arch => panic!(
                 "{} is currently unsupported to load from goblin",
                 machine_to_str(arch)

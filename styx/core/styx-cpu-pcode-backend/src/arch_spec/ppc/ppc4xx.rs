@@ -5,15 +5,19 @@ use crate::{
     call_other::handlers::{EmptyCallback, TraceCallOther},
     memory::sized_value::SizedValue,
     pcode_gen::RegisterTranslator,
-    register_manager::{MappedRegister, RegisterCallback, RegisterHandleError},
+    register_manager::{
+        MappedRegister, RegisterCallback, RegisterCallbackCpu, RegisterHandleError,
+    },
+    PcodeBackend,
 };
+use styx_cpu_type::arch::backends::ArchRegister;
 use styx_cpu_type::arch::ppc32::{Ppc32Register, SpecialPpc32Register, SprRegister};
 use styx_errors::anyhow::{anyhow, Context};
 use styx_pcode_translator::sla;
 use styx_pcode_translator::sla::Ppc324xxBeUserOps as UserOps;
-use styx_processor::cpu::CpuBackendExt;
+use styx_processor::cpu::{CpuBackend, CpuBackendExt};
 
-pub fn build() -> ArchSpecBuilder<sla::Ppc324xxBe> {
+pub fn build() -> ArchSpecBuilder<sla::Ppc324xxBe, PcodeBackend> {
     let mut spec = ArchSpecBuilder::default();
 
     super::ppc_common(&mut spec);
@@ -87,18 +91,15 @@ pub fn build() -> ArchSpecBuilder<sla::Ppc324xxBe> {
 
 #[derive(Debug)]
 struct Cr0Register;
-impl RegisterCallback for Cr0Register {
+impl<T: CpuBackend> RegisterCallback<T> for Cr0Register {
     fn read(
         &mut self,
-        register: styx_cpu_type::arch::backends::ArchRegister,
-        cpu: &mut crate::PcodeBackend,
-    ) -> Result<SizedValue, crate::register_manager::RegisterHandleError> {
-        let cr0_varnode = cpu
-            .pcode_generator
-            .get_register(&register)
-            .context("no cr0 register")?;
-        let value = cpu
-            .space_manager
+        register: ArchRegister,
+        cpu: &mut dyn RegisterCallbackCpu<T>,
+    ) -> Result<SizedValue, RegisterHandleError> {
+        let (spc, gen) = cpu.borrow_space_gen();
+        let cr0_varnode = gen.get_register(&register).context("no cr0 register")?;
+        let value = spc
             .read(cr0_varnode)
             .context("could not read cr0 varnode")?;
 
@@ -107,16 +108,13 @@ impl RegisterCallback for Cr0Register {
 
     fn write(
         &mut self,
-        register: styx_cpu_type::arch::backends::ArchRegister,
+        register: ArchRegister,
         value: SizedValue,
-        cpu: &mut crate::PcodeBackend,
-    ) -> Result<(), crate::register_manager::RegisterHandleError> {
-        let cr0_varnode = cpu
-            .pcode_generator
-            .get_register(&register)
-            .context("no cr0 register")?;
-        cpu.space_manager
-            .write(cr0_varnode, value)
+        cpu: &mut dyn RegisterCallbackCpu<T>,
+    ) -> Result<(), RegisterHandleError> {
+        let (spc, gen) = cpu.borrow_space_gen();
+        let cr0_varnode = gen.get_register(&register).context("no cr0 register")?;
+        spc.write(cr0_varnode, value)
             .context("could not write cr0 varnode")?;
 
         Ok(())
@@ -125,13 +123,12 @@ impl RegisterCallback for Cr0Register {
 
 #[derive(Debug)]
 struct CrRegister;
-impl RegisterCallback for CrRegister {
+impl<T: CpuBackend> RegisterCallback<T> for CrRegister {
     fn read(
         &mut self,
-        _register: styx_cpu_type::arch::backends::ArchRegister,
-        cpu: &mut crate::PcodeBackend,
-    ) -> Result<crate::memory::sized_value::SizedValue, crate::register_manager::RegisterHandleError>
-    {
+        _register: ArchRegister,
+        cpu: &mut dyn RegisterCallbackCpu<T>,
+    ) -> Result<SizedValue, RegisterHandleError> {
         let cr0 = cpu
             .read_register::<u32>(Ppc32Register::Cr0)
             .with_context(|| "Couldnt't read")?;
@@ -143,10 +140,10 @@ impl RegisterCallback for CrRegister {
 
     fn write(
         &mut self,
-        _register: styx_cpu_type::arch::backends::ArchRegister,
-        value: crate::memory::sized_value::SizedValue,
-        cpu: &mut crate::PcodeBackend,
-    ) -> Result<(), crate::register_manager::RegisterHandleError> {
+        _register: ArchRegister,
+        value: SizedValue,
+        cpu: &mut dyn RegisterCallbackCpu<T>,
+    ) -> Result<(), RegisterHandleError> {
         if value.size() != 4 {
             return Err(RegisterHandleError::Other(anyhow!("bad")));
         }

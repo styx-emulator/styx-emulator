@@ -547,6 +547,7 @@ impl HookManager {
         data: &RegisterValue,
     ) -> Result<(), UnknownError> {
         let mut hook_bucket = cpu.hook_manager().register_write_hooks.take()?;
+        trace!("hook bucket is {hook_bucket:?}");
 
         trace!("Triggering register write for {register}.");
         let mut errors = ErrorBuffer::new();

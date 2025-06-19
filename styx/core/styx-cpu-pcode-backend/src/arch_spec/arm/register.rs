@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use super::helpers::StackPointerManager;
+use crate::register_manager::RegisterCallbackCpu;
 use crate::{
     memory::{sized_value::SizedValue, space_manager::SpaceManager},
     register_manager::{RegisterCallback, RegisterHandleError},
-    PcodeBackend,
 };
 use log::{trace, warn};
 use styx_cpu_type::arch::{arm::ArmRegister, backends::ArchRegister};
@@ -25,22 +25,21 @@ const APSR_MASK: u32 = 0xF80F_0000;
 /// APSR register for Armv7-A, Armv7-R, and Armv7-M architectures.
 #[derive(Debug, Default)]
 pub struct ApsrHandler;
-impl RegisterCallback for ApsrHandler {
+impl<T: CpuBackend> RegisterCallback<T> for ApsrHandler {
     fn read(
         &mut self,
         register: ArchRegister,
-        cpu: &mut PcodeBackend,
+        cpu: &mut dyn RegisterCallbackCpu<T>,
     ) -> Result<SizedValue, RegisterHandleError> {
         if register != ArmRegister::Apsr.into() {
             return Err(RegisterHandleError::CannotHandleRegister(register));
         }
 
         // Start with the condition flags in the top five bits.
-        let mut apsr =
-            armv7_get_condition_flags(&mut cpu.space_manager, APSR_BIT_OFFSET_COND_FLAGS);
+        let mut apsr = armv7_get_condition_flags(cpu.space_manager(), APSR_BIT_OFFSET_COND_FLAGS);
         // Puts the GE flag bits in bits [19:16] as described in the ARMv7-A/R and ARMv7-M
         // documentation.
-        apsr |= arm7_get_ge_flags(&mut cpu.space_manager, APSR_BIT_OFFSET_GE_FLAGS);
+        apsr |= arm7_get_ge_flags(cpu.space_manager(), APSR_BIT_OFFSET_GE_FLAGS);
 
         // technically for the M series we could read from XPSR and mask the APSR bits but to
         // make this handler agnostic to A/M/R processors we can just calculate from the
@@ -55,7 +54,7 @@ impl RegisterCallback for ApsrHandler {
         &mut self,
         _register: ArchRegister,
         value: SizedValue,
-        _cpu: &mut PcodeBackend,
+        _cpu: &mut dyn RegisterCallbackCpu<T>,
     ) -> Result<(), RegisterHandleError> {
         warn!("WRITE APSR");
         let raw_value = value.to_u64().unwrap() as u32;
@@ -80,11 +79,11 @@ impl ControlHandler {
     }
 }
 
-impl RegisterCallback for ControlHandler {
+impl<T: CpuBackend> RegisterCallback<T> for ControlHandler {
     fn read(
         &mut self,
         _register: ArchRegister,
-        _cpu: &mut PcodeBackend,
+        _cpu: &mut dyn RegisterCallbackCpu<T>,
     ) -> Result<SizedValue, RegisterHandleError> {
         let mut out = 0u32;
         out |= (self.stack_pointer_manager.get_stack_pointer_select() as u32) << 1;
@@ -96,7 +95,7 @@ impl RegisterCallback for ControlHandler {
         &mut self,
         _register: ArchRegister,
         value: SizedValue,
-        cpu: &mut PcodeBackend,
+        cpu: &mut dyn RegisterCallbackCpu<T>,
     ) -> Result<(), RegisterHandleError> {
         let value = value.to_u64().unwrap() as u32;
 
@@ -117,11 +116,11 @@ impl RegisterCallback for ControlHandler {
 pub struct MainStackPointerHandler {
     pub stack_pointer_manager: Arc<StackPointerManager>,
 }
-impl RegisterCallback for MainStackPointerHandler {
+impl<T: CpuBackend> RegisterCallback<T> for MainStackPointerHandler {
     fn read(
         &mut self,
         register: ArchRegister,
-        cpu: &mut PcodeBackend,
+        cpu: &mut dyn RegisterCallbackCpu<T>,
     ) -> Result<SizedValue, RegisterHandleError> {
         if register != ArmRegister::Msp.into() {
             return Err(RegisterHandleError::CannotHandleRegister(register));
@@ -137,7 +136,7 @@ impl RegisterCallback for MainStackPointerHandler {
         &mut self,
         _register: ArchRegister,
         value: SizedValue,
-        cpu: &mut PcodeBackend,
+        cpu: &mut dyn RegisterCallbackCpu<T>,
     ) -> Result<(), RegisterHandleError> {
         trace!("new MSP: 0x{:X}", value.to_u64().unwrap());
 
@@ -153,11 +152,11 @@ pub struct ProcessStackPointerHandler {
     pub stack_pointer_manager: Arc<StackPointerManager>,
 }
 
-impl RegisterCallback for ProcessStackPointerHandler {
+impl<T: CpuBackend> RegisterCallback<T> for ProcessStackPointerHandler {
     fn read(
         &mut self,
         register: ArchRegister,
-        cpu: &mut PcodeBackend,
+        cpu: &mut dyn RegisterCallbackCpu<T>,
     ) -> Result<SizedValue, RegisterHandleError> {
         if register != ArmRegister::Psp.into() {
             return Err(RegisterHandleError::CannotHandleRegister(register));
@@ -171,7 +170,7 @@ impl RegisterCallback for ProcessStackPointerHandler {
         &mut self,
         _register: ArchRegister,
         value: SizedValue,
-        cpu: &mut PcodeBackend,
+        cpu: &mut dyn RegisterCallbackCpu<T>,
     ) -> Result<(), RegisterHandleError> {
         trace!("NEW PSP: 0x{:X}", value.to_u64().unwrap() as u32);
 
@@ -186,11 +185,11 @@ impl RegisterCallback for ProcessStackPointerHandler {
 pub struct BasePriorityHandler {
     base_priority: AtomicU64,
 }
-impl RegisterCallback for BasePriorityHandler {
+impl<T: CpuBackend> RegisterCallback<T> for BasePriorityHandler {
     fn read(
         &mut self,
         register: ArchRegister,
-        _cpu: &mut PcodeBackend,
+        _cpu: &mut dyn RegisterCallbackCpu<T>,
     ) -> Result<SizedValue, RegisterHandleError> {
         if register != ArmRegister::Basepri.into() {
             return Err(RegisterHandleError::CannotHandleRegister(register));
@@ -205,7 +204,7 @@ impl RegisterCallback for BasePriorityHandler {
         &mut self,
         register: ArchRegister,
         value: SizedValue,
-        _cpu: &mut PcodeBackend,
+        _cpu: &mut dyn RegisterCallbackCpu<T>,
     ) -> Result<(), RegisterHandleError> {
         if register != ArmRegister::Basepri.into() {
             return Err(RegisterHandleError::CannotHandleRegister(register));
@@ -223,11 +222,11 @@ impl RegisterCallback for BasePriorityHandler {
 pub struct PriorityMaskRegister {
     priority_mask: AtomicU64,
 }
-impl RegisterCallback for PriorityMaskRegister {
+impl<T: CpuBackend> RegisterCallback<T> for PriorityMaskRegister {
     fn read(
         &mut self,
         register: ArchRegister,
-        _cpu: &mut PcodeBackend,
+        _cpu: &mut dyn RegisterCallbackCpu<T>,
     ) -> Result<SizedValue, RegisterHandleError> {
         if register != ArmRegister::Primask.into() {
             return Err(RegisterHandleError::CannotHandleRegister(register));
@@ -241,7 +240,7 @@ impl RegisterCallback for PriorityMaskRegister {
         &mut self,
         register: ArchRegister,
         value: SizedValue,
-        cpu: &mut PcodeBackend,
+        cpu: &mut dyn RegisterCallbackCpu<T>,
     ) -> Result<(), RegisterHandleError> {
         if register != ArmRegister::Primask.into() {
             return Err(RegisterHandleError::CannotHandleRegister(register));
@@ -265,11 +264,11 @@ impl RegisterCallback for PriorityMaskRegister {
 pub struct FaultMaskRegister {
     fault_mask: AtomicU64,
 }
-impl RegisterCallback for FaultMaskRegister {
+impl<T: CpuBackend> RegisterCallback<T> for FaultMaskRegister {
     fn read(
         &mut self,
         register: ArchRegister,
-        _cpu: &mut PcodeBackend,
+        _cpu: &mut dyn RegisterCallbackCpu<T>,
     ) -> Result<SizedValue, RegisterHandleError> {
         if register != ArmRegister::Faultmask.into() {
             return Err(RegisterHandleError::CannotHandleRegister(register));
@@ -284,7 +283,7 @@ impl RegisterCallback for FaultMaskRegister {
         &mut self,
         register: ArchRegister,
         value: SizedValue,
-        _cpu: &mut PcodeBackend,
+        _cpu: &mut dyn RegisterCallbackCpu<T>,
     ) -> Result<(), RegisterHandleError> {
         if register != ArmRegister::Faultmask.into() {
             return Err(RegisterHandleError::CannotHandleRegister(register));
@@ -305,11 +304,11 @@ impl RegisterCallback for FaultMaskRegister {
 pub struct Ipsr {
     ipsr: AtomicU64,
 }
-impl RegisterCallback for Ipsr {
+impl<T: CpuBackend> RegisterCallback<T> for Ipsr {
     fn read(
         &mut self,
         register: ArchRegister,
-        _cpu: &mut PcodeBackend,
+        _cpu: &mut dyn RegisterCallbackCpu<T>,
     ) -> Result<SizedValue, RegisterHandleError> {
         if register != ArmRegister::Ipsr.into() {
             return Err(RegisterHandleError::CannotHandleRegister(register));
@@ -322,7 +321,7 @@ impl RegisterCallback for Ipsr {
         &mut self,
         register: ArchRegister,
         value: SizedValue,
-        _cpu: &mut PcodeBackend,
+        _cpu: &mut dyn RegisterCallbackCpu<T>,
     ) -> Result<(), RegisterHandleError> {
         if register != ArmRegister::Ipsr.into() {
             return Err(RegisterHandleError::CannotHandleRegister(register));
@@ -344,11 +343,11 @@ impl RegisterCallback for Ipsr {
 /// block or multi-register load/store operation.
 #[derive(Debug, Default)]
 pub struct Epsr;
-impl RegisterCallback for Epsr {
+impl<T: CpuBackend> RegisterCallback<T> for Epsr {
     fn read(
         &mut self,
         register: ArchRegister,
-        _cpu: &mut PcodeBackend,
+        _cpu: &mut dyn RegisterCallbackCpu<T>,
     ) -> Result<SizedValue, RegisterHandleError> {
         if register != ArmRegister::Epsr.into() {
             return Err(RegisterHandleError::CannotHandleRegister(register));
@@ -365,7 +364,7 @@ impl RegisterCallback for Epsr {
         &mut self,
         _register: ArchRegister,
         value: SizedValue,
-        cpu: &mut PcodeBackend,
+        cpu: &mut dyn RegisterCallbackCpu<T>,
     ) -> Result<(), RegisterHandleError> {
         let epsr = value.to_u64().unwrap();
         warn!(
@@ -384,11 +383,11 @@ const CPSR_MASK_THUMB_BIT: u32 = 1 << CPSR_BIT_OFFSET_THUMB_BIT;
 /// Current Program Status Register (CPSR)
 #[derive(Debug, Default)]
 pub struct CpsrHandler;
-impl RegisterCallback for CpsrHandler {
+impl<T: CpuBackend> RegisterCallback<T> for CpsrHandler {
     fn read(
         &mut self,
         register: ArchRegister,
-        cpu: &mut PcodeBackend,
+        cpu: &mut dyn RegisterCallbackCpu<T>,
     ) -> Result<SizedValue, RegisterHandleError> {
         if register != ArmRegister::Cpsr.into() {
             return Err(RegisterHandleError::CannotHandleRegister(register));
@@ -412,7 +411,7 @@ impl RegisterCallback for CpsrHandler {
             cpsr,
             CPSR_BIT_OFFSET_THUMB_BIT,
             THUMB_BIT_OFFSET,
-            &mut cpu.space_manager,
+            cpu.space_manager(),
         );
 
         trace!("Read from cpsr: 0x{cpsr:X}");
@@ -423,7 +422,7 @@ impl RegisterCallback for CpsrHandler {
         &mut self,
         register: ArchRegister,
         value: SizedValue,
-        cpu: &mut PcodeBackend,
+        cpu: &mut dyn RegisterCallbackCpu<T>,
     ) -> Result<(), RegisterHandleError> {
         if register != ArmRegister::Cpsr.into() {
             return Err(RegisterHandleError::CannotHandleRegister(register));
@@ -471,11 +470,11 @@ impl RegisterCallback for CpsrHandler {
 ///
 #[derive(Debug, Default)]
 pub struct XpsrHandler;
-impl RegisterCallback for XpsrHandler {
+impl<T: CpuBackend> RegisterCallback<T> for XpsrHandler {
     fn read(
         &mut self,
         register: ArchRegister,
-        cpu: &mut PcodeBackend,
+        cpu: &mut dyn RegisterCallbackCpu<T>,
     ) -> Result<SizedValue, RegisterHandleError> {
         if register != ArmRegister::Xpsr.into() {
             return Err(RegisterHandleError::CannotHandleRegister(register));
@@ -494,7 +493,7 @@ impl RegisterCallback for XpsrHandler {
         &mut self,
         register: ArchRegister,
         value: SizedValue,
-        cpu: &mut PcodeBackend,
+        cpu: &mut dyn RegisterCallbackCpu<T>,
     ) -> Result<(), RegisterHandleError> {
         if register != ArmRegister::Xpsr.into() {
             return Err(RegisterHandleError::CannotHandleRegister(register));
@@ -575,7 +574,7 @@ fn add_flag(flag: u32, bit_offset: u32, flag_offset: u64, spaces: &mut SpaceMana
     flag | (value << bit_offset)
 }
 
-fn arm7a_get_cpsr(backend: &mut PcodeBackend) -> u32 {
+fn arm7a_get_cpsr<C: CpuBackend>(backend: &mut dyn RegisterCallbackCpu<C>) -> u32 {
     let varnode = VarnodeData {
         space: SpaceName::Register,
         offset: CPSR_OFFSET,
@@ -584,7 +583,7 @@ fn arm7a_get_cpsr(backend: &mut PcodeBackend) -> u32 {
     backend.read(&varnode).unwrap().to_u64().unwrap() as u32
 }
 
-fn arm7a_set_cpsr(backend: &mut PcodeBackend, value: SizedValue) {
+fn arm7a_set_cpsr<C: CpuBackend>(backend: &mut dyn RegisterCallbackCpu<C>, value: SizedValue) {
     let varnode = VarnodeData {
         space: SpaceName::Register,
         offset: CPSR_OFFSET,
@@ -597,11 +596,11 @@ fn arm7a_set_cpsr(backend: &mut PcodeBackend, value: SizedValue) {
 pub struct FloatingPointExtensionHandler {
     value: AtomicU64,
 }
-impl RegisterCallback for FloatingPointExtensionHandler {
+impl<T: CpuBackend> RegisterCallback<T> for FloatingPointExtensionHandler {
     fn read(
         &mut self,
         _register: ArchRegister,
-        _cpu: &mut PcodeBackend,
+        _cpu: &mut dyn RegisterCallbackCpu<T>,
     ) -> Result<SizedValue, RegisterHandleError> {
         Ok(SizedValue::from_u64(self.value.load(Ordering::Acquire), 4))
     }
@@ -610,7 +609,7 @@ impl RegisterCallback for FloatingPointExtensionHandler {
         &mut self,
         _register: ArchRegister,
         value: SizedValue,
-        _cpu: &mut PcodeBackend,
+        _cpu: &mut dyn RegisterCallbackCpu<T>,
     ) -> Result<(), RegisterHandleError> {
         self.value.store(value.to_u64().unwrap(), Ordering::Release);
 

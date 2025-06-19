@@ -2,11 +2,11 @@
 use styx_pcode::pcode::VarnodeData;
 
 use log::debug;
-use styx_processor::{event_controller::EventController, memory::Mmu};
+use styx_processor::{cpu::CpuBackend, event_controller::EventController, memory::Mmu};
 
 use crate::{
-    call_other::{CallOtherCallback, CallOtherHandleError},
-    PCodeStateChange, PcodeBackend,
+    call_other::{CallOtherCallback, CallOtherCpu, CallOtherHandleError},
+    PCodeStateChange,
 };
 
 /// `Sleep_Standby` instruction
@@ -15,10 +15,10 @@ use crate::{
 #[derive(Debug)]
 pub struct SleepStandby;
 
-impl CallOtherCallback for SleepStandby {
+impl<T: CpuBackend> CallOtherCallback<T> for SleepStandby {
     fn handle(
         &mut self,
-        _backend: &mut PcodeBackend,
+        _backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         _inputs: &[VarnodeData],
@@ -36,10 +36,10 @@ impl CallOtherCallback for SleepStandby {
 #[derive(Debug)]
 pub struct SinHandler;
 
-impl CallOtherCallback for SinHandler {
+impl<T: CpuBackend> CallOtherCallback<T> for SinHandler {
     fn handle(
         &mut self,
-        _backend: &mut PcodeBackend,
+        _backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         _inputs: &[VarnodeData],
@@ -52,10 +52,10 @@ impl CallOtherCallback for SinHandler {
 #[derive(Debug)]
 pub struct CosHandler;
 
-impl CallOtherCallback for CosHandler {
+impl<T: CpuBackend> CallOtherCallback<T> for CosHandler {
     fn handle(
         &mut self,
-        _backend: &mut PcodeBackend,
+        _backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         _inputs: &[VarnodeData],
@@ -68,10 +68,10 @@ impl CallOtherCallback for CosHandler {
 #[derive(Debug)]
 pub struct InvalidateCacheBlock;
 
-impl CallOtherCallback for InvalidateCacheBlock {
+impl<T: CpuBackend> CallOtherCallback<T> for InvalidateCacheBlock {
     fn handle(
         &mut self,
-        _backend: &mut PcodeBackend,
+        _backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         _inputs: &[VarnodeData],
@@ -86,10 +86,10 @@ impl CallOtherCallback for InvalidateCacheBlock {
 #[derive(Debug)]
 pub struct LoadTranslationLookasideBuffer;
 
-impl CallOtherCallback for LoadTranslationLookasideBuffer {
+impl<T: CpuBackend> CallOtherCallback<T> for LoadTranslationLookasideBuffer {
     fn handle(
         &mut self,
-        _backend: &mut PcodeBackend,
+        _backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         _inputs: &[VarnodeData],
@@ -104,10 +104,10 @@ impl CallOtherCallback for LoadTranslationLookasideBuffer {
 #[derive(Debug)]
 pub struct Macl0pHandler;
 
-impl CallOtherCallback for Macl0pHandler {
+impl<T: CpuBackend> CallOtherCallback<T> for Macl0pHandler {
     fn handle(
         &mut self,
-        _backend: &mut PcodeBackend,
+        _backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         _inputs: &[VarnodeData],
@@ -120,10 +120,10 @@ impl CallOtherCallback for Macl0pHandler {
 #[derive(Debug)]
 pub struct Macw0pHandler;
 
-impl CallOtherCallback for Macw0pHandler {
+impl<T: CpuBackend> CallOtherCallback<T> for Macw0pHandler {
     fn handle(
         &mut self,
-        _backend: &mut PcodeBackend,
+        _backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         _inputs: &[VarnodeData],
@@ -136,10 +136,10 @@ impl CallOtherCallback for Macw0pHandler {
 #[derive(Debug)]
 pub struct CacheBlockInvalidate;
 
-impl CallOtherCallback for CacheBlockInvalidate {
+impl<T: CpuBackend> CallOtherCallback<T> for CacheBlockInvalidate {
     fn handle(
         &mut self,
-        _backend: &mut PcodeBackend,
+        _backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         _inputs: &[VarnodeData],
@@ -154,10 +154,10 @@ impl CallOtherCallback for CacheBlockInvalidate {
 #[derive(Debug)]
 pub struct CacheBlockPurge;
 
-impl CallOtherCallback for CacheBlockPurge {
+impl<T: CpuBackend> CallOtherCallback<T> for CacheBlockPurge {
     fn handle(
         &mut self,
-        _backend: &mut PcodeBackend,
+        _backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         _inputs: &[VarnodeData],
@@ -172,10 +172,10 @@ impl CallOtherCallback for CacheBlockPurge {
 #[derive(Debug)]
 pub struct CacheBlockWriteBack;
 
-impl CallOtherCallback for CacheBlockWriteBack {
+impl<T: CpuBackend> CallOtherCallback<T> for CacheBlockWriteBack {
     fn handle(
         &mut self,
-        _backend: &mut PcodeBackend,
+        _backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         _inputs: &[VarnodeData],
@@ -190,10 +190,10 @@ impl CallOtherCallback for CacheBlockWriteBack {
 #[derive(Debug)]
 pub struct SynchronizeDataOperation;
 
-impl CallOtherCallback for SynchronizeDataOperation {
+impl<T: CpuBackend> CallOtherCallback<T> for SynchronizeDataOperation {
     fn handle(
         &mut self,
-        _backend: &mut PcodeBackend,
+        _backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         _inputs: &[VarnodeData],
@@ -208,10 +208,10 @@ impl CallOtherCallback for SynchronizeDataOperation {
 #[derive(Debug)]
 pub struct TrapAlways;
 
-impl CallOtherCallback for TrapAlways {
+impl<T: CpuBackend> CallOtherCallback<T> for TrapAlways {
     fn handle(
         &mut self,
-        _backend: &mut PcodeBackend,
+        _backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         _inputs: &[VarnodeData],

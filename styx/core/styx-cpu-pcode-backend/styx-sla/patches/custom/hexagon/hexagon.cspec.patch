@@ -1,0 +1,11 @@
+--- hexagon.cspec	2025-06-20 14:39:46.088998313 -0400
++++ hexagon.cspec.patched	2025-06-20 16:55:15.948097761 -0400
+@@ -59,7 +59,7 @@
+     <register name="G27G26"/>
+     <register name="G29G28"/>
+     <register name="G31G30"/>
+-    <register name="S1S0"/>
++    <register name="SGP1SGP0"/>
+     <register name="S3S2"/>
+     <register name="S5S4"/>
+     <register name="S7S6"/>

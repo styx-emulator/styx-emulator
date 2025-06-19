@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::PcodeBackend;
+use crate::{pcode_gen::GeneratePcodeError, PcodeBackend};
 use enum_dispatch::enum_dispatch;
+use smallvec::{smallvec, SmallVec};
 use std::fmt::Debug;
 use styx_pcode_translator::ContextOption;
 
@@ -13,6 +14,8 @@ use super::arm;
 #[cfg(feature = "arch_superh")]
 use super::superh;
 
+pub const CONTEXT_OPTION_LEN: usize = 4;
+
 /// Arch specific customization pcode generators.
 #[enum_dispatch]
 pub trait GeneratorHelp: Debug {
@@ -20,12 +23,18 @@ pub trait GeneratorHelp: Debug {
     /// fairly quick as this is called on every pcode translate call.
     ///
     /// FIXME: possible change return type to stack only buffer to reduce allocations.
-    fn pre_fetch(&mut self, backend: &mut PcodeBackend) -> Box<[ContextOption]>;
+    fn pre_fetch(
+        &mut self,
+        backend: &mut PcodeBackend,
+    ) -> Result<SmallVec<[ContextOption; CONTEXT_OPTION_LEN]>, GeneratePcodeError>;
 }
 
 /// Use [GeneratorHelper::default()] for a "do-nothing" helper.
 #[enum_dispatch(GeneratorHelp)]
-#[derive(Debug)]
+// We derive Clone here because the GeneratorHelper
+// is saved and restored in context_save and
+// context_restore using .clone().
+#[derive(Debug, Clone)]
 pub enum GeneratorHelper {
     #[cfg(feature = "arch_aarch64")]
     Aarch64(aarch64::StandardGeneratorHelper),
@@ -45,10 +54,13 @@ impl Default for GeneratorHelper {
 }
 
 /// [GeneratorHelp] that does nothing.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct EmptyGeneratorHelper;
 impl GeneratorHelp for EmptyGeneratorHelper {
-    fn pre_fetch(&mut self, _backend: &mut PcodeBackend) -> Box<[ContextOption]> {
-        [].into()
+    fn pre_fetch(
+        &mut self,
+        _backend: &mut PcodeBackend,
+    ) -> Result<SmallVec<[ContextOption; CONTEXT_OPTION_LEN]>, GeneratePcodeError> {
+        Ok(smallvec![])
     }
 }
