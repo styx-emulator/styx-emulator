@@ -32,7 +32,9 @@
 		<!-- <register_mapping dwarf="131" ghidra="VTMP" /> -->
 
 		<!-- System registers -->
-		<register_mapping dwarf="144" ghidra="S0" auto_count="76" /> <!-- S0..S75 -->
+		<register_mapping dwarf="144" ghidra="SGP0" /> 
+		<register_mapping dwarf="145" ghidra="SGP1" /> 
+		<register_mapping dwarf="146" ghidra="S0" auto_count="74" /> <!-- S2..S75 -->
 
 		<!-- Guest registers (why is there overlap?), we choose to use the guest regs here, not sys regs. see above. LLVM goes up to S80 -->
 		<register_mapping dwarf="220" ghidra="G0" auto_count="32" /> <!-- G0..G31 -->
