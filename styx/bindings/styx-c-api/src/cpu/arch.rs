@@ -59,4 +59,5 @@ pub enum StyxArch {
     Z80,
     Msp430,
     Msp430X,
+    Hexagon,
 }

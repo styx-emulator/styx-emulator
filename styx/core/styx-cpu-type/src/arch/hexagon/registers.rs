@@ -23,7 +23,6 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //! Generic top level container for PPC32 registers
-use derive_more::FromStr;
 use std::collections::HashMap;
 use std::num::NonZeroUsize;
 use strum::IntoEnumIterator;
@@ -422,6 +421,7 @@ create_special_register_enums!(Hexagon);
 #[cfg(test)]
 mod tests {
     use super::*;
+    use derive_more::FromStr;
 
     #[test]
     fn test_regs_from_str() {
