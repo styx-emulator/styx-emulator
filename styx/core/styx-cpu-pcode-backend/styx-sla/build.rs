@@ -42,6 +42,7 @@ enum ArchFeature {
     Msp430,
     PowerPc,
     SuperH,
+    Hexagon,
 }
 
 impl ArchFeature {
@@ -57,6 +58,7 @@ impl ArchFeature {
             ArchFeature::Mips32 => "mips32",
             ArchFeature::Mips64 => "mips64",
             ArchFeature::Msp430 => "msp430",
+            ArchFeature::Hexagon => "hexagon",
         }
     }
 
@@ -123,6 +125,7 @@ const SPECS: &[(ArchFeature, &[&str])] = &[
             "ghidra/TI_MSP430/data/languages/TI_MSP430",
         ],
     ),
+    (ArchFeature::Hexagon, &["custom/hexagon/hexagon"]),
 ];
 
 /// Takes a single slaspec source and writes the generated rust code to `generated_code`.

@@ -493,6 +493,257 @@ mod msp430 {
     }
 }
 
+#[cfg(feature = "arch_hexagon")]
+mod hexagon {
+    //! hexagon sla specifications
+
+    use styx_cpu_type::arch::{
+        backends::{ArchRegister, BasicArchRegister},
+        hexagon::HexagonRegister,
+        CpuRegister,
+    };
+
+    impl crate::SlaRegisters for crate::Hexagon {
+        fn translate_register(register: &CpuRegister) -> Box<str> {
+            let variant = register.variant();
+
+            match variant {
+                ArchRegister::Basic(BasicArchRegister::Hexagon(reg)) => {
+                    hexagon_basic(register, reg)
+                }
+                _ => "".to_owned().into_boxed_str(),
+            }
+        }
+    }
+
+    fn hexagon_basic(register: &CpuRegister, hex_reg: HexagonRegister) -> Box<str> {
+        let default_name = register.name();
+
+        // The slaspec doesn't have support for the
+        // vector registers at the moment.
+        // TODO: Things could get very messy if we update a register name and
+        // currently the register is covered in the match fallthrough arm.
+        //
+        // Eg. if C24 gets named something else in the HexagonRegister struct (defined
+        // in macro), then this match will not handle that.
+        // I have explicitly redefined all the system and guest registers here for this reason,
+        // as in the future we may have names for them, and it would be good for rust to throw an error
+        // or have to explicitly modify this match if/when that rename happens.
+        (match hex_reg {
+            HexagonRegister::Sp => "R29",
+            HexagonRegister::Fp => "R30",
+            HexagonRegister::Lr => "R31",
+            HexagonRegister::D0 => "R1R0",
+            HexagonRegister::D1 => "R3R2",
+            HexagonRegister::D2 => "R5R4",
+            HexagonRegister::D3 => "R7R6",
+            HexagonRegister::D4 => "R9R8",
+            HexagonRegister::D5 => "R11R10",
+            HexagonRegister::D6 => "R13R12",
+            HexagonRegister::D7 => "R15R14",
+            HexagonRegister::D8 => "R17R16",
+            HexagonRegister::D9 => "R19R18",
+            HexagonRegister::D10 => "R21R20",
+            HexagonRegister::D11 => "R23R22",
+            HexagonRegister::D12 => "R25R24",
+            HexagonRegister::D13 => "R27R26",
+            HexagonRegister::D14 => "R29R28",
+            HexagonRegister::D15 => "R31R30",
+            HexagonRegister::Sa0 => "C0",
+            HexagonRegister::Lc0 => "C1",
+            HexagonRegister::Sa1 => "C2",
+            HexagonRegister::Lc1 => "C3",
+            HexagonRegister::P3_0 => "C4",
+            HexagonRegister::C5 => "C5",
+            HexagonRegister::M0 => "C6",
+            HexagonRegister::M1 => "C7",
+            HexagonRegister::Usr => "C8",
+            HexagonRegister::Pc => "C9",
+            HexagonRegister::Ugp => "C10",
+            HexagonRegister::Gp => "C11",
+            HexagonRegister::Cs0 => "C12",
+            HexagonRegister::Cs1 => "C13",
+            HexagonRegister::UpcycleLo => "C14",
+            HexagonRegister::UpcycleHi => "C15",
+            HexagonRegister::FrameLimit => "C16",
+            HexagonRegister::FrameKey => "C17",
+            HexagonRegister::PktCountLo => "C18",
+            HexagonRegister::PktCountHi => "C19",
+            HexagonRegister::Cs => "C13C12",
+            HexagonRegister::Upcycle => "C15C14",
+            HexagonRegister::C17C16 => "C15C14",
+            HexagonRegister::PktCount => "C19C18",
+            HexagonRegister::Utimer => "C31C30",
+            // For some reason, the slaspec defines S0
+            // and S1, but never uses them in any instruction.
+            // TODO: patch the slaspec
+            HexagonRegister::Sgp0 => "SGP0",
+            HexagonRegister::Sgp1 => "SGP1",
+            HexagonRegister::Stid => "S2",
+            HexagonRegister::Elr => "S3",
+            HexagonRegister::BadVa0 => "S4",
+            HexagonRegister::BadVa1 => "S5",
+            HexagonRegister::Ssr => "S6",
+            HexagonRegister::Ccr => "S7",
+            HexagonRegister::Htid => "S8",
+            HexagonRegister::BadVa => "S9",
+            HexagonRegister::Imask => "S10",
+            HexagonRegister::S11 => "S11",
+            HexagonRegister::S12 => "S12",
+            HexagonRegister::S13 => "S13",
+            HexagonRegister::S14 => "S14",
+            HexagonRegister::S15 => "S15",
+            HexagonRegister::Evb => "S16",
+            HexagonRegister::ModeCtl => "S17",
+            HexagonRegister::SysCfg => "S18",
+            HexagonRegister::S19 => "S19",
+            HexagonRegister::S20 => "S20",
+            HexagonRegister::Vid => "S21",
+            HexagonRegister::CfgBase => "S27",
+            HexagonRegister::Diag => "S28",
+            HexagonRegister::Rev => "S29",
+            HexagonRegister::PcycleLo => "S30",
+            HexagonRegister::PcycleHi => "S31",
+            HexagonRegister::IsdbSt => "S32",
+            HexagonRegister::IsdbCfg0 => "S33",
+            HexagonRegister::IsdbCfg1 => "S34",
+            HexagonRegister::S35 => "S35",
+            HexagonRegister::BrkptPc0 => "S36",
+            HexagonRegister::BrkptCfg0 => "S37",
+            HexagonRegister::BrkptPc1 => "S38",
+            HexagonRegister::BrkptCfg1 => "S39",
+            HexagonRegister::IsdbMbxIn => "S40",
+            HexagonRegister::IsdbMbxOut => "S41",
+            HexagonRegister::IsdbEn => "S42",
+            HexagonRegister::IsdbGpr => "S43",
+            HexagonRegister::S44 => "S44",
+            HexagonRegister::S45 => "S45",
+            HexagonRegister::S46 => "S46",
+            HexagonRegister::S47 => "S47",
+            HexagonRegister::PmuCnt0 => "S48",
+            HexagonRegister::PmuCnt1 => "S49",
+            HexagonRegister::PmuCnt2 => "S50",
+            HexagonRegister::PmuCnt3 => "S51",
+            HexagonRegister::PmuEvtCfg => "S52",
+            HexagonRegister::PmuCfg => "S53",
+            HexagonRegister::SGP1SGP0 => "SGP1SGP0",
+            HexagonRegister::S3S2
+            | HexagonRegister::S5S4
+            | HexagonRegister::S7S6
+            | HexagonRegister::S9S8
+            | HexagonRegister::S11S10
+            | HexagonRegister::S13S12
+            | HexagonRegister::S15S14
+            | HexagonRegister::S17S16
+            | HexagonRegister::S19S18
+            | HexagonRegister::S21S20
+            | HexagonRegister::S23S22
+            | HexagonRegister::S25S24
+            | HexagonRegister::S27S26
+            | HexagonRegister::S29S28
+            | HexagonRegister::S31S30
+            | HexagonRegister::S33S32
+            | HexagonRegister::S35S34
+            | HexagonRegister::S37S36
+            | HexagonRegister::S39S38
+            | HexagonRegister::S41S40
+            | HexagonRegister::S43S42
+            | HexagonRegister::S45S44
+            | HexagonRegister::S47S46
+            | HexagonRegister::S49S48
+            | HexagonRegister::S51S50
+            | HexagonRegister::S53S52
+            | HexagonRegister::S55S54
+            | HexagonRegister::S57S56
+            | HexagonRegister::S59S58
+            | HexagonRegister::S61S60
+            | HexagonRegister::S63S62
+            | HexagonRegister::S65S64
+            | HexagonRegister::S67S66
+            | HexagonRegister::S69S68
+            | HexagonRegister::S71S70
+            | HexagonRegister::S73S72
+            | HexagonRegister::S75S74
+            | HexagonRegister::S77S76
+            | HexagonRegister::S79S78 => default_name,
+            HexagonRegister::S54
+            | HexagonRegister::S55
+            | HexagonRegister::S56
+            | HexagonRegister::S57
+            | HexagonRegister::S58
+            | HexagonRegister::S59
+            | HexagonRegister::S60
+            | HexagonRegister::S61
+            | HexagonRegister::S62
+            | HexagonRegister::S63
+            | HexagonRegister::S64
+            | HexagonRegister::S65
+            | HexagonRegister::S66
+            | HexagonRegister::S67
+            | HexagonRegister::S68
+            | HexagonRegister::S69
+            | HexagonRegister::S70
+            | HexagonRegister::S71
+            | HexagonRegister::S72
+            | HexagonRegister::S73
+            | HexagonRegister::S74
+            | HexagonRegister::S75
+            | HexagonRegister::S76
+            | HexagonRegister::S77
+            | HexagonRegister::S78
+            | HexagonRegister::S79
+            | HexagonRegister::S80 => default_name,
+            HexagonRegister::Gelr => "G0",
+            HexagonRegister::Gsr => "G1",
+            HexagonRegister::Gosp => "G2",
+            HexagonRegister::G3
+            | HexagonRegister::G4
+            | HexagonRegister::G5
+            | HexagonRegister::G6
+            | HexagonRegister::G7
+            | HexagonRegister::G8
+            | HexagonRegister::G9
+            | HexagonRegister::G10
+            | HexagonRegister::G11
+            | HexagonRegister::G12
+            | HexagonRegister::G13
+            | HexagonRegister::G14
+            | HexagonRegister::G15 => default_name,
+            HexagonRegister::Gpmucnt4 => "G16",
+            HexagonRegister::Gpmucnt5 => "G17",
+            HexagonRegister::Gpmucnt6 => "G18",
+            HexagonRegister::Gpmucnt7 => "G19",
+            HexagonRegister::Gpcyclelo => "G24",
+            HexagonRegister::Gpcyclehii => "G25",
+            HexagonRegister::Gpmucnt0 => "G26",
+            HexagonRegister::Gpmucnt1 => "G27",
+            HexagonRegister::Gpmucnt2 => "G28",
+            HexagonRegister::Gpmnucnt3 => "G29",
+            HexagonRegister::G30 | HexagonRegister::G31 => default_name,
+            HexagonRegister::G1G0
+            | HexagonRegister::G3G2
+            | HexagonRegister::G5G4
+            | HexagonRegister::G7G6
+            | HexagonRegister::G9G8
+            | HexagonRegister::G11G10
+            | HexagonRegister::G13G12
+            | HexagonRegister::G15G14
+            | HexagonRegister::G17G16
+            | HexagonRegister::G19G18
+            | HexagonRegister::G21G20
+            | HexagonRegister::G23G22
+            | HexagonRegister::G25G24
+            | HexagonRegister::G27G26
+            | HexagonRegister::G29G28
+            | HexagonRegister::G31G30 => default_name,
+            _ => default_name,
+        })
+        .to_owned()
+        .into_boxed_str()
+        .into()
+    }
+}
+
 #[cfg(test)]
 #[cfg(feature = "arch_arm")]
 mod tests {

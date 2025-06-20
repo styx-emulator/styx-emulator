@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<compiler_spec>
+  <spacebase name="gp" register="C11" space="ram"/>
+  <global>
+    <range space="ram"/>
+    <range space="gp"/>
+    <!-- UGP, GP, C14-C31, G0-G31, S0-S127 -->
+    <range space="register" first="0xa8" last="0xaf"/>
+    <range space="register" first="0xb8" last="0x380"/>
+  </global>
+  <stackpointer register="R29" space="ram"/>
+  <prefersplit style="inhalf">
+    <register name="R1R0"/>
+    <register name="R1R0"/>
+    <register name="R3R2"/>
+    <register name="R5R4"/>
+    <register name="R7R6"/>
+    <register name="R9R8"/>
+    <register name="R11R10"/>
+    <register name="R13R12"/>
+    <register name="R15R14"/>
+    <register name="R17R16"/>
+    <register name="R19R18"/>
+    <register name="R21R20"/>
+    <register name="R23R22"/>
+    <register name="R25R24"/>
+    <register name="R27R26"/>
+    <register name="R29R28"/>
+    <register name="R31R30"/>
+    <register name="C1C0"/>
+    <register name="C3C2"/>
+    <register name="C5C4"/>
+    <register name="C7C6"/>
+    <register name="C9C8"/>
+    <register name="C11C10"/>
+    <register name="C13C12"/>
+    <register name="C15C14"/>
+    <register name="C17C16"/>
+    <register name="C19C18"/>
+    <register name="C21C20"/>
+    <register name="C23C22"/>
+    <register name="C25C24"/>
+    <register name="C27C26"/>
+    <register name="C29C28"/>
+    <register name="C31C30"/>
+    <register name="G1G0"/>
+    <register name="G3G2"/>
+    <register name="G5G4"/>
+    <register name="G7G6"/>
+    <register name="G9G8"/>
+    <register name="G11G10"/>
+    <register name="G13G12"/>
+    <register name="G15G14"/>
+    <register name="G17G16"/>
+    <register name="G19G18"/>
+    <register name="G21G20"/>
+    <register name="G23G22"/>
+    <register name="G25G24"/>
+    <register name="G27G26"/>
+    <register name="G29G28"/>
+    <register name="G31G30"/>
+    <register name="S1S0"/>
+    <register name="S3S2"/>
+    <register name="S5S4"/>
+    <register name="S7S6"/>
+    <register name="S9S8"/>
+    <register name="S11S10"/>
+    <register name="S13S12"/>
+    <register name="S15S14"/>
+    <register name="S17S16"/>
+    <register name="S19S18"/>
+    <register name="S21S20"/>
+    <register name="S23S22"/>
+    <register name="S25S24"/>
+    <register name="S27S26"/>
+    <register name="S29S28"/>
+    <register name="S31S30"/>
+    <register name="S33S32"/>
+    <register name="S35S34"/>
+    <register name="S37S36"/>
+    <register name="S39S38"/>
+    <register name="S41S40"/>
+    <register name="S43S42"/>
+    <register name="S45S44"/>
+    <register name="S47S46"/>
+    <register name="S49S48"/>
+    <register name="S51S50"/>
+    <register name="S53S52"/>
+    <register name="S55S54"/>
+    <register name="S57S56"/>
+    <register name="S59S58"/>
+    <register name="S61S60"/>
+    <register name="S63S62"/>
+    <register name="S65S64"/>
+    <register name="S67S66"/>
+    <register name="S69S68"/>
+    <register name="S71S70"/>
+    <register name="S73S72"/>
+    <register name="S75S74"/>
+    <register name="S77S76"/>
+    <register name="S79S78"/>
+    <register name="S81S80"/>
+    <register name="S83S82"/>
+    <register name="S85S84"/>
+    <register name="S87S86"/>
+    <register name="S89S88"/>
+    <register name="S91S90"/>
+    <register name="S93S92"/>
+    <register name="S95S94"/>
+    <register name="S97S96"/>
+    <register name="S99S98"/>
+    <register name="S101S100"/>
+    <register name="S103S102"/>
+    <register name="S105S104"/>
+    <register name="S107S106"/>
+    <register name="S109S108"/>
+    <register name="S111S110"/>
+    <register name="S113S112"/>
+    <register name="S115S114"/>
+    <register name="S117S116"/>
+    <register name="S119S118"/>
+    <register name="S121S120"/>
+    <register name="S123S122"/>
+    <register name="S125S124"/>
+    <register name="S127S126"/>
+    <register name="SGP1SGP0"/>
+  </prefersplit>
+  <default_proto>
+    <prototype name="__stdcall" extrapop="0" stackshift="0">
+      <input>
+        <pentry minsize="1" maxsize="4">
+          <register name="R0" />
+        </pentry>
+        <pentry minsize="1" maxsize="4">
+          <register name="R1" />
+        </pentry>
+        <pentry minsize="1" maxsize="4">
+          <register name="R2" />
+        </pentry>
+        <pentry minsize="1" maxsize="4">
+          <register name="R3" />
+        </pentry>
+        <pentry minsize="1" maxsize="4">
+          <register name="R4" />
+        </pentry>
+        <pentry minsize="1" maxsize="4">
+          <register name="R5" />
+        </pentry>
+        <pentry minsize="1" maxsize="500" align="4">
+          <addr offset="0" space="stack"/>
+        </pentry>
+      </input>
+      <output>
+        <pentry minsize="1" maxsize="4">
+          <register name="R0" />
+        </pentry>
+      </output>
+      <unaffected>
+        <register name="R16"/>
+        <register name="R17"/>
+        <register name="R18"/>
+        <register name="R19"/>
+        <register name="R20"/>
+        <register name="R21"/>
+        <register name="R22"/>
+        <register name="R23"/>
+        <register name="R24"/>
+        <register name="R25"/>
+        <register name="R26"/>
+        <register name="R29"/> <!-- SP -->
+        <register name="R30"/> <!-- FP -->
+        <register name="C11"/> <!-- GP -->
+      </unaffected>
+      <killedbycall>
+        <register name="R0"/>
+        <register name="R6"/>
+        <register name="R7"/>
+        <register name="R8"/>
+        <register name="R9"/>
+        <register name="R10"/>
+        <register name="R11"/>
+        <register name="R12"/>
+        <register name="R13"/>
+        <register name="R14"/>
+        <register name="R15"/>
+      </killedbycall>
+    </prototype>
+  </default_proto>
+</compiler_spec>

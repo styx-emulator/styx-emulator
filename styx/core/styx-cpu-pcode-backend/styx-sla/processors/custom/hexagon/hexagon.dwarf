@@ -1,0 +1,42 @@
+<dwarf>
+	<register_mappings>
+		<!-- Integer registers --> 
+		<register_mapping dwarf="0" ghidra="R0" auto_count="29"/> <!-- R0..R28 -->
+		<register_mapping dwarf="29" ghidra="R29" stackpointer="true"/>
+		<register_mapping dwarf="30" ghidra="R30" />
+		<register_mapping dwarf="31" ghidra="R31" /> <!-- this is the link register -->
+
+		<!-- Integer register pairs -->
+		<register_mapping dwarf="32" ghidra="R1R0" />
+		<register_mapping dwarf="34" ghidra="R3R2" />
+		<register_mapping dwarf="36" ghidra="R5R4" />
+		<register_mapping dwarf="38" ghidra="R7R6" />
+		<register_mapping dwarf="40" ghidra="R9R8" />
+		<register_mapping dwarf="42" ghidra="R11R10" />
+		<register_mapping dwarf="44" ghidra="R13R12" />
+		<register_mapping dwarf="46" ghidra="R15R14" />
+		<register_mapping dwarf="48" ghidra="R17R16" />
+		<register_mapping dwarf="50" ghidra="R19R18" />
+		<register_mapping dwarf="52" ghidra="R21R20" />
+		<register_mapping dwarf="54" ghidra="R23R22" />
+		<register_mapping dwarf="56" ghidra="R25R24" />
+		<register_mapping dwarf="58" ghidra="R27R26" />
+		<register_mapping dwarf="60" ghidra="R29R28" />
+
+		<!-- Predicate registers -->
+		<register_mapping dwarf="63" ghidra="P0" auto_count="4"/> <!-- P0.. P3 -->
+		<!-- Control registers -->
+		<register_mapping dwarf="67" ghidra="C0" auto_count="32" /> <!-- C0..C31 -->
+
+		<!-- VTMP register (undefined in sla) -->
+		<!-- <register_mapping dwarf="131" ghidra="VTMP" /> -->
+
+		<!-- System registers -->
+		<register_mapping dwarf="144" ghidra="S0" auto_count="76" /> <!-- S0..S75 -->
+
+		<!-- Guest registers (why is there overlap?), we choose to use the guest regs here, not sys regs. see above. LLVM goes up to S80 -->
+		<register_mapping dwarf="220" ghidra="G0" auto_count="32" /> <!-- G0..G31 -->
+
+	</register_mappings>
+	<call_frame_cfa value="0"/>
+</dwarf>

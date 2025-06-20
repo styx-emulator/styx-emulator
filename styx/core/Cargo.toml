@@ -13,6 +13,7 @@ default = [
   "arch_mips64",
   "arch_ppc",
   "arch_superh",
+  "arch_hexagon",
 ]
 arch_arm = ["styx-cpu/arch_arm"]
 arch_aarch64 = ["styx-cpu/arch_aarch64"]
@@ -21,6 +22,7 @@ arch_m32r = ["styx-cpu/arch_m32r"]
 arch_mips64 = ["styx-cpu/arch_mips64"]
 arch_ppc = ["styx-cpu/arch_ppc"]
 arch_superh = ["styx-cpu/arch_superh"]
+arch_hexagon = ["styx-cpu/arch_hexagon"]
 pyo3_bindings = ["styx-grpc/pyo3_bindings"]
 
 [lints]
