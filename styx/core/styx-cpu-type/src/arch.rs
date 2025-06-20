@@ -120,7 +120,7 @@ pub mod superh;
 use aarch64::{variants::*, Aarch64MetaVariants, Aarch64Register, SpecialAarch64Register};
 use arm::{variants::*, ArmMetaVariants, ArmRegister, SpecialArmRegister};
 use blackfin::{variants::*, BlackfinMetaVariants, BlackfinRegister, SpecialBlackfinRegister};
-use hexagon::{variants::*, HexagonRegister, SpecialHexagonRegister};
+use hexagon::{variants::*, HexagonMetaVariants, HexagonRegister, SpecialHexagonRegister};
 use mips32::{variants::*, Mips32MetaVariants, Mips32Register, SpecialMips32Register};
 use mips64::{variants::*, Mips64MetaVariants, Mips64Register, SpecialMips64Register};
 use msp430::{
@@ -956,6 +956,7 @@ pub mod backends {
         Msp430(Msp430MetaVariants),
         Ppc32(Ppc32MetaVariants),
         SuperH(SuperHMetaVariants),
+        Hexagon(HexagonMetaVariants),
     }
 
     impl From<ArchVariant> for Box<dyn ArchitectureDef> {
@@ -969,6 +970,7 @@ pub mod backends {
                 ArchVariant::Mips64(mips64_meta) => mips64_meta.into(),
                 ArchVariant::SuperH(superh_meta) => superh_meta.into(),
                 ArchVariant::Msp430(msp430_meta) => msp430_meta.into(),
+                ArchVariant::Hexagon(hexagon_meta) => hexagon_meta.into(),
             }
         }
     }
