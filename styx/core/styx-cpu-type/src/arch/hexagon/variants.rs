@@ -25,12 +25,16 @@
 //! Maps the various hexagon architecture variants
 
 use super::{
-    gdb_targets::{HexagonCpuTargetDescription, HEXAGON_CORE_CPU_REGISTER_MAP},
+    gdb_targets::{
+        HexagonCpuTargetDescription, HEXAGON_CORE_CPU_REGISTER_MAP,
+        HEXAGON_CORE_HVX_CPU_REGISTER_MAP,
+    },
     HexagonRegister,
 };
 use crate::arch::{Arch, ArchitectureDef, ArchitectureVariant, CpuRegisterBank};
 use derive_more::Display;
 
+// TODO: macroize?
 #[derive(Default)]
 pub struct HexagonGeneralRegisters {}
 
@@ -45,6 +49,26 @@ impl CpuRegisterBank for HexagonGeneralRegisters {
 
     fn registers(&self) -> Vec<crate::arch::CpuRegister> {
         HEXAGON_CORE_CPU_REGISTER_MAP.values().cloned().collect()
+    }
+}
+
+#[derive(Default)]
+pub struct HexagonGeneralRegistersWithHvx {}
+
+impl CpuRegisterBank for HexagonGeneralRegistersWithHvx {
+    fn pc(&self) -> crate::arch::CpuRegister {
+        HexagonRegister::Pc.register()
+    }
+
+    fn sp(&self) -> crate::arch::CpuRegister {
+        HexagonRegister::Sp.register()
+    }
+
+    fn registers(&self) -> Vec<crate::arch::CpuRegister> {
+        HEXAGON_CORE_HVX_CPU_REGISTER_MAP
+            .values()
+            .cloned()
+            .collect()
     }
 }
 
@@ -102,6 +126,7 @@ macro_rules! hexagon_arch_impl {
     };
 }
 
+// TODO: change to HexagonGeneralRegistersWithHvx? Need to find out which DSPs have HVX and which don't.
 macro_rules! hexagon_arch_impls (
     ($($variant_name:ident),*) => {
         $(hexagon_arch_impl!(

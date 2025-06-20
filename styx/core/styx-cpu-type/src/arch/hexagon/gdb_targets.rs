@@ -31,7 +31,7 @@ use crate::arch::CpuRegister;
 use std::marker::PhantomData;
 use styx_macros::gdb_target_description;
 use styx_sync::lazy_static;
-use styx_util::gdb_xml::HEXAGON_CORE;
+use styx_util::gdb_xml::{HEXAGON_CORE, HEXAGON_HVX};
 
 lazy_static! {
     // Hexagon register map is not clear
@@ -103,6 +103,50 @@ lazy_static! {
         (62, HexagonRegister::UtimerLo.register()),
         (63, HexagonRegister::UtimerHi.register())
     ]);
+
+    // TODO: which variants have HVX, and which ones don't?
+    static ref HEXAGON_HVX_REGISTER_MAP: BTreeMap<usize, CpuRegister> = BTreeMap::from([
+        (88, HexagonRegister::V0.register()),
+        (89, HexagonRegister::V1.register()),
+        (90, HexagonRegister::V2.register()),
+        (91, HexagonRegister::V3.register()),
+        (92, HexagonRegister::V4.register()),
+        (93, HexagonRegister::V5.register()),
+        (94, HexagonRegister::V6.register()),
+        (95, HexagonRegister::V7.register()),
+        (96, HexagonRegister::V8.register()),
+        (97, HexagonRegister::V9.register()),
+        (98, HexagonRegister::V10.register()),
+        (99, HexagonRegister::V11.register()),
+        (100, HexagonRegister::V12.register()),
+        (101, HexagonRegister::V13.register()),
+        (102, HexagonRegister::V14.register()),
+        (103, HexagonRegister::V15.register()),
+        (104, HexagonRegister::V16.register()),
+        (105, HexagonRegister::V17.register()),
+        (106, HexagonRegister::V18.register()),
+        (107, HexagonRegister::V19.register()),
+        (108, HexagonRegister::V20.register()),
+        (109, HexagonRegister::V21.register()),
+        (110, HexagonRegister::V22.register()),
+        (111, HexagonRegister::V23.register()),
+        (112, HexagonRegister::V24.register()),
+        (113, HexagonRegister::V25.register()),
+        (114, HexagonRegister::V26.register()),
+        (115, HexagonRegister::V27.register()),
+        (116, HexagonRegister::V28.register()),
+        (117, HexagonRegister::V29.register()),
+        (118, HexagonRegister::V30.register()),
+        (119, HexagonRegister::V31.register()),
+        (120, HexagonRegister::Q0.register()),
+        (121, HexagonRegister::Q1.register()),
+        (122, HexagonRegister::Q2.register()),
+        (123, HexagonRegister::Q3.register())
+    ]);
+
+    // Combine HVX register map and default register map
+    pub static ref HEXAGON_CORE_HVX_CPU_REGISTER_MAP: BTreeMap<usize, CpuRegister> = HEXAGON_CORE_CPU_REGISTER_MAP
+        .clone().into_iter().chain(HEXAGON_CORE_HVX_CPU_REGISTER_MAP.clone().into_iter()).collect();
 }
 
 #[gdb_target_description]
@@ -113,6 +157,20 @@ pub struct HexagonCpuTargetDescription {
         gdb_arch_name("hexagon"),
         gdb_feature_xml(HEXAGON_CORE),
         register_map(HEXAGON_CORE_CPU_REGISTER_MAP),
+        pc_register(ArchRegister::Basic(BasicArchRegister::Hexagon(HexagonRegister::Pc))),
+        endianness(ArchEndian::LittleEndian)
+    )]
+    args: PhantomData<()>,
+}
+
+#[gdb_target_description]
+#[derive(Debug, Default)]
+pub struct HexagonHvxCpuTargetDescription {
+    #[args(
+        // TODO: what should this be?
+        gdb_arch_name("hexagon_hvx"),
+        gdb_feature_xml(HEXAGON_HVX),
+        register_map(HEXAGON_CORE_HVX_CPU_REGISTER_MAP),
         pc_register(ArchRegister::Basic(BasicArchRegister::Hexagon(HexagonRegister::Pc))),
         endianness(ArchEndian::LittleEndian)
     )]
