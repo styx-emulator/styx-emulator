@@ -62,6 +62,7 @@ default = [
   "arch_mips64",
   "arch_ppc",
   "arch_superh",
+  "arch_hexagon",
 ]
 arch_arm = ["styx-core/arch_arm"]
 arch_aarch64 = ["styx-core/arch_aarch64"]
@@ -70,6 +71,7 @@ arch_m32r = ["styx-core/arch_m32r"]
 arch_mips64 = ["styx-core/arch_mips64"]
 arch_ppc = ["styx-core/arch_ppc"]
 arch_superh = ["styx-core/arch_superh"]
+arch_hexagon = ["styx-core/arch_hexagon"]
 pyo3_bindings = ["styx-core/pyo3_bindings"]
 tracy = ["styx-plugins/tracy"]
 tui = ["styx-plugins/tui"]

@@ -14,6 +14,7 @@ default = [
   "arch_mips64",
   "arch_ppc",
   "arch_superh",
+  "arch_hexagon",
 ]
 arch_arm = ["styx-sla/arch_arm"]
 arch_aarch64 = ["styx-sla/arch_aarch64"]
@@ -23,6 +24,7 @@ arch_mips32 = ["styx-sla/arch_mips32"]
 arch_mips64 = ["styx-sla/arch_mips64"]
 arch_ppc = ["styx-sla/arch_ppc"]
 arch_superh = ["styx-sla/arch_superh"]
+arch_hexagon = ["styx-sla/arch_hexagon"]
 
 [lints]
 workspace = true

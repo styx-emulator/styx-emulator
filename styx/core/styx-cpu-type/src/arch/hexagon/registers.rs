@@ -32,6 +32,9 @@ use crate::macros::*;
 
 // Hexagon seems to always be 32-bit as of now, so
 // there's not really much point in distinguishing here.
+//
+// NOTE: If you rename any registers here, you must update the mapping
+// in styx-sla/src/lib.rs
 create_basic_register_enums!(
     Hexagon,
     // Registers definitions are found here:
@@ -224,7 +227,7 @@ create_basic_register_enums!(
     (S79, 32),        // S79
     (S80, 32),        // S80
     // System register pairs
-    (Sgp1_0, 64),
+    (SGP1SGP0, 64),
     (S3S2, 64),
     (S5S4, 64),
     (S7S6, 64),
