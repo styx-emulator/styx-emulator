@@ -15,6 +15,7 @@ default = [
   "arch_mips64",
   "arch_ppc",
   "arch_superh",
+  "arch_hexagon",
 ]
 blackfin-binutils-tests = ["dep:styx-blackfin-testdata", "dep:styx-loader"]
 hexagon-binutils-tests = ["dep:styx-hexagon-testdata", "dep:styx-loader"]
@@ -29,6 +30,7 @@ arch_mips32 = ["styx-pcode-translator/arch_mips32"]
 arch_mips64 = ["styx-pcode-translator/arch_mips64"]
 arch_ppc = ["styx-pcode-translator/arch_ppc"]
 arch_superh = ["styx-pcode-translator/arch_superh"]
+arch_hexagon = ["styx-pcode-translator/arch_hexagon"]
 
 
 [dependencies]

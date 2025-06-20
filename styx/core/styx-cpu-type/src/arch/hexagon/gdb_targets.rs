@@ -35,6 +35,8 @@ use styx_util::gdb_xml::{HEXAGON_CORE, HEXAGON_HVX};
 
 lazy_static! {
     // Hexagon register map is not clear
+    // NOTE: gdb's XML doesn't have system registers. Can we find
+    // the mappings elsewhere/use DWARF mappings?
     pub static ref HEXAGON_CORE_CPU_REGISTER_MAP: BTreeMap<usize, CpuRegister> = BTreeMap::from([
         (0, HexagonRegister::R0.register()),
         (1, HexagonRegister::R1.register()),

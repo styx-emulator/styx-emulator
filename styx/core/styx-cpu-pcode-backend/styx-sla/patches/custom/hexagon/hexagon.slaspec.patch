@@ -1,0 +1,54 @@
+--- hexagon.slaspec	2025-06-20 14:39:46.258997196 -0400
++++ hexagon.slaspec.patched	2025-06-20 16:47:31.561387351 -0400
+@@ -30,7 +30,7 @@
+   G8   G9   G10  G11  G12  G13  G14  G15
+   G16  G17  G18  G19  G20  G21  G22  G23
+   G24  G25  G26  G27  G28  G29  G30  G31
+-  S0   S1   S2   S3   S4   S5   S6   S7
++  SGP0   SGP1   S2   S3   S4   S5   S6   S7
+   S8   S9   S10  S11  S12  S13  S14  S15
+   S16  S17  S18  S19  S20  S21  S22  S23
+   S24  S25  S26  S27  S28  S29  S30  S31
+@@ -46,7 +46,6 @@
+   S104 S105 S106 S107 S108 S109 S110 S111
+   S112 S113 S114 S115 S116 S117 S118 S119
+   S120 S121 S122 S123 S124 S125 S126 S127
+-  SGP0 SGP1
+ ];
+
+ define register offset=0x094 size=1 [
+@@ -66,7 +65,7 @@
+   G9G8      G11G10    G13G12    G15G14
+   G17G16    G19G18    G21G20    G23G22
+   G25G24    G27G26    G29G28    G31G30
+-  S1S0      S3S2      S5S4      S7S6
++  SGP1SGP0      S3S2      S5S4      S7S6
+   S9S8      S11S10    S13S12    S15S14
+   S17S16    S19S18    S21S20    S23S22
+   S25S24    S27S26    S29S28    S31S30
+@@ -82,7 +81,6 @@
+   S105S104  S107S106  S109S108  S111S110
+   S113S112  S115S114  S117S116  S119S118
+   S121S120  S123S122  S125S124  S127S126
+-  SGP1SGP0
+ ];
+
+ define register offset=0x500 size=32 contextreg;
+@@ -9443,7 +9441,7 @@
+   Y2_tfrscrr_Ss128
+   Y2_tfrsrcr_Sd128
+ ] [
+-  S0   S1   S2   S3   S4   S5   S6   S7
++  SGP0   SGP1   S2   S3   S4   S5   S6   S7
+   S8   S9   S10  S11  S12  S13  S14  S15
+   S16  S17  S18  S19  S20  S21  S22  S23
+   S24  S25  S26  S27  S28  S29  S30  S31
+@@ -9465,7 +9463,7 @@
+   Y4_tfrscpp_Sss128
+   Y4_tfrspcp_Sdd128
+ ] [
+-  S1S0      _ S3S2      _ S5S4      _ S7S6      _
++  SGP1SGP0      _ S3S2      _ S5S4      _ S7S6      _
+   S9S8      _ S11S10    _ S13S12    _ S15S14    _
+   S17S16    _ S19S18    _ S21S20    _ S23S22    _
+   S25S24    _ S27S26    _ S29S28    _ S31S30    _
