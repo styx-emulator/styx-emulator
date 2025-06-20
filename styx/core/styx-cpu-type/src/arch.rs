@@ -768,6 +768,7 @@ pub enum Arch {
     V850,
     Msp430,
     Msp430X,
+    Hexagon,
 }
 
 impl Arch {
@@ -1205,6 +1206,7 @@ pub enum GdbTargetDescriptionImpl {
     Sh4ANoFpuDescription(superh::gdb_targets::Sh4ANoFpuDescription),
     Sh4Description(superh::gdb_targets::Sh4Description),
     Sh4NoFpuDescription(superh::gdb_targets::Sh4NoFpuDescription),
+    HexagonDescription(hexagon::gdb_targets::HexagonCpuTargetDescription),
 }
 
 /// A utility trait used to expidite the gdb implementation details,

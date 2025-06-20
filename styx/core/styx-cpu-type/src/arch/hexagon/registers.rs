@@ -35,6 +35,9 @@ use crate::macros::*;
 // there's not really much point in distinguishing here.
 create_basic_register_enums!(
     Hexagon,
+    // Registers definitions are found here:
+    // https://github.com/llvm/llvm-project/blob/main/llvm/lib/Target/Hexagon/HexagonRegisterInfo.td
+
     // General purpose registers
     (R0, 32),
     (R1, 32),
@@ -113,8 +116,19 @@ create_basic_register_enums!(
     (FrameKey, 32),   // Alias to C17
     (PktCountLo, 32), // Alias to C18
     (PktCountHi, 32), // Alias to C19
-    (UtimerLo, 32),   // Alias to C30
-    (UtimerHi, 32),   // Alias to C31
+    // These registers seem to be undocumented/reserved!!
+    (EmuPktCount, 32), // C20, From QEMU definitions: hex_regs.h and cpu.c's hexagon_regnmaes
+    (EmuInsnCount, 32), // C21, From QEMU: see above
+    (EmuHvxCount, 32), // C22, From QEMU: see above
+    (C23, 32),
+    (C24, 32),
+    (C25, 32),
+    (C26, 32),
+    (C27, 32),
+    (C28, 32),
+    (C29, 32),
+    (UtimerLo, 32), // Alias to C30
+    (UtimerHi, 32), // Alias to C31
     // Control register pairs
     (C1C0, 64),
     (C3C2, 64),
@@ -301,6 +315,93 @@ create_basic_register_enums!(
     (G27G26, 64),
     (G29G28, 64),
     (G31G30, 64),
+    // TODO: HVX Registers
+    // Some info found in Hexagon manuals, and
+    // https://chipsandcheese.com/p/qualcomms-hexagon-dsp-and-now-npu
+    // Vector data registers: 128 bytes
+    (V0, 128),
+    (V1, 128),
+    (V2, 128),
+    (V3, 128),
+    (V4, 128),
+    (V5, 128),
+    (V6, 128),
+    (V7, 128),
+    (V8, 128),
+    (V9, 128),
+    (V10, 128),
+    (V11, 128),
+    (V12, 128),
+    (V13, 128),
+    (V14, 128),
+    (V15, 128),
+    (V16, 128),
+    (V17, 128),
+    (V18, 128),
+    (V19, 128),
+    (V20, 128),
+    (V21, 128),
+    (V22, 128),
+    (V23, 128),
+    (V24, 128),
+    (V25, 128),
+    (V26, 128),
+    (V27, 128),
+    (V28, 128),
+    (V29, 128),
+    (V30, 128),
+    (V31, 128),
+    // Register pairs for V registers
+    // VhiVlo
+    (W0, 256),  // V1V0
+    (W1, 256),  // V3V2
+    (W2, 256),  // V5V4
+    (W3, 256),  // V7V6
+    (W4, 256),  // V9V8
+    (W5, 256),  // V11V10
+    (W6, 256),  // V13V12
+    (W7, 256),  // V15V14
+    (W8, 256),  // V17V16
+    (W9, 256),  // V19V18
+    (W10, 256), // V21V20
+    (W11, 256), // V23V22
+    (W12, 256), // V25V24
+    (W13, 256), // V27V26
+    (W14, 256), // V29V28
+    (W15, 256), // V31V30
+    // Register pairs for Vector register (reversed)
+    // VhiVlo
+    (WR0, 256),  // V0V1
+    (WR1, 256),  // V2V3
+    (WR2, 256),  // V4V5
+    (WR3, 256),  // V6V7
+    (WR4, 256),  // V8V9
+    (WR5, 256),  // V10V11
+    (WR6, 256),  // V12V13
+    (WR7, 256),  // V14V15
+    (WR8, 256),  // V16V17
+    (WR9, 256),  // V18V19
+    (WR10, 256), // V20V21
+    (WR11, 256), // V22V23
+    (WR12, 256), // V24V25
+    (WR13, 256), // V26V27
+    (WR14, 256), // V28V29
+    (WR15, 256), // V30V31
+    // Registers for quad vectors
+    // Comment: V highest ---> lowest, W highest --> lowest
+    (VQ0, 512), // V3V2V1V0 or W1W0
+    (VQ1, 512), // V7V6V5V4 or W3W2
+    (VQ2, 512), // V11V10V9V8 or W5W4
+    (VQ3, 512), // V15V14V13V12 or W7W6
+    (VQ4, 512), // V19V18V17V16 or W9W8
+    (VQ5, 512), // V23V22V21V20 or W11W10
+    (VQ6, 512), // V27V26V25V24 or W13W12
+    (VQ7, 512), // V31V30V29V28 or W15W14
+    // Predicate registers
+    (Q0, 128),
+    (Q1, 128),
+    (Q2, 128),
+    (Q3, 128)
 );
 
 lazy_static::lazy_static! {
