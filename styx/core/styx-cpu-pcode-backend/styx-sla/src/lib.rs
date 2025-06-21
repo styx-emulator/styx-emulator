@@ -744,6 +744,8 @@ mod hexagon {
     }
 }
 
+// TODO: hexagon tests here?
+
 #[cfg(test)]
 #[cfg(feature = "arch_arm")]
 mod tests {
