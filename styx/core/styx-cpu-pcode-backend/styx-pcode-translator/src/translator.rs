@@ -326,7 +326,7 @@ mod hexagon_tests {
         backends::ArchVariant,
         hexagon::{variants::QDSP6V66, HexagonMetaVariants},
     };
-    use styx_pcode_sleigh_backend::{SleighTranslateError, VectorLoader};
+    use styx_pcode_sleigh_backend::VectorLoader;
 
     use super::PcodeTranslator;
     use crate::ContextOption;
