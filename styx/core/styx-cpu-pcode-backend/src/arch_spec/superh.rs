@@ -9,11 +9,14 @@ pub mod sh4eb;
 pub mod sh4el;
 
 use super::{
+    generator_helper::CONTEXT_OPTION_LEN,
     pc_manager::{apply_difference, PcOverflow},
     ArchPcManager, GeneratorHelp,
 };
-use crate::PcodeBackend;
+use crate::{pcode_gen::GeneratePcodeError, PcodeBackend};
+use smallvec::{smallvec, SmallVec};
 use styx_pcode_translator::ContextOption;
+use styx_processor::memory::Mmu;
 
 /// Program Counter manager for SuperH processors.
 ///
@@ -33,7 +36,7 @@ impl ArchPcManager for StandardPcManager {
         self.internal_pc
     }
 
-    fn set_internal_pc(&mut self, value: u64, _backend: &mut PcodeBackend) {
+    fn set_internal_pc(&mut self, value: u64, _backend: &mut PcodeBackend, _from_branch: bool) {
         // i128 here is used so we don't overflow on cast
         let difference = (value as i128 - self.internal_pc as i128) & (!1);
 
@@ -67,7 +70,11 @@ impl ArchPcManager for StandardPcManager {
 #[derive(Debug, Default)]
 pub struct StandardGeneratorHelper;
 impl GeneratorHelp for StandardGeneratorHelper {
-    fn pre_fetch(&mut self, _backend: &mut PcodeBackend) -> Box<[ContextOption]> {
-        [].into()
+    fn pre_fetch(
+        &mut self,
+        _backend: &mut PcodeBackend,
+        _mmu: &mut Mmu,
+    ) -> Result<SmallVec<[ContextOption; CONTEXT_OPTION_LEN]>, GeneratePcodeError> {
+        Ok(smallvec![])
     }
 }

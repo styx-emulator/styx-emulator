@@ -46,6 +46,9 @@ mod mips32;
 #[cfg(feature = "arch_mips64")]
 mod mips64;
 
+#[cfg(feature = "arch_hexagon")]
+mod hexagon;
+
 // Manager types
 mod generator_helper;
 mod pc_manager;
@@ -163,6 +166,18 @@ pub fn build_arch_spec(arch: &ArchVariant, endian: ArchEndian) -> ArchSpec {
 
         #[cfg(feature = "arch_mips64")]
         ArchVariant::Mips64(_) => mips64::mips64_arch_spec(arch, endian).unwrap(),
+
+        #[cfg(feature = "arch_hexagon")]
+        ArchVariant::Hexagon(arch::hexagon::HexagonMetaVariants::QDSP6V60(_)  |
+                             arch::hexagon::HexagonMetaVariants::QDSP6V62(_) |
+                             arch::hexagon::HexagonMetaVariants::QDSP6V65 (_) |
+                             arch::hexagon::HexagonMetaVariants::QDSP6V66(_) |
+                             arch::hexagon::HexagonMetaVariants::QDSP6V67(_) |
+                             arch::hexagon::HexagonMetaVariants::QDSP6V67T(_) |
+                             arch::hexagon::HexagonMetaVariants::QDSP6V69(_) |
+                             arch::hexagon::HexagonMetaVariants::QDSP6V71 (_) |
+                             arch::hexagon::HexagonMetaVariants::QDSP6V73 (_) |
+                             arch::hexagon::HexagonMetaVariants::QDSP6V77(_) ) => hexagon::build().build(arch),
 
         _ => unimplemented!("architecture {arch:?} not supported by pcode backend"),
     }
