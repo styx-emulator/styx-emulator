@@ -71,8 +71,7 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                     // Is there a performance impact of hitting the MMU?
                     match mmu.read_u32_le_virt_code(self.pc_varnode.offset) {
                         Ok(insn_data) => {
-                            // bytes we want: 31|30|29|13
-                            // TODO: endianness may be wrong
+                            // bytes we want: 31|30|29|14
 
                             debug!("insn data is 0x{:x}", insn_data);
                             let pkt_type = (insn_data >> 14) & 0b11;
@@ -125,13 +124,14 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                                 Box::new([])
                             }
                             // The start of a new packet
-                            // TODO: verify that this is how the hexagon
-                            // plugin sets things
+                            // Based on: https://github.com/toshipiazza/ghidra-plugin-hexagon/blob/main/Ghidra/Processors/Hexagon/src/main/java/ghidra/app/plugin/core/analysis/HexagonPacketAnalyzer.java
+                            // They also set pkt_next, but pkt_next isn't used in the slaspec (thankfully).
                             else if last_pkt_ended == true {
                                 trace!("hexagon start of packet");
 
                                 // NOTE: there's a truncation here, but since hexagon pointers
                                 // are 32 bits this shouldn't matter?
+
                                 Box::new([ContextOption::HexagonPktStart(unwrapped_pc as u32)])
                             } else {
                                 trace!("hexagon prefetch is middle of packet");
