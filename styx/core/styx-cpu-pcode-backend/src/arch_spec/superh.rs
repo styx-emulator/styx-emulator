@@ -37,6 +37,7 @@ use super::{
 };
 use crate::PcodeBackend;
 use styx_pcode_translator::ContextOption;
+use styx_processor::memory::Mmu;
 
 /// Program Counter manager for SuperH processors.
 ///
@@ -90,7 +91,7 @@ impl ArchPcManager for StandardPcManager {
 #[derive(Debug, Default)]
 pub struct StandardGeneratorHelper;
 impl GeneratorHelp for StandardGeneratorHelper {
-    fn pre_fetch(&mut self, _backend: &mut PcodeBackend) -> Box<[ContextOption]> {
+    fn pre_fetch(&mut self, _backend: &mut PcodeBackend, _mmu: &mut Mmu) -> Box<[ContextOption]> {
         [].into()
     }
 }

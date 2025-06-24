@@ -26,6 +26,7 @@ use crate::PcodeBackend;
 use enum_dispatch::enum_dispatch;
 use std::fmt::Debug;
 use styx_pcode_translator::ContextOption;
+use styx_processor::memory::Mmu;
 
 #[cfg(feature = "arch_aarch64")]
 use super::aarch64;
@@ -33,6 +34,7 @@ use super::aarch64;
 #[cfg(feature = "arch_arm")]
 use super::arm;
 
+use super::hexagon;
 #[cfg(feature = "arch_superh")]
 use super::superh;
 
@@ -43,7 +45,7 @@ pub trait GeneratorHelp: Debug {
     /// fairly quick as this is called on every pcode translate call.
     ///
     /// FIXME: possible change return type to stack only buffer to reduce allocations.
-    fn pre_fetch(&mut self, backend: &mut PcodeBackend) -> Box<[ContextOption]>;
+    fn pre_fetch(&mut self, backend: &mut PcodeBackend, mmu: &mut Mmu) -> Box<[ContextOption]>;
 }
 
 /// Use [GeneratorHelper::default()] for a "do-nothing" helper.
@@ -59,6 +61,8 @@ pub enum GeneratorHelper {
     Empty(EmptyGeneratorHelper),
     #[cfg(feature = "arch_superh")]
     SuperH(superh::StandardGeneratorHelper),
+    #[cfg(feature = "arch_hexagon")]
+    Hexagon(hexagon::HexagonGeneratorHelper),
 }
 
 impl Default for GeneratorHelper {
@@ -71,7 +75,7 @@ impl Default for GeneratorHelper {
 #[derive(Debug, Default)]
 pub struct EmptyGeneratorHelper;
 impl GeneratorHelp for EmptyGeneratorHelper {
-    fn pre_fetch(&mut self, _backend: &mut PcodeBackend) -> Box<[ContextOption]> {
+    fn pre_fetch(&mut self, _backend: &mut PcodeBackend, _mmu: &mut Mmu) -> Box<[ContextOption]> {
         [].into()
     }
 }

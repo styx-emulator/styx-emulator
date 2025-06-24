@@ -49,7 +49,7 @@ use styx_cpu_type::{
 };
 use styx_pcode::sla::SlaUserOps;
 use styx_pcode_translator::{sla::Arm7LeUserOps, ContextOption};
-use styx_processor::cpu::CpuBackendExt;
+use styx_processor::{cpu::CpuBackendExt, memory::Mmu};
 use styx_sync::sync::Arc;
 
 pub fn arm_arch_spec(
@@ -391,7 +391,7 @@ pub struct StandardGeneratorHelper {
 }
 
 impl GeneratorHelp for StandardGeneratorHelper {
-    fn pre_fetch(&mut self, backend: &mut PcodeBackend) -> Box<[ContextOption]> {
+    fn pre_fetch(&mut self, backend: &mut PcodeBackend, _mmu: &mut Mmu) -> Box<[ContextOption]> {
         let mut ret = Vec::new();
         let cpsr = backend.read_register::<u32>(ArmRegister::Cpsr).unwrap();
         let new_mode = ArmCpuMode::from_cpsr(cpsr);
@@ -424,7 +424,7 @@ pub struct ThumbOnlyGeneratorHelper {
 }
 
 impl GeneratorHelp for ThumbOnlyGeneratorHelper {
-    fn pre_fetch(&mut self, _backend: &mut PcodeBackend) -> Box<[ContextOption]> {
+    fn pre_fetch(&mut self, _backend: &mut PcodeBackend, _mmu: &mut Mmu) -> Box<[ContextOption]> {
         if !self.thumb_already_set {
             self.thumb_already_set = true;
             vec![ContextOption::ThumbMode(true)]

@@ -44,6 +44,9 @@ use super::ppc;
 #[cfg(any(feature = "arch_mips32", feature = "arch_mips64"))]
 use super::mips_common;
 
+#[cfg(feature = "arch_hexagon")]
+use super::hexagon;
+
 /// Concrete enum for program counter managers.
 ///
 /// In pcode emulation multiple program counters must be kept track of to provide the correct value
@@ -69,6 +72,8 @@ pub enum PcManager {
     SuperH(superh::StandardPcManager),
     #[cfg(any(feature = "arch_mips32", feature = "arch_mips64"))]
     Mips(mips_common::StandardMipsPcManager),
+    #[cfg(feature = "arch_hexagon")]
+    Hexagon(hexagon::StandardPcManager),
 }
 
 /// Implemented for structs that can manager the pcode machine program counters.
