@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::arch_spec::GeneratorHelp;
 use crate::PcodeBackend;
-use log::{debug, warn};
+use log::{debug, trace, warn};
 use styx_pcode::pcode::{SpaceName, VarnodeData};
 use styx_pcode_translator::ContextOption;
 use styx_processor::{cpu::CpuBackend, memory::Mmu};
@@ -26,6 +26,9 @@ pub struct HexagonGeneratorHelper {
     // map code address -> subinsn type
     subinsn_map: HashMap<u64, u32>,
     pc_varnode: VarnodeData,
+    pkt_end: u64,
+    // Stores if the last instruction was the end of a packet.
+    last_pkt_ended: bool,
 }
 
 impl Default for HexagonGeneratorHelper {
@@ -39,6 +42,8 @@ impl Default for HexagonGeneratorHelper {
                 offset: 0,
                 size: 4,
             },
+            pkt_end: 0,
+            last_pkt_ended: false,
         }
     }
 }
@@ -48,7 +53,10 @@ impl GeneratorHelp for HexagonGeneratorHelper {
         // Read where the PC's at and then figure out what the next 2 subinsn values should be.
         // Check our lut here first
 
-        // Todo translate with mmu?
+        // Save this off
+        let last_pkt_ended = self.last_pkt_ended;
+        self.last_pkt_ended = true;
+
         match backend.pc() {
             Ok(unwrapped_pc) => {
                 self.pc_varnode.offset = unwrapped_pc;
@@ -60,6 +68,7 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                     // need to repopulate
                     self.subinsn_map.clear();
 
+                    // Is there a performance impact of hitting the MMU?
                     match mmu.read_u32_le_virt_code(self.pc_varnode.offset) {
                         Ok(insn_data) => {
                             // bytes we want: 31|30|29|13
@@ -107,8 +116,26 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                                 debug!("duplex slot 1 slot 2 subinsn type {:?}", duplex_slots);
 
                                 Box::new([ContextOption::HexagonSubinsn(duplex_slots.0 as u32)])
+                            }
+                            // End of packet
+                            else if pkt_type == 0b11 {
+                                self.pkt_end = unwrapped_pc;
+                                self.last_pkt_ended = true;
+
+                                Box::new([])
+                            }
+                            // The start of a new packet
+                            // TODO: verify that this is how the hexagon
+                            // plugin sets things
+                            else if last_pkt_ended == true {
+                                trace!("hexagon start of packet");
+
+                                // NOTE: there's a truncation here, but since hexagon pointers
+                                // are 32 bits this shouldn't matter?
+                                Box::new([ContextOption::HexagonPktStart(unwrapped_pc as u32)])
                             } else {
-                                debug!("hexagon prefetch is not a duplex instruction");
+                                trace!("hexagon prefetch is middle of packet");
+
                                 Box::new([])
                             }
                         }
