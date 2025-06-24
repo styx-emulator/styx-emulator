@@ -8,14 +8,19 @@ mod helpers;
 mod register;
 
 use super::{
+    generator_helper::CONTEXT_OPTION_LEN,
     pc_manager::{apply_difference, PcOverflow},
     ArchPcManager, ArchSpecBuilder, GeneratorHelp,
 };
-use crate::{arch_spec::ArchSpec, call_other::handlers::TraceCallOther, PcodeBackend};
+use crate::{
+    arch_spec::ArchSpec, call_other::handlers::TraceCallOther, pcode_gen::GeneratePcodeError,
+    PcodeBackend,
+};
 use call_other::*;
 use helpers::StackPointerManager;
 use log::debug;
 use register::*;
+use smallvec::{smallvec, SmallVec};
 use std::str::FromStr;
 use styx_cpu_type::{
     arch::{
@@ -26,7 +31,7 @@ use styx_cpu_type::{
 };
 use styx_pcode::sla::SlaUserOps;
 use styx_pcode_translator::{sla::Arm7LeUserOps, ContextOption};
-use styx_processor::cpu::CpuBackendExt;
+use styx_processor::{cpu::CpuBackendExt, memory::Mmu};
 use styx_sync::sync::Arc;
 
 pub fn arm_arch_spec(
@@ -200,7 +205,7 @@ impl ArchPcManager for ThumbPcManager {
         self.internal_pc
     }
 
-    fn set_internal_pc(&mut self, value: u64, _backend: &mut PcodeBackend) {
+    fn set_internal_pc(&mut self, value: u64, _backend: &mut PcodeBackend, _from_branch: bool) {
         // i128 here is used so we don't overflow on cast
         let difference = (value as i128 - self.internal_pc as i128) & (!1);
 
@@ -283,7 +288,7 @@ impl ArchPcManager for StandardPcManager {
         self.internal_pc
     }
 
-    fn set_internal_pc(&mut self, value: u64, _backend: &mut PcodeBackend) {
+    fn set_internal_pc(&mut self, value: u64, _backend: &mut PcodeBackend, _from_branch: bool) {
         // i128 here is used so we don't overflow on cast
         let difference = (value as i128 - self.internal_pc as i128) & (!1);
 
@@ -368,15 +373,19 @@ pub struct StandardGeneratorHelper {
 }
 
 impl GeneratorHelp for StandardGeneratorHelper {
-    fn pre_fetch(&mut self, backend: &mut PcodeBackend) -> Box<[ContextOption]> {
-        let mut ret = Vec::new();
+    fn pre_fetch(
+        &mut self,
+        backend: &mut PcodeBackend,
+        _mmu: &mut Mmu,
+    ) -> Result<SmallVec<[ContextOption; CONTEXT_OPTION_LEN]>, GeneratePcodeError> {
+        let mut ret = SmallVec::new();
         let cpsr = backend.read_register::<u32>(ArmRegister::Cpsr).unwrap();
         let new_mode = ArmCpuMode::from_cpsr(cpsr);
 
         // only write context variable if thumb mode changed
         if let Some(previous_mode) = self.previous_mode {
             if previous_mode == new_mode {
-                return Vec::new().into_boxed_slice();
+                return Ok(SmallVec::new());
             }
         }
 
@@ -387,7 +396,7 @@ impl GeneratorHelp for StandardGeneratorHelper {
 
         self.previous_mode = Some(new_mode);
 
-        ret.into_boxed_slice()
+        Ok(ret)
     }
 }
 
@@ -401,13 +410,16 @@ pub struct ThumbOnlyGeneratorHelper {
 }
 
 impl GeneratorHelp for ThumbOnlyGeneratorHelper {
-    fn pre_fetch(&mut self, _backend: &mut PcodeBackend) -> Box<[ContextOption]> {
+    fn pre_fetch(
+        &mut self,
+        _backend: &mut PcodeBackend,
+        _mmu: &mut Mmu,
+    ) -> Result<SmallVec<[ContextOption; CONTEXT_OPTION_LEN]>, GeneratePcodeError> {
         if !self.thumb_already_set {
             self.thumb_already_set = true;
-            vec![ContextOption::ThumbMode(true)]
+            Ok(smallvec![ContextOption::ThumbMode(true)])
         } else {
-            Vec::new()
+            Ok(SmallVec::new())
         }
-        .into_boxed_slice()
     }
 }

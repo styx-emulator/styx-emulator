@@ -21,6 +21,9 @@ use super::ppc;
 #[cfg(any(feature = "arch_mips32", feature = "arch_mips64"))]
 use super::mips_common;
 
+#[cfg(feature = "arch_hexagon")]
+use super::hexagon;
+
 /// Concrete enum for program counter managers.
 ///
 /// In pcode emulation multiple program counters must be kept track of to provide the correct value
@@ -46,6 +49,8 @@ pub enum PcManager {
     SuperH(superh::StandardPcManager),
     #[cfg(any(feature = "arch_mips32", feature = "arch_mips64"))]
     Mips(mips_common::StandardMipsPcManager),
+    #[cfg(feature = "arch_hexagon")]
+    Hexagon(hexagon::StandardPcManager),
 }
 
 /// Implemented for structs that can manager the pcode machine program counters.
@@ -78,7 +83,7 @@ pub(crate) trait ArchPcManager: Debug {
     fn set_isa_pc(&mut self, value: u64, backend: &mut PcodeBackend);
     /// Sets the internal program counter to `value`. NOTE: the ISA counter must be kept in sync
     /// with this counter!
-    fn set_internal_pc(&mut self, value: u64, backend: &mut PcodeBackend) {
+    fn set_internal_pc(&mut self, value: u64, backend: &mut PcodeBackend, _from_branch: bool) {
         self.set_isa_pc(value, backend)
     }
 

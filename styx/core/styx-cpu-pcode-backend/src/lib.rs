@@ -25,7 +25,8 @@ use call_other::CallOtherManager;
 use derivative::Derivative;
 use log::trace;
 use memory::{mmu_store::MmuSpace, space_manager::VarnodeError};
-use pcode_gen::GeneratePcodeError;
+use pcode_gen::{GeneratePcodeError, MmuLoaderDependencies};
+use rustc_hash::FxHashMap;
 use std::collections::{BTreeMap, HashMap};
 use styx_cpu_type::{
     arch::{
@@ -153,6 +154,12 @@ fn handle_basic_block_hooks(
 /// same TLB exception.
 ///
 #[derive(Derivative)]
+#[derivative(Eq, PartialEq, Hash, Debug, Clone, Copy)]
+pub enum SharedStateKey {
+    HexagonPktStart,
+}
+
+#[derive(Derivative)]
 #[derivative(Debug)]
 pub struct PcodeBackend {
     space_manager: SpaceManager,
@@ -175,7 +182,16 @@ pub struct PcodeBackend {
     pcode_config: PcodeBackendConfiguration,
 
     // holds saved register state
-    saved_context: BTreeMap<ArchRegister, RegisterValue>,
+    saved_reg_context: BTreeMap<ArchRegister, RegisterValue>,
+    // we could use an enum with the previous map but it's easier to just
+    // make a separate saved context
+    saved_shared_state_context: FxHashMap<SharedStateKey, u128>,
+
+    // we may want to make this an enum dispatch at some point,
+    // and u128 is chosen to avoid space issues with storing
+    // registers that may be different sizes on different platforms
+    // TODO: does this have to be dealt with in context switches?
+    pub shared_state: FxHashMap<SharedStateKey, u128>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -283,7 +299,9 @@ impl PcodeBackend {
             pc_manager: Some(spec.pc_manager),
             last_was_branch: false,
             pcode_config: config.clone(),
-            saved_context: BTreeMap::default(),
+            saved_reg_context: BTreeMap::default(),
+            saved_shared_state_context: FxHashMap::default(),
+            shared_state: FxHashMap::default(),
         }
     }
 
@@ -372,7 +390,7 @@ impl PcodeBackend {
                     trace!("Pcode state change absolute jump new PC=0x{new_pc:X}");
                     self.last_was_branch = true;
                     let mut pc_manager = self.pc_manager.take().unwrap();
-                    pc_manager.set_internal_pc(new_pc, self);
+                    pc_manager.set_internal_pc(new_pc, self, true);
                     self.pc_manager = Some(pc_manager);
                     return Ok(Ok(bytes_consumed)); // Don't increment PC, jump to next instruction
                 }
@@ -551,7 +569,10 @@ impl CpuBackend for PcodeBackend {
 
     fn set_pc(&mut self, value: u64) -> Result<(), UnknownError> {
         let mut pc_manager = self.pc_manager.take().unwrap();
-        pc_manager.set_internal_pc(value, self);
+        // NOTE: if set_pc starts being called from a branching location,
+        // then we need to be more nuanced here.
+        // TODO: decide whether we should pass from_branch here as well
+        pc_manager.set_internal_pc(value, self, false);
         let isa_pc = SizedValue::from_u128(pc_manager.isa_pc() as u128, 4);
         self.pc_manager = Some(pc_manager);
         let pc_reg_variant = self.pc_register().variant();
@@ -564,30 +585,41 @@ impl CpuBackend for PcodeBackend {
     }
 
     fn context_save(&mut self) -> Result<(), UnknownError> {
-        self.saved_context.clear();
+        self.saved_reg_context.clear();
+        self.saved_shared_state_context.clear();
 
         for register in self.architecture().registers().registers() {
             // we need to do this because not every processor supports all of the valid registers defined by the architecture
             if let Ok(val) = self.read_register_raw(register.variant()) {
-                self.saved_context.insert(register.variant(), val);
+                self.saved_reg_context.insert(register.variant(), val);
             }
+        }
+
+        for (state_key, val) in self.shared_state.iter() {
+            self.saved_shared_state_context.insert(*state_key, *val);
         }
 
         Ok(())
     }
 
     fn context_restore(&mut self) -> Result<(), UnknownError> {
-        if self.saved_context.is_empty() {
+        if self.saved_reg_context.is_empty() {
             return Err(anyhow!("attempting to restore from nothing"));
         }
 
-        let context = std::mem::take(&mut self.saved_context);
+        let reg_context = std::mem::take(&mut self.saved_reg_context);
 
-        for register in context.keys() {
-            self.write_register_raw(*register, *context.get(register).unwrap())?;
+        for register in reg_context.keys() {
+            self.write_register_raw(*register, *reg_context.get(register).unwrap())?;
         }
 
-        let _ = std::mem::replace(&mut self.saved_context, context);
+        // Copy saved shared state into the current shared state
+        for (state_key, val) in self.saved_shared_state_context.iter() {
+            self.shared_state.insert(*state_key, *val);
+        }
+        self.saved_shared_state_context.clear();
+
+        let _ = std::mem::replace(&mut self.saved_reg_context, reg_context);
 
         Ok(())
     }
