@@ -87,10 +87,10 @@ impl GhidraPcodeGenerator {
     ) -> Result<u64, super::GeneratePcodeError> {
         // execute prefetch routine on generator helper
         let mut helper = cpu.pcode_generator.helper.take().unwrap();
-        let context_options = helper.pre_fetch(cpu, data.mmu);
+        let context_options = helper.pre_fetch(cpu, data.mmu)?;
         cpu.pcode_generator.helper = Some(helper);
         // and apply context options
-        for option in context_options.into_vec().into_iter() {
+        for option in context_options.into_iter() {
             trace!("Setting context option: {option:?}");
             cpu.pcode_generator.translator.set_context_option(option);
         }

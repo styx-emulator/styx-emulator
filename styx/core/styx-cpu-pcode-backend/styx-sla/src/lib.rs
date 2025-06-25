@@ -569,6 +569,11 @@ mod hexagon {
             HexagonRegister::FrameKey => "C17",
             HexagonRegister::PktCountLo => "C18",
             HexagonRegister::PktCountHi => "C19",
+            HexagonRegister::EmuPktCount => "C20", // C20, From QEMU definitions: hex_regs.h and cpu.c's hexagon_regnmaes
+            HexagonRegister::EmuInsnCount => "C21", // C21, From QEMU: see above
+            HexagonRegister::EmuHvxCount => "C22", // C22, From QEMU: see above
+            HexagonRegister::UtimerLo => "C30",
+            HexagonRegister::UtimerHi => "C31",
             HexagonRegister::Cs => "C13C12",
             HexagonRegister::Upcycle => "C15C14",
             HexagonRegister::C17C16 => "C15C14",

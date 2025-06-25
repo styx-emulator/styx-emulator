@@ -32,10 +32,13 @@ pub mod sh4eb;
 pub mod sh4el;
 
 use super::{
+    generator_helper::CONTEXT_OPTION_LEN,
     pc_manager::{apply_difference, PcOverflow},
     ArchPcManager, GeneratorHelp,
 };
-use crate::PcodeBackend;
+use crate::{pcode_gen::GeneratePcodeError, PcodeBackend};
+use smallvec::{smallvec, SmallVec};
+use styx_errors::UnknownError;
 use styx_pcode_translator::ContextOption;
 use styx_processor::memory::Mmu;
 
@@ -91,7 +94,11 @@ impl ArchPcManager for StandardPcManager {
 #[derive(Debug, Default)]
 pub struct StandardGeneratorHelper;
 impl GeneratorHelp for StandardGeneratorHelper {
-    fn pre_fetch(&mut self, _backend: &mut PcodeBackend, _mmu: &mut Mmu) -> Box<[ContextOption]> {
-        [].into()
+    fn pre_fetch(
+        &mut self,
+        _backend: &mut PcodeBackend,
+        _mmu: &mut Mmu,
+    ) -> Result<SmallVec<[ContextOption; CONTEXT_OPTION_LEN]>, GeneratePcodeError> {
+        Ok(smallvec![])
     }
 }

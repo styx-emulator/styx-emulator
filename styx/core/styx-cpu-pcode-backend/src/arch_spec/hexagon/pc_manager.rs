@@ -32,6 +32,13 @@ impl ArchPcManager for StandardPcManager {
         self.internal_pc = value;
     }
 
+    /*fn pre_fetch(&mut self, backend: &mut PcodeBackend) -> Result<(), PcOverflow> {
+       backend
+        .pcode_generator
+        .translator
+        .set_context_option(option);
+    }*/
+
     fn post_execute(
         &mut self,
         bytes_consumed: u64,
