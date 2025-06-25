@@ -52,7 +52,6 @@ use styx_cpu_type::{
     },
     ArchEndian,
 };
-use styx_errors::UnknownError;
 use styx_pcode::sla::SlaUserOps;
 use styx_pcode_translator::{sla::Arm7LeUserOps, ContextOption};
 use styx_processor::{cpu::CpuBackendExt, memory::Mmu};

@@ -26,7 +26,6 @@ use crate::{pcode_gen::GeneratePcodeError, PcodeBackend};
 use enum_dispatch::enum_dispatch;
 use smallvec::{smallvec, SmallVec};
 use std::fmt::Debug;
-use styx_errors::UnknownError;
 use styx_pcode_translator::ContextOption;
 use styx_processor::memory::Mmu;
 

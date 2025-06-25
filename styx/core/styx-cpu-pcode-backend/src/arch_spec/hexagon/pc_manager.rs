@@ -20,7 +20,7 @@ impl ArchPcManager for StandardPcManager {
         self.isa_pc
     }
 
-    fn set_isa_pc(&mut self, value: u64, backend: &mut PcodeBackend) {
+    fn set_isa_pc(&mut self, value: u64, _backend: &mut PcodeBackend) {
         self.isa_pc = value
     }
 

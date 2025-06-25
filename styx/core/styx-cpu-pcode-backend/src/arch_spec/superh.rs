@@ -38,7 +38,6 @@ use super::{
 };
 use crate::{pcode_gen::GeneratePcodeError, PcodeBackend};
 use smallvec::{smallvec, SmallVec};
-use styx_errors::UnknownError;
 use styx_pcode_translator::ContextOption;
 use styx_processor::memory::Mmu;
 

@@ -1,11 +1,9 @@
-use std::collections::HashMap;
-
 use crate::arch_spec::generator_helper::CONTEXT_OPTION_LEN;
 use crate::PcodeBackend;
 use crate::{arch_spec::GeneratorHelp, pcode_gen::GeneratePcodeError};
-use log::{debug, error, trace, warn};
-use smallvec::{smallvec, SmallVec};
-use styx_errors::UnknownError;
+use log::{error, trace, warn};
+use rustc_hash::FxHashMap;
+use smallvec::SmallVec;
 use styx_pcode::pcode::{SpaceName, VarnodeData};
 use styx_pcode_translator::ContextOption;
 use styx_processor::{cpu::CpuBackend, memory::Mmu};
@@ -49,7 +47,7 @@ impl From<u32> for PktLoopParseBits {
 #[derive(Debug)]
 pub struct HexagonGeneratorHelper {
     // map code address -> subinsn type
-    subinsn_map: HashMap<u64, u32>,
+    subinsn_map: FxHashMap<u64, u32>,
     pc_varnode: VarnodeData,
     pkt_end: u64,
     // Stores if the last instruction was the end of a packet.
