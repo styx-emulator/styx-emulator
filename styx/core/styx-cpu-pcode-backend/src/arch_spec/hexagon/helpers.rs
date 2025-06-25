@@ -1,4 +1,5 @@
 use crate::arch_spec::generator_helper::CONTEXT_OPTION_LEN;
+use crate::pcode_gen::GhidraPcodeGenerator;
 use crate::PcodeBackend;
 use crate::{arch_spec::GeneratorHelp, pcode_gen::GeneratePcodeError};
 use log::{error, trace, warn};
@@ -95,110 +96,116 @@ impl GeneratorHelp for HexagonGeneratorHelper {
         let last_pkt_ended = self.last_pkt_ended;
         self.last_pkt_ended = true;
 
+        // Get the PC
         match backend.pc() {
+            Err(e) => {
+                error!("Could not fetch PC from backend: {:?}", e);
+                return Err(GeneratePcodeError::InvalidAddress);
+            }
             Ok(unwrapped_pc) => {
                 self.pc_varnode.offset = unwrapped_pc;
 
                 if let Some(subinsn_type) = self.subinsn_map.get(&self.pc_varnode.offset) {
                     context_opts.push(ContextOption::HexagonSubinsn(*subinsn_type));
-                } else {
-                    // The hashmap doesn't have anything for us anymore, we
-                    // need to repopulate
-                    self.subinsn_map.clear();
+                    return Ok(context_opts);
+                }
 
-                    // Is there a performance impact of hitting the MMU?
-                    match mmu.read_u32_le_virt_code(self.pc_varnode.offset) {
-                        Ok(insn_data) => {
-                            // bytes we want: 31|30|29|14
+                // The hashmap doesn't have anything for us anymore, we
+                // need to repopulate
+                self.subinsn_map.clear();
 
-                            trace!("insn data is 0x{:x}", insn_data);
-                            let pkt_type: PktLoopParseBits = ((insn_data >> 14) & 0b11).into();
-                            match pkt_type {
-                                PktLoopParseBits::Duplex => {
-                                    let insclass =
-                                        ((insn_data >> 28) & 0b1110) | ((insn_data >> 13) & 0b1);
-                                    trace!("duplex instruction, insclass {}", insclass);
-                                    // From https://github.com/toshipiazza/ghidra-plugin-hexagon/blob/main/Ghidra/Processors/Hexagon/src/main/java/ghidra/app/plugin/core/analysis/HexagonInstructionInfo.java#L68
-                                    let duplex_slots = match insclass {
-                                        0 => (DuplexInsClass::L1, DuplexInsClass::L1),
-                                        1 => (DuplexInsClass::L2, DuplexInsClass::L1),
-                                        2 => (DuplexInsClass::L2, DuplexInsClass::L2),
-                                        3 => (DuplexInsClass::A, DuplexInsClass::A),
-                                        4 => (DuplexInsClass::L1, DuplexInsClass::A),
-                                        5 => (DuplexInsClass::L2, DuplexInsClass::A),
-                                        6 => (DuplexInsClass::S1, DuplexInsClass::A),
-                                        7 => (DuplexInsClass::S2, DuplexInsClass::A),
-                                        8 => (DuplexInsClass::S1, DuplexInsClass::L1),
-                                        9 => (DuplexInsClass::S1, DuplexInsClass::L2),
-                                        10 => (DuplexInsClass::S1, DuplexInsClass::S1),
-                                        11 => (DuplexInsClass::S2, DuplexInsClass::S1),
-                                        12 => (DuplexInsClass::S2, DuplexInsClass::L1),
-                                        13 => (DuplexInsClass::S2, DuplexInsClass::L2),
-                                        14 => (DuplexInsClass::S2, DuplexInsClass::S2),
-                                        // Realistically, this should be some sort of bad instruction thing
-                                        _ => unreachable!(),
-                                    };
+                // Is there a performance impact of hitting the MMU?
+                match mmu.read_u32_le_virt_code(self.pc_varnode.offset) {
+                    Err(e) => {
+                        error!(
+                            "couldn't prefetch the next insn for duplex checking from MMU: {:?}",
+                            e
+                        );
+                        return Err(GeneratePcodeError::InvalidAddress);
+                    }
+                    Ok(insn_data) => {
+                        // bits we want: 31|30|29|14
 
-                                    // TODO: why use a hashmap? it may make it easier to implement
-                                    // larger blocks of prefetches in the future.
-                                    // If the performance impact is negligible, just switch to a
-                                    // next_subinsn_class variable
-                                    //
-                                    // Also, maybe saving the current pc might be useful if some exception
-                                    // occurs
-                                    self.subinsn_map.insert(unwrapped_pc, duplex_slots.0 as u32);
-                                    // TODO: overflow checks?
-                                    self.subinsn_map
-                                        .insert(unwrapped_pc + 2, duplex_slots.1 as u32);
+                        trace!("insn data is 0x{:x}", insn_data);
 
-                                    trace!("duplex slot 1 slot 2 subinsn type {:?}", duplex_slots);
+                        let pkt_type: PktLoopParseBits = ((insn_data >> 14) & 0b11).into();
+                        match pkt_type {
+                            PktLoopParseBits::Duplex => {
+                                let insclass =
+                                    ((insn_data >> 28) & 0b1110) | ((insn_data >> 13) & 0b1);
+                                trace!("duplex instruction, insclass {}", insclass);
+                                // From https://github.com/toshipiazza/ghidra-plugin-hexagon/blob/main/Ghidra/Processors/Hexagon/src/main/java/ghidra/app/plugin/core/analysis/HexagonInstructionInfo.java#L68
+                                let duplex_slots = match insclass {
+                                    0 => (DuplexInsClass::L1, DuplexInsClass::L1),
+                                    1 => (DuplexInsClass::L2, DuplexInsClass::L1),
+                                    2 => (DuplexInsClass::L2, DuplexInsClass::L2),
+                                    3 => (DuplexInsClass::A, DuplexInsClass::A),
+                                    4 => (DuplexInsClass::L1, DuplexInsClass::A),
+                                    5 => (DuplexInsClass::L2, DuplexInsClass::A),
+                                    6 => (DuplexInsClass::S1, DuplexInsClass::A),
+                                    7 => (DuplexInsClass::S2, DuplexInsClass::A),
+                                    8 => (DuplexInsClass::S1, DuplexInsClass::L1),
+                                    9 => (DuplexInsClass::S1, DuplexInsClass::L2),
+                                    10 => (DuplexInsClass::S1, DuplexInsClass::S1),
+                                    11 => (DuplexInsClass::S2, DuplexInsClass::S1),
+                                    12 => (DuplexInsClass::S2, DuplexInsClass::L1),
+                                    13 => (DuplexInsClass::S2, DuplexInsClass::L2),
+                                    14 => (DuplexInsClass::S2, DuplexInsClass::S2),
+                                    // Realistically, this should be some sort of bad instruction thing
+                                    _ => unreachable!(),
+                                };
 
-                                    // First insn in duplex is a pkt start
-                                    context_opts
-                                        .push(ContextOption::HexagonSubinsn(duplex_slots.0 as u32));
-                                    context_opts
-                                        .push(ContextOption::HexagonPktStart(unwrapped_pc as u32));
-                                }
-                                // The start of a new packet
-                                // Based on: https://github.com/toshipiazza/ghidra-plugin-hexagon/blob/main/Ghidra/Processors/Hexagon/src/main/java/ghidra/app/plugin/core/analysis/HexagonPacketAnalyzer.java
-                                // They also set pkt_next, but pkt_next isn't used in the slaspec (thankfully).
-                                PktLoopParseBits::NotEndOfPacket1
-                                | PktLoopParseBits::NotEndOfPacket2
-                                    if last_pkt_ended =>
-                                {
-                                    trace!("hexagon start of packet");
+                                // TODO: why use a hashmap? it may make it easier to implement
+                                // larger blocks of prefetches in the future.
+                                // If the performance impact is negligible, just switch to a
+                                // next_subinsn_class variable
+                                //
+                                // Also, maybe saving the current pc might be useful if some exception
+                                // occurs
+                                self.subinsn_map.insert(unwrapped_pc, duplex_slots.0 as u32);
+                                // TODO: overflow checks?
+                                self.subinsn_map
+                                    .insert(unwrapped_pc + 2, duplex_slots.1 as u32);
 
-                                    // NOTE: there's a truncation here, but since hexagon pointers
-                                    // are 32 bits this shouldn't matter?
+                                trace!("duplex slot 1 slot 2 subinsn type {:?}", duplex_slots);
 
-                                    context_opts
-                                        .push(ContextOption::HexagonPktStart(unwrapped_pc as u32));
-                                }
-                                PktLoopParseBits::NotEndOfPacket1
-                                | PktLoopParseBits::NotEndOfPacket2 => {
-                                    trace!("hexagon prefetch is middle of packet");
-                                }
-                                PktLoopParseBits::EndOfPacket => {
-                                    self.pkt_end = unwrapped_pc;
-                                    self.last_pkt_ended = true;
-                                }
-                                // TODO
-                                PktLoopParseBits::Other => {
-                                    error!("shouldn't be here");
-                                }
+                                // First insn in duplex is a pkt start
+                                context_opts
+                                    .push(ContextOption::HexagonSubinsn(duplex_slots.0 as u32));
+                                context_opts
+                                    .push(ContextOption::HexagonPktStart(unwrapped_pc as u32));
                             }
-                        }
-                        Err(e) => {
-                            warn!(
-                                "hexagon couldn't prefetch the next insn for duplex checking: {:?}",
-                                e
-                            );
+                            // The start of a new packet
+                            // Based on: https://github.com/toshipiazza/ghidra-plugin-hexagon/blob/main/Ghidra/Processors/Hexagon/src/main/java/ghidra/app/plugin/core/analysis/HexagonPacketAnalyzer.java
+                            // They also set pkt_next, but pkt_next isn't used in the slaspec (thankfully).
+                            PktLoopParseBits::NotEndOfPacket1
+                            | PktLoopParseBits::NotEndOfPacket2
+                                if last_pkt_ended =>
+                            {
+                                trace!("hexagon start of packet");
+
+                                // NOTE: there's a truncation here, but since hexagon pointers
+                                // are 32 bits this shouldn't matter?
+
+                                context_opts
+                                    .push(ContextOption::HexagonPktStart(unwrapped_pc as u32));
+                            }
+                            PktLoopParseBits::NotEndOfPacket1
+                            | PktLoopParseBits::NotEndOfPacket2 => {
+                                trace!("hexagon prefetch is middle of packet");
+                            }
+                            PktLoopParseBits::EndOfPacket => {
+                                self.pkt_end = unwrapped_pc;
+                                self.last_pkt_ended = true;
+                            }
+                            // TODO
+                            PktLoopParseBits::Other => {
+                                error!("shouldn't be here");
+                                return Err(GeneratePcodeError::InvalidInstruction);
+                            }
                         }
                     }
                 }
-            }
-            Err(e) => {
-                warn!("hexagon couldn't obtain current program counter: {:?}", e);
             }
         }
 
