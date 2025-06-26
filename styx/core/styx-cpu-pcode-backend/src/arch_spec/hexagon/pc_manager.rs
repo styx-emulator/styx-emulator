@@ -14,7 +14,7 @@ pub struct StandardPcManager {
     internal_pc: u64,
     in_duplex: bool,
     // default is false
-    branch: bool,
+    isa_pc_set_this_cycle: bool,
 }
 
 // TODO: we need to have this advance the PC
@@ -36,7 +36,7 @@ impl ArchPcManager for StandardPcManager {
         );
     }
     fn pre_fetch(&mut self, _backend: &mut PcodeBackend) -> Result<(), PcOverflow> {
-        self.branch = false;
+        self.isa_pc_set_this_cycle = false;
         Ok(())
     }
 
@@ -54,19 +54,13 @@ impl ArchPcManager for StandardPcManager {
         // NOTE: in the case of a branch, this is called BEFORE post_execute.
         // TODO: relative branching? does that even matter?
         // NOTE: this may at times set the internal PC in RegisterManager twice (if called from set_pc), but that's fine
+        // NOTE: if we make the assumption that set_internal_pc can be called at any point in the fetch/decode/execute_cycle, then
+        // we should just set isa_pc_set_this_cycle to true.
 
-        // Step 1: check if we're at the end of the packet.
-        match backend.shared_state.get(&SharedStateKey::HexagonPktStart) {
-            // This indicates end of packet, so we just want to make sure post_execute
-            // doesn't overwrite our isa_pc
-            Some(new_pkt_start) if self.isa_pc as u128 != *new_pkt_start => {
-                self.branch = true;
-            }
-            _ => {}
-        }
-        // Step 2: write out the registers
+        // write out the registers
         self.internal_pc = value;
         self.set_isa_pc(self.internal_pc, backend);
+        self.isa_pc_set_this_cycle = true;
     }
 
     fn post_execute(
@@ -95,7 +89,7 @@ impl ArchPcManager for StandardPcManager {
         //
         // We check branch since if set_internal_pc was called before this, a branch happened,
         // and so we don't care about the next sequential packet start.
-        if !self.branch {
+        if !self.isa_pc_set_this_cycle {
             match backend.shared_state.get(&SharedStateKey::HexagonPktStart) {
                 Some(new_pkt_start) if self.isa_pc as u128 != *new_pkt_start => {
                     trace!("new packet, setting ISA PC to {}", new_pkt_start);

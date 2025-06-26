@@ -84,6 +84,12 @@ mod tests {
 
         (cpu, mmu, ev)
     }
+    fn get_isa_pc(cpu: &mut PcodeBackend) -> u32 {
+        RegisterManager::read_register(cpu, HexagonRegister::Pc.into())
+            .unwrap()
+            .to_u64()
+            .unwrap() as u32
+    }
 
     // TODO: can you mix a duplex instruction with some other stuff in a packet?
     #[test]
@@ -99,10 +105,7 @@ mod tests {
         let mult_opts = (92, 7);
 
         // truncate
-        let initial_isa_pc = RegisterManager::read_register(&mut cpu, HexagonRegister::Pc.into())
-            .unwrap()
-            .to_u64()
-            .unwrap() as u32;
+        let initial_isa_pc = get_isa_pc(&mut cpu);
         trace!("initial isa pc is {}", initial_isa_pc);
         cpu.write_register(HexagonRegister::R0, r0).unwrap();
         cpu.write_register(HexagonRegister::R3, mult_opts.0)
@@ -117,10 +120,7 @@ mod tests {
         assert_eq!(exit, TargetExitReason::InstructionCountComplete);
 
         // truncate
-        let mid_isa_pc = RegisterManager::read_register(&mut cpu, HexagonRegister::Pc.into())
-            .unwrap()
-            .to_u64()
-            .unwrap() as u32;
+        let mid_isa_pc = get_isa_pc(&mut cpu);
         assert_eq!(mid_isa_pc, initial_isa_pc);
 
         // let's now finish up. The no op is because styx internally only
@@ -133,10 +133,7 @@ mod tests {
         let r3 = cpu.read_register::<u32>(HexagonRegister::R3).unwrap();
 
         // This *should* be the ISA PC
-        let end_isa_pc = RegisterManager::read_register(&mut cpu, HexagonRegister::Pc.into())
-            .unwrap()
-            .to_u64()
-            .unwrap() as u32;
+        let end_isa_pc = get_isa_pc(&mut cpu);
 
         assert_eq!(r1, r0 + 32);
         assert_eq!(r2, mult_opts.0 * mult_opts.1);
@@ -158,13 +155,43 @@ mod tests {
         cpu.write_register(HexagonRegister::R0, 0xcafeb0ba_u32)
             .unwrap();
 
-        let exit = cpu.execute(&mut mmu, &mut ev, 2).unwrap();
+        let initial_isa_pc = get_isa_pc(&mut cpu);
+
+        let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+        assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+
+        let mid_isa_pc = get_isa_pc(&mut cpu);
+        assert_eq!(initial_isa_pc, mid_isa_pc);
+
+        let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+        assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+
+        let end_isa_pc = get_isa_pc(&mut cpu);
+        let r5 = cpu.read_register::<u32>(HexagonRegister::R5).unwrap();
+        let r6 = cpu.read_register::<u32>(HexagonRegister::R6).unwrap();
+
+        assert_eq!(r6, 0xdeadbeef);
+        assert_eq!(r5, 0xcafeb0ba);
+        assert_eq!(end_isa_pc - initial_isa_pc, 4);
+    }
+
+    #[test]
+    fn test_single_instruction() {
+        let (mut cpu, mut mmu, mut ev) = setup_asm("{ r5 = r0; }", None);
+        const WRITTEN: u32 = 0x29177717;
+        cpu.write_register(HexagonRegister::R0, WRITTEN).unwrap();
+
+        let initial_isa_pc = get_isa_pc(&mut cpu);
+        let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
 
         assert_eq!(exit, TargetExitReason::InstructionCountComplete);
 
         let r5 = cpu.read_register::<u32>(HexagonRegister::R5).unwrap();
-        let r6 = cpu.read_register::<u32>(HexagonRegister::R6).unwrap();
-        assert_eq!(r6, 0xdeadbeef);
-        assert_eq!(r5, 0xcafeb0ba);
+
+        // This *should* be the ISA PC
+        let end_isa_pc = get_isa_pc(&mut cpu);
+
+        assert_eq!(r5, WRITTEN);
+        assert_eq!(end_isa_pc - initial_isa_pc, 4);
     }
 }

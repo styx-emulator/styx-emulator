@@ -45,9 +45,15 @@ impl From<u32> for PktLoopParseBits {
 }
 
 #[derive(Debug)]
+enum SubinstructionData {
+    EndDuplex(u32),
+    StartDuplex(u32),
+}
+
+#[derive(Debug)]
 pub struct HexagonGeneratorHelper {
     // map code address -> subinsn type
-    subinsn_map: FxHashMap<u64, u32>,
+    subinsn_map: FxHashMap<u64, SubinstructionData>,
     pc_varnode: VarnodeData,
     pkt_end: u64,
     // Stores if the last instruction was the end of a packet.
@@ -104,9 +110,22 @@ impl GeneratorHelp for HexagonGeneratorHelper {
             Ok(unwrapped_pc) => {
                 self.pc_varnode.offset = unwrapped_pc;
 
-                if let Some(subinsn_type) = self.subinsn_map.get(&self.pc_varnode.offset) {
-                    context_opts.push(ContextOption::HexagonSubinsn(*subinsn_type));
-                    return Ok(context_opts);
+                match self.subinsn_map.get(&self.pc_varnode.offset) {
+                    // Update shared state to the start of the next packet, as is done in the EndPkt case later
+                    Some(SubinstructionData::EndDuplex(subinsn_type)) => {
+                        trace!("in end duplex, pushing the next packet and such");
+                        context_opts.push(ContextOption::HexagonSubinsn(*subinsn_type));
+                        backend
+                            .shared_state
+                            .insert(SharedStateKey::HexagonPktStart, (unwrapped_pc + 2) as u128);
+
+                        return Ok(context_opts);
+                    }
+                    Some(SubinstructionData::StartDuplex(subinsn_type)) => {
+                        context_opts.push(ContextOption::HexagonSubinsn(*subinsn_type));
+                        return Ok(context_opts);
+                    }
+                    None => {}
                 }
 
                 // The hashmap doesn't have anything for us anymore, we
@@ -161,13 +180,21 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                                 //
                                 // Also, maybe saving the current pc might be useful if some exception
                                 // occurs
-                                self.subinsn_map.insert(unwrapped_pc, duplex_slots.0 as u32);
+                                self.subinsn_map.insert(
+                                    unwrapped_pc,
+                                    SubinstructionData::StartDuplex(duplex_slots.0 as u32),
+                                );
                                 // TODO: overflow checks?
-                                self.subinsn_map
-                                    .insert(unwrapped_pc + 2, duplex_slots.1 as u32);
+                                self.subinsn_map.insert(
+                                    unwrapped_pc + 2,
+                                    SubinstructionData::EndDuplex(duplex_slots.1 as u32),
+                                );
 
                                 trace!("duplex slot 1 slot 2 subinsn type {:?}", duplex_slots);
 
+                                // TODO: restructure this so the map is accessed after this?
+                                // Later problem for now
+                                //
                                 // First insn in duplex is a pkt start
                                 context_opts
                                     .push(ContextOption::HexagonSubinsn(duplex_slots.0 as u32));
