@@ -49,6 +49,7 @@ use derivative::Derivative;
 use log::trace;
 use memory::{mmu_store::MmuSpace, space_manager::VarnodeError};
 use pcode_gen::{GeneratePcodeError, MmuLoaderDependencies};
+use rustc_hash::FxHashMap;
 use std::collections::{BTreeMap, HashMap};
 use styx_cpu_type::{
     arch::{
@@ -159,6 +160,12 @@ fn handle_basic_block_hooks(
 }
 
 #[derive(Derivative)]
+#[derivative(Eq, PartialEq, Hash, Debug)]
+pub enum SharedStateKey {
+    HexagonPktStart,
+}
+
+#[derive(Derivative)]
 #[derivative(Debug)]
 pub struct PcodeBackend {
     space_manager: SpaceManager,
@@ -182,6 +189,14 @@ pub struct PcodeBackend {
 
     // holds saved register state
     saved_context: BTreeMap<ArchRegister, RegisterValue>,
+
+    // stores shared state between generator helper, pc manager
+    // and anything else (hooks etc) that uses pcodebackend.
+    // we may want to make this an enum dispatch at some point,
+    // and u128 is chosen to avoid space issues with storing
+    // registers that may be different sizes on different platforms
+    // TODO: does this have to be dealt with in context switches?
+    pub shared_state: FxHashMap<SharedStateKey, u128>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -290,6 +305,7 @@ impl PcodeBackend {
             last_was_branch: false,
             pcode_config: config.clone(),
             saved_context: BTreeMap::default(),
+            shared_state: FxHashMap::default(),
         }
     }
 

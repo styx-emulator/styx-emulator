@@ -1,8 +1,7 @@
 use crate::arch_spec::generator_helper::CONTEXT_OPTION_LEN;
-use crate::pcode_gen::GhidraPcodeGenerator;
-use crate::PcodeBackend;
 use crate::{arch_spec::GeneratorHelp, pcode_gen::GeneratePcodeError};
-use log::{error, trace, warn};
+use crate::{PcodeBackend, SharedStateKey};
+use log::{error, trace};
 use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
 use styx_pcode::pcode::{SpaceName, VarnodeData};
@@ -197,10 +196,17 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                             PktLoopParseBits::EndOfPacket => {
                                 self.pkt_end = unwrapped_pc;
                                 self.last_pkt_ended = true;
+                                trace!("got to end of pkt");
+
+                                // Not a duplex, so next ins is +4 away in packet distance
+                                backend.shared_state.insert(
+                                    SharedStateKey::HexagonPktStart,
+                                    (unwrapped_pc + 4) as u128,
+                                );
                             }
                             // TODO
                             PktLoopParseBits::Other => {
-                                error!("shouldn't be here");
+                                error!("shouldn't be here, wrong pkt loop parse bits");
                                 return Err(GeneratePcodeError::InvalidInstruction);
                             }
                         }
