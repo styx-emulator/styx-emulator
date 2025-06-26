@@ -186,6 +186,9 @@ pub struct PcodeBackend {
     // we could use an enum with the previous map but it's easier to just
     // make a separate saved context
     saved_shared_state_context: FxHashMap<SharedStateKey, u128>,
+    // TODO: what about the generator helper?
+    // saved_pc_manager: Option<PcManager>,
+    // saved_generator_helper: Option<Box<GeneratorHelper>>,
 
     // we may want to make this an enum dispatch at some point,
     // and u128 is chosen to avoid space issues with storing

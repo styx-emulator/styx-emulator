@@ -1,5 +1,5 @@
---- hexagon.slaspec	2025-06-20 14:39:46.258997196 -0400
-+++ hexagon.slaspec.patched	2025-06-20 16:47:31.561387351 -0400
+--- hexagon.slaspec.bak	2025-06-29 16:23:12.488952736 -0400
++++ hexagon.slaspec.topatch	2025-06-29 16:39:28.236834959 -0400
 @@ -30,7 +30,7 @@
    G8   G9   G10  G11  G12  G13  G14  G15
    G16  G17  G18  G19  G20  G21  G22  G23
@@ -15,7 +15,7 @@
    S120 S121 S122 S123 S124 S125 S126 S127
 -  SGP0 SGP1
  ];
-
+ 
  define register offset=0x094 size=1 [
 @@ -66,7 +65,7 @@
    G9G8      G11G10    G13G12    G15G14
@@ -32,7 +32,7 @@
    S121S120  S123S122  S125S124  S127S126
 -  SGP1SGP0
  ];
-
+ 
  define register offset=0x500 size=32 contextreg;
 @@ -9443,7 +9441,7 @@
    Y2_tfrscrr_Ss128
@@ -52,3 +52,59 @@
    S9S8      _ S11S10    _ S13S12    _ S15S14    _
    S17S16    _ S19S18    _ S21S20    _ S23S22    _
    S25S24    _ S27S26    _ S29S28    _ S31S30    _
+@@ -12287,12 +12285,12 @@
+   if (tmp22) goto <t_branch_24>;
+   goto <done_24>;
+ <t_branch_24>
+-  goto [C0];
+   local tmp24:4;
+   tmp24 = 1;
+   local tmp25:4;
+   tmp25 = C1 - tmp24;
+   C1 = tmp25;
++  goto [C0];
+   goto <done_24>;
+ <done_24>
+ }
+@@ -12308,12 +12306,12 @@
+   if (tmp2) goto <t_branch_4>;
+   goto <done_4>;
+ <t_branch_4>
+-  goto [C2];
+   local tmp4:4;
+   tmp4 = 1;
+   local tmp5:4;
+   tmp5 = C3 - tmp4;
+   C3 = tmp5;
++  goto [C2];
+   goto <done_4>;
+ <done_4>
+ }
+@@ -12381,12 +12379,12 @@
+   if (tmp22) goto <t_branch_24>;
+   goto <f_branch_24>;
+ <t_branch_24>
+-  goto [C0];
+   local tmp24:4;
+   tmp24 = 1;
+   local tmp25:4;
+   tmp25 = C1 - tmp24;
+   C1 = tmp25;
++  goto [C0];
+   goto <done_24>;
+ <f_branch_24>
+   local tmp26:4;
+@@ -12398,12 +12396,12 @@
+   if (tmp28) goto <t_branch_30>;
+   goto <done_30>;
+ <t_branch_30>
+-  goto [C2];
+   local tmp30:4;
+   tmp30 = 1;
+   local tmp31:4;
+   tmp31 = C3 - tmp30;
+   C3 = tmp31;
++  goto [C2];
+   goto <done_30>;
+ <done_30>
+ <done_24>
