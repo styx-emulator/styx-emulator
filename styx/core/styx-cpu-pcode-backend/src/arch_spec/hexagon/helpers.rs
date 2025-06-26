@@ -58,7 +58,7 @@ pub struct HexagonGeneratorHelper {
     pkt_end: u64,
     // Stores if the last instruction was the end of a packet.
     last_pkt_ended: bool,
-    set_immext: bool,
+    first_insn_setup: bool,
 }
 
 impl Default for HexagonGeneratorHelper {
@@ -76,7 +76,7 @@ impl Default for HexagonGeneratorHelper {
             last_pkt_ended: true,
             // Presumably this needs to be set once, and never again.
             // TODO: make sure this is true by trying an instruction that would actually use an immext
-            set_immext: true,
+            first_insn_setup: true,
         }
     }
 }
@@ -91,11 +91,6 @@ impl GeneratorHelp for HexagonGeneratorHelper {
         // Check our lut here first
 
         let mut context_opts: SmallVec<[ContextOption; 4]> = SmallVec::new();
-
-        if self.set_immext {
-            self.set_immext = false;
-            context_opts.push(ContextOption::HexagonImmext(0xffffffff));
-        }
 
         // Save this off
         let last_pkt_ended = self.last_pkt_ended;
@@ -202,6 +197,27 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                                 context_opts
                                     .push(ContextOption::HexagonPktStart(unwrapped_pc as u32));
                             }
+                            // First instruction in the won't have anything taken care of
+                            PktLoopParseBits::NotEndOfPacket1
+                            | PktLoopParseBits::NotEndOfPacket2
+                                if self.first_insn_setup =>
+                            {
+                                trace!(
+                                    "First instruction helper has seen, setting up context opts"
+                                );
+                                self.first_insn_setup = false;
+
+                                context_opts.push(ContextOption::HexagonImmext(0xffffffff));
+                                context_opts
+                                    .push(ContextOption::HexagonPktStart(unwrapped_pc as u32));
+
+                                backend
+                                    .shared_state
+                                    .insert(SharedStateKey::HexagonPktStart, unwrapped_pc as u128);
+
+                                return Ok(context_opts);
+                            }
+
                             // The start of a new packet
                             // Based on: https://github.com/toshipiazza/ghidra-plugin-hexagon/blob/main/Ghidra/Processors/Hexagon/src/main/java/ghidra/app/plugin/core/analysis/HexagonPacketAnalyzer.java
                             // They also set pkt_next, but pkt_next isn't used in the slaspec (thankfully).
@@ -213,6 +229,22 @@ impl GeneratorHelp for HexagonGeneratorHelper {
 
                                 // NOTE: there's a truncation here, but since hexagon pointers
                                 // are 32 bits this shouldn't matter?
+
+                                // In case of branching, we need to do a quick sanity check
+                                // to make sure that value in our shared state matches, otherwise
+                                // we need to update it here.
+                                match backend.shared_state.get(&SharedStateKey::HexagonPktStart) {
+                                    Some(next_pkt_start)
+                                        if *next_pkt_start != unwrapped_pc as u128 =>
+                                    {
+                                        trace!("helper detected a branch, updating shared state for consistency");
+                                        backend.shared_state.insert(
+                                            SharedStateKey::HexagonPktStart,
+                                            unwrapped_pc as u128,
+                                        );
+                                    }
+                                    _ => {}
+                                }
 
                                 context_opts
                                     .push(ContextOption::HexagonPktStart(unwrapped_pc as u32));
@@ -231,6 +263,20 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                                     SharedStateKey::HexagonPktStart,
                                     (unwrapped_pc + 4) as u128,
                                 );
+
+                                // Special care is taken for an end of packet
+                                // that is the first packet seen
+                                if self.first_insn_setup {
+                                    trace!(
+                                        "First instruction helper but the packet has only 1 insn"
+                                    );
+
+                                    self.first_insn_setup = false;
+
+                                    context_opts.push(ContextOption::HexagonImmext(0xffffffff));
+                                    context_opts
+                                        .push(ContextOption::HexagonPktStart(unwrapped_pc as u32));
+                                }
                             }
                             // TODO
                             PktLoopParseBits::Other => {

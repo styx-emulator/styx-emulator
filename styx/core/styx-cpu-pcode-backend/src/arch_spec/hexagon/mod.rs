@@ -235,7 +235,60 @@ mod tests {
     }
 
     #[test]
-    fn test_branching() {}
+    fn test_basic_branching() {
+        const R1: u32 = 47;
+        // can't get labels to work for some reason
+        // this is a cool test because it's a register transfer jump
+        // so the first packet is actually 1 instruction, which adds
+        // some lovely edge cases
+        let (mut cpu, mut mmu, mut ev) = setup_asm(
+            r#"
+{ r0 = r1;
+  jump 0xc }
+junk:
+{ r0 = mpyi(r0, ##32) }
+lab:
+{ r0 = mpyi(r0, ##56) }
+{ r2 = add(r0, #2); }
+        "#,
+            None,
+        );
+        cpu.write_register(HexagonRegister::R1, R1).unwrap();
+
+        // Check jump
+        let initial_isa_pc = get_isa_pc(&mut cpu);
+
+        trace!("starting initial jump");
+        // register transfer jump 1 insn
+        let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+        assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+
+        let mid_isa_pc = get_isa_pc(&mut cpu);
+        assert_eq!(mid_isa_pc - initial_isa_pc, 12);
+
+        // There's an immext here
+        trace!("starting initial multiply");
+        let exit = cpu.execute(&mut mmu, &mut ev, 2).unwrap();
+        assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+
+        let end_branch_isa_pc = get_isa_pc(&mut cpu);
+        assert_eq!(end_branch_isa_pc - initial_isa_pc, 20);
+
+        // Last addition
+        trace!("starting addition");
+        let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+        assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+
+        let r0 = cpu.read_register::<u32>(HexagonRegister::R0).unwrap();
+        let r2 = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
+
+        assert_eq!(r0, R1 * 56);
+        assert_eq!(r2, r0 + 2);
+    }
+    /*#[test]
+    fn test_compare_branching() {
+        let (mut cpu, mut mmu, mut ev) = setup_asm("{ p0 = cm.eq; }", None);
+    }*/
 
     // duplex imm test,
     // hwloop test, jump test

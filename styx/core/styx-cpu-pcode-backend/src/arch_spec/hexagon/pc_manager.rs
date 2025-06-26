@@ -18,6 +18,13 @@ pub struct StandardPcManager {
     internal_pc_set_during_packet: bool,
 }
 
+impl StandardPcManager {
+    fn handle_branching_end_of_packet(&mut self, backend: &mut PcodeBackend) {
+        self.internal_pc = self.new_internal_pc;
+        self.set_isa_pc(self.internal_pc as u64, backend);
+    }
+}
+
 // TODO: we need to have this advance the PC
 // at the end of every packet
 impl ArchPcManager for StandardPcManager {
@@ -68,8 +75,25 @@ impl ArchPcManager for StandardPcManager {
             self.internal_pc = value;
             self.set_isa_pc(self.internal_pc, backend);
         } else {
+            trace!("set_internal_pc called because a branch occurred");
             self.new_internal_pc = value;
             self.internal_pc_set_during_packet = true;
+
+            // If this happens at the end of a slot, post_execute will never occur.
+            // So we have to handle it again here.
+            match backend.shared_state.get(&SharedStateKey::HexagonPktStart) {
+                Some(new_pkt_start)
+                    if self.isa_pc as u128 != *new_pkt_start
+                        && self.internal_pc_set_during_packet =>
+                {
+                    trace!(
+                        "LAST instruction in packet was a branch, the next (sequential pkt) is {}, branching to {}",
+                        new_pkt_start, self.new_internal_pc
+                    );
+                    self.handle_branching_end_of_packet(backend)
+                }
+                _ => {}
+            }
         }
     }
 
@@ -100,38 +124,34 @@ impl ArchPcManager for StandardPcManager {
         //
         // We check branch since if set_internal_pc was called before this, a branch happened,
         // and so we don't care about the next sequential packet start.
-        if !self.internal_pc_set_during_packet {
-            match backend.shared_state.get(&SharedStateKey::HexagonPktStart) {
-                // New packet, no branching or anything
-                Some(new_pkt_start)
-                    if self.isa_pc as u128 != *new_pkt_start
-                        && !self.internal_pc_set_during_packet =>
-                {
-                    trace!("new packet, setting ISA PC to {}", new_pkt_start);
-                    self.set_isa_pc(*new_pkt_start as u64, backend);
-                }
-                // This is the case where the internal PC was set earlier in the cycle
-                // (indicative of branching) but we don't want to set it until the end of the packet.
-                Some(new_pkt_start)
-                    if self.isa_pc as u128 != *new_pkt_start
-                        && self.internal_pc_set_during_packet =>
-                {
-                    trace!(
-                        "new but internal ISA set during packet cycle, setting ISA PC to {}",
-                        new_pkt_start
-                    );
-                    self.internal_pc = self.new_internal_pc;
-                    self.set_isa_pc(self.internal_pc as u64, backend);
-                }
-                Some(new_pkt_start) => {
-                    trace!(
-                        "value of ISA PC {}, shared state pkt start {}",
-                        self.isa_pc,
-                        new_pkt_start
-                    );
-                }
-                _ => {}
+        match backend.shared_state.get(&SharedStateKey::HexagonPktStart) {
+            // New packet, no branching or anything
+            Some(new_pkt_start)
+                if self.isa_pc as u128 != *new_pkt_start && !self.internal_pc_set_during_packet =>
+            {
+                trace!("new packet, setting ISA PC to {}", new_pkt_start);
+                self.set_isa_pc(*new_pkt_start as u64, backend);
             }
+            // This is the case where the internal PC was set earlier in the cycle
+            // (indicative of branching) but we don't want to set it until the end of the packet.
+            Some(new_pkt_start)
+                if self.isa_pc as u128 != *new_pkt_start && self.internal_pc_set_during_packet =>
+            {
+                trace!(
+                    "new but internal ISA set during packet cycle, setting ISA PC to {}",
+                    new_pkt_start
+                );
+
+                self.handle_branching_end_of_packet(backend)
+            }
+            Some(new_pkt_start) => {
+                trace!(
+                    "value of ISA PC {}, shared state pkt start {}",
+                    self.isa_pc,
+                    new_pkt_start
+                );
+            }
+            _ => {}
         }
 
         Ok(())
