@@ -16,7 +16,6 @@ pub struct StandardPcManager {
     in_duplex: bool,
     // default is false
     internal_pc_set_during_packet: bool,
-    initial_internal_pc_set: bool,
 }
 
 // TODO: we need to have this advance the PC
@@ -46,7 +45,7 @@ impl ArchPcManager for StandardPcManager {
         self.internal_pc
     }
 
-    fn set_internal_pc(&mut self, value: u64, backend: &mut PcodeBackend) {
+    fn set_internal_pc(&mut self, value: u64, backend: &mut PcodeBackend, from_branch: bool) {
         // Since set_internal_pc is only ever called from
         // instructions that have absolute branching, or set_pc (which is called from write_register_raw)
         // we can always set the ISA pc here.
@@ -56,13 +55,16 @@ impl ArchPcManager for StandardPcManager {
         // NOTE: in the case of a branch, this is called BEFORE post_execute.
         // TODO: relative branching? does that even matter?
         // NOTE: this may at times set the internal PC in RegisterManager twice (if called from set_pc), but that's fine
-        // NOTE: if we make the assumption that set_internal_pc can be called at any point in the fetch/decode/execute_cycle, then
-        // we should just set isa_pc_set_this_cycle to true.
+        // NOTE: our assumption is that from_branch must be set appropriately for this to work
+        // properly.
 
-        // write out the registers
-        if !self.initial_internal_pc_set {
-            self.initial_internal_pc_set = true;
-
+        // In the case that the PC wasn't set at a branch,
+        // we want this to set the ISAPC immediately.
+        //
+        // In the case where the PC was set at a branch,
+        // we want the internal PC to only be set at the end
+        // of the packet, thanks to Hexagon pkt semantics.
+        if !from_branch {
             self.internal_pc = value;
             self.set_isa_pc(self.internal_pc, backend);
         } else {

@@ -106,7 +106,7 @@ pub(crate) trait ArchPcManager: Debug {
     fn set_isa_pc(&mut self, value: u64, backend: &mut PcodeBackend);
     /// Sets the internal program counter to `value`. NOTE: the ISA counter must be kept in sync
     /// with this counter!
-    fn set_internal_pc(&mut self, value: u64, backend: &mut PcodeBackend) {
+    fn set_internal_pc(&mut self, value: u64, backend: &mut PcodeBackend, _from_branch: bool) {
         self.set_isa_pc(value, backend)
     }
 

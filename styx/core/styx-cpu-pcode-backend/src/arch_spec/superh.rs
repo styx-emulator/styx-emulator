@@ -59,7 +59,7 @@ impl ArchPcManager for StandardPcManager {
         self.internal_pc
     }
 
-    fn set_internal_pc(&mut self, value: u64, _backend: &mut PcodeBackend) {
+    fn set_internal_pc(&mut self, value: u64, _backend: &mut PcodeBackend, _from_branch: bool) {
         // i128 here is used so we don't overflow on cast
         let difference = (value as i128 - self.internal_pc as i128) & (!1);
 

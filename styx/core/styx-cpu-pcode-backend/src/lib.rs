@@ -385,7 +385,7 @@ impl PcodeBackend {
                     trace!("Pcode state change absolute jump new PC=0x{new_pc:X}");
                     self.last_was_branch = true;
                     let mut pc_manager = self.pc_manager.take().unwrap();
-                    pc_manager.set_internal_pc(new_pc, self);
+                    pc_manager.set_internal_pc(new_pc, self, true);
                     self.pc_manager = Some(pc_manager);
                     return Ok(Ok(bytes_consumed)); // Don't increment PC, jump to next instruction
                 }
@@ -554,7 +554,10 @@ impl CpuBackend for PcodeBackend {
 
     fn set_pc(&mut self, value: u64) -> Result<(), UnknownError> {
         let mut pc_manager = self.pc_manager.take().unwrap();
-        pc_manager.set_internal_pc(value, self);
+        // NOTE: if set_pc starts being called from a branching location,
+        // then we need to be more nuanced here.
+        // TODO: decide whether we should pass from_branch here as well
+        pc_manager.set_internal_pc(value, self, false);
         let isa_pc = SizedValue::from_u128(pc_manager.isa_pc() as u128, 4);
         self.pc_manager = Some(pc_manager);
         let pc_reg_variant = self.pc_register().variant();
