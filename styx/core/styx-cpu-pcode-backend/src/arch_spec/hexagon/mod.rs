@@ -176,6 +176,30 @@ mod tests {
     }
 
     #[test]
+    fn test_immediate_instruction() {
+        const WRITTEN: u32 = 0x29177717;
+        const R0VAL: u32 = 21;
+        let (mut cpu, mut mmu, mut ev) =
+            setup_asm(&format!("{{ r1 = add(r0, #{}); }}", WRITTEN), None);
+        cpu.write_register(HexagonRegister::R0, R0VAL).unwrap();
+
+        // TODO: how should the ISA PC respond to immext?
+
+        // We'll have two instructions for immext
+        let exit = cpu.execute(&mut mmu, &mut ev, 2).unwrap();
+
+        assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+
+        let r1 = cpu.read_register::<u32>(HexagonRegister::R1).unwrap();
+
+        assert_eq!(r1, WRITTEN + R0VAL);
+    }
+
+    // immediate test, duplex imm test,
+    // hwloop test, jump test
+    // .new test, interrupt test??
+
+    #[test]
     fn test_single_instruction() {
         let (mut cpu, mut mmu, mut ev) = setup_asm("{ r5 = r0; }", None);
         const WRITTEN: u32 = 0x29177717;
