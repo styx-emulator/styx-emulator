@@ -160,7 +160,7 @@ fn handle_basic_block_hooks(
 }
 
 #[derive(Derivative)]
-#[derivative(Eq, PartialEq, Hash, Debug)]
+#[derivative(Eq, PartialEq, Hash, Debug, Clone, Copy)]
 pub enum SharedStateKey {
     HexagonPktStart,
 }
@@ -188,10 +188,11 @@ pub struct PcodeBackend {
     pcode_config: PcodeBackendConfiguration,
 
     // holds saved register state
-    saved_context: BTreeMap<ArchRegister, RegisterValue>,
+    saved_reg_context: BTreeMap<ArchRegister, RegisterValue>,
+    // we could use an enum with the previous map but it's easier to just
+    // make a separate saved context
+    saved_shared_state_context: FxHashMap<SharedStateKey, u128>,
 
-    // stores shared state between generator helper, pc manager
-    // and anything else (hooks etc) that uses pcodebackend.
     // we may want to make this an enum dispatch at some point,
     // and u128 is chosen to avoid space issues with storing
     // registers that may be different sizes on different platforms
@@ -304,7 +305,8 @@ impl PcodeBackend {
             pc_manager: Some(spec.pc_manager),
             last_was_branch: false,
             pcode_config: config.clone(),
-            saved_context: BTreeMap::default(),
+            saved_reg_context: BTreeMap::default(),
+            saved_shared_state_context: FxHashMap::default(),
             shared_state: FxHashMap::default(),
         }
     }
@@ -570,30 +572,41 @@ impl CpuBackend for PcodeBackend {
     }
 
     fn context_save(&mut self) -> Result<(), UnknownError> {
-        self.saved_context.clear();
+        self.saved_reg_context.clear();
+        self.saved_shared_state_context.clear();
 
         for register in self.architecture().registers().registers() {
             // we need to do this because not every processor supports all of the valid registers defined by the architecture
             if let Ok(val) = self.read_register_raw(register.variant()) {
-                self.saved_context.insert(register.variant(), val);
+                self.saved_reg_context.insert(register.variant(), val);
             }
+        }
+
+        for (state_key, val) in self.shared_state.iter() {
+            self.saved_shared_state_context.insert(*state_key, *val);
         }
 
         Ok(())
     }
 
     fn context_restore(&mut self) -> Result<(), UnknownError> {
-        if self.saved_context.is_empty() {
+        if self.saved_reg_context.is_empty() {
             return Err(anyhow!("attempting to restore from nothing"));
         }
 
-        let context = std::mem::take(&mut self.saved_context);
+        let reg_context = std::mem::take(&mut self.saved_reg_context);
 
-        for register in context.keys() {
-            self.write_register_raw(*register, *context.get(register).unwrap())?;
+        for register in reg_context.keys() {
+            self.write_register_raw(*register, *reg_context.get(register).unwrap())?;
         }
 
-        let _ = std::mem::replace(&mut self.saved_context, context);
+        // Copy saved shared state into the current shared state
+        for (state_key, val) in self.saved_shared_state_context.iter() {
+            self.shared_state.insert(*state_key, *val);
+        }
+        self.saved_shared_state_context.clear();
+
+        let _ = std::mem::replace(&mut self.saved_reg_context, reg_context);
 
         Ok(())
     }
