@@ -111,18 +111,26 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                 self.pc_varnode.offset = unwrapped_pc;
 
                 match self.subinsn_map.get(&self.pc_varnode.offset) {
-                    // Update shared state to the start of the next packet, as is done in the EndPkt case later
-                    Some(SubinstructionData::EndDuplex(subinsn_type)) => {
-                        trace!("in end duplex, pushing the next packet and such");
-                        context_opts.push(ContextOption::HexagonSubinsn(*subinsn_type));
-                        backend
-                            .shared_state
-                            .insert(SharedStateKey::HexagonPktStart, (unwrapped_pc + 2) as u128);
+                    Some(subinsn_data) => {
+                        let subinsn_type = match subinsn_data {
+                            // Update shared state to the start of the next packet, as is done in the EndPkt case later
+                            SubinstructionData::EndDuplex(ty) => {
+                                trace!("in end duplex, pushing the next packet and such");
+                                backend.shared_state.insert(
+                                    SharedStateKey::HexagonPktStart,
+                                    (unwrapped_pc + 2) as u128,
+                                );
+                                ty
+                            }
+                            SubinstructionData::StartDuplex(ty) => ty,
+                        };
 
-                        return Ok(context_opts);
-                    }
-                    Some(SubinstructionData::StartDuplex(subinsn_type)) => {
                         context_opts.push(ContextOption::HexagonSubinsn(*subinsn_type));
+
+                        // Consume as we go to prevent a memory leak
+                        // by having the map grow infinitely
+                        self.subinsn_map.remove(&self.pc_varnode.offset);
+
                         return Ok(context_opts);
                     }
                     None => {}
@@ -180,10 +188,6 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                                 //
                                 // Also, maybe saving the current pc might be useful if some exception
                                 // occurs
-                                self.subinsn_map.insert(
-                                    unwrapped_pc,
-                                    SubinstructionData::StartDuplex(duplex_slots.0 as u32),
-                                );
                                 // TODO: overflow checks?
                                 self.subinsn_map.insert(
                                     unwrapped_pc + 2,
@@ -192,9 +196,6 @@ impl GeneratorHelp for HexagonGeneratorHelper {
 
                                 trace!("duplex slot 1 slot 2 subinsn type {:?}", duplex_slots);
 
-                                // TODO: restructure this so the map is accessed after this?
-                                // Later problem for now
-                                //
                                 // First insn in duplex is a pkt start
                                 context_opts
                                     .push(ContextOption::HexagonSubinsn(duplex_slots.0 as u32));
