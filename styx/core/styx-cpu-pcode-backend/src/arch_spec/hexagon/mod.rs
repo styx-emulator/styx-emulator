@@ -234,6 +234,8 @@ mod tests {
         assert_eq!(r4, r2);
     }
 
+    // TODO: jumpr branch (indirect), conditional branch,
+    // and a branch that isn't at the end of the packet!
     #[test]
     fn test_basic_branching() {
         const R1: u32 = 47;
@@ -285,10 +287,39 @@ lab:
         assert_eq!(r0, R1 * 56);
         assert_eq!(r2, r0 + 2);
     }
-    /*#[test]
-    fn test_compare_branching() {
-        let (mut cpu, mut mmu, mut ev) = setup_asm("{ p0 = cm.eq; }", None);
-    }*/
+
+    #[test]
+    fn test_cond_branching() {
+        // need to have a separate test for .new, so
+        // that p0 could be in the same packet.
+        let (mut cpu, mut mmu, mut ev) = setup_asm(
+            r#"
+{ r4 = r0; p0 = cmp.eq(r1, r0); }
+{ r2 = add(r4, #2); r5 = r4; if (p0) jump 0x10; r3 = add(r0, #1) }
+{ r0 = #322 }
+{ r0 = #929 }
+"#,
+            None,
+        );
+        cpu.write_register(HexagonRegister::R0, 32u64).unwrap();
+        cpu.write_register(HexagonRegister::R1, 32u64).unwrap();
+
+        let exit = cpu.execute(&mut mmu, &mut ev, 7).unwrap();
+        assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+
+        let r5 = cpu.read_register::<u32>(HexagonRegister::R5).unwrap();
+        let r4 = cpu.read_register::<u32>(HexagonRegister::R4).unwrap();
+        let r3 = cpu.read_register::<u32>(HexagonRegister::R3).unwrap();
+        let r0 = cpu.read_register::<u32>(HexagonRegister::R0).unwrap();
+        let r2 = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
+
+        // branch taken
+        assert_eq!(r0, 929);
+        assert_eq!(r4, 32);
+        assert_eq!(r5, r4);
+        assert_eq!(r3, 33);
+        assert_eq!(r2, 34);
+    }
 
     // duplex imm test,
     // hwloop test, jump test
