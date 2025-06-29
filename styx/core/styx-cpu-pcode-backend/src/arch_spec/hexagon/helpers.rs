@@ -89,7 +89,7 @@ impl Default for HexagonGeneratorHelper {
             first_insn_setup: true,
             pkt_insns: 0,
             duplex_ended: false,
-            duplex_next_set: false
+            duplex_next_set: false,
         }
     }
 }
@@ -177,13 +177,15 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                         let insn_next = ((insn_data_wide >> 32) & 0xffffffff) as u32;
                         let insn_next1 = ((insn_data_wide >> 64) & 0xffffffff) as u32;
                         let insn_next2 = ((insn_data_wide >> 96) & 0xffffffff) as u32;
+
                         let parse_next = PktLoopParseBits::new_from_insn(insn_next);
                         let parse_next1 = PktLoopParseBits::new_from_insn(insn_next1);
-                        let parse_next2 = PktLoopParseBits::new_from_insn(insn_next2);
+                        let _parse_next2 = PktLoopParseBits::new_from_insn(insn_next2);
 
                         // This is only needed for immext
                         if parse_next == PktLoopParseBits::Duplex && insn_next != 0 {
-                            context_opts.push(ContextOption::HexagonDuplexNext(unwrapped_pc as u32 + 6));
+                            context_opts
+                                .push(ContextOption::HexagonDuplexNext(unwrapped_pc as u32 + 6));
                             self.duplex_next_set = true;
                         } else if self.duplex_next_set {
                             self.duplex_next_set = false;
@@ -240,10 +242,10 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                                     // If standalone, this should be EndDuplexEndPacket
 
                                     // D I Ie or D Ie
-                                    if (parse_next == PktLoopParseBits::EndOfPacket
+                                    if parse_next == PktLoopParseBits::EndOfPacket
                                         || ((parse_next == PktLoopParseBits::NotEndOfPacket1
                                             || parse_next == PktLoopParseBits::NotEndOfPacket2)
-                                            && parse_next2 == PktLoopParseBits::EndOfPacket))
+                                            && parse_next1 == PktLoopParseBits::EndOfPacket)
                                     {
                                         self.subinsn_map.insert(
                                             unwrapped_pc + 2,
@@ -279,7 +281,7 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                                 (parse_next == PktLoopParseBits::EndOfPacket ||
                                         // D I I (end)
                                          ( (parse_next == PktLoopParseBits::NotEndOfPacket1 || parse_next == PktLoopParseBits::NotEndOfPacket2)
-                                              && parse_next2 == PktLoopParseBits::EndOfPacket))
+                                              && parse_next1 == PktLoopParseBits::EndOfPacket))
                                 {
                                     trace!(
                                         "this duplex instruction pair does not terminate a packet"
