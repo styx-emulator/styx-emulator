@@ -1,11 +1,14 @@
 use crate::arch_spec::generator_helper::CONTEXT_OPTION_LEN;
+use crate::pcode_gen::GhidraPcodeGenerator;
 use crate::{arch_spec::GeneratorHelp, pcode_gen::GeneratePcodeError};
 use crate::{PcodeBackend, SharedStateKey};
 use log::{error, trace};
 use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
+use styx_cpu_type::arch::hexagon::HexagonRegister;
 use styx_pcode::pcode::{SpaceName, VarnodeData};
 use styx_pcode_translator::ContextOption;
+use styx_processor::cpu::CpuBackendExt;
 use styx_processor::{cpu::CpuBackend, memory::Mmu};
 
 // How many insns to fetch to analyze for duplexes?
@@ -369,6 +372,21 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                                 self.last_pkt_ended = true;
                                 trace!("got to end of pkt");
 
+                                // check for hardware loop
+                                // check if lc0/lc1 is greater than 0
+                                let lc0 = backend
+                                    .read_register::<u32>(HexagonRegister::Lc0)
+                                    .map_err(|_| GeneratePcodeError::InvalidAddress)?;
+                                let lc1 = backend
+                                    .read_register::<u32>(HexagonRegister::Lc1)
+                                    .map_err(|_| GeneratePcodeError::InvalidAddress)?;
+                                trace!("hwloop help: lc0 {} lc1 {}", lc0, lc1);
+
+                                if lc0 > 0 {
+                                    context_opts.push(ContextOption::HexagonEndloop(1));
+                                } else if lc1 > 0 {
+                                    context_opts.push(ContextOption::HexagonEndloop(2));
+                                }
                                 // Not a duplex, so next ins is +4 away in packet distance
                                 backend.shared_state.insert(
                                     SharedStateKey::HexagonPktStart,

@@ -116,6 +116,17 @@ impl GhidraPcodeGenerator {
     pub(crate) fn default_space(&self) -> SpaceName {
         SpaceName::Ram
     }
+
+    /*pub(crate) fn save_generator_helper(&self) -> Option<Box<GeneratorHelper>> {
+        match self.helper {
+            Some(i) => i.clone(),
+            None => None,
+        }
+    }*/
+
+    pub(crate) fn restore_generator_helper(&mut self, saved_helper: Option<Box<GeneratorHelper>>) {
+        self.helper = saved_helper;
+    }
 }
 
 pub(crate) trait RegisterTranslator {

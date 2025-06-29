@@ -12,10 +12,7 @@ use styx_processor::{
 use crate::{register_manager::RegisterManager, PcodeBackend};
 use styx_processor::cpu::{CpuBackend, CpuBackendExt};
 
-fn setup_asm(
-    asm_str: &str,
-    expected_asm: Option<Vec<u8>>,
-) -> (PcodeBackend, Mmu, EventController) {
+fn setup_asm(asm_str: &str, expected_asm: Option<Vec<u8>>) -> (PcodeBackend, Mmu, EventController) {
     styx_util::logging::init_logging();
     // objdump from example ppc program
     // notably load/store operations are omitted because sleigh uses dynamic pointers
@@ -28,7 +25,7 @@ fn setup_asm(
         keystone_engine::Arch::HEXAGON,
         keystone_engine::Mode::BIG_ENDIAN,
     )
-        .expect("Could not initialize Keystone engine");
+    .expect("Could not initialize Keystone engine");
     let asm = ks
         .asm(asm_str.to_owned(), init_pc)
         .expect("Could not assemble");
@@ -42,7 +39,10 @@ fn setup_asm(
 
     // takes the objdump and extracts the binary from it
     //  duplex instruction:
+    setup_cpu(init_pc, code)
+}
 
+fn setup_cpu(init_pc: u64, code: Vec<u8>) -> (PcodeBackend, Mmu, EventController) {
     let mut cpu = PcodeBackend::new_engine(
         Arch::Hexagon,
         HexagonVariants::QDSP6V66,
@@ -57,11 +57,41 @@ fn setup_asm(
 
     (cpu, mmu, ev)
 }
+
 fn get_isa_pc(cpu: &mut PcodeBackend) -> u32 {
     RegisterManager::read_register(cpu, HexagonRegister::Pc.into())
         .unwrap()
         .to_u64()
         .unwrap() as u32
+}
+
+/*#[test]
+fn test_hwloop1() {
+}
+
+#[test]
+fn test_nested_hwloop() {
+}*/
+
+#[test]
+fn test_hwloop() {
+    styx_util::logging::init_logging();
+    // copied from the manual
+    let (mut cpu, mut mmu, mut ev) = setup_cpu(
+        0x1000,
+        vec![
+            0x0b, 0xc0, 0x00, 0x69, 0x00, 0x80, 0x0, 0xed, 0x0, 0xc0, 0x0, 0x7f,
+        ],
+    );
+
+    cpu.write_register(HexagonRegister::R0, 7u32).unwrap();
+
+    let exit = cpu.execute(&mut mmu, &mut ev, 7).unwrap();
+    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+
+    let r2 = cpu.read_register::<u32>(HexagonRegister::R0).unwrap();
+
+    assert_eq!(r2, 5764801);
 }
 
 #[test]
@@ -77,14 +107,13 @@ fn test_duplex_immext() {
     let exit = cpu.execute(&mut mmu, &mut ev, 4).unwrap();
     assert_eq!(exit, TargetExitReason::InstructionCountComplete);
 
-    let r2  = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
-    let r3  = cpu.read_register::<u32>(HexagonRegister::R3).unwrap();
-    let r4  = cpu.read_register::<u32>(HexagonRegister::R4).unwrap();
+    let r2 = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
+    let r3 = cpu.read_register::<u32>(HexagonRegister::R3).unwrap();
+    let r4 = cpu.read_register::<u32>(HexagonRegister::R4).unwrap();
 
     assert_eq!(r2, 1905856528u32);
     assert_eq!(r3, 100);
     assert_eq!(r4, 100 * 470);
-
 }
 
 // TODO: can you mix a duplex instruction with some other stuff in a packet?
@@ -175,8 +204,7 @@ fn test_duplex_instructions() {
 fn test_immediate_instruction() {
     const WRITTEN: u32 = 0x29177717;
     const R0VAL: u32 = 21;
-    let (mut cpu, mut mmu, mut ev) =
-        setup_asm(&format!("{{ r1 = add(r0, #{}); }}", WRITTEN), None);
+    let (mut cpu, mut mmu, mut ev) = setup_asm(&format!("{{ r1 = add(r0, #{}); }}", WRITTEN), None);
     cpu.write_register(HexagonRegister::R0, R0VAL).unwrap();
 
     // TODO: how should the ISA PC respond to immext?
