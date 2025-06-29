@@ -29,13 +29,15 @@ use crate::{
     pcode_emit::{FromFfiVarnode, PCodeEmitRef},
     sleigh_obj::{DeriveParent, SleighObj},
 };
-use cxx::{CxxVector, UniquePtr};
+use cxx::{let_cxx_string, CxxVector, UniquePtr};
 use std::{collections::HashMap, path::Path};
+use std::pin::Pin;
 use styx_cpu_type::ArchEndian;
 use styx_pcode::pcode::{Pcode, SpaceInfo, SpaceName, VarnodeData};
 use styx_sleigh_bindings::{ffi, RustPCodeEmit};
 use thiserror::Error;
 use vector_map::VecMap;
+use log::trace;
 
 pub struct Sleigh<L> {
     pub obj: SleighObj<ffi::Sleigh>,
@@ -185,8 +187,17 @@ impl<L> Sleigh<L> {
         }
     }
 
-    pub fn set_variable_default(&mut self, variable: &str, value: u32) {
-        self._context.set_variable_default(variable, value);
+    pub fn set_variable(&mut self, variable: &str, addr_off: u64, value: u32) {
+        let space_manager: &ffi::AddrSpaceManager = self.obj.upcast_ref();
+        // TODO: what if code doesn't reside in RAM?
+        let_cxx_string!(space_name = "ram");
+        cxx::let_cxx_string!(variable_cxx = variable);
+        let space = space_manager.getSpaceByName(&space_name);
+        let sleigh : Pin<&mut ffi::Sleigh>= self.obj.as_mut();
+        // safety: this should get dropped?
+        let addr  = unsafe { ffi::new_address(space, addr_off) };
+        trace!("setting context variable at {}", addr_off);
+        sleigh.setContextVariableCached(&variable_cxx, &addr, value);
     }
 
     /// Get a map between a register's varnode offset and name.

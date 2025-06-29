@@ -68,6 +68,7 @@ pub struct HexagonGeneratorHelper {
     duplex_ended: bool,
     first_insn_setup: bool,
     pkt_insns: usize,
+    duplex_next_set: bool,
 }
 
 impl Default for HexagonGeneratorHelper {
@@ -88,6 +89,7 @@ impl Default for HexagonGeneratorHelper {
             first_insn_setup: true,
             pkt_insns: 0,
             duplex_ended: false,
+            duplex_next_set: false
         }
     }
 }
@@ -178,6 +180,15 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                         let parse_next = PktLoopParseBits::new_from_insn(insn_next);
                         let parse_next1 = PktLoopParseBits::new_from_insn(insn_next1);
                         let parse_next2 = PktLoopParseBits::new_from_insn(insn_next2);
+
+                        // This is only needed for immext
+                        if parse_next == PktLoopParseBits::Duplex && insn_next != 0 {
+                            context_opts.push(ContextOption::HexagonDuplexNext(unwrapped_pc as u32 + 6));
+                            self.duplex_next_set = true;
+                        } else if self.duplex_next_set {
+                            self.duplex_next_set = false;
+                            context_opts.push(ContextOption::HexagonDuplexNext(0));
+                        }
 
                         trace!("insn data is 0x{:x}", insn_data);
 

@@ -125,13 +125,6 @@ protected:
   /// If the variable doesn't exist an exception is thrown.
   /// \param nm is the name of the context value
   /// \return the ContextBitRange object matching the name
-  virtual ContextBitRange &getVariable(const string &nm)=0;
-
-  /// \brief Retrieve the context variable description object by name
-  ///
-  /// If the variable doesn't exist an exception is thrown.
-  /// \param nm is the name of the context value
-  /// \return the ContextBitRange object matching the name
   virtual const ContextBitRange &getVariable(const string &nm) const=0;
 
   /// \brief Grab the context blob(s) for the given address range, marking bits that will be set
@@ -244,6 +237,13 @@ public:
   /// or processor specification file for the architecture, initializing this database.
   /// \param decoder is the given stream decoder
   virtual void decodeFromSpec(Decoder &decoder)=0;
+
+  /// \brief Retrieve the context variable description object by name
+  ///
+  /// If the variable doesn't exist an exception is thrown.
+  /// \param nm is the name of the context value
+  /// \return the ContextBitRange object matching the name
+  virtual ContextBitRange &getVariable(const string &nm)=0;
 
   void setVariableDefault(const string &nm,uintm val);	///< Provide a default value for a context variable
   uintm getDefaultValue(const string &nm) const;	///< Retrieve the default value for a context variable
