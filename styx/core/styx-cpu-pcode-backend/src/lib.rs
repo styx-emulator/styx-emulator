@@ -10,6 +10,7 @@ mod register_manager;
 mod types;
 
 use crate::get_pcode::{fetch_pcode, is_branching_instruction};
+use smallvec::{smallvec, SmallVec};
 
 use self::{
     hooks::HookManager,
@@ -20,7 +21,7 @@ use self::{
     pcode_gen::GhidraPcodeGenerator,
     register_manager::RegisterManager,
 };
-use arch_spec::{build_arch_spec, ArchPcManager, PcManager};
+use arch_spec::{build_arch_spec, ArchPcManager, GeneratorHelper, PcManager};
 use call_other::CallOtherManager;
 use derivative::Derivative;
 use log::trace;
@@ -54,6 +55,7 @@ use types::*;
 ///
 /// increased from 20000 because ARM64 has too many registers
 const REGISTER_SPACE_SIZE: usize = 80000;
+pub(crate) const DEFAULT_REG_ALLOCATION: usize = 3;
 
 #[derive(Debug, PartialEq)]
 pub(crate) enum PCodeStateChange {
@@ -157,6 +159,10 @@ fn handle_basic_block_hooks(
 #[derivative(Eq, PartialEq, Hash, Debug, Clone, Copy)]
 pub enum SharedStateKey {
     HexagonPktStart,
+    // For dotnew/hasnew - immext and such instructions shall be ignored
+    HexagonTrueInsnCount,
+    // Stores destination register in an instruction
+    HexagonInsnRegDest(usize),
 }
 
 #[derive(Derivative)]
@@ -170,6 +176,7 @@ pub struct PcodeBackend {
     /// This should be accessed through [Self::stop_request_check_and_reset()] to ensure it is
     /// cleared after handling.
     stop_requested: bool,
+
     #[derivative(Debug = "ignore")]
     arch_def: Box<dyn ArchitectureDef>,
     endian: ArchEndian,
@@ -187,9 +194,8 @@ pub struct PcodeBackend {
     // make a separate saved context
     saved_shared_state_context: FxHashMap<SharedStateKey, u128>,
     // TODO: what about the generator helper?
-    // saved_pc_manager: Option<PcManager>,
-    // saved_generator_helper: Option<Box<GeneratorHelper>>,
-
+    saved_pc_manager: Option<PcManager>,
+    saved_generator_helper: Option<Box<GeneratorHelper>>,
     // we may want to make this an enum dispatch at some point,
     // and u128 is chosen to avoid space issues with storing
     // registers that may be different sizes on different platforms
@@ -304,6 +310,8 @@ impl PcodeBackend {
             pcode_config: config.clone(),
             saved_reg_context: BTreeMap::default(),
             saved_shared_state_context: FxHashMap::default(),
+            saved_pc_manager: None,
+            saved_generator_helper: None,
             shared_state: FxHashMap::default(),
         }
     }
@@ -368,13 +376,15 @@ impl PcodeBackend {
         let total_pcodes = pcodes.len();
 
         let mut delayed_irqn: Option<i32> = None;
+        let mut regs_written: SmallVec<[u64; DEFAULT_REG_ALLOCATION]> = smallvec![];
+
         while i < total_pcodes {
             let current_pcode = &pcodes[i];
             trace!(
                 "Executing Pcode ({}/{total_pcodes}) {current_pcode:?}",
                 i + 1
             );
-            match execute_pcode::execute_pcode(current_pcode, self, mmu, ev) {
+            match execute_pcode::execute_pcode(current_pcode, self, mmu, ev, &mut regs_written) {
                 PCodeStateChange::Fallthrough => i += 1,
                 PCodeStateChange::DelayedInterrupt(irqn) => {
                     // interrupt will *probably* branch execution
@@ -407,7 +417,8 @@ impl PcodeBackend {
             }
         }
         let mut pc_manager = self.pc_manager.take().unwrap();
-        let pc_post_execute_res = pc_manager.post_execute(bytes_consumed, self);
+        let pc_post_execute_res =
+            pc_manager.post_execute(bytes_consumed, self, &mut regs_written, total_pcodes);
         self.pc_manager = Some(pc_manager);
         if pc_post_execute_res.is_err() {
             return Err(anyhow!("pc overflowed in pcode backend during post execute. you can modify the pc manager to wrap or prevent overflow if this is desired behavior"));
@@ -602,6 +613,9 @@ impl CpuBackend for PcodeBackend {
             self.saved_shared_state_context.insert(*state_key, *val);
         }
 
+        self.saved_pc_manager = self.pc_manager.clone();
+        self.saved_generator_helper = self.pcode_generator.helper.clone();
+
         Ok(())
     }
 
@@ -623,6 +637,9 @@ impl CpuBackend for PcodeBackend {
         self.saved_shared_state_context.clear();
 
         let _ = std::mem::replace(&mut self.saved_reg_context, reg_context);
+
+        self.pc_manager = self.saved_pc_manager.clone();
+        self.pcode_generator.helper = self.saved_generator_helper.clone();
 
         Ok(())
     }

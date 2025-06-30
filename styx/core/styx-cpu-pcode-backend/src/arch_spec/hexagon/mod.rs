@@ -4,13 +4,18 @@ use super::PcManager;
 
 mod helpers;
 mod pc_manager;
+// Anything related to packet semantics
+mod dotnew;
+mod pkt_semantics;
 
 #[cfg(test)]
 pub mod tests;
 
 pub use helpers::HexagonGeneratorHelper;
 pub use pc_manager::StandardPcManager;
-use styx_pcode_translator::sla;
+
+use pkt_semantics::NewReg;
+use styx_pcode_translator::sla::{self, HexagonUserOps};
 
 // Adapted from PPC
 pub fn build() -> ArchSpecBuilder<sla::Hexagon> {
@@ -21,8 +26,10 @@ pub fn build() -> ArchSpecBuilder<sla::Hexagon> {
     spec.set_pc_manager(PcManager::Hexagon(StandardPcManager::default()));
 
     // TODO: callother manager for system instructions, reg manager
-    // etc
+
+    spec.call_other_manager
+        .add_handler_other_sla(HexagonUserOps::Newreg, NewReg {})
+        .unwrap();
 
     spec
 }
-

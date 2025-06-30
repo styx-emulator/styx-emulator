@@ -13,7 +13,7 @@ use super::{
     pc_manager::{apply_difference, PcOverflow},
     ArchPcManager, GeneratorHelp,
 };
-use crate::{pcode_gen::GeneratePcodeError, PcodeBackend};
+use crate::{pcode_gen::GeneratePcodeError, PcodeBackend, DEFAULT_REG_ALLOCATION};
 use smallvec::{smallvec, SmallVec};
 use styx_pcode_translator::ContextOption;
 use styx_processor::memory::Mmu;
@@ -21,7 +21,7 @@ use styx_processor::memory::Mmu;
 /// Program Counter manager for SuperH processors.
 ///
 /// Copied from Blackfin
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct StandardPcManager {
     isa_pc: u64,
     internal_pc: u64,
@@ -56,6 +56,8 @@ impl ArchPcManager for StandardPcManager {
         &mut self,
         bytes_consumed: u64,
         _backend: &mut PcodeBackend,
+        _regs_written: &mut SmallVec<[u64; DEFAULT_REG_ALLOCATION]>,
+        _total_pcodes: usize,
     ) -> Result<(), PcOverflow> {
         self.internal_pc = self
             .internal_pc
@@ -67,7 +69,7 @@ impl ArchPcManager for StandardPcManager {
 }
 
 /// [GeneratorHelp] for SuperH processors. Does nothing at the moment.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct StandardGeneratorHelper;
 impl GeneratorHelp for StandardGeneratorHelper {
     fn pre_fetch(
