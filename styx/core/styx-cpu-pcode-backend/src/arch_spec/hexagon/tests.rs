@@ -65,7 +65,6 @@ fn get_isa_pc(cpu: &mut PcodeBackend) -> u32 {
         .unwrap() as u32
 }
 
-// similar to the other inner loop one
 #[test]
 fn test_hwloop_predicate() {
     styx_util::logging::init_logging();
@@ -79,6 +78,7 @@ fn test_hwloop_predicate() {
        4:	60 c2 80 75	7580c260 { 	p0 = cmp.gtu(r0,#0x13) }
        8:	40 81 80 74	74808140 { 	if (!p0) r0 = add(r0,#0xa)
        c:	00 c0 00 7f	7f00c000   	nop }  :endloop0
+       10:	41 f2 00 78	7800f241 { 	r1 = #0x192 }
         "#,
         )
         .unwrap(),
@@ -86,12 +86,14 @@ fn test_hwloop_predicate() {
 
     cpu.write_register(HexagonRegister::R0, 0u32).unwrap();
 
-    let exit = cpu.execute(&mut mmu, &mut ev, 10).unwrap();
+    let exit = cpu.execute(&mut mmu, &mut ev, 11).unwrap();
     assert_eq!(exit, TargetExitReason::InstructionCountComplete);
 
     let r0 = cpu.read_register::<u32>(HexagonRegister::R0).unwrap();
+    let r1 = cpu.read_register::<u32>(HexagonRegister::R1).unwrap();
 
     assert_eq!(r0, 20);
+    assert_eq!(r1, 402);
 }
 
 // similar to the other inner loop one
