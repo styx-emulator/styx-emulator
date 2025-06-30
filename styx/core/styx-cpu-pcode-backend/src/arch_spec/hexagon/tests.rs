@@ -65,6 +65,78 @@ fn get_isa_pc(cpu: &mut PcodeBackend) -> u32 {
         .unwrap() as u32
 }
 
+// also need one that does something like R2 = mpyi(R0, add(R1, #1))
+// need to test load/stores here
+
+/*fn test_store_dotnew() {
+    styx_util::logging::init_logging();
+    let (mut cpu, mut mmu, mut ev) = setup_cpu(
+        0x1000,
+        styx_util::parse_objdump(
+            r#"
+       0:	40 40 00 75	75004040 { 	p0 = cmp.eq(r0,#0x2)
+       4:	21 60 00 7e	7e006021   	if (p0.new) r1 = #0x1
+       8:	41 e0 80 7e	7e80e041   	if (!p0.new) r1 = #0x2 }
+"#,
+        )
+        .unwrap(),
+    );
+    cpu.write_register(HexagonRegister::R0, 2u32).unwrap();
+    cpu.write_register(HexagonRegister::R1, 1u32).unwrap();
+
+    // We'll have two instructions for each immext, and then the second instruction
+    // doesn't have an immediate _extension_ so we're good on that end, total
+    // 5 instructions
+    // TODO: does immext need to be set to 0xffffffff every cycle?
+    // it doesn't seem like it..
+    let exit = cpu.execute(&mut mmu, &mut ev, 3).unwrap();
+
+    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+
+    let r0 = cpu.read_register::<u32>(HexagonRegister::R0).unwrap();
+    let r1 = cpu.read_register::<u32>(HexagonRegister::R1).unwrap();
+
+    // I don't think there's any overflow here, but if the
+    // test cases are changed we should be careful
+    assert_eq!(r0, 2);
+    assert_eq!(r1, 1);
+}*/
+
+#[test]
+fn test_predicate_dotnew() {
+    styx_util::logging::init_logging();
+    let (mut cpu, mut mmu, mut ev) = setup_cpu(
+        0x1000,
+        styx_util::parse_objdump(
+            r#"
+       0:	40 40 00 75	75004040 { 	p0 = cmp.eq(r0,#0x2)
+       4:	21 60 00 7e	7e006021   	if (p0.new) r1 = #0x1
+       8:	41 e0 80 7e	7e80e041   	if (!p0.new) r1 = #0x2 }
+"#,
+        )
+        .unwrap(),
+    );
+    cpu.write_register(HexagonRegister::R0, 2u32).unwrap();
+    cpu.write_register(HexagonRegister::R1, 1u32).unwrap();
+
+    // We'll have two instructions for each immext, and then the second instruction
+    // doesn't have an immediate _extension_ so we're good on that end, total
+    // 5 instructions
+    // TODO: does immext need to be set to 0xffffffff every cycle?
+    // it doesn't seem like it..
+    let exit = cpu.execute(&mut mmu, &mut ev, 3).unwrap();
+
+    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+
+    let r0 = cpu.read_register::<u32>(HexagonRegister::R0).unwrap();
+    let r1 = cpu.read_register::<u32>(HexagonRegister::R1).unwrap();
+
+    // I don't think there's any overflow here, but if the
+    // test cases are changed we should be careful
+    assert_eq!(r0, 2);
+    assert_eq!(r1, 1);
+}
+
 #[test]
 fn test_hwloop_predicate() {
     styx_util::logging::init_logging();

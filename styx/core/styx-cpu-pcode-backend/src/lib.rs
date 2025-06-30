@@ -193,9 +193,8 @@ pub struct PcodeBackend {
     // make a separate saved context
     saved_shared_state_context: FxHashMap<SharedStateKey, u128>,
     // TODO: what about the generator helper?
-    // saved_pc_manager: Option<PcManager>,
-    // saved_generator_helper: Option<Box<GeneratorHelper>>,
-
+    /*saved_pc_manager: Option<PcManager>,
+    saved_generator_helper: Option<Box<GeneratorHelper>>,*/
     // we may want to make this an enum dispatch at some point,
     // and u128 is chosen to avoid space issues with storing
     // registers that may be different sizes on different platforms
@@ -588,6 +587,9 @@ impl CpuBackend for PcodeBackend {
         for (state_key, val) in self.shared_state.iter() {
             self.saved_shared_state_context.insert(*state_key, *val);
         }
+
+        // self.saved_pc_manager = self.pc_manager.clone();
+        // get generator helper from ghidrapcodegenerator and do same thing
 
         Ok(())
     }
