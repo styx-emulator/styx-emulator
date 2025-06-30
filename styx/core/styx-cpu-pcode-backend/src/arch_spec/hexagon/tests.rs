@@ -67,6 +67,35 @@ fn get_isa_pc(cpu: &mut PcodeBackend) -> u32 {
 
 // similar to the other inner loop one
 #[test]
+fn test_hwloop_predicate() {
+    styx_util::logging::init_logging();
+    // a loop1 should have at min 3 insns in its packet
+    // runs 3 times
+    let (mut cpu, mut mmu, mut ev) = setup_cpu(
+        0x1000,
+        styx_util::parse_objdump(
+            r#"
+       0:	0b c0 00 69	6900c00b { 	loop0(0x4,#0x3) }
+       4:	60 c2 80 75	7580c260 { 	p0 = cmp.gtu(r0,#0x13) }
+       8:	40 81 80 74	74808140 { 	if (!p0) r0 = add(r0,#0xa)
+       c:	00 c0 00 7f	7f00c000   	nop }  :endloop0
+        "#,
+        )
+        .unwrap(),
+    );
+
+    cpu.write_register(HexagonRegister::R0, 0u32).unwrap();
+
+    let exit = cpu.execute(&mut mmu, &mut ev, 10).unwrap();
+    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+
+    let r0 = cpu.read_register::<u32>(HexagonRegister::R0).unwrap();
+
+    assert_eq!(r0, 20);
+}
+
+// similar to the other inner loop one
+#[test]
 fn test_hwloop_inner() {
     styx_util::logging::init_logging();
 
