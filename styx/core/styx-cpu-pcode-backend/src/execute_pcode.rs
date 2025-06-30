@@ -14,9 +14,10 @@ use crate::{
         space_manager::{HasSpaceManager, MmuSpaceOps, VarnodeError},
     },
     pcode_gen::HasPcodeGenerator,
-    HasConfig, PcodeBackend, FALSE,
+    HasConfig, PcodeBackend, DEFAULT_REG_ALLOCATION, FALSE,
 };
 use log::trace;
+use smallvec::SmallVec;
 use styx_errors::anyhow::anyhow;
 use styx_pcode::pcode::{Opcode, Pcode, SpaceId, SpaceName, VarnodeData};
 use styx_processor::{
@@ -73,8 +74,17 @@ pub fn execute_pcode(
     cpu: &mut PcodeBackend,
     mmu: &mut Mmu,
     ev: &mut EventController,
+    regs_written: &mut SmallVec<[u64; DEFAULT_REG_ALLOCATION]>,
 ) -> PCodeStateChange {
     let s = execute_pcode_inner(pcode, cpu, mmu, ev);
+
+    // Allows it to get dropped after this
+    {
+        let outvar = &pcode.output;
+        if let Some(outvar_unwrap) = outvar {
+            regs_written.push(outvar_unwrap.offset)
+        }
+    }
 
     match s {
         PCodeStateChangeInner::CallOther(call_other_op, varnode_datas, varnode_data) => {
@@ -930,6 +940,7 @@ fn unary_typed_inner<
         .unwrap()
         .into();
     let output_value = f(v0_value, output.size);
+
     SpaceManager::write_hooked_register(cpu, mmu, ev, output, output_value.into()).unwrap();
     trace!(
         "Unary op {:?}: {v0_value:?} -> {output_value:?}",
@@ -976,6 +987,7 @@ fn binary_typed_inner<
         .unwrap()
         .into();
     let output_value = f(v0_value, v1_value, output.size);
+
     SpaceManager::write_hooked_register(cpu, mmu, ev, output, output_value.into()).unwrap();
     trace!(
         "Binary op {:?}: {v0_value:?}, {v1_value:?} -> {output_value:?}",

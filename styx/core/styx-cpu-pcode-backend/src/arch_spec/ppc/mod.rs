@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
-use crate::PcodeBackend;
+use smallvec::SmallVec;
+
+use crate::{PcodeBackend, DEFAULT_REG_ALLOCATION};
 
 use super::{
     pc_manager::{apply_difference, PcOverflow},
@@ -23,7 +25,7 @@ fn ppc_common<Sla>(spec: &mut super::ArchSpecBuilder<Sla>) {
 ///
 /// I think *technically* this is incorrect however ppc code cannot read from
 /// the pc so not needed.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct StandardPpcPcManager {
     isa_pc: u64,
     internal_pc: u64,
@@ -58,6 +60,8 @@ impl ArchPcManager for StandardPpcPcManager {
         &mut self,
         bytes_consumed: u64,
         _backend: &mut PcodeBackend,
+        _regs_written: &mut SmallVec<[u64; DEFAULT_REG_ALLOCATION]>,
+        _total_pcodes: usize,
     ) -> Result<(), PcOverflow> {
         self.internal_pc = self
             .internal_pc

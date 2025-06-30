@@ -14,7 +14,7 @@ use super::{
 };
 use crate::{
     arch_spec::ArchSpec, call_other::handlers::TraceCallOther, pcode_gen::GeneratePcodeError,
-    PcodeBackend,
+    PcodeBackend, DEFAULT_REG_ALLOCATION,
 };
 use call_other::*;
 use helpers::StackPointerManager;
@@ -191,7 +191,7 @@ fn armv7a_common<S>(spec: &mut ArchSpecBuilder<S>) {
 }
 
 /// Program Counter manager for the thumb-only ARM processors.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ThumbPcManager {
     isa_pc: u64,
     internal_pc: u64,
@@ -229,6 +229,8 @@ impl ArchPcManager for ThumbPcManager {
         &mut self,
         bytes_consumed: u64,
         _backend: &mut PcodeBackend,
+        _regs_written: &mut SmallVec<[u64; DEFAULT_REG_ALLOCATION]>,
+        _total_pcodes: usize,
     ) -> Result<(), PcOverflow> {
         self.internal_pc = self
             .internal_pc
@@ -251,7 +253,7 @@ impl Default for ThumbPcManager {
 /// Program Counter manager for Armv7-A processors.
 ///
 /// Controls thumb mode base on bit 5 of the CPSR.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct StandardPcManager {
     isa_pc: u64,
     internal_pc: u64,
@@ -311,6 +313,8 @@ impl ArchPcManager for StandardPcManager {
         &mut self,
         bytes_consumed: u64,
         backend: &mut PcodeBackend,
+        _regs_written: &mut SmallVec<[u64; DEFAULT_REG_ALLOCATION]>,
+        _total_pcodes: usize,
     ) -> Result<(), PcOverflow> {
         self.internal_pc = self
             .internal_pc
@@ -366,7 +370,7 @@ impl ArmCpuMode {
 /// Thumb mode switching for Armv7-A processors,
 ///
 /// Thumb mode bit is bit 5 of the CPSR register.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct StandardGeneratorHelper {
     /// Stores the previous cpu mode, [None] at start of running when no mode is stored.
     previous_mode: Option<ArmCpuMode>,
@@ -403,7 +407,7 @@ impl GeneratorHelp for StandardGeneratorHelper {
 /// Thumb mode enabling for the Armv7-M processors.
 ///
 /// Sets the thumb mode context variable on first execution.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct ThumbOnlyGeneratorHelper {
     /// `false` on creation, changed to true after setting the thumb mode context on first call.
     thumb_already_set: bool,

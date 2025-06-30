@@ -37,7 +37,7 @@ pub struct GhidraPcodeGenerator {
     translator: Option<PcodeTranslator<MmuLoader>>,
 
     /// Arch specific helper for changing context variables.
-    helper: Option<Box<GeneratorHelper>>,
+    pub(crate) helper: Option<Box<GeneratorHelper>>,
 
     /// Cached register storage to support read/write register while the `translator` is in use.
     registers: HashMap<ArchRegister, VarnodeData>,
@@ -123,17 +123,6 @@ impl GhidraPcodeGenerator {
 
     pub(crate) fn default_space(&self) -> SpaceName {
         SpaceName::Ram
-    }
-
-    /*pub(crate) fn save_generator_helper(&self) -> Option<Box<GeneratorHelper>> {
-        match self.helper {
-            Some(i) => i.clone(),
-            None => None,
-        }
-    }*/
-
-    pub(crate) fn restore_generator_helper(&mut self, saved_helper: Option<Box<GeneratorHelper>>) {
-        self.helper = saved_helper;
     }
 }
 

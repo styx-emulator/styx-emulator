@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::PcodeBackend;
+use crate::{PcodeBackend, DEFAULT_REG_ALLOCATION};
 use enum_dispatch::enum_dispatch;
+use smallvec::SmallVec;
 use std::fmt::Debug;
 
 #[cfg(feature = "arch_aarch64")]
@@ -109,6 +110,8 @@ pub(crate) trait ArchPcManager: Debug {
         &mut self,
         _bytes_consumed: u64,
         _backend: &mut PcodeBackend,
+        _regs_written: &mut SmallVec<[u64; 3]>,
+        _total_pcodes: usize,
     ) -> Result<(), PcOverflow> {
         Ok(())
     }
