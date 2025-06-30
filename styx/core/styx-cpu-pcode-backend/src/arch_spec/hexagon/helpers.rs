@@ -72,6 +72,8 @@ pub struct HexagonGeneratorHelper {
     first_insn_setup: bool,
     pkt_insns: usize,
     duplex_next_set: bool,
+    pkt_endloop: u32,
+    pkt_endloop_cleared: bool,
 }
 
 impl Default for HexagonGeneratorHelper {
@@ -93,6 +95,8 @@ impl Default for HexagonGeneratorHelper {
             pkt_insns: 0,
             duplex_ended: false,
             duplex_next_set: false,
+            pkt_endloop: 0,
+            pkt_endloop_cleared: true,
         }
     }
 }
@@ -338,6 +342,48 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                             {
                                 trace!("hexagon start of packet");
 
+                                // Hardware loop handling needs to be done here.
+                                // There shouldn't be duplexes at the beginning of a hwloop?
+                                let lc0 = backend
+                                    .read_register::<u32>(HexagonRegister::Lc0)
+                                    .map_err(|_| GeneratePcodeError::InvalidAddress)?;
+                                let lc1 = backend
+                                    .read_register::<u32>(HexagonRegister::Lc1)
+                                    .map_err(|_| GeneratePcodeError::InvalidAddress)?;
+
+                                // check for hardware loop
+                                // check if lc0/lc1 is greater than 0
+                                trace!("hwloop help: lc0 {} lc1 {}", lc0, lc1);
+
+                                // check if this packet is the last packet in a hardware loop
+                                if lc0 > 0 || lc1 > 0 {
+                                    // last in loop 1
+                                    if pkt_type == PktLoopParseBits::NotEndOfPacket1 {
+                                        trace!("hwloop help: last in loop 1");
+                                        self.pkt_endloop = 2;
+                                    }
+                                    // last in loop 0
+                                    else if pkt_type == PktLoopParseBits::NotEndOfPacket2
+                                        && (parse_next == PktLoopParseBits::NotEndOfPacket1
+                                            || parse_next == PktLoopParseBits::EndOfPacket)
+                                    {
+                                        trace!("hwloop help: last in loop 0");
+                                        self.pkt_endloop = 1;
+                                    }
+                                    // last in loop 0 and 1
+                                    else if pkt_type == PktLoopParseBits::NotEndOfPacket2
+                                        && parse_next == PktLoopParseBits::NotEndOfPacket2
+                                    {
+                                        trace!("hwloop help: last in loop 0 and loop 1");
+                                        self.pkt_endloop = 3;
+                                    }
+                                    // not last pkt in loop
+                                    else {
+                                        trace!("hwloop help: not the last packet in a hwloop");
+                                        self.pkt_endloop = 0;
+                                    }
+                                }
+
                                 // NOTE: there's a truncation here, but since hexagon pointers
                                 // are 32 bits this shouldn't matter?
 
@@ -368,31 +414,7 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                                 trace!("hexagon prefetch is middle of packet");
                             }
                             PktLoopParseBits::EndOfPacket => {
-                                self.pkt_end = unwrapped_pc;
-                                self.last_pkt_ended = true;
-                                trace!("got to end of pkt");
-
-                                // check for hardware loop
-                                // check if lc0/lc1 is greater than 0
-                                let lc0 = backend
-                                    .read_register::<u32>(HexagonRegister::Lc0)
-                                    .map_err(|_| GeneratePcodeError::InvalidAddress)?;
-                                let lc1 = backend
-                                    .read_register::<u32>(HexagonRegister::Lc1)
-                                    .map_err(|_| GeneratePcodeError::InvalidAddress)?;
-                                trace!("hwloop help: lc0 {} lc1 {}", lc0, lc1);
-
-                                if lc0 > 0 {
-                                    context_opts.push(ContextOption::HexagonEndloop(1));
-                                } else if lc1 > 0 {
-                                    context_opts.push(ContextOption::HexagonEndloop(2));
-                                }
-                                // Not a duplex, so next ins is +4 away in packet distance
-                                backend.shared_state.insert(
-                                    SharedStateKey::HexagonPktStart,
-                                    (unwrapped_pc + 4) as u128,
-                                );
-
+                                // This is both the start and end of a packet
                                 // Special care is taken for an end of packet
                                 // that is the first packet seen
                                 if self.first_insn_setup {
@@ -403,9 +425,35 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                                     self.first_insn_setup = false;
 
                                     context_opts.push(ContextOption::HexagonImmext(0xffffffff));
+                                }
+
+                                if last_pkt_ended {
+                                    trace!("start and end of pkt");
                                     context_opts
                                         .push(ContextOption::HexagonPktStart(unwrapped_pc as u32));
+                                } else {
+                                    trace!("got to end of pkt");
                                 }
+
+                                self.pkt_end = unwrapped_pc;
+                                self.last_pkt_ended = true;
+
+                                if self.pkt_endloop != 0 {
+                                    context_opts
+                                        .push(ContextOption::HexagonEndloop(self.pkt_endloop));
+
+                                    self.pkt_endloop = 0;
+                                    self.pkt_endloop_cleared = false;
+                                } else if !self.pkt_endloop_cleared {
+                                    context_opts.push(ContextOption::HexagonEndloop(0));
+
+                                    self.pkt_endloop_cleared = true;
+                                }
+                                // Not a duplex, so next ins is +4 away in packet distance
+                                backend.shared_state.insert(
+                                    SharedStateKey::HexagonPktStart,
+                                    (unwrapped_pc + 4) as u128,
+                                );
                             }
                             // TODO
                             PktLoopParseBits::Other => {

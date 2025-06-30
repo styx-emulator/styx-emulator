@@ -65,18 +65,87 @@ fn get_isa_pc(cpu: &mut PcodeBackend) -> u32 {
         .unwrap() as u32
 }
 
-/*#[test]
+#[test]
 fn test_hwloop1() {
+    styx_util::logging::init_logging();
+    // multiply by 2 to r0, add 1 to r1.
+
+    // a loop1 should have at min 3 insns in its packet
+    // runs 3 times
+    let (mut cpu, mut mmu, mut ev) = setup_cpu(
+        0x1000,
+        styx_util::parse_objdump(
+            r#"
+       0:	0b c0 20 69	6920c00b { 	loop1(0x4,#0x3) }
+       4:	40 40 00 e0	e0004040 { 	r0 = +mpyi(r0,#0x2)
+       8:	21 80 01 b0	b0018021   	r1 = add(r1,#0x1)
+       c:	00 c0 00 7f	7f00c000   	nop }  :endloop1
+        "#,
+        )
+        .unwrap(),
+    );
+
+    cpu.write_register(HexagonRegister::R0, 3u32).unwrap();
+    cpu.write_register(HexagonRegister::R1, 29u32).unwrap();
+
+    let exit = cpu.execute(&mut mmu, &mut ev, 10).unwrap();
+    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+
+    let r0 = cpu.read_register::<u32>(HexagonRegister::R0).unwrap();
+    let r1 = cpu.read_register::<u32>(HexagonRegister::R1).unwrap();
+
+    assert_eq!(r0, 24);
+    assert_eq!(r1, 32);
 }
 
 #[test]
-fn test_nested_hwloop() {
-}*/
+fn test_hwloop01() {
+    styx_util::logging::init_logging();
+
+    let (mut cpu, mut mmu, mut ev) = setup_cpu(
+        0x1000,
+        styx_util::parse_objdump(
+            r#"
+       0:	0b c0 20 69	6920c00b { 	loop1(0x4,#0x3) }
+       4:	20 c0 00 b0	b000c020 { 	r0 = add(r0,#0x1) }
+       8:	0b c0 00 69	6900c00b { 	loop0(0xc,#0x3) }
+       c:	42 80 02 e0	e0028042 { 	r2 = +mpyi(r2,#0x2)
+      10:	01 80 01 f3	f3018001   	r1 = add(r1,r0)
+      14:	00 c0 00 7f	7f00c000   	nop }  :endloop01
+      18:	03 f2 00 78	7800f203 { 	r3 = #0x190 }
+    "#,
+        )
+        .unwrap(),
+    );
+
+    cpu.write_register(HexagonRegister::R0, 0u32).unwrap();
+    cpu.write_register(HexagonRegister::R1, 0u32).unwrap();
+    cpu.write_register(HexagonRegister::R2, 1u32).unwrap();
+
+    let exit = cpu.execute(&mut mmu, &mut ev, 35).unwrap();
+    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+
+    let r0 = cpu.read_register::<u32>(HexagonRegister::R0).unwrap();
+    let r1 = cpu.read_register::<u32>(HexagonRegister::R1).unwrap();
+    let r2 = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
+    let r3 = cpu.read_register::<u32>(HexagonRegister::R3).unwrap();
+
+    assert_eq!(r0, 3);
+    assert_eq!(r1, (1 * 3) + (2 * 3) + (3 * 3));
+    assert_eq!(r2, 512); // 2 ** 9
+    assert_eq!(r3, 400); // 2 ** 9
+}
 
 #[test]
-fn test_hwloop() {
+fn test_hwloop0() {
     styx_util::logging::init_logging();
-    // copied from the manual
+    /* copied from the manual
+     * The code is:
+     * loop0(start,#3);
+     * // Loop 3 times
+     *start:
+     * { R0 = mpyi(R0,R0) } :endloop0
+     */
     let (mut cpu, mut mmu, mut ev) = setup_cpu(
         0x1000,
         vec![
@@ -89,9 +158,9 @@ fn test_hwloop() {
     let exit = cpu.execute(&mut mmu, &mut ev, 7).unwrap();
     assert_eq!(exit, TargetExitReason::InstructionCountComplete);
 
-    let r2 = cpu.read_register::<u32>(HexagonRegister::R0).unwrap();
+    let r0 = cpu.read_register::<u32>(HexagonRegister::R0).unwrap();
 
-    assert_eq!(r2, 5764801);
+    assert_eq!(r0, 5764801);
 }
 
 #[test]
