@@ -65,16 +65,17 @@ fn get_isa_pc(cpu: &mut PcodeBackend) -> u32 {
         .unwrap() as u32
 }
 
-// also need one that does something like R2 = mpyi(R0, add(R1, #1))
-// need to test load/stores here
-
-#[test]
-fn test_store_dotnew() {
+// need a conditional too
+fn test_dotnew_basic(
+    insn: &str,
+    verify_insn: Option<Vec<u8>>,
+    insn_count_1: u64,
+    insn_count_2: u64,
+    write_value: u32,
+    read_value: u32,
+) -> (PcodeBackend, Mmu, EventController) {
     // I copied this from the manual
-    let (mut cpu, mut mmu, mut ev) = setup_asm(
-        "{ r2 = memh(r4+#0x8); memw(r5+#0x0) = r2.new }",
-        Some(vec![0x82, 0x40, 0x44, 0x91, 0x00, 0xd2, 0xa5, 0xa1]),
-    );
+    let (mut cpu, mut mmu, mut ev) = setup_asm(insn, verify_insn);
     const SRC_MEMLOC: u64 = 20;
     const DST_MEMLOC: u64 = 40;
     cpu.write_register(HexagonRegister::R2, 0xf001u32).unwrap();
@@ -84,21 +85,82 @@ fn test_store_dotnew() {
         .unwrap();
 
     // byte layout 0x20 0x10
-    mmu.write_u16_le_virt_data(SRC_MEMLOC + 8, 0x1020).unwrap();
+    mmu.write_u32_le_virt_data(SRC_MEMLOC + 8, write_value)
+        .unwrap();
 
     // Load
-    let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+    let exit = cpu.execute(&mut mmu, &mut ev, insn_count_1).unwrap();
     assert_eq!(exit, TargetExitReason::InstructionCountComplete);
 
     let r2 = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
-    assert_eq!(r2, 0x1020);
+    assert_eq!(r2, write_value);
 
     // Store
-    let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+    let exit = cpu.execute(&mut mmu, &mut ev, insn_count_2).unwrap();
     assert_eq!(exit, TargetExitReason::InstructionCountComplete);
 
     let data = mmu.read_u32_le_virt_data(DST_MEMLOC).unwrap();
-    assert_eq!(data, 0x1020);
+    assert_eq!(data, read_value);
+
+    (cpu, mmu, ev)
+}
+
+// also need one that does something like R2 = mpyi(R0, add(R1, #1))
+// need to test load/stores here
+
+#[test]
+fn test_store_dotnew_byte() {
+    // I copied this from the manual
+    test_dotnew_basic(
+        "{ r2 = memh(r4+#0x8); memb(r5+#0x0) = r2.new }",
+        None,
+        1,
+        1,
+        0x1020,
+        0x20,
+    );
+}
+
+#[test]
+fn test_store_dotnew_halfword() {
+    // I copied this from the manual
+    test_dotnew_basic(
+        "{ r2 = memh(r4+#0x8); memh(r5+#0x0) = r2.new }",
+        None,
+        1,
+        1,
+        0x1020,
+        0x1020,
+    );
+}
+
+#[test]
+fn test_store_dotnew_halfword_add() {
+    // There should be an immext here somewhere, which is the point
+    let (mut cpu, mmu, ev) = test_dotnew_basic(
+        "{ r2 = memh(r4+#0x8); r10 = add(r10, #269492265); memh(r5) = r2.new }",
+        None,
+        3,
+        1,
+        0x1020,
+        0x1020,
+    );
+
+    let r10 = cpu.read_register::<u32>(HexagonRegister::R10).unwrap();
+    assert_eq!(r10, 269492265);
+}
+
+#[test]
+fn test_store_dotnew_word() {
+    // I copied this from the manual
+    test_dotnew_basic(
+        "{ r2 = memw(r4+#0x8); memw(r5+#0x0) = r2.new }",
+        None,
+        1,
+        1,
+        0x10202020,
+        0x10202020,
+    );
 }
 
 #[test]

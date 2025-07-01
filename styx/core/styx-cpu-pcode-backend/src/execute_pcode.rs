@@ -101,6 +101,14 @@ pub fn execute_pcode(
 ) -> PCodeStateChange {
     let s = execute_pcode_inner(pcode, cpu, mmu, ev, regs_written);
 
+    // Allows it to get dropped after this
+    {
+        let outvar = &pcode.output;
+        if let Some(outvar_unwrap) = outvar {
+            regs_written.push(outvar_unwrap.offset)
+        }
+    }
+
     match s {
         PCodeStateChangeInner::CallOther(call_other_op, varnode_datas, varnode_data) => {
             let result_output =
@@ -1094,10 +1102,6 @@ fn unary_typed_inner<
         .into();
     let output_value = f(v0_value, output.size);
 
-    if output.space == SpaceName::Register {
-        regs_written.push(output.offset)
-    }
-
     SpaceManager::write_hooked_register(cpu, mmu, ev, output, output_value.into()).unwrap();
     trace!(
         "Unary op {:?}: {v0_value:?} -> {output_value:?}",
@@ -1146,9 +1150,6 @@ fn binary_typed_inner<
         .unwrap()
         .into();
     let output_value = f(v0_value, v1_value, output.size);
-    if output.space == SpaceName::Register {
-        regs_written.push(output.offset)
-    }
 
     SpaceManager::write_hooked_register(cpu, mmu, ev, output, output_value.into()).unwrap();
     trace!(
