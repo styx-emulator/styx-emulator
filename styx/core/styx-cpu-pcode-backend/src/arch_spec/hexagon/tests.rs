@@ -8,6 +8,7 @@ use styx_processor::{
     event_controller::EventController,
     memory::{helpers::WriteExt, Mmu},
 };
+use test_case::test_case;
 
 use crate::{register_manager::RegisterManager, PcodeBackend};
 use styx_processor::cpu::{CpuBackend, CpuBackendExt};
@@ -65,7 +66,49 @@ fn get_isa_pc(cpu: &mut PcodeBackend) -> u32 {
         .unwrap() as u32
 }
 
-// need a conditional too
+// need a separate conditional too
+#[test_case(
+    "{ r2 = memh(r4+#0x8); memb(r5+#0x0) = r2.new }",
+    None,
+    1,
+    1,
+    0x1020,
+    0x20; "store halfword, load byte; +0x0"
+)]
+#[test_case(
+    "{ r2 = memh(r4+#0x8); memh(r5+#0x0) = r2.new }",
+    None,
+    1,
+    1,
+    0x1020,
+    0x1020; "store halfword, load halfword; +0x0"
+)]
+#[test_case(
+    "{ r2 = memw(r4+#0x8); memw(r5+#0x0) = r2.new }",
+    None,
+    1,
+    1,
+    0x10202020,
+    0x10202020; "store word, load word; +0x0"
+)]
+fn test_dotnew_basic_cases(
+    insn: &str,
+    verify_insn: Option<Vec<u8>>,
+    insn_count_1: u64,
+    insn_count_2: u64,
+    write_value: u32,
+    read_value: u32,
+) {
+    test_dotnew_basic(
+        insn,
+        verify_insn,
+        insn_count_1,
+        insn_count_2,
+        write_value,
+        read_value,
+    );
+}
+
 fn test_dotnew_basic(
     insn: &str,
     verify_insn: Option<Vec<u8>>,
@@ -109,32 +152,6 @@ fn test_dotnew_basic(
 // need to test load/stores here
 
 #[test]
-fn test_store_dotnew_byte() {
-    // I copied this from the manual
-    test_dotnew_basic(
-        "{ r2 = memh(r4+#0x8); memb(r5+#0x0) = r2.new }",
-        None,
-        1,
-        1,
-        0x1020,
-        0x20,
-    );
-}
-
-#[test]
-fn test_store_dotnew_halfword() {
-    // I copied this from the manual
-    test_dotnew_basic(
-        "{ r2 = memh(r4+#0x8); memh(r5+#0x0) = r2.new }",
-        None,
-        1,
-        1,
-        0x1020,
-        0x1020,
-    );
-}
-
-#[test]
 fn test_store_dotnew_halfword_add() {
     // There should be an immext here somewhere, which is the point
     let (mut cpu, mmu, ev) = test_dotnew_basic(
@@ -148,19 +165,6 @@ fn test_store_dotnew_halfword_add() {
 
     let r10 = cpu.read_register::<u32>(HexagonRegister::R10).unwrap();
     assert_eq!(r10, 269492265);
-}
-
-#[test]
-fn test_store_dotnew_word() {
-    // I copied this from the manual
-    test_dotnew_basic(
-        "{ r2 = memw(r4+#0x8); memw(r5+#0x0) = r2.new }",
-        None,
-        1,
-        1,
-        0x10202020,
-        0x10202020,
-    );
 }
 
 #[test]
