@@ -28,10 +28,11 @@ mod call_other;
 mod register;
 
 use register::AnalogRegister;
+use smallvec::SmallVec;
 use styx_cpu_type::arch::blackfin::BlackfinRegister;
 use styx_pcode_translator::sla::{self, BlackfinUserOps};
 
-use crate::PcodeBackend;
+use crate::{PcodeBackend, DEFAULT_REG_ALLOCATION};
 
 use super::{
     pc_manager::{apply_difference, PcOverflow},
@@ -74,6 +75,8 @@ impl ArchPcManager for StandardPcManager {
         &mut self,
         bytes_consumed: u64,
         _backend: &mut PcodeBackend,
+        _regs_written: &mut SmallVec<[u64; DEFAULT_REG_ALLOCATION]>,
+        _total_pcodes: usize,
     ) -> Result<(), PcOverflow> {
         self.internal_pc = self
             .internal_pc

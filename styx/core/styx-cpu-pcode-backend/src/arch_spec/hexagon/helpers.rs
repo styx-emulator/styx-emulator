@@ -199,6 +199,8 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                             context_opts.push(ContextOption::HexagonDuplexNext(0));
                         }
 
+                        // TODO: put our dotnew handlers here
+
                         trace!("insn data is 0x{:x}", insn_data);
 
                         let pkt_type = PktLoopParseBits::new_from_insn(insn_data);

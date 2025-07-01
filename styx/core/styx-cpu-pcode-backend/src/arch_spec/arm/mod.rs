@@ -37,7 +37,7 @@ use super::{
 };
 use crate::{
     arch_spec::ArchSpec, call_other::handlers::TraceCallOther, pcode_gen::GeneratePcodeError,
-    PcodeBackend,
+    PcodeBackend, DEFAULT_REG_ALLOCATION,
 };
 use call_other::*;
 use helpers::StackPointerManager;
@@ -252,6 +252,8 @@ impl ArchPcManager for ThumbPcManager {
         &mut self,
         bytes_consumed: u64,
         _backend: &mut PcodeBackend,
+        _regs_written: &mut SmallVec<[u64; DEFAULT_REG_ALLOCATION]>,
+        _total_pcodes: usize,
     ) -> Result<(), PcOverflow> {
         self.internal_pc = self
             .internal_pc
@@ -334,6 +336,8 @@ impl ArchPcManager for StandardPcManager {
         &mut self,
         bytes_consumed: u64,
         backend: &mut PcodeBackend,
+        _regs_written: &mut SmallVec<[u64; DEFAULT_REG_ALLOCATION]>,
+        _total_pcodes: usize,
     ) -> Result<(), PcOverflow> {
         self.internal_pc = self
             .internal_pc

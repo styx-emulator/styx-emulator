@@ -68,39 +68,38 @@ fn get_isa_pc(cpu: &mut PcodeBackend) -> u32 {
 // also need one that does something like R2 = mpyi(R0, add(R1, #1))
 // need to test load/stores here
 
-/*fn test_store_dotnew() {
-    styx_util::logging::init_logging();
-    let (mut cpu, mut mmu, mut ev) = setup_cpu(
-        0x1000,
-        styx_util::parse_objdump(
-            r#"
-       0:	40 40 00 75	75004040 { 	p0 = cmp.eq(r0,#0x2)
-       4:	21 60 00 7e	7e006021   	if (p0.new) r1 = #0x1
-       8:	41 e0 80 7e	7e80e041   	if (!p0.new) r1 = #0x2 }
-"#,
-        )
-        .unwrap(),
+#[test]
+fn test_store_dotnew() {
+    // I copied this from the manual
+    let (mut cpu, mut mmu, mut ev) = setup_asm(
+        "{ r2 = memh(r4+#0x8); memw(r5+#0x0) = r2.new }",
+        Some(vec![0x82, 0x40, 0x44, 0x91, 0x00, 0xd2, 0xa5, 0xa1]),
     );
-    cpu.write_register(HexagonRegister::R0, 2u32).unwrap();
-    cpu.write_register(HexagonRegister::R1, 1u32).unwrap();
+    const SRC_MEMLOC: u64 = 20;
+    const DST_MEMLOC: u64 = 40;
+    cpu.write_register(HexagonRegister::R2, 0xf001u32).unwrap();
+    cpu.write_register(HexagonRegister::R4, SRC_MEMLOC as u32)
+        .unwrap();
+    cpu.write_register(HexagonRegister::R5, DST_MEMLOC as u32)
+        .unwrap();
 
-    // We'll have two instructions for each immext, and then the second instruction
-    // doesn't have an immediate _extension_ so we're good on that end, total
-    // 5 instructions
-    // TODO: does immext need to be set to 0xffffffff every cycle?
-    // it doesn't seem like it..
-    let exit = cpu.execute(&mut mmu, &mut ev, 3).unwrap();
+    // byte layout 0x20 0x10
+    mmu.write_u16_le_virt_data(SRC_MEMLOC + 8, 0x1020).unwrap();
 
+    // Load
+    let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
     assert_eq!(exit, TargetExitReason::InstructionCountComplete);
 
-    let r0 = cpu.read_register::<u32>(HexagonRegister::R0).unwrap();
-    let r1 = cpu.read_register::<u32>(HexagonRegister::R1).unwrap();
+    let r2 = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
+    assert_eq!(r2, 0x1020);
 
-    // I don't think there's any overflow here, but if the
-    // test cases are changed we should be careful
-    assert_eq!(r0, 2);
-    assert_eq!(r1, 1);
-}*/
+    // Store
+    let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+
+    let data = mmu.read_u32_le_virt_data(DST_MEMLOC).unwrap();
+    assert_eq!(data, 0x1020);
+}
 
 #[test]
 fn test_predicate_dotnew() {

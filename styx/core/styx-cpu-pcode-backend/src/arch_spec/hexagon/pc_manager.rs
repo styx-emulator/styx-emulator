@@ -1,11 +1,12 @@
 use log::trace;
+use smallvec::SmallVec;
 use styx_cpu_type::arch::hexagon::HexagonRegister;
 
 use crate::{
     arch_spec::{pc_manager::PcOverflow, ArchPcManager},
     memory::sized_value::SizedValue,
     register_manager::RegisterManager,
-    PcodeBackend, SharedStateKey,
+    PcodeBackend, SharedStateKey, DEFAULT_REG_ALLOCATION,
 };
 
 #[derive(Debug, Default)]
@@ -17,6 +18,8 @@ pub struct StandardPcManager {
     // default is false
     internal_pc_set_during_packet: bool,
     last_bytes_consumed: u64,
+    // This ignores immext and such
+    true_insn_count: usize,
 }
 
 impl StandardPcManager {
@@ -115,9 +118,17 @@ impl ArchPcManager for StandardPcManager {
         &mut self,
         bytes_consumed: u64,
         backend: &mut PcodeBackend,
+        regs_written: &mut SmallVec<[u64; DEFAULT_REG_ALLOCATION]>,
+        total_pcodes: usize,
     ) -> Result<(), PcOverflow> {
         // Update duplex
         self.in_duplex = !self.in_duplex && bytes_consumed == 2;
+
+        trace!(
+            "post_execute: regs written {:?} pcodes generated {}",
+            regs_written,
+            total_pcodes
+        );
 
         trace!(
             "instruction at {} consumed {} bytes in_duplex {} pc set during pkt {} new internal pc {}",
@@ -147,6 +158,7 @@ impl ArchPcManager for StandardPcManager {
             {
                 trace!("new packet, setting ISA PC to {}", new_pkt_start);
                 self.set_isa_pc(*new_pkt_start as u64, backend);
+
                 true
             }
             // This is the case where the internal PC was set earlier in the cycle
@@ -179,6 +191,33 @@ impl ArchPcManager for StandardPcManager {
             trace!("resetting internal pc set during pkt");
             self.internal_pc_set_during_packet = false;
             self.new_internal_pc = 0;
+            self.true_insn_count = 0;
+        }
+
+        if total_pcodes > 0 {
+            trace!("dotnew: inside a real instruction");
+            let mut first_general_reg = 0;
+            for i in regs_written {
+                // TODO: make this more reliable;
+                if *i <= 28 * 4 {
+                    first_general_reg = *i / 4;
+                }
+            }
+            backend.shared_state.insert(
+                SharedStateKey::HexagonInsnRegDest(self.true_insn_count),
+                first_general_reg as u128,
+            );
+            trace!(
+                "dotnew: wrote {} -> {}",
+                self.true_insn_count,
+                first_general_reg
+            );
+            self.true_insn_count += 1;
+            backend
+                .shared_state
+                .insert(SharedStateKey::HexagonTrueInsnCount, self.true_insn_count);
+
+            trace!("dotnew: first general reg is {}", first_general_reg);
         }
 
         Ok(())

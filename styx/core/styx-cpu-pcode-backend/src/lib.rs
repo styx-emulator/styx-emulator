@@ -33,6 +33,7 @@ mod register_manager;
 mod types;
 
 use crate::get_pcode::{fetch_pcode, is_branching_instruction};
+use smallvec::{smallvec, SmallVec};
 
 use self::{
     hooks::HookManager,
@@ -77,6 +78,7 @@ use types::*;
 ///
 /// increased from 20000 because ARM64 has too many registers
 const REGISTER_SPACE_SIZE: usize = 80000;
+pub(crate) const DEFAULT_REG_ALLOCATION: usize = 3;
 
 #[derive(Debug, PartialEq)]
 pub(crate) enum PCodeStateChange {
@@ -163,6 +165,10 @@ fn handle_basic_block_hooks(
 #[derivative(Eq, PartialEq, Hash, Debug, Clone, Copy)]
 pub enum SharedStateKey {
     HexagonPktStart,
+    // For dotnew/hasnew - immext and such instructions shall be ignored
+    HexagonTrueInsnCount,
+    // Stores destination register in an instruction
+    HexagonInsnRegDest(usize),
 }
 
 #[derive(Derivative)]
@@ -364,13 +370,15 @@ impl PcodeBackend {
         let total_pcodes = pcodes.len();
 
         let mut delayed_irqn: Option<i32> = None;
+        let mut regs_written: SmallVec<[u64; DEFAULT_REG_ALLOCATION]> = smallvec![];
+
         while i < total_pcodes {
             let current_pcode = &pcodes[i];
             trace!(
                 "Executing Pcode ({}/{total_pcodes}) {current_pcode:?}",
                 i + 1
             );
-            match execute_pcode::execute_pcode(current_pcode, self, mmu, ev) {
+            match execute_pcode::execute_pcode(current_pcode, self, mmu, ev, &mut regs_written) {
                 PCodeStateChange::Fallthrough => i += 1,
                 PCodeStateChange::DelayedInterrupt(irqn) => {
                     // interrupt will *probably* branch execution
@@ -397,7 +405,8 @@ impl PcodeBackend {
             }
         }
         let mut pc_manager = self.pc_manager.take().unwrap();
-        let pc_post_execute_res = pc_manager.post_execute(bytes_consumed, self);
+        let pc_post_execute_res =
+            pc_manager.post_execute(bytes_consumed, self, &mut regs_written, total_pcodes);
         self.pc_manager = Some(pc_manager);
         if pc_post_execute_res.is_err() {
             return Err(anyhow!("pc overflowed in pcode backend during post execute. you can modify the pc manager to wrap or prevent overflow if this is desired behavior"));

@@ -36,7 +36,7 @@ use super::{
     pc_manager::{apply_difference, PcOverflow},
     ArchPcManager, GeneratorHelp,
 };
-use crate::{pcode_gen::GeneratePcodeError, PcodeBackend};
+use crate::{pcode_gen::GeneratePcodeError, PcodeBackend, DEFAULT_REG_ALLOCATION};
 use smallvec::{smallvec, SmallVec};
 use styx_pcode_translator::ContextOption;
 use styx_processor::memory::Mmu;
@@ -79,6 +79,8 @@ impl ArchPcManager for StandardPcManager {
         &mut self,
         bytes_consumed: u64,
         _backend: &mut PcodeBackend,
+        _regs_written: &mut SmallVec<[u64; DEFAULT_REG_ALLOCATION]>,
+        _total_pcodes: usize,
     ) -> Result<(), PcOverflow> {
         self.internal_pc = self
             .internal_pc

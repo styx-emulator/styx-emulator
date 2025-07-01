@@ -23,7 +23,9 @@
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use crate::PcodeBackend;
+use smallvec::SmallVec;
+
+use crate::{PcodeBackend, DEFAULT_REG_ALLOCATION};
 
 use super::{
     pc_manager::{apply_difference, PcOverflow},
@@ -81,6 +83,8 @@ impl ArchPcManager for StandardPpcPcManager {
         &mut self,
         bytes_consumed: u64,
         _backend: &mut PcodeBackend,
+        _regs_written: &mut SmallVec<[u64; DEFAULT_REG_ALLOCATION]>,
+        _total_pcodes: usize,
     ) -> Result<(), PcOverflow> {
         self.internal_pc = self
             .internal_pc
