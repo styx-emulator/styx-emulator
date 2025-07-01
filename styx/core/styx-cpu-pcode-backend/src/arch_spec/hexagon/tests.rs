@@ -68,6 +68,22 @@ fn get_isa_pc(cpu: &mut PcodeBackend) -> u32 {
 
 // need a separate conditional too
 #[test_case(
+    "{ r2 = memh(r4+#0x8); r3 = #2; p0 = cmp.eq(r3, #2); if (p0) memh(r5+#0x0) = r2.new }",
+    None,
+    3,
+    1,
+    0x1020,
+    0x1020; "conditional dotnew load halfword branch taken"
+)]
+#[test_case(
+    "{ r2 = memw(r4+#0x8); r3 = #3; p0 = cmp.eq(r3, #2); if (p0) memh(r5+#0x0) = r2.new }",
+    None,
+    3,
+    1,
+    0xf0991020,
+    0; "conditional dotnew load word branch not taken"
+)]
+#[test_case(
     "{ r2 = memh(r4+#0x8); memb(r5+#0x0) = r2.new }",
     None,
     1,
