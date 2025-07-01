@@ -156,8 +156,55 @@ fn test_dotnew_basic(
     (cpu, mmu, ev)
 }
 
+// TODO:
 // also need one that does something like R2 = mpyi(R0, add(R1, #1))
-// need to test load/stores here
+// need to test load/stores (non dotnew) here
+//
+// also need something that tests the position of duplex instructions within a larger packet
+// VERY heavily.
+//
+// also need some real programs, compiled with clang
+
+#[test]
+fn test_compound() {
+    // More instructions that were taken from the manual
+    // Can only do in slot 2 and 3.
+    let (mut cpu, mut mmu, mut ev) = setup_asm(
+        "{ R2 = add(R0, mpyi(R1, #3)); } { R7 = add(R4, sub(#15, R3)); R10 &= and(R11, R12) }",
+        Some(vec![
+            0x60, 0xc2, 0x81, 0xdf, 0xe3, 0x67, 0x84, 0xdb, 0x0a, 0xcc, 0x4b, 0xef,
+        ]),
+    );
+
+    // for add mpyi
+
+    cpu.write_register(HexagonRegister::R0, 12u32).unwrap();
+    cpu.write_register(HexagonRegister::R1, 9u32).unwrap();
+
+    // for add sub
+
+    cpu.write_register(HexagonRegister::R4, 200u32).unwrap();
+    cpu.write_register(HexagonRegister::R3, 7u32).unwrap();
+
+    // for and, and
+
+    cpu.write_register(HexagonRegister::R10, 8872u32).unwrap();
+    cpu.write_register(HexagonRegister::R11, 39939201u32)
+        .unwrap();
+    cpu.write_register(HexagonRegister::R12, 0xf8f8f8f8u32)
+        .unwrap();
+
+    let exit = cpu.execute(&mut mmu, &mut ev, 3).unwrap();
+    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+
+    let r2 = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
+    let r7 = cpu.read_register::<u32>(HexagonRegister::R7).unwrap();
+    let r10 = cpu.read_register::<u32>(HexagonRegister::R10).unwrap();
+
+    assert_eq!(r2, 39);
+    assert_eq!(r7, (15 - 7) + 200);
+    assert_eq!(r10, (0xf8f8f8f8 & 39939201) & 8872);
+}
 
 #[test]
 fn test_store_dotnew_halfword_add() {
