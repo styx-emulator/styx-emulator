@@ -1,4 +1,5 @@
 use crate::arch_spec::generator_helper::CONTEXT_OPTION_LEN;
+use crate::arch_spec::hexagon::dotnew;
 use crate::pcode_gen::GhidraPcodeGenerator;
 use crate::{arch_spec::GeneratorHelp, pcode_gen::GeneratePcodeError};
 use crate::{PcodeBackend, SharedStateKey};
@@ -74,6 +75,7 @@ pub struct HexagonGeneratorHelper {
     duplex_next_set: bool,
     pkt_endloop: u32,
     pkt_endloop_cleared: bool,
+    dotnew_should_unset: bool,
 }
 
 impl Default for HexagonGeneratorHelper {
@@ -97,6 +99,7 @@ impl Default for HexagonGeneratorHelper {
             duplex_next_set: false,
             pkt_endloop: 0,
             pkt_endloop_cleared: true,
+            dotnew_should_unset: false,
         }
     }
 }
@@ -199,7 +202,53 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                             context_opts.push(ContextOption::HexagonDuplexNext(0));
                         }
 
+                        if self.dotnew_should_unset {
+                            trace!("unsetting hexagon hasnew");
+
+                            // there's no point in setting dotnew, it's only ever used if
+                            // hasnew is 1, but just for good measure
+                            context_opts.push(ContextOption::HexagonHasnew(0));
+                            context_opts.push(ContextOption::HexagonDotnew(0));
+
+                            self.dotnew_should_unset = false;
+                        }
+
+                        match dotnew::parse_dotnew(insn_data) {
+                            Some(referenced_dotnew_pkt) => {
+                                // get current start
+                                if let Some(current) = backend
+                                    .shared_state
+                                    .get(&SharedStateKey::HexagonTrueInsnCount)
+                                {
+                                    trace!(
+                                        "dotnew: this is a dotnew packet, finding register at {}",
+                                        (*current - referenced_dotnew_pkt as u128)
+                                    );
+                                    if let Some(register_num) = backend.shared_state.get(
+                                        &SharedStateKey::HexagonInsnRegDest(
+                                            (*current - referenced_dotnew_pkt as u128) as usize,
+                                        ),
+                                    ) {
+                                        trace!(
+                                            "dotnew: this is a dotnew packet, setting context opts"
+                                        );
+                                        context_opts.push(ContextOption::HexagonDotnew(
+                                            *register_num as u32,
+                                        ));
+                                        context_opts.push(ContextOption::HexagonHasnew(1));
+                                        self.dotnew_should_unset = true;
+                                    }
+                                }
+                            }
+                            None => {}
+                        }
                         // TODO: put our dotnew handlers here
+                        // if dotnew_insn {
+                        // off = get dotnew offset(dst, offset)
+                        // get Q current - off -> regval
+                        //  set hasnew 1
+                        //  set dotnew Q
+                        // }
 
                         trace!("insn data is 0x{:x}", insn_data);
 
@@ -241,10 +290,10 @@ impl GeneratorHelp for HexagonGeneratorHelper {
 
                                 trace!("duplex slot 1 slot 2 subinsn type {:?}", duplex_slots);
 
-                                // First insn in duplex is a pkt start
                                 context_opts
                                     .push(ContextOption::HexagonSubinsn(duplex_slots.0 as u32));
 
+                                // First insn in duplex is a pkt start
                                 if self.first_insn_setup {
                                     self.first_insn_setup = false;
 
@@ -273,6 +322,7 @@ impl GeneratorHelp for HexagonGeneratorHelper {
 
                                     context_opts
                                         .push(ContextOption::HexagonPktStart(unwrapped_pc as u32));
+                                    // None of this should require last_pkt_ended, as we're not at the end of an instruction
                                 }
                                 // If not, we should inspect the following insns to figure out whether this duplex is at the end of the packet
                                 // Duplex comes in these combos:
@@ -316,7 +366,7 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                                     );
                                 }
                             }
-                            // First instruction in the won't have anything taken care of
+                            // First instruction in the program won't have anything taken care of
                             PktLoopParseBits::NotEndOfPacket1
                             | PktLoopParseBits::NotEndOfPacket2
                                 if self.first_insn_setup =>
@@ -325,6 +375,7 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                                     "First instruction helper has seen, setting up context opts"
                                 );
                                 self.first_insn_setup = false;
+                                self.last_pkt_ended = false;
 
                                 context_opts.push(ContextOption::HexagonImmext(0xffffffff));
                                 context_opts

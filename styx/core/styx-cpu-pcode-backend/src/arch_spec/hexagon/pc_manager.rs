@@ -213,9 +213,10 @@ impl ArchPcManager for StandardPcManager {
                 first_general_reg
             );
             self.true_insn_count += 1;
-            backend
-                .shared_state
-                .insert(SharedStateKey::HexagonTrueInsnCount, self.true_insn_count);
+            backend.shared_state.insert(
+                SharedStateKey::HexagonTrueInsnCount,
+                self.true_insn_count as u128,
+            );
 
             trace!("dotnew: first general reg is {}", first_general_reg);
         }

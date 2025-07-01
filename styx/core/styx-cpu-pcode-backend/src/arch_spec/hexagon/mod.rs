@@ -5,6 +5,7 @@ use super::PcManager;
 mod helpers;
 mod pc_manager;
 // Anything related to packet semantics
+mod dotnew;
 mod pkt_semantics;
 
 #[cfg(test)]
