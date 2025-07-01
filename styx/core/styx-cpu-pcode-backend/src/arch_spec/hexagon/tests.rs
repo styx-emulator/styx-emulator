@@ -91,6 +91,14 @@ fn get_isa_pc(cpu: &mut PcodeBackend) -> u32 {
     0x10202020,
     0x10202020; "store word, load word; +0x0"
 )]
+#[test_case(
+    "{ r2 = memb(r4+#0x8); nop; memb(r5) = r2.new }",
+    None,
+    2,
+    1,
+    0x18,
+    0x18; "store byte, load byte, with no op; +0x0"
+)]
 fn test_dotnew_basic_cases(
     insn: &str,
     verify_insn: Option<Vec<u8>>,
@@ -153,7 +161,30 @@ fn test_dotnew_basic(
 
 #[test]
 fn test_store_dotnew_halfword_add() {
+    // This gets reordered.
+    // the r0 add is first
+    // r10 add second
+    // store third
+    // load fourth
+    let (mut cpu, mmu, ev) = test_dotnew_basic(
+        "{ r2 = memh(r4+#0x8); r0 = add(r0, #40); r10 = add(r10, #30); memh(r5) = r0.new }",
+        None,
+        3,
+        1,
+        0x1020,
+        40,
+    );
+
+    let r10 = cpu.read_register::<u32>(HexagonRegister::R10).unwrap();
+    let r0 = cpu.read_register::<u32>(HexagonRegister::R0).unwrap();
+    assert_eq!(r10, 30);
+    assert_eq!(r0, 40);
+}
+
+#[test]
+fn test_store_dotnew_halfword_add_immext() {
     // There should be an immext here somewhere, which is the point
+    // The immext is moved to the beginning
     let (mut cpu, mmu, ev) = test_dotnew_basic(
         "{ r2 = memh(r4+#0x8); r10 = add(r10, #269492265); memh(r5) = r2.new }",
         None,

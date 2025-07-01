@@ -221,8 +221,8 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                                     .get(&SharedStateKey::HexagonTrueInsnCount)
                                 {
                                     trace!(
-                                        "dotnew: this is a dotnew packet, finding register at {}",
-                                        (*current - referenced_dotnew_pkt as u128)
+                                        "dotnew: this is a dotnew packet, finding register at {} - {}",
+                                        *current , referenced_dotnew_pkt
                                     );
                                     if let Some(register_num) = backend.shared_state.get(
                                         &SharedStateKey::HexagonInsnRegDest(
@@ -350,7 +350,7 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                                         SubinstructionData::EndDuplex(duplex_slots.1 as u32),
                                     );
                                     // Start of packet
-                                    if self.last_pkt_ended {
+                                    if last_pkt_ended {
                                         self.pkt_insns = 0;
                                     }
                                 }
@@ -465,6 +465,7 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                             PktLoopParseBits::NotEndOfPacket1
                             | PktLoopParseBits::NotEndOfPacket2 => {
                                 trace!("hexagon prefetch is middle of packet");
+                                self.last_pkt_ended = false;
                             }
                             PktLoopParseBits::EndOfPacket => {
                                 // This is both the start and end of a packet
