@@ -15,7 +15,6 @@ pub use helpers::HexagonGeneratorHelper;
 pub use pc_manager::StandardPcManager;
 
 use pkt_semantics::NewReg;
-use styx_pcode::sla::SlaUserOps;
 use styx_pcode_translator::sla::{self, HexagonUserOps};
 
 // Adapted from PPC

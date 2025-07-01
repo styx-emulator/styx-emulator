@@ -40,7 +40,7 @@ use super::{
 };
 
 /// Program Counter manager for Blackfin processors.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct StandardPcManager {
     isa_pc: u64,
     internal_pc: u64,

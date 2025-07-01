@@ -40,7 +40,7 @@ use crate::{
     HasConfig, PcodeBackend, DEFAULT_REG_ALLOCATION, FALSE,
 };
 use log::trace;
-use smallvec::{smallvec, SmallVec};
+use smallvec::SmallVec;
 use styx_errors::anyhow::anyhow;
 use styx_pcode::pcode::{Opcode, Pcode, SpaceId, SpaceName, VarnodeData};
 use styx_processor::{
@@ -99,7 +99,7 @@ pub fn execute_pcode(
     ev: &mut EventController,
     regs_written: &mut SmallVec<[u64; DEFAULT_REG_ALLOCATION]>,
 ) -> PCodeStateChange {
-    let s = execute_pcode_inner(pcode, cpu, mmu, ev, regs_written);
+    let s = execute_pcode_inner(pcode, cpu, mmu, ev);
 
     // Allows it to get dropped after this
     {
@@ -135,10 +135,9 @@ fn execute_pcode_inner<'a>(
     cpu: &mut (impl CpuBackend + HasSpaceManager + HasHookManager + HasPcodeGenerator + HasConfig),
     mmu: &mut Mmu,
     ev: &mut EventController,
-    regs_written: &mut SmallVec<[u64; DEFAULT_REG_ALLOCATION]>,
 ) -> PCodeStateChangeInner<'a> {
     match pcode.opcode {
-        Opcode::Copy => unary_typed::<Int, Int, _>(pcode, cpu, mmu, ev, regs_written, |v0, os| {
+        Opcode::Copy => unary_typed::<Int, Int, _>(pcode, cpu, mmu, ev, |v0, os| {
             debug_assert_eq!(v0.size() as u32, os);
 
             v0
@@ -497,101 +496,88 @@ fn execute_pcode_inner<'a>(
             //     },
             // }
         }
-        Opcode::IntEqual => {
-            binary_typed::<Int, Int, Bool, _>(pcode, cpu, mmu, ev, regs_written, |v0, v1, os| {
-                debug_assert_eq!(v0.size(), v1.size());
-                debug_assert_eq!(os, 1);
-                Bool(v0.value() == v1.value())
-            })
-        }
+        Opcode::IntEqual => binary_typed::<Int, Int, Bool, _>(pcode, cpu, mmu, ev, |v0, v1, os| {
+            debug_assert_eq!(v0.size(), v1.size());
+            debug_assert_eq!(os, 1);
+            Bool(v0.value() == v1.value())
+        }),
         Opcode::IntNotEqual => {
-            binary_typed::<Int, Int, Bool, _>(pcode, cpu, mmu, ev, regs_written, |v0, v1, os| {
+            binary_typed::<Int, Int, Bool, _>(pcode, cpu, mmu, ev, |v0, v1, os| {
                 debug_assert_eq!(v0.size(), v1.size());
                 debug_assert_eq!(os, 1);
                 Bool(v0.value() != v1.value())
             })
         }
         Opcode::IntSLess => {
-            binary_typed::<SInt, SInt, Bool, _>(pcode, cpu, mmu, ev, regs_written, |v0, v1, os| {
+            binary_typed::<SInt, SInt, Bool, _>(pcode, cpu, mmu, ev, |v0, v1, os| {
                 debug_assert_eq!(v0.size(), v1.size());
                 debug_assert_eq!(os, 1);
                 Bool(v0.value() < v1.value())
             })
         }
         Opcode::IntSLessEqual => {
-            binary_typed::<SInt, SInt, Bool, _>(pcode, cpu, mmu, ev, regs_written, |v0, v1, os| {
+            binary_typed::<SInt, SInt, Bool, _>(pcode, cpu, mmu, ev, |v0, v1, os| {
                 debug_assert_eq!(v0.size(), v1.size());
                 debug_assert_eq!(os, 1);
                 Bool(v0.value() <= v1.value())
             })
         }
-        Opcode::IntLess => {
-            binary_typed::<Int, Int, Bool, _>(pcode, cpu, mmu, ev, regs_written, |v0, v1, os| {
-                debug_assert_eq!(v0.size(), v1.size());
-                debug_assert_eq!(os, 1);
-                Bool(v0.value() < v1.value())
-            })
-        }
+        Opcode::IntLess => binary_typed::<Int, Int, Bool, _>(pcode, cpu, mmu, ev, |v0, v1, os| {
+            debug_assert_eq!(v0.size(), v1.size());
+            debug_assert_eq!(os, 1);
+            Bool(v0.value() < v1.value())
+        }),
         Opcode::IntLessEqual => {
-            binary_typed::<Int, Int, Bool, _>(pcode, cpu, mmu, ev, regs_written, |v0, v1, os| {
+            binary_typed::<Int, Int, Bool, _>(pcode, cpu, mmu, ev, |v0, v1, os| {
                 debug_assert_eq!(v0.size(), v1.size());
                 debug_assert_eq!(os, 1);
                 Bool(v0.value() <= v1.value())
             })
         }
-        Opcode::IntZExt => {
-            unary_typed::<Int, Int, _>(pcode, cpu, mmu, ev, regs_written, |v0, os| {
-                debug_assert!(os as u8 > v0.size());
-                SizedValue::from_u128(v0.value(), os as u8).into()
-            })
-        }
-        Opcode::IntSExt => {
-            unary_typed::<SInt, SInt, _>(pcode, cpu, mmu, ev, regs_written, |v0, os| {
-                debug_assert!(os as u8 > v0.size());
-                let shift_amount = 64 - v0.size() * 8;
-                SizedValue::from_u128(
-                    ((v0.value() << shift_amount) >> shift_amount) as u128,
-                    os as u8,
-                )
-                .into()
-            })
-        }
-        Opcode::IntAdd => {
-            binary_typed::<Int, Int, Int, _>(pcode, cpu, mmu, ev, regs_written, |v0, v1, os| {
-                debug_assert_eq!(v0.size(), v1.size());
-                debug_assert_eq!(v0.size() as u32, os);
-                SizedValue::from_u128(
-                    v0.value().wrapping_add(v1.value()) & get_mask(v0.size()),
-                    v0.size(),
-                )
-                .into()
-            })
-        }
-        Opcode::IntSub => {
-            binary_typed::<Int, Int, Int, _>(pcode, cpu, mmu, ev, regs_written, |v0, v1, os| {
-                debug_assert_eq!(v0.size(), v1.size());
-                debug_assert_eq!(v0.size() as u32, os);
-                SizedValue::from_u128(
-                    v0.value().wrapping_sub(v1.value()) & get_mask(v0.size()),
-                    v0.size(),
-                )
-                .into()
-            })
-        }
-        Opcode::IntCarry => {
-            binary_typed::<Int, Int, Bool, _>(pcode, cpu, mmu, ev, regs_written, |v0, v1, os| {
-                debug_assert_eq!(v0.size(), v1.size());
-                debug_assert_eq!(os, 1);
+        Opcode::IntZExt => unary_typed::<Int, Int, _>(pcode, cpu, mmu, ev, |v0, os| {
+            debug_assert!(os as u8 > v0.size());
+            SizedValue::from_u128(v0.value(), os as u8).into()
+        }),
+        Opcode::IntSExt => unary_typed::<SInt, SInt, _>(pcode, cpu, mmu, ev, |v0, os| {
+            debug_assert!(os as u8 > v0.size());
+            let shift_amount = 64 - v0.size() * 8;
+            SizedValue::from_u128(
+                ((v0.value() << shift_amount) >> shift_amount) as u128,
+                os as u8,
+            )
+            .into()
+        }),
+        Opcode::IntAdd => binary_typed::<Int, Int, Int, _>(pcode, cpu, mmu, ev, |v0, v1, os| {
+            debug_assert_eq!(v0.size(), v1.size());
+            debug_assert_eq!(v0.size() as u32, os);
+            SizedValue::from_u128(
+                v0.value().wrapping_add(v1.value()) & get_mask(v0.size()),
+                v0.size(),
+            )
+            .into()
+        }),
+        Opcode::IntSub => binary_typed::<Int, Int, Int, _>(pcode, cpu, mmu, ev, |v0, v1, os| {
+            debug_assert_eq!(v0.size(), v1.size());
+            debug_assert_eq!(v0.size() as u32, os);
+            SizedValue::from_u128(
+                v0.value().wrapping_sub(v1.value()) & get_mask(v0.size()),
+                v0.size(),
+            )
+            .into()
+        }),
+        Opcode::IntCarry => binary_typed::<Int, Int, Bool, _>(pcode, cpu, mmu, ev, |v0, v1, os| {
+            debug_assert_eq!(v0.size(), v1.size());
+            debug_assert_eq!(os, 1);
 
-                let size = v0.size();
-                let v0 = v0.value();
-                let v1 = v1.value();
+            let size = v0.size();
+            let v0 = v0.value();
+            let v1 = v1.value();
 
-                Bool(v0 > (v0.wrapping_add(v1) & get_mask(size)))
+            Bool(v0 > (v0.wrapping_add(v1) & get_mask(size)))
         }),
         Opcode::IntSCarry => {
             // if inputs have the same sign, but output has a different sign then carry occurred
-            binary_typed::<SInt, SInt, Bool, _>(pcode, cpu, mmu, ev, regs_written, |v0, v1, os| {
+            binary_typed::<SInt, SInt, Bool, _>(pcode, cpu, mmu, ev, |v0, v1, os| {
                 debug_assert_eq!(v0.size(), v1.size());
                 debug_assert_eq!(os, 1);
 
@@ -610,7 +596,7 @@ fn execute_pcode_inner<'a>(
         }
         Opcode::IntSBorrow => {
             // if input1 and output have different signs but input2 and output have the same sign then borrow occurred
-            binary_typed::<SInt, SInt, Bool, _>(pcode, cpu, mmu, ev, regs_written, |v0, v1, os| {
+            binary_typed::<SInt, SInt, Bool, _>(pcode, cpu, mmu, ev, |v0, v1, os| {
                 debug_assert_eq!(v0.size(), v1.size());
                 debug_assert_eq!(os, 1);
 
@@ -627,67 +613,53 @@ fn execute_pcode_inner<'a>(
                 Bool((s1 ^ so) & (s2 ^ so ^ 1) > 0)
             })
         }
-        Opcode::Int2Comp => {
-            unary_typed::<Int, Int, _>(pcode, cpu, mmu, ev, regs_written, |v0, os| {
-                debug_assert_eq!(v0.size() as u32, os);
-                SizedValue::from_u128((!v0.value()).wrapping_add(1), v0.size()).into()
-            })
-        }
+        Opcode::Int2Comp => unary_typed::<Int, Int, _>(pcode, cpu, mmu, ev, |v0, os| {
+            debug_assert_eq!(v0.size() as u32, os);
+            SizedValue::from_u128((!v0.value()).wrapping_add(1), v0.size()).into()
+        }),
 
-        Opcode::IntNegate => {
-            unary_typed::<Int, Int, _>(pcode, cpu, mmu, ev, regs_written, |v0, os| {
-                debug_assert_eq!(v0.size() as u32, os);
-                SizedValue::from_u128(!v0.value(), v0.size()).into()
-            })
-        }
-        Opcode::IntXor => {
-            binary_typed::<Int, Int, Int, _>(pcode, cpu, mmu, ev, regs_written, |v0, v1, os| {
-                debug_assert_eq!(v0.size(), v1.size());
-                debug_assert_eq!(v0.size() as u32, os);
-                SizedValue::from_u128(v0.value() ^ v1.value(), v0.size()).into()
-            })
-        }
-        Opcode::IntAnd => {
-            binary_typed::<Int, Int, Int, _>(pcode, cpu, mmu, ev, regs_written, |v0, v1, os| {
-                debug_assert_eq!(v0.size(), v1.size());
-                debug_assert_eq!(v0.size() as u32, os);
-                SizedValue::from_u128(v0.value() & v1.value(), v0.size()).into()
-            })
-        }
-        Opcode::IntOr => {
-            binary_typed::<Int, Int, Int, _>(pcode, cpu, mmu, ev, regs_written, |v0, v1, os| {
-                debug_assert_eq!(v0.size(), v1.size());
-                debug_assert_eq!(v0.size() as u32, os);
-                SizedValue::from_u128(v0.value() | v1.value(), v0.size()).into()
-            })
-        }
-        Opcode::IntLeft => {
-            binary_typed::<Int, Int, Int, _>(pcode, cpu, mmu, ev, regs_written, |v0, v1, os| {
-                debug_assert_eq!(v0.size() as u32, os);
+        Opcode::IntNegate => unary_typed::<Int, Int, _>(pcode, cpu, mmu, ev, |v0, os| {
+            debug_assert_eq!(v0.size() as u32, os);
+            SizedValue::from_u128(!v0.value(), v0.size()).into()
+        }),
+        Opcode::IntXor => binary_typed::<Int, Int, Int, _>(pcode, cpu, mmu, ev, |v0, v1, os| {
+            debug_assert_eq!(v0.size(), v1.size());
+            debug_assert_eq!(v0.size() as u32, os);
+            SizedValue::from_u128(v0.value() ^ v1.value(), v0.size()).into()
+        }),
+        Opcode::IntAnd => binary_typed::<Int, Int, Int, _>(pcode, cpu, mmu, ev, |v0, v1, os| {
+            debug_assert_eq!(v0.size(), v1.size());
+            debug_assert_eq!(v0.size() as u32, os);
+            SizedValue::from_u128(v0.value() & v1.value(), v0.size()).into()
+        }),
+        Opcode::IntOr => binary_typed::<Int, Int, Int, _>(pcode, cpu, mmu, ev, |v0, v1, os| {
+            debug_assert_eq!(v0.size(), v1.size());
+            debug_assert_eq!(v0.size() as u32, os);
+            SizedValue::from_u128(v0.value() | v1.value(), v0.size()).into()
+        }),
+        Opcode::IntLeft => binary_typed::<Int, Int, Int, _>(pcode, cpu, mmu, ev, |v0, v1, os| {
+            debug_assert_eq!(v0.size() as u32, os);
 
-                SizedValue::from_u128(
-                    v0.value()
-                        .checked_shl(v1.value().try_into().unwrap())
-                        .unwrap_or(0),
-                    v0.size(),
-                )
-                .into()
-            })
-        }
-        Opcode::IntRight => {
-            binary_typed::<Int, Int, Int, _>(pcode, cpu, mmu, ev, regs_written, |v0, v1, os| {
-                debug_assert_eq!(v0.size() as u32, os);
-                SizedValue::from_u128(
-                    v0.value()
-                        .checked_shr(v1.value().try_into().unwrap())
-                        .unwrap_or(0),
-                    v0.size(),
-                )
-                .into()
-            })
-        }
+            SizedValue::from_u128(
+                v0.value()
+                    .checked_shl(v1.value().try_into().unwrap())
+                    .unwrap_or(0),
+                v0.size(),
+            )
+            .into()
+        }),
+        Opcode::IntRight => binary_typed::<Int, Int, Int, _>(pcode, cpu, mmu, ev, |v0, v1, os| {
+            debug_assert_eq!(v0.size() as u32, os);
+            SizedValue::from_u128(
+                v0.value()
+                    .checked_shr(v1.value().try_into().unwrap())
+                    .unwrap_or(0),
+                v0.size(),
+            )
+            .into()
+        }),
         Opcode::IntSRight => {
-            binary_typed::<SInt, Int, SInt, _>(pcode, cpu, mmu, ev, regs_written, |v0, v1, os| {
+            binary_typed::<SInt, Int, SInt, _>(pcode, cpu, mmu, ev, |v0, v1, os| {
                 debug_assert_eq!(v0.size() as u32, os);
                 let res = v0
                     .value()
@@ -696,30 +668,26 @@ fn execute_pcode_inner<'a>(
                 SizedValue::from_u128(res as u128, v0.size()).into()
             })
         }
-        Opcode::IntMult => {
-            binary_typed::<Int, Int, Int, _>(pcode, cpu, mmu, ev, regs_written, |v0, v1, os| {
-                debug_assert_eq!(v0.size(), v1.size());
-                debug_assert_eq!(v0.size() as u32, os);
-                SizedValue::from_u128(
-                    v0.value().wrapping_mul(v1.value()) & get_mask(v0.size()),
-                    v0.size(),
-                )
-                .into()
-            })
-        }
-        Opcode::IntDiv => {
-            binary_typed::<Int, Int, Int, _>(pcode, cpu, mmu, ev, regs_written, |v0, v1, os| {
-                debug_assert_eq!(v0.size(), v1.size());
-                debug_assert_eq!(v0.size() as u32, os);
-                if v1.value() == 0 {
-                    return SizedValue::from_u128(0, v0.size()).into();
-                }
+        Opcode::IntMult => binary_typed::<Int, Int, Int, _>(pcode, cpu, mmu, ev, |v0, v1, os| {
+            debug_assert_eq!(v0.size(), v1.size());
+            debug_assert_eq!(v0.size() as u32, os);
+            SizedValue::from_u128(
+                v0.value().wrapping_mul(v1.value()) & get_mask(v0.size()),
+                v0.size(),
+            )
+            .into()
+        }),
+        Opcode::IntDiv => binary_typed::<Int, Int, Int, _>(pcode, cpu, mmu, ev, |v0, v1, os| {
+            debug_assert_eq!(v0.size(), v1.size());
+            debug_assert_eq!(v0.size() as u32, os);
+            if v1.value() == 0 {
+                return SizedValue::from_u128(0, v0.size()).into();
+            }
 
-                SizedValue::from_u128(v0.value() / v1.value(), v0.size()).into()
-            })
-        }
+            SizedValue::from_u128(v0.value() / v1.value(), v0.size()).into()
+        }),
         Opcode::IntSDiv => {
-            binary_typed::<SInt, SInt, SInt, _>(pcode, cpu, mmu, ev, regs_written, |v0, v1, os| {
+            binary_typed::<SInt, SInt, SInt, _>(pcode, cpu, mmu, ev, |v0, v1, os| {
                 debug_assert_eq!(v0.size(), v1.size());
                 debug_assert_eq!(v0.size() as u32, os);
                 if v1.value() == 0 {
@@ -729,29 +697,25 @@ fn execute_pcode_inner<'a>(
                 SizedValue::from_u128((v0.value() / v1.value()) as u128, v0.size()).into()
             })
         }
-        Opcode::IntRem => {
-            binary_typed::<Int, Int, Int, _>(pcode, cpu, mmu, ev, regs_written, |v0, v1, os| {
-                debug_assert_eq!(v0.size(), v1.size());
-                debug_assert_eq!(v0.size() as u32, os);
-                SizedValue::from_u128(v0.value() % v1.value(), v0.size()).into()
-            })
-        }
+        Opcode::IntRem => binary_typed::<Int, Int, Int, _>(pcode, cpu, mmu, ev, |v0, v1, os| {
+            debug_assert_eq!(v0.size(), v1.size());
+            debug_assert_eq!(v0.size() as u32, os);
+            SizedValue::from_u128(v0.value() % v1.value(), v0.size()).into()
+        }),
         Opcode::IntSRem => {
-            binary_typed::<SInt, SInt, SInt, _>(pcode, cpu, mmu, ev, regs_written, |v0, v1, os| {
+            binary_typed::<SInt, SInt, SInt, _>(pcode, cpu, mmu, ev, |v0, v1, os| {
                 debug_assert_eq!(v0.size(), v1.size());
                 debug_assert_eq!(v0.size() as u32, os);
                 SizedValue::from_u128((v0.value() % v1.value()) as u128, v0.size()).into()
             })
         }
-        Opcode::BoolNegate => {
-            unary_typed::<Bool, Bool, _>(pcode, cpu, mmu, ev, regs_written, |v0, os| {
-                debug_assert_eq!(v0.size(), 1);
-                debug_assert_eq!(os, 1);
-                Bool(!v0.0)
-            })
-        }
+        Opcode::BoolNegate => unary_typed::<Bool, Bool, _>(pcode, cpu, mmu, ev, |v0, os| {
+            debug_assert_eq!(v0.size(), 1);
+            debug_assert_eq!(os, 1);
+            Bool(!v0.0)
+        }),
         Opcode::BoolXor => {
-            binary_typed::<Bool, Bool, Bool, _>(pcode, cpu, mmu, ev, regs_written, |v0, v1, os| {
+            binary_typed::<Bool, Bool, Bool, _>(pcode, cpu, mmu, ev, |v0, v1, os| {
                 debug_assert_eq!(v0.size(), 1);
                 debug_assert_eq!(v1.size(), 1);
                 debug_assert_eq!(os, 1);
@@ -759,28 +723,21 @@ fn execute_pcode_inner<'a>(
             })
         }
         Opcode::BoolAnd => {
-            binary_typed::<Bool, Bool, Bool, _>(pcode, cpu, mmu, ev, regs_written, |v0, v1, os| {
+            binary_typed::<Bool, Bool, Bool, _>(pcode, cpu, mmu, ev, |v0, v1, os| {
                 debug_assert_eq!(v0.size(), 1);
                 debug_assert_eq!(v1.size(), 1);
                 debug_assert_eq!(os, 1);
                 (v0.0 && v1.0).into()
             })
         }
-        Opcode::BoolOr => {
-            binary_typed::<Bool, Bool, Bool, _>(pcode, cpu, mmu, ev, regs_written, |v0, v1, os| {
-                debug_assert_eq!(v0.size(), 1);
-                debug_assert_eq!(v1.size(), 1);
-                debug_assert_eq!(os, 1);
-                Bool(v0.0 | v1.0)
-            })
-        }
-        Opcode::FloatEqual => binary_typed::<Float, Float, Bool, _>(
-            pcode,
-            cpu,
-            mmu,
-            ev,
-            regs_written,
-            |v0, v1, os| {
+        Opcode::BoolOr => binary_typed::<Bool, Bool, Bool, _>(pcode, cpu, mmu, ev, |v0, v1, os| {
+            debug_assert_eq!(v0.size(), 1);
+            debug_assert_eq!(v1.size(), 1);
+            debug_assert_eq!(os, 1);
+            Bool(v0.0 | v1.0)
+        }),
+        Opcode::FloatEqual => {
+            binary_typed::<Float, Float, Bool, _>(pcode, cpu, mmu, ev, |v0, v1, os| {
                 debug_assert_eq!(v0.size(), v1.size());
                 debug_assert_eq!(os, 1);
                 if v0.value().is_nan() || v1.value().is_nan() {
@@ -788,15 +745,10 @@ fn execute_pcode_inner<'a>(
                 }
 
                 Bool(v0.value() == v1.value())
-            },
-        ),
-        Opcode::FloatNotEqual => binary_typed::<Float, Float, Bool, _>(
-            pcode,
-            cpu,
-            mmu,
-            ev,
-            regs_written,
-            |v0, v1, os| {
+            })
+        }
+        Opcode::FloatNotEqual => {
+            binary_typed::<Float, Float, Bool, _>(pcode, cpu, mmu, ev, |v0, v1, os| {
                 debug_assert_eq!(v0.size(), v1.size());
                 debug_assert_eq!(os, 1);
                 if v0.value().is_nan() || v1.value().is_nan() {
@@ -804,15 +756,10 @@ fn execute_pcode_inner<'a>(
                 }
 
                 Bool(v0.value() != v1.value())
-            },
-        ),
-        Opcode::FloatLess => binary_typed::<Float, Float, Bool, _>(
-            pcode,
-            cpu,
-            mmu,
-            ev,
-            regs_written,
-            |v0, v1, os| {
+            })
+        }
+        Opcode::FloatLess => {
+            binary_typed::<Float, Float, Bool, _>(pcode, cpu, mmu, ev, |v0, v1, os| {
                 debug_assert_eq!(v0.size(), v1.size());
                 debug_assert_eq!(os, 1);
                 if v0.value().is_nan() || v1.value().is_nan() {
@@ -820,15 +767,10 @@ fn execute_pcode_inner<'a>(
                 }
 
                 Bool(v0.value() < v1.value())
-            },
-        ),
-        Opcode::FloatLessEqual => binary_typed::<Float, Float, Bool, _>(
-            pcode,
-            cpu,
-            mmu,
-            ev,
-            regs_written,
-            |v0, v1, os| {
+            })
+        }
+        Opcode::FloatLessEqual => {
+            binary_typed::<Float, Float, Bool, _>(pcode, cpu, mmu, ev, |v0, v1, os| {
                 debug_assert_eq!(v0.size(), v1.size());
                 debug_assert_eq!(os, 1);
                 if v0.value().is_nan() || v1.value().is_nan() {
@@ -836,87 +778,59 @@ fn execute_pcode_inner<'a>(
                 }
 
                 Bool(v0.value() <= v1.value())
-            },
-        ),
-        Opcode::FloatNan => {
-            unary_typed::<Float, Bool, _>(pcode, cpu, mmu, ev, regs_written, |v0, os| {
-                debug_assert_eq!(os, 1);
-                Bool(v0.value().is_nan())
             })
         }
-        Opcode::FloatAdd => binary_typed::<Float, Float, Float, _>(
-            pcode,
-            cpu,
-            mmu,
-            ev,
-            regs_written,
-            |v0, v1, os| {
+        Opcode::FloatNan => unary_typed::<Float, Bool, _>(pcode, cpu, mmu, ev, |v0, os| {
+            debug_assert_eq!(os, 1);
+            Bool(v0.value().is_nan())
+        }),
+        Opcode::FloatAdd => {
+            binary_typed::<Float, Float, Float, _>(pcode, cpu, mmu, ev, |v0, v1, os| {
                 debug_assert_eq!(v0.size(), v1.size());
                 debug_assert_eq!(v0.size() as u32, os);
                 SizedValue::from_f64(v0.value() + v1.value(), v0.size()).into()
-            },
-        ),
-        Opcode::FloatDiv => binary_typed::<Float, Float, Float, _>(
-            pcode,
-            cpu,
-            mmu,
-            ev,
-            regs_written,
-            |v0, v1, os| {
+            })
+        }
+        Opcode::FloatDiv => {
+            binary_typed::<Float, Float, Float, _>(pcode, cpu, mmu, ev, |v0, v1, os| {
                 debug_assert_eq!(v0.size(), v1.size());
                 debug_assert_eq!(v0.size() as u32, os);
                 SizedValue::from_f64(v0.value() / v1.value(), v0.size()).into()
-            },
-        ),
-        Opcode::FloatMult => binary_typed::<Float, Float, Float, _>(
-            pcode,
-            cpu,
-            mmu,
-            ev,
-            regs_written,
-            |v0, v1, os| {
+            })
+        }
+        Opcode::FloatMult => {
+            binary_typed::<Float, Float, Float, _>(pcode, cpu, mmu, ev, |v0, v1, os| {
                 debug_assert_eq!(v0.size(), v1.size());
                 debug_assert_eq!(v0.size() as u32, os);
                 SizedValue::from_f64(v0.value() * v1.value(), v0.size()).into()
-            },
-        ),
-        Opcode::FloatSub => binary_typed::<Float, Float, Float, _>(
-            pcode,
-            cpu,
-            mmu,
-            ev,
-            regs_written,
-            |v0, v1, os| {
+            })
+        }
+        Opcode::FloatSub => {
+            binary_typed::<Float, Float, Float, _>(pcode, cpu, mmu, ev, |v0, v1, os| {
                 debug_assert_eq!(v0.size(), v1.size());
                 debug_assert_eq!(v0.size() as u32, os);
                 SizedValue::from_f64(v0.value() - v1.value(), v0.size()).into()
-            },
-        ),
-        Opcode::FloatNeg => {
-            unary_typed::<Float, Float, _>(pcode, cpu, mmu, ev, regs_written, |v0, os| {
-                debug_assert_eq!(v0.size() as u32, os);
-                SizedValue::from_f64(-v0.value(), v0.size()).into()
             })
         }
-        Opcode::FloatAbs => {
-            unary_typed::<Float, Float, _>(pcode, cpu, mmu, ev, regs_written, |v0, os| {
-                debug_assert_eq!(v0.size() as u32, os);
-                SizedValue::from_f64(v0.value().abs(), v0.size()).into()
-            })
-        }
-        Opcode::FloatSqrt => {
-            unary_typed::<Float, Float, _>(pcode, cpu, mmu, ev, regs_written, |v0, os| {
-                debug_assert_eq!(v0.size() as u32, os);
-                SizedValue::from_f64(v0.value().sqrt(), v0.size()).into()
-            })
-        }
+        Opcode::FloatNeg => unary_typed::<Float, Float, _>(pcode, cpu, mmu, ev, |v0, os| {
+            debug_assert_eq!(v0.size() as u32, os);
+            SizedValue::from_f64(-v0.value(), v0.size()).into()
+        }),
+        Opcode::FloatAbs => unary_typed::<Float, Float, _>(pcode, cpu, mmu, ev, |v0, os| {
+            debug_assert_eq!(v0.size() as u32, os);
+            SizedValue::from_f64(v0.value().abs(), v0.size()).into()
+        }),
+        Opcode::FloatSqrt => unary_typed::<Float, Float, _>(pcode, cpu, mmu, ev, |v0, os| {
+            debug_assert_eq!(v0.size() as u32, os);
+            SizedValue::from_f64(v0.value().sqrt(), v0.size()).into()
+        }),
         Opcode::FloatInt2Float => {
-            unary_typed::<SInt, Float, _>(pcode, cpu, mmu, ev, regs_written, |v0, out_size| {
+            unary_typed::<SInt, Float, _>(pcode, cpu, mmu, ev, |v0, out_size| {
                 SizedValue::from_f64(v0.value() as f64, out_size.try_into().unwrap()).into()
             })
         }
         Opcode::FloatFloat2Float => {
-            unary_typed::<Float, Float, _>(pcode, cpu, mmu, ev, regs_written, |v0, out_size| {
+            unary_typed::<Float, Float, _>(pcode, cpu, mmu, ev, |v0, out_size| {
                 debug_assert_ne!(v0.size(), out_size as u8);
                 SizedValue::from_f64(v0.value(), out_size.try_into().unwrap()).into()
             })
@@ -959,7 +873,7 @@ fn execute_pcode_inner<'a>(
         }),
         Opcode::Piece => {
             // concat(v0,v1)
-            binary_typed::<Int, Int, Int, _>(pcode, cpu, mmu, ev, regs_written, |v0, v1, os| {
+            binary_typed::<Int, Int, Int, _>(pcode, cpu, mmu, ev, |v0, v1, os| {
                 debug_assert_eq!(v0.size() + v1.size(), os as u8);
                 let v1_size = v1.size();
 
@@ -974,7 +888,7 @@ fn execute_pcode_inner<'a>(
             // with any remaining bytes of input0 up to the size of output. If the size of
             // output is smaller than the size of input0 plus the constant input1, then the
             // additional most significant bytes of input0 will also be truncated.""
-            binary_typed::<Int, Int, Int, _>(pcode, cpu, mmu, ev, regs_written, |v0, v1, os| {
+            binary_typed::<Int, Int, Int, _>(pcode, cpu, mmu, ev, |v0, v1, os| {
                 SizedValue::from_u128(v0.value() >> (v1.value() * 8), os as u8).into()
             })
         }
@@ -1064,7 +978,7 @@ fn execute_pcode_inner<'a>(
         }
         Opcode::Indirect => {
             // I'm pretty sure this implementation is correct for our use case
-            unary_typed::<Int, Int, _>(pcode, cpu, mmu, ev, regs_written, |v0, _| v0)
+            unary_typed::<Int, Int, _>(pcode, cpu, mmu, ev, |v0, _| v0)
         }
         // everything below here should probably be fine to leave unimplemented (at least for now, maybe forever)
         // psuedo pcode ops
@@ -1091,7 +1005,6 @@ fn unary_typed_inner<
     cpu: &mut C,
     mmu: &mut Mmu,
     ev: &mut EventController,
-    regs_written: &mut SmallVec<[u64; DEFAULT_REG_ALLOCATION]>,
     f: impl FnOnce(V0, u32) -> O,
 ) -> PCodeStateChange {
     let v0 = pcode.get_input(0);
@@ -1119,10 +1032,9 @@ fn unary_typed<
     cpu: &mut C,
     mmu: &mut Mmu,
     ev: &mut EventController,
-    regs_written: &mut SmallVec<[u64; DEFAULT_REG_ALLOCATION]>,
     f: impl FnOnce(V0, u32) -> O,
 ) -> PCodeStateChangeInner<'a> {
-    unary_typed_inner(pcode, cpu, mmu, ev, regs_written, f).into()
+    unary_typed_inner(pcode, cpu, mmu, ev, f).into()
 }
 
 fn binary_typed_inner<
@@ -1135,7 +1047,6 @@ fn binary_typed_inner<
     cpu: &mut C,
     mmu: &mut Mmu,
     ev: &mut EventController,
-    regs_written: &mut SmallVec<[u64; DEFAULT_REG_ALLOCATION]>,
     f: impl FnOnce(V0, V1, u32) -> O,
 ) -> PCodeStateChange {
     let v0 = pcode.get_input(0);
@@ -1170,10 +1081,9 @@ fn binary_typed<
     cpu: &mut C,
     mmu: &mut Mmu,
     ev: &mut EventController,
-    regs_written: &mut SmallVec<[u64; DEFAULT_REG_ALLOCATION]>,
     f: impl FnOnce(V0, V1, u32) -> O,
 ) -> PCodeStateChangeInner<'a> {
-    binary_typed_inner(pcode, cpu, mmu, ev, regs_written, f).into()
+    binary_typed_inner(pcode, cpu, mmu, ev, f).into()
 }
 
 #[inline]
@@ -1194,7 +1104,6 @@ mod tests {
         memory::sized_value::SizedValue,
         Bool, PCodeStateChange, PcodeBackend,
     };
-    use smallvec::{smallvec, SmallVec};
     use styx_cpu_type::arch::arm::ArmVariants;
     use styx_pcode::pcode::{Opcode, Pcode, SpaceName, VarnodeData};
     use styx_processor::{
@@ -1384,8 +1293,7 @@ mod tests {
 
         cpu.space_manager.write(pcode.get_input(0), input).unwrap();
 
-        let mut _reg_writes = smallvec![];
-        execute_pcode_inner(&pcode, &mut cpu, &mut mmu, &mut evt, &mut _reg_writes);
+        execute_pcode_inner(&pcode, &mut cpu, &mut mmu, &mut evt);
 
         let result = cpu
             .space_manager
@@ -1674,8 +1582,7 @@ mod tests {
         cpu.space_manager.write(pcode.get_input(0), input1).unwrap();
         cpu.space_manager.write(pcode.get_input(1), input2).unwrap();
 
-        let mut _reg_writes = smallvec![];
-        execute_pcode_inner(&pcode, &mut cpu, &mut mmu, &mut evt, &mut _reg_writes);
+        execute_pcode_inner(&pcode, &mut cpu, &mut mmu, &mut evt);
 
         let result = cpu
             .space_manager
@@ -1727,8 +1634,7 @@ mod tests {
             output: Some(out),
         };
 
-        let mut _reg_writes = smallvec![];
-        execute_pcode_inner(&inst, &mut cpu, &mut mmu, &mut evt, &mut _reg_writes);
+        execute_pcode_inner(&inst, &mut cpu, &mut mmu, &mut evt);
 
         let result = cpu
             .space_manager
@@ -1789,8 +1695,7 @@ mod tests {
             output: Some(out),
         };
 
-        let mut _reg_writes = smallvec![];
-        execute_pcode_inner(&inst, &mut cpu, &mut mmu, &mut evt, &mut _reg_writes);
+        execute_pcode_inner(&inst, &mut cpu, &mut mmu, &mut evt);
 
         let result = cpu
             .space_manager
@@ -1821,8 +1726,7 @@ mod tests {
             inputs: vec![target].into(),
             output: None,
         };
-        let mut _reg_writes = smallvec![];
-        let state = execute_pcode_inner(&inst, &mut cpu, &mut mmu, &mut evt, &mut _reg_writes);
+        let state = execute_pcode_inner(&inst, &mut cpu, &mut mmu, &mut evt);
         assert_eq!(state, PCodeStateChange::PCodeRelative(-2).into());
 
         let target = VarnodeData {
@@ -1835,8 +1739,7 @@ mod tests {
             inputs: vec![target].into(),
             output: None,
         };
-        let mut _reg_writes = smallvec![];
-        let state = execute_pcode_inner(&inst, &mut cpu, &mut mmu, &mut evt, &mut _reg_writes);
+        let state = execute_pcode_inner(&inst, &mut cpu, &mut mmu, &mut evt);
         assert_eq!(
             state,
             PCodeStateChange::InstructionAbsolute(0xCAFEBABE).into()
@@ -1861,8 +1764,7 @@ mod tests {
             inputs: vec![target, condition].into(),
             output: None,
         };
-        let mut _reg_writes = smallvec![];
-        let state = execute_pcode_inner(&inst, &mut cpu, &mut mmu, &mut evt, &mut _reg_writes);
+        let state = execute_pcode_inner(&inst, &mut cpu, &mut mmu, &mut evt);
 
         assert_eq!(state, PCodeStateChange::PCodeRelative(-2).into());
 
@@ -1881,8 +1783,7 @@ mod tests {
             inputs: vec![target, condition].into(),
             output: None,
         };
-        let mut _reg_writes = smallvec![];
-        let state = execute_pcode_inner(&inst, &mut cpu, &mut mmu, &mut evt, &mut _reg_writes);
+        let state = execute_pcode_inner(&inst, &mut cpu, &mut mmu, &mut evt);
 
         assert_eq!(
             state,
@@ -1895,8 +1796,7 @@ mod tests {
             size: 1,
         };
         cpu.space_manager.write(&condition, f).unwrap();
-        let mut _reg_writes = smallvec![];
-        let state = execute_pcode_inner(&inst, &mut cpu, &mut mmu, &mut evt, &mut _reg_writes);
+        let state = execute_pcode_inner(&inst, &mut cpu, &mut mmu, &mut evt);
         assert_eq!(state, PCodeStateChange::Fallthrough.into());
 
         // BRANCH_IND/CALL_IND/RETURN
@@ -1913,8 +1813,7 @@ mod tests {
             inputs: vec![target].into(),
             output: None,
         };
-        let mut _reg_writes = smallvec![];
-        let state = execute_pcode_inner(&inst, &mut cpu, &mut mmu, &mut evt, &mut _reg_writes);
+        let state = execute_pcode_inner(&inst, &mut cpu, &mut mmu, &mut evt);
 
         assert_eq!(
             state,

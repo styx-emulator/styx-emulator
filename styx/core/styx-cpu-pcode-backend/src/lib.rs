@@ -44,7 +44,7 @@ use self::{
     pcode_gen::GhidraPcodeGenerator,
     register_manager::RegisterManager,
 };
-use arch_spec::{build_arch_spec, ArchPcManager, PcManager};
+use arch_spec::{build_arch_spec, ArchPcManager, GeneratorHelper, PcManager};
 use call_other::CallOtherManager;
 use derivative::Derivative;
 use log::trace;
@@ -182,6 +182,7 @@ pub struct PcodeBackend {
     /// This should be accessed through [Self::stop_request_check_and_reset()] to ensure it is
     /// cleared after handling.
     stop_requested: bool,
+
     #[derivative(Debug = "ignore")]
     arch_def: Box<dyn ArchitectureDef>,
     endian: ArchEndian,
@@ -199,8 +200,8 @@ pub struct PcodeBackend {
     // make a separate saved context
     saved_shared_state_context: FxHashMap<SharedStateKey, u128>,
     // TODO: what about the generator helper?
-    /*saved_pc_manager: Option<PcManager>,
-    saved_generator_helper: Option<Box<GeneratorHelper>>,*/
+    saved_pc_manager: Option<PcManager>,
+    saved_generator_helper: Option<Box<GeneratorHelper>>,
     // we may want to make this an enum dispatch at some point,
     // and u128 is chosen to avoid space issues with storing
     // registers that may be different sizes on different platforms
@@ -315,6 +316,8 @@ impl PcodeBackend {
             pcode_config: config.clone(),
             saved_reg_context: BTreeMap::default(),
             saved_shared_state_context: FxHashMap::default(),
+            saved_pc_manager: None,
+            saved_generator_helper: None,
             shared_state: FxHashMap::default(),
         }
     }
@@ -597,8 +600,8 @@ impl CpuBackend for PcodeBackend {
             self.saved_shared_state_context.insert(*state_key, *val);
         }
 
-        // self.saved_pc_manager = self.pc_manager.clone();
-        // get generator helper from ghidrapcodegenerator and do same thing
+        self.saved_pc_manager = self.pc_manager.clone();
+        self.saved_generator_helper = self.pcode_generator.helper.clone();
 
         Ok(())
     }
@@ -621,6 +624,9 @@ impl CpuBackend for PcodeBackend {
         self.saved_shared_state_context.clear();
 
         let _ = std::mem::replace(&mut self.saved_reg_context, reg_context);
+
+        self.pc_manager = self.saved_pc_manager.clone();
+        self.pcode_generator.helper = self.saved_generator_helper.clone();
 
         Ok(())
     }

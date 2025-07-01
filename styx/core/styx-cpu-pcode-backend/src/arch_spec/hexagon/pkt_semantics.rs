@@ -4,7 +4,6 @@ use styx_processor::{event_controller::EventController, memory::Mmu};
 
 use crate::{
     call_other::{CallOtherCallback, CallOtherHandleError},
-    memory::sized_value::SizedValue,
     PCodeStateChange, PcodeBackend,
 };
 

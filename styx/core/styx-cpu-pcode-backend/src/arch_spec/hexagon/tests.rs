@@ -229,7 +229,7 @@ fn test_store_dotnew_halfword_add() {
     // r10 add second
     // store third
     // load fourth
-    let (mut cpu, mmu, ev) = test_dotnew_basic(
+    let (mut cpu, _mmu, _ev) = test_dotnew_basic(
         "{ r2 = memh(r4+#0x8); r0 = add(r0, #40); r10 = add(r10, #30); memh(r5) = r0.new }",
         None,
         3,
@@ -248,7 +248,7 @@ fn test_store_dotnew_halfword_add() {
 fn test_store_dotnew_halfword_add_immext() {
     // There should be an immext here somewhere, which is the point
     // The immext is moved to the beginning
-    let (mut cpu, mmu, ev) = test_dotnew_basic(
+    let (mut cpu, _mmu, _ev) = test_dotnew_basic(
         "{ r2 = memh(r4+#0x8); r10 = add(r10, #269492265); memh(r5) = r2.new }",
         None,
         3,

@@ -57,7 +57,7 @@ pub trait GeneratorHelp: Debug {
 
 /// Use [GeneratorHelper::default()] for a "do-nothing" helper.
 #[enum_dispatch(GeneratorHelp)]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum GeneratorHelper {
     #[cfg(feature = "arch_aarch64")]
     Aarch64(aarch64::StandardGeneratorHelper),
@@ -79,7 +79,7 @@ impl Default for GeneratorHelper {
 }
 
 /// [GeneratorHelp] that does nothing.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct EmptyGeneratorHelper;
 impl GeneratorHelp for EmptyGeneratorHelper {
     fn pre_fetch(

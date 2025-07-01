@@ -1,6 +1,5 @@
 use crate::arch_spec::generator_helper::CONTEXT_OPTION_LEN;
 use crate::arch_spec::hexagon::dotnew;
-use crate::pcode_gen::GhidraPcodeGenerator;
 use crate::{arch_spec::GeneratorHelp, pcode_gen::GeneratePcodeError};
 use crate::{PcodeBackend, SharedStateKey};
 use log::{error, trace};
@@ -54,14 +53,14 @@ impl PktLoopParseBits {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum SubinstructionData {
     EndDuplex(u32),
     EndDuplexEndPacket(u32),
     StartDuplex(u32),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct HexagonGeneratorHelper {
     // map code address -> subinsn type
     subinsn_map: FxHashMap<u64, SubinstructionData>,
@@ -349,6 +348,7 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                                         unwrapped_pc + 2,
                                         SubinstructionData::EndDuplex(duplex_slots.1 as u32),
                                     );
+
                                     // Start of packet
                                     if last_pkt_ended {
                                         self.pkt_insns = 0;

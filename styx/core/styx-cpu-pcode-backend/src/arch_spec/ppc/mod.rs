@@ -48,7 +48,7 @@ fn ppc_common<Sla>(spec: &mut super::ArchSpecBuilder<Sla>) {
 ///
 /// I think *technically* this is incorrect however ppc code cannot read from
 /// the pc so not needed.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct StandardPpcPcManager {
     isa_pc: u64,
     internal_pc: u64,

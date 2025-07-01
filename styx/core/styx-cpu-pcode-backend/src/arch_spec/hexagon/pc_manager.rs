@@ -9,7 +9,7 @@ use crate::{
     PcodeBackend, SharedStateKey, DEFAULT_REG_ALLOCATION,
 };
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct StandardPcManager {
     isa_pc: u64,
     internal_pc: u64,
