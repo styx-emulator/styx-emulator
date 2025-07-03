@@ -405,7 +405,7 @@ impl RegisterCallback for RegpairHandler {
         register: ArchRegister,
         cpu: &mut PcodeBackend,
     ) -> Result<SizedValue, RegisterHandleError> {
-        let (reg_lo, reg_hi) = Self::get_pairs_from_archregister(register)
+        let (reg_hi, reg_lo) = Self::get_pairs_from_archregister(register)
             .ok_or(anyhow!("could not get registers to read from"))?;
 
         // Don't read more than we should be; then zero-extend the values
@@ -439,7 +439,7 @@ impl RegisterCallback for RegpairHandler {
         // must be 64 bit for this handler
         assert_eq!(write_val.size(), 8);
 
-        let (reg_lo, reg_hi) = Self::get_pairs_from_archregister(register)
+        let (reg_hi, reg_lo) = Self::get_pairs_from_archregister(register)
             .ok_or(anyhow!("could not get registers to write from"))?;
 
         let write_val = write_val
