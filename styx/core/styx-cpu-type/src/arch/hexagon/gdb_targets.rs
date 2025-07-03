@@ -1,6 +1,6 @@
 // BSD 2-Clause License
 //
-// Copyright (c) 2025, Styx Emulator Project
+// Copyright (c) 2024, Styx Emulator Project
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -70,6 +70,7 @@ lazy_static! {
         (29, HexagonRegister::Sp.register()),
         (30, HexagonRegister::Fp.register()),
         (31, HexagonRegister::Lr.register()),
+        // Start control registers
         (32, HexagonRegister::Sa0.register()),
         (33, HexagonRegister::Lc0.register()),
         (34, HexagonRegister::Sa1.register()),

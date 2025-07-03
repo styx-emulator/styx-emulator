@@ -471,6 +471,9 @@ mod msp430 {
 }
 
 #[cfg(feature = "arch_hexagon")]
+#[allow(unused_imports)] // wrong, this is a re-export
+pub use hexagon::*;
+#[cfg(feature = "arch_hexagon")]
 mod hexagon {
     //! hexagon sla specifications
 
@@ -493,19 +496,9 @@ mod hexagon {
         }
     }
 
-    fn hexagon_basic(register: &CpuRegister, hex_reg: HexagonRegister) -> Box<str> {
-        let default_name = register.name();
+    pub fn hexagon_reg_to_str(hex_reg: &HexagonRegister) -> Box<str> {
+        let default_name = &hex_reg.to_string();
 
-        // The slaspec doesn't have support for the
-        // vector registers at the moment.
-        // TODO: Things could get very messy if we update a register name and
-        // currently the register is covered in the match fallthrough arm.
-        //
-        // Eg. if C24 gets named something else in the HexagonRegister struct (defined
-        // in macro), then this match will not handle that.
-        // I have explicitly redefined all the system and guest registers here for this reason,
-        // as in the future we may have names for them, and it would be good for rust to throw an error
-        // or have to explicitly modify this match if/when that rename happens.
         (match hex_reg {
             HexagonRegister::Sp => "R29",
             HexagonRegister::Fp => "R30",
@@ -553,7 +546,7 @@ mod hexagon {
             HexagonRegister::UtimerHi => "C31",
             HexagonRegister::Cs => "C13C12",
             HexagonRegister::Upcycle => "C15C14",
-            HexagonRegister::C17C16 => "C15C14",
+            HexagonRegister::C17C16 => "C17C16",
             HexagonRegister::PktCount => "C19C18",
             HexagonRegister::Utimer => "C31C30",
             // For some reason, the slaspec defines S0
@@ -696,11 +689,11 @@ mod hexagon {
             HexagonRegister::Gpmucnt6 => "G18",
             HexagonRegister::Gpmucnt7 => "G19",
             HexagonRegister::Gpcyclelo => "G24",
-            HexagonRegister::Gpcyclehii => "G25",
+            HexagonRegister::Gpcyclehi => "G25",
             HexagonRegister::Gpmucnt0 => "G26",
             HexagonRegister::Gpmucnt1 => "G27",
             HexagonRegister::Gpmucnt2 => "G28",
-            HexagonRegister::Gpmnucnt3 => "G29",
+            HexagonRegister::Gpmucnt3 => "G29",
             HexagonRegister::G30 | HexagonRegister::G31 => default_name,
             HexagonRegister::G1G0
             | HexagonRegister::G3G2
@@ -722,7 +715,21 @@ mod hexagon {
         })
         .to_owned()
         .into_boxed_str()
-        .into()
+    }
+
+    fn hexagon_basic(_register: &CpuRegister, hex_reg: HexagonRegister) -> Box<str> {
+        // The slaspec doesn't have support for the
+        // vector registers at the moment.
+        // TODO: Things could get very messy if we update a register name and
+        // currently the register is covered in the match fallthrough arm.
+        //
+        // Eg. if C24 gets named something else in the HexagonRegister struct (defined
+        // in macro), then this match will not handle that.
+        // I have explicitly redefined all the system and guest registers here for this reason,
+        // as in the future we may have names for them, and it would be good for rust to throw an error
+        // or have to explicitly modify this match if/when that rename happens.
+
+        hexagon_reg_to_str(&hex_reg)
     }
 }
 

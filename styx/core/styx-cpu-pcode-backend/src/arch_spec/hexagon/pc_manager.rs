@@ -1,3 +1,27 @@
+// BSD 2-Clause License
+//
+// Copyright (c) 2024, Styx Emulator Project
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, this
+//    list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 use log::trace;
 use smallvec::SmallVec;
 use styx_cpu_type::arch::hexagon::HexagonRegister;
@@ -20,12 +44,13 @@ pub struct StandardPcManager {
     last_bytes_consumed: u64,
     // This ignores immext and such
     true_insn_count: usize,
+    reset_insn_count: bool,
 }
 
 impl StandardPcManager {
     fn handle_branching_end_of_packet(&mut self, backend: &mut PcodeBackend) {
         self.internal_pc = self.new_internal_pc;
-        self.set_isa_pc(self.internal_pc as u64, backend);
+        self.set_isa_pc(self.internal_pc, backend);
     }
 }
 
@@ -107,7 +132,7 @@ impl ArchPcManager for StandardPcManager {
                         self.internal_pc_set_during_packet
                     );
                     self.internal_pc_set_during_packet = true;
-                    self.internal_pc = self.internal_pc + self.last_bytes_consumed;
+                    self.internal_pc += self.last_bytes_consumed;
                 }
                 _ => {}
             }
@@ -142,7 +167,7 @@ impl ArchPcManager for StandardPcManager {
         // TODO: I think the generator helper needs to set some context
         // regs for pkt_start and pkt_end -- could we just acquire these instead?
 
-        self.internal_pc = self.internal_pc + bytes_consumed;
+        self.internal_pc += bytes_consumed;
 
         // The ISA PC increments in packet granularity.
         // Get the start of the packet. If the start of the packet is the same
@@ -187,42 +212,58 @@ impl ArchPcManager for StandardPcManager {
             _ => false,
         };
 
+        if self.reset_insn_count {
+            trace!("resetting insn count at beginning of first packet");
+            self.true_insn_count = 0;
+            self.reset_insn_count = false;
+        }
+
         if new_pkt {
             trace!("resetting internal pc set during pkt");
             self.internal_pc_set_during_packet = false;
             self.new_internal_pc = 0;
-            self.true_insn_count = 0;
+            // This should only reset at the start of the next packet, not now
+            self.reset_insn_count = true;
         }
 
-        if total_pcodes > 0 {
-            trace!("dotnew: inside a real instruction");
-            let mut first_general_reg = 0;
+        if let Some(0) = backend
+            .shared_state
+            .get(&SharedStateKey::HexagonCurrentInsnImmext)
+        {
+            trace!("dotnew: inside a non-immext instruction");
+            let mut first_general_reg = None;
             for i in regs_written {
                 // TODO: make this more reliable;
                 if *i <= 28 * 4 {
-                    first_general_reg = *i / 4;
+                    first_general_reg = Some(*i / 4);
                 }
             }
-            backend.shared_state.insert(
-                SharedStateKey::HexagonInsnRegDest(self.true_insn_count),
-                first_general_reg as u128,
-            );
+
+            // Only insert if there was actually a register
+            if let Some(first_general_reg) = first_general_reg {
+                backend.shared_state.insert(
+                    SharedStateKey::HexagonInsnRegDest(self.true_insn_count),
+                    first_general_reg as u128,
+                );
+            }
+
             trace!(
-                "dotnew: wrote {} -> {}",
+                "dotnew: wrote {} -> {:?}",
                 self.true_insn_count,
                 first_general_reg
             );
             self.true_insn_count += 1;
             trace!(
-                "true instruction count is upped to {}",
+                "dotnew: true instruction count is upped to {}",
                 self.true_insn_count
             );
+
             backend.shared_state.insert(
                 SharedStateKey::HexagonTrueInsnCount,
                 self.true_insn_count as u128,
             );
 
-            trace!("dotnew: first general reg is {}", first_general_reg);
+            trace!("dotnew: first general reg is {:?}", first_general_reg);
         }
 
         Ok(())

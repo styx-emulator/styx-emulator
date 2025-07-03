@@ -1,6 +1,6 @@
 // BSD 2-Clause License
 //
-// Copyright (c) 2025, Styx Emulator Project
+// Copyright (c) 2024, Styx Emulator Project
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -22,7 +22,7 @@
 // CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//! Generic top level container for PPC32 registers
+//! Generic top level container for Hexagon registers
 use std::collections::HashMap;
 use std::num::NonZeroUsize;
 use strum::IntoEnumIterator;
@@ -93,10 +93,10 @@ create_basic_register_enums!(
     (D14, 64),
     (D15, 64),
     // Predicate registers
-    (P0, 32),
-    (P1, 32),
-    (P2, 32),
-    (P3, 32),
+    (P0, 8),
+    (P1, 8),
+    (P2, 8),
+    (P3, 8),
     // Control registers
     (Sa0, 32),  // Alias to C0
     (Lc0, 32),  // Alias to C1
@@ -140,7 +140,7 @@ create_basic_register_enums!(
     (C11C10, 64),
     (Cs, 64),       // Alias to C13C12
     (Upcycle, 64),  // Alias to C15C14
-    (C17C16, 64),   // Alias to C15C14
+    (C17C16, 64),   // Alias to C17C16
     (PktCount, 64), // Alias to C19C18
     (Utimer, 64),   // Alias to C31C30
     // Skipping HVX extensions for now
@@ -268,38 +268,38 @@ create_basic_register_enums!(
     (S77S76, 64),
     (S79S78, 64),
     // Guest registers
-    (Gelr, 32),       // G0
-    (Gsr, 32),        // G1
-    (Gosp, 32),       // G2
-    (G3, 32),         // G3
-    (G4, 32),         // G4
-    (G5, 32),         // G5
-    (G6, 32),         // G6
-    (G7, 32),         // G7
-    (G8, 32),         // G8
-    (G9, 32),         // G9
-    (G10, 32),        // G10
-    (G11, 32),        // G11
-    (G12, 32),        // G12
-    (G13, 32),        // G13
-    (G14, 32),        // G14
-    (G15, 32),        // G15
-    (Gpmucnt4, 32),   // G16
-    (Gpmucnt5, 32),   // G17
-    (Gpmucnt6, 32),   // G18
-    (Gpmucnt7, 32),   // G19
-    (G20, 32),        // G20
-    (G21, 32),        // G21
-    (G22, 32),        // G22
-    (G23, 32),        // G23
-    (Gpcyclelo, 32),  // G24
-    (Gpcyclehii, 32), // G25
-    (Gpmucnt0, 32),   // G26
-    (Gpmucnt1, 32),   // G27
-    (Gpmucnt2, 32),   // G28
-    (Gpmnucnt3, 32),  // G29
-    (G30, 32),        // G30
-    (G31, 32),        // G31
+    (Gelr, 32),      // G0
+    (Gsr, 32),       // G1
+    (Gosp, 32),      // G2
+    (G3, 32),        // G3
+    (G4, 32),        // G4
+    (G5, 32),        // G5
+    (G6, 32),        // G6
+    (G7, 32),        // G7
+    (G8, 32),        // G8
+    (G9, 32),        // G9
+    (G10, 32),       // G10
+    (G11, 32),       // G11
+    (G12, 32),       // G12
+    (G13, 32),       // G13
+    (G14, 32),       // G14
+    (G15, 32),       // G15
+    (Gpmucnt4, 32),  // G16
+    (Gpmucnt5, 32),  // G17
+    (Gpmucnt6, 32),  // G18
+    (Gpmucnt7, 32),  // G19
+    (G20, 32),       // G20
+    (G21, 32),       // G21
+    (G22, 32),       // G22
+    (G23, 32),       // G23
+    (Gpcyclelo, 32), // G24
+    (Gpcyclehi, 32), // G25
+    (Gpmucnt0, 32),  // G26
+    (Gpmucnt1, 32),  // G27
+    (Gpmucnt2, 32),  // G28
+    (Gpmucnt3, 32),  // G29
+    (G30, 32),       // G30
+    (G31, 32),       // G31
     // Guest register pairs
     (G1G0, 64),
     (G3G2, 64),
@@ -408,7 +408,7 @@ create_basic_register_enums!(
 
 lazy_static::lazy_static! {
     /// List of all [HexagonRegister]s convert to string and uppercased.
-    /// This is done in a [lazy_static::lazy_static] to avoid recomputing every time [Ppc32Register::register()] is called.
+    /// This is done in a [lazy_static::lazy_static] to avoid recomputing every time [HexagonRegister::register()] is called.
     static ref REGISTER_NAMES: HashMap<HexagonRegister, String> =  {
         HexagonRegister::iter()
             .map(|reg| (reg, reg.to_string().to_uppercase()))

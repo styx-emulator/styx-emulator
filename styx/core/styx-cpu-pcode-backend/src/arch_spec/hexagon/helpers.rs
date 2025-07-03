@@ -1,3 +1,27 @@
+// BSD 2-Clause License
+//
+// Copyright (c) 2024, Styx Emulator Project
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, this
+//    list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 use crate::arch_spec::generator_helper::CONTEXT_OPTION_LEN;
 use crate::arch_spec::hexagon::dotnew;
 use crate::{arch_spec::GeneratorHelp, pcode_gen::GeneratePcodeError};
@@ -10,6 +34,8 @@ use styx_pcode::pcode::{SpaceName, VarnodeData};
 use styx_pcode_translator::ContextOption;
 use styx_processor::cpu::CpuBackendExt;
 use styx_processor::{cpu::CpuBackend, memory::Mmu};
+
+use super::parse_iclass;
 
 // How many insns to fetch to analyze for duplexes?
 // Is trapping easier?
@@ -55,9 +81,21 @@ impl PktLoopParseBits {
 
 #[derive(Debug, Clone)]
 enum SubinstructionData {
-    EndDuplex(u32),
     EndDuplexEndPacket(u32),
-    StartDuplex(u32),
+}
+
+// this is to avoid https://smallcultfollowing.com/babysteps/blog/2018/11/01/after-nll-interprocedural-conflicts/
+#[derive(Debug, Clone)]
+struct HexagonGeneratorHelperState {
+    // Stores if the last instruction was the end of a packet.
+    pub last_insn_was_end_of_pkt: bool,
+    pub duplex_ended: bool,
+    pub first_insn_setup: bool,
+    pub pkt_insns: usize,
+    pub duplex_next_set: bool,
+    pub pkt_endloop: u32,
+    pub pkt_endloop_cleared: bool,
+    pub dotnew_should_unset: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -65,16 +103,7 @@ pub struct HexagonGeneratorHelper {
     // map code address -> subinsn type
     subinsn_map: FxHashMap<u64, SubinstructionData>,
     pc_varnode: VarnodeData,
-    pkt_end: u64,
-    // Stores if the last instruction was the end of a packet.
-    last_pkt_ended: bool,
-    duplex_ended: bool,
-    first_insn_setup: bool,
-    pkt_insns: usize,
-    duplex_next_set: bool,
-    pkt_endloop: u32,
-    pkt_endloop_cleared: bool,
-    dotnew_should_unset: bool,
+    state: HexagonGeneratorHelperState,
 }
 
 impl Default for HexagonGeneratorHelper {
@@ -88,17 +117,307 @@ impl Default for HexagonGeneratorHelper {
                 offset: 0,
                 size: 4,
             },
-            pkt_end: 0,
-            last_pkt_ended: true,
-            // Presumably this needs to be set once, and never again.
-            // TODO: make sure this is true by trying an instruction that would actually use an immext
-            first_insn_setup: true,
-            pkt_insns: 0,
-            duplex_ended: false,
-            duplex_next_set: false,
-            pkt_endloop: 0,
-            pkt_endloop_cleared: true,
-            dotnew_should_unset: false,
+            state: HexagonGeneratorHelperState {
+                last_insn_was_end_of_pkt: true,
+                // Presumably this needs to be set once, and never again.
+                // TODO: make sure this is true by trying an instruction that would actually use an immext
+                first_insn_setup: true,
+                pkt_insns: 0,
+                duplex_ended: false,
+                duplex_next_set: false,
+                pkt_endloop: 0,
+                pkt_endloop_cleared: true,
+                dotnew_should_unset: false,
+            },
+        }
+    }
+}
+
+impl HexagonGeneratorHelperState {
+    fn handle_first_insn(
+        &mut self,
+        context_opts: &mut SmallVec<[ContextOption; 4]>,
+        backend: &mut PcodeBackend,
+        unwrapped_pc: u64,
+    ) {
+        self.first_insn_setup = false;
+
+        context_opts.push(ContextOption::HexagonImmext(0xffffffff));
+        context_opts.push(ContextOption::HexagonPktStart(unwrapped_pc as u32));
+        backend
+            .shared_state
+            .insert(SharedStateKey::HexagonPktStart, unwrapped_pc as u128);
+    }
+
+    fn mark_end_of_pkt(&mut self, backend: &mut PcodeBackend, next_start_pc: u64) {
+        // Mark that the "last instruction was the end of a packet"
+        // and update the location of the end of the packet
+        self.last_insn_was_end_of_pkt = true;
+        backend
+            .shared_state
+            .insert(SharedStateKey::HexagonPktStart, next_start_pc as u128);
+    }
+
+    fn handle_endloop_set(&mut self, context_opts: &mut SmallVec<[ContextOption; 4]>) {
+        if self.pkt_endloop != 0 {
+            context_opts.push(ContextOption::HexagonEndloop(self.pkt_endloop));
+
+            self.pkt_endloop = 0;
+            self.pkt_endloop_cleared = false;
+        }
+    }
+
+    fn handle_duplex_immext(
+        &mut self,
+        parse_next: PktLoopParseBits,
+        insn_next: u32,
+        unwrapped_pc: u64,
+        context_opts: &mut SmallVec<[ContextOption; 4]>,
+    ) {
+        // This is only needed for immext
+        if parse_next == PktLoopParseBits::Duplex && insn_next != 0 {
+            context_opts.push(ContextOption::HexagonDuplexNext(unwrapped_pc as u32 + 6));
+            self.duplex_next_set = true;
+        } else if self.duplex_next_set {
+            self.duplex_next_set = false;
+            context_opts.push(ContextOption::HexagonDuplexNext(0));
+        }
+    }
+
+    fn common_handle_start_of_pkt(
+        &mut self,
+        context_opts: &mut SmallVec<[ContextOption; 4]>,
+        unwrapped_pc: u64,
+    ) {
+        context_opts.push(ContextOption::HexagonPktStart(unwrapped_pc as u32));
+
+        // endloop is cleared at the start of the next packet
+        if !self.pkt_endloop_cleared {
+            context_opts.push(ContextOption::HexagonEndloop(0));
+            self.pkt_endloop_cleared = true;
+        }
+
+        self.pkt_insns = 0;
+    }
+}
+
+impl HexagonGeneratorHelper {
+    fn handle_dotnew_immext(&mut self, insn_data: u32, backend: &mut PcodeBackend) {
+        // I think I need a separate "parse_iclass function"
+        let iclass = parse_iclass(insn_data);
+        let is_immext = iclass == 0b0000;
+        backend
+            .shared_state
+            .insert(SharedStateKey::HexagonCurrentInsnImmext, is_immext as u128);
+    }
+    fn handle_dotnew(
+        &mut self,
+        insn_data: u32,
+        backend: &mut PcodeBackend,
+        context_opts: &mut SmallVec<[ContextOption; 4]>,
+    ) {
+        if self.state.dotnew_should_unset {
+            trace!("unsetting hexagon hasnew");
+
+            // there's no point in setting dotnew, it's only ever used if
+            // hasnew is 1, but just for good measure
+            context_opts.push(ContextOption::HexagonHasnew(0));
+            context_opts.push(ContextOption::HexagonDotnew(0));
+
+            self.state.dotnew_should_unset = false;
+        }
+
+        match dotnew::parse_dotnew(insn_data) {
+            Some(referenced_dotnew_pkt) => {
+                // get current start
+                if let Some(current) = backend
+                    .shared_state
+                    .get(&SharedStateKey::HexagonTrueInsnCount)
+                {
+                    trace!(
+                        "dotnew: this is a dotnew packet, finding register at {} - {}",
+                        *current,
+                        referenced_dotnew_pkt
+                    );
+                    if let Some(register_num) =
+                        backend
+                            .shared_state
+                            .get(&SharedStateKey::HexagonInsnRegDest(
+                                (*current - referenced_dotnew_pkt as u128) as usize,
+                            ))
+                    {
+                        trace!("dotnew: this is a dotnew packet, setting context opts");
+                        context_opts.push(ContextOption::HexagonDotnew(*register_num as u32));
+                        context_opts.push(ContextOption::HexagonHasnew(1));
+                        self.state.dotnew_should_unset = true;
+                    }
+                }
+            }
+            None => {
+                trace!("dotnew: this isn't a dotnew insn")
+            }
+        }
+
+        // TODO: put our dotnew handlers here
+        // if dotnew_insn {
+        // off = get dotnew offset(dst, offset)
+        // get Q current - off -> regval
+        //  set hasnew 1
+        //  set dotnew Q
+        // }
+    }
+    fn handle_duplex(
+        &mut self,
+        backend: &mut PcodeBackend,
+        context_opts: &mut SmallVec<[ContextOption; 4]>,
+        saved_last_insn_was_end_of_pkt: bool,
+        unwrapped_pc: u64,
+        insn_data: u32,
+    ) -> Result<(), GeneratePcodeError> {
+        let insclass = ((insn_data >> 28) & 0b1110) | ((insn_data >> 13) & 0b1);
+        trace!("duplex instruction, insclass {}", insclass);
+
+        self.state.duplex_ended = false;
+
+        // From https://github.com/toshipiazza/ghidra-plugin-hexagon/blob/main/Ghidra/Processors/Hexagon/src/main/java/ghidra/app/plugin/core/analysis/HexagonInstructionInfo.java#L68
+        let duplex_slots = match insclass {
+            0 => (DuplexInsClass::L1, DuplexInsClass::L1),
+            1 => (DuplexInsClass::L2, DuplexInsClass::L1),
+            2 => (DuplexInsClass::L2, DuplexInsClass::L2),
+            3 => (DuplexInsClass::A, DuplexInsClass::A),
+            4 => (DuplexInsClass::L1, DuplexInsClass::A),
+            5 => (DuplexInsClass::L2, DuplexInsClass::A),
+            6 => (DuplexInsClass::S1, DuplexInsClass::A),
+            7 => (DuplexInsClass::S2, DuplexInsClass::A),
+            8 => (DuplexInsClass::S1, DuplexInsClass::L1),
+            9 => (DuplexInsClass::S1, DuplexInsClass::L2),
+            10 => (DuplexInsClass::S1, DuplexInsClass::S1),
+            11 => (DuplexInsClass::S2, DuplexInsClass::S1),
+            12 => (DuplexInsClass::S2, DuplexInsClass::L1),
+            13 => (DuplexInsClass::S2, DuplexInsClass::L2),
+            14 => (DuplexInsClass::S2, DuplexInsClass::S2),
+            // Realistically, this should be some sort of bad instruction thing
+            _ => unreachable!(),
+        };
+
+        // TODO: why use a hashmap? it may make it easier to implement
+        // larger blocks of prefetches in the future.
+        // If the performance impact is negligible, just switch to a
+        // next_subinsn_class variable
+        //
+        // Also, maybe saving the current pc might be useful if some exception
+        // occurs
+        // TODO: overflow checks?
+
+        trace!("duplex slot 1 slot 2 subinsn type {:?}", duplex_slots);
+
+        context_opts.push(ContextOption::HexagonSubinsn(duplex_slots.0 as u32));
+
+        // A duplex always terminates a packet. If it's the start of the packet, need to handle
+        // D, ID, or IID
+        trace!("this duplex instruction pair terminates a packet");
+        self.subinsn_map.insert(
+            unwrapped_pc + 2,
+            SubinstructionData::EndDuplexEndPacket(duplex_slots.1 as u32),
+        );
+
+        // First insn in duplex is a pkt start
+        // In this case, it has to be a standalone, because
+        // duplex is always slots 0 and 1 (last 2 slots) in pkt,
+        // so either we have a standalone or the duplex is later
+        if self.state.first_insn_setup {
+            trace!("this is the first instruction ever, and it is a duplex");
+            self.state
+                .handle_first_insn(context_opts, backend, unwrapped_pc);
+        }
+        // Start of packet
+        else if saved_last_insn_was_end_of_pkt {
+            trace!("this duplex is also the START of a packet!");
+            // No need to check hwloop because
+            // obviously a 2-instruction duplex packet with NOTHING else
+            // cannot contain an endloop marker.
+            //
+            // An endloop with a duplex would contain a nop first.
+            // Nonetheless, branching test is probably needed here
+
+            self.detect_handle_branch(backend, unwrapped_pc);
+            self.state
+                .common_handle_start_of_pkt(context_opts, unwrapped_pc);
+        }
+
+        Ok(())
+    }
+
+    fn detect_hwloop_start_of_packet(
+        &mut self,
+        backend: &mut PcodeBackend,
+        pkt_type: PktLoopParseBits,
+        parse_next: PktLoopParseBits,
+    ) -> Result<(), GeneratePcodeError> {
+        // Hardware loop handling needs to be done here.
+        // There shouldn't be duplexes at the beginning of a hwloop?
+        let lc0 = backend
+            .read_register::<u32>(HexagonRegister::Lc0)
+            .map_err(|_| GeneratePcodeError::InvalidAddress)?;
+        let lc1 = backend
+            .read_register::<u32>(HexagonRegister::Lc1)
+            .map_err(|_| GeneratePcodeError::InvalidAddress)?;
+
+        // check for hardware loop
+        // check if lc0/lc1 is greater than 1, since
+        // a hwloop terminates when lc0/lc1 == 1
+        // so it will never get set to zero after the hwloop executes
+        trace!("hwloop help: lc0 {} lc1 {}", lc0, lc1);
+
+        // check if this packet is the last packet in a hardware loop
+        // these are from the manual, section 10.6
+        if lc0 > 1 || lc1 > 1 {
+            // last in loop 1
+            if pkt_type == PktLoopParseBits::NotEndOfPacket1 {
+                trace!("hwloop help: last in loop 1");
+                self.state.pkt_endloop = 2;
+            }
+            // last in loop 0
+            else if pkt_type == PktLoopParseBits::NotEndOfPacket2
+                && (parse_next == PktLoopParseBits::NotEndOfPacket1
+                    || parse_next == PktLoopParseBits::EndOfPacket
+                    // Is this undocumented? the assembler will happily make endloop0
+                    // spit out a duplex as last instruction, but
+                    // this case isn't covered in the manual AFAICT.
+                    // Endloop1 and 01 are fine since they must be padded with at least 2 nops.
+                    || parse_next == PktLoopParseBits::Duplex)
+            {
+                trace!("hwloop help: last in loop 0");
+                self.state.pkt_endloop = 1;
+            }
+            // last in loop 0 and 1
+            else if pkt_type == PktLoopParseBits::NotEndOfPacket2
+                && parse_next == PktLoopParseBits::NotEndOfPacket2
+            {
+                trace!("hwloop help: last in loop 0 and loop 1");
+                self.state.pkt_endloop = 3;
+            }
+            // not last pkt in loop
+            else {
+                trace!("hwloop help: not the last packet in a hwloop");
+                self.state.pkt_endloop = 0;
+            }
+        }
+        Ok(())
+    }
+
+    fn detect_handle_branch(&self, backend: &mut PcodeBackend, unwrapped_pc: u64) {
+        // In case of branching, we need to do a quick sanity check
+        // to make sure that value in our shared state matches, otherwise
+        // we need to update it here.
+        match backend.shared_state.get(&SharedStateKey::HexagonPktStart) {
+            Some(next_pkt_start) if *next_pkt_start != unwrapped_pc as u128 => {
+                trace!("helper detected a branch, updating shared state for consistency");
+                backend
+                    .shared_state
+                    .insert(SharedStateKey::HexagonPktStart, unwrapped_pc as u128);
+            }
+            _ => {}
         }
     }
 }
@@ -115,8 +434,8 @@ impl GeneratorHelp for HexagonGeneratorHelper {
         let mut context_opts: SmallVec<[ContextOption; 4]> = SmallVec::new();
 
         // Save this off
-        let last_pkt_ended = self.last_pkt_ended;
-        self.last_pkt_ended = true;
+        let saved_last_insn_was_end_of_pkt = self.state.last_insn_was_end_of_pkt;
+        self.state.last_insn_was_end_of_pkt = false;
 
         // Get the PC
         match backend.pc() {
@@ -127,41 +446,28 @@ impl GeneratorHelp for HexagonGeneratorHelper {
             Ok(unwrapped_pc) => {
                 self.pc_varnode.offset = unwrapped_pc;
 
-                match self.subinsn_map.get(&self.pc_varnode.offset) {
-                    Some(subinsn_data) => {
-                        let (duplex_ended, subinsn_type) = match subinsn_data {
-                            // Update shared state to the start of the next packet, as is done in the EndPkt case later
-                            SubinstructionData::EndDuplexEndPacket(ty) => {
-                                trace!("in end duplex that's an end of packet, pushing the next packet and such");
+                if let Some(subinsn_data) = self.subinsn_map.get_mut(&self.pc_varnode.offset) {
+                    match subinsn_data {
+                        // Update shared state to the start of the next packet, as is done in the EndPkt case later
+                        SubinstructionData::EndDuplexEndPacket(ty) => {
+                            trace!("in end duplex that's an end of packet, pushing the next packet and such");
 
-                                self.last_pkt_ended = true;
-                                backend.shared_state.insert(
-                                    SharedStateKey::HexagonPktStart,
-                                    (unwrapped_pc + 2) as u128,
-                                );
-                                (true, ty)
-                            }
-                            SubinstructionData::EndDuplex(ty) => (true, ty),
-                            SubinstructionData::StartDuplex(ty) => (false, ty),
-                        };
+                            self.state.mark_end_of_pkt(backend, unwrapped_pc + 2);
+                            self.state.duplex_ended = true;
 
-                        self.duplex_ended = duplex_ended;
+                            context_opts.push(ContextOption::HexagonSubinsn(*ty));
 
-                        context_opts.push(ContextOption::HexagonSubinsn(*subinsn_type));
+                            // Consume as we go to prevent a memory leak
+                            // by having the map grow infinitely
+                            self.subinsn_map.remove(&self.pc_varnode.offset);
+                            self.state.pkt_insns += 1;
 
-                        // Consume as we go to prevent a memory leak
-                        // by having the map grow infinitely
-                        self.subinsn_map.remove(&self.pc_varnode.offset);
-                        self.pkt_insns = self.pkt_insns + 1;
+                            // For some reason, duplexes can end an endloop0
+                            self.state.handle_endloop_set(&mut context_opts);
 
-                        return Ok(context_opts);
-                    }
-                    None => {}
-                }
-
-                if self.duplex_ended {
-                    self.duplex_ended = false;
-                    context_opts.push(ContextOption::HexagonSubinsn(0));
+                            return Ok(context_opts);
+                        }
+                    };
                 }
 
                 // The hashmap doesn't have anything for us anymore, we
@@ -188,202 +494,44 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                         let insn_next2 = ((insn_data_wide >> 96) & 0xffffffff) as u32;
 
                         let parse_next = PktLoopParseBits::new_from_insn(insn_next);
-                        let parse_next1 = PktLoopParseBits::new_from_insn(insn_next1);
+                        let _parse_next1 = PktLoopParseBits::new_from_insn(insn_next1);
                         let _parse_next2 = PktLoopParseBits::new_from_insn(insn_next2);
 
-                        // This is only needed for immext
-                        if parse_next == PktLoopParseBits::Duplex && insn_next != 0 {
-                            context_opts
-                                .push(ContextOption::HexagonDuplexNext(unwrapped_pc as u32 + 6));
-                            self.duplex_next_set = true;
-                        } else if self.duplex_next_set {
-                            self.duplex_next_set = false;
-                            context_opts.push(ContextOption::HexagonDuplexNext(0));
-                        }
+                        self.handle_dotnew_immext(insn_data, backend);
 
-                        if self.dotnew_should_unset {
-                            trace!("unsetting hexagon hasnew");
-
-                            // there's no point in setting dotnew, it's only ever used if
-                            // hasnew is 1, but just for good measure
-                            context_opts.push(ContextOption::HexagonHasnew(0));
-                            context_opts.push(ContextOption::HexagonDotnew(0));
-
-                            self.dotnew_should_unset = false;
-                        }
-
-                        match dotnew::parse_dotnew(insn_data) {
-                            Some(referenced_dotnew_pkt) => {
-                                // get current start
-                                if let Some(current) = backend
-                                    .shared_state
-                                    .get(&SharedStateKey::HexagonTrueInsnCount)
-                                {
-                                    trace!(
-                                        "dotnew: this is a dotnew packet, finding register at {} - {}",
-                                        *current , referenced_dotnew_pkt
-                                    );
-                                    if let Some(register_num) = backend.shared_state.get(
-                                        &SharedStateKey::HexagonInsnRegDest(
-                                            (*current - referenced_dotnew_pkt as u128) as usize,
-                                        ),
-                                    ) {
-                                        trace!(
-                                            "dotnew: this is a dotnew packet, setting context opts"
-                                        );
-                                        context_opts.push(ContextOption::HexagonDotnew(
-                                            *register_num as u32,
-                                        ));
-                                        context_opts.push(ContextOption::HexagonHasnew(1));
-                                        self.dotnew_should_unset = true;
-                                    }
-                                }
-                            }
-                            None => {}
-                        }
-                        // TODO: put our dotnew handlers here
-                        // if dotnew_insn {
-                        // off = get dotnew offset(dst, offset)
-                        // get Q current - off -> regval
-                        //  set hasnew 1
-                        //  set dotnew Q
-                        // }
+                        self.state.handle_duplex_immext(
+                            parse_next,
+                            insn_next,
+                            unwrapped_pc,
+                            &mut context_opts,
+                        );
+                        self.handle_dotnew(insn_data, backend, &mut context_opts);
 
                         trace!("insn data is 0x{:x}", insn_data);
 
                         let pkt_type = PktLoopParseBits::new_from_insn(insn_data);
                         match pkt_type {
-                            PktLoopParseBits::Duplex => {
-                                let insclass =
-                                    ((insn_data >> 28) & 0b1110) | ((insn_data >> 13) & 0b1);
-                                trace!("duplex instruction, insclass {}", insclass);
-                                // From https://github.com/toshipiazza/ghidra-plugin-hexagon/blob/main/Ghidra/Processors/Hexagon/src/main/java/ghidra/app/plugin/core/analysis/HexagonInstructionInfo.java#L68
-                                let duplex_slots = match insclass {
-                                    0 => (DuplexInsClass::L1, DuplexInsClass::L1),
-                                    1 => (DuplexInsClass::L2, DuplexInsClass::L1),
-                                    2 => (DuplexInsClass::L2, DuplexInsClass::L2),
-                                    3 => (DuplexInsClass::A, DuplexInsClass::A),
-                                    4 => (DuplexInsClass::L1, DuplexInsClass::A),
-                                    5 => (DuplexInsClass::L2, DuplexInsClass::A),
-                                    6 => (DuplexInsClass::S1, DuplexInsClass::A),
-                                    7 => (DuplexInsClass::S2, DuplexInsClass::A),
-                                    8 => (DuplexInsClass::S1, DuplexInsClass::L1),
-                                    9 => (DuplexInsClass::S1, DuplexInsClass::L2),
-                                    10 => (DuplexInsClass::S1, DuplexInsClass::S1),
-                                    11 => (DuplexInsClass::S2, DuplexInsClass::S1),
-                                    12 => (DuplexInsClass::S2, DuplexInsClass::L1),
-                                    13 => (DuplexInsClass::S2, DuplexInsClass::L2),
-                                    14 => (DuplexInsClass::S2, DuplexInsClass::S2),
-                                    // Realistically, this should be some sort of bad instruction thing
-                                    _ => unreachable!(),
-                                };
-
-                                // TODO: why use a hashmap? it may make it easier to implement
-                                // larger blocks of prefetches in the future.
-                                // If the performance impact is negligible, just switch to a
-                                // next_subinsn_class variable
-                                //
-                                // Also, maybe saving the current pc might be useful if some exception
-                                // occurs
-                                // TODO: overflow checks?
-
-                                trace!("duplex slot 1 slot 2 subinsn type {:?}", duplex_slots);
-
-                                context_opts
-                                    .push(ContextOption::HexagonSubinsn(duplex_slots.0 as u32));
-
-                                // First insn in duplex is a pkt start
-                                if self.first_insn_setup {
-                                    self.first_insn_setup = false;
-
-                                    // If standalone, this should be EndDuplexEndPacket
-
-                                    // D I Ie or D Ie
-                                    if parse_next == PktLoopParseBits::EndOfPacket
-                                        || ((parse_next == PktLoopParseBits::NotEndOfPacket1
-                                            || parse_next == PktLoopParseBits::NotEndOfPacket2)
-                                            && parse_next1 == PktLoopParseBits::EndOfPacket)
-                                    {
-                                        self.subinsn_map.insert(
-                                            unwrapped_pc + 2,
-                                            SubinstructionData::EndDuplex(duplex_slots.1 as u32),
-                                        );
-                                    }
-                                    // Standalone
-                                    else {
-                                        self.subinsn_map.insert(
-                                            unwrapped_pc + 2,
-                                            SubinstructionData::EndDuplexEndPacket(
-                                                duplex_slots.1 as u32,
-                                            ),
-                                        );
-                                    }
-
-                                    context_opts
-                                        .push(ContextOption::HexagonPktStart(unwrapped_pc as u32));
-                                    // None of this should require last_pkt_ended, as we're not at the end of an instruction
-                                }
-                                // If not, we should inspect the following insns to figure out whether this duplex is at the end of the packet
-                                // Duplex comes in these combos:
-                                // Ie = end
-                                // I I D |
-                                // I D Ie |
-                                // D I Ie |
-                                //
-                                // D
-                                //
-                                // I D
-                                // D Iend
-                                else if self.pkt_insns <= 1 &&
-                                // D I (end) or I D I (end)
-                                (parse_next == PktLoopParseBits::EndOfPacket ||
-                                        // D I I (end)
-                                         ( (parse_next == PktLoopParseBits::NotEndOfPacket1 || parse_next == PktLoopParseBits::NotEndOfPacket2)
-                                              && parse_next1 == PktLoopParseBits::EndOfPacket))
-                                {
-                                    trace!(
-                                        "this duplex instruction pair does not terminate a packet"
-                                    );
-                                    self.subinsn_map.insert(
-                                        unwrapped_pc + 2,
-                                        SubinstructionData::EndDuplex(duplex_slots.1 as u32),
-                                    );
-
-                                    // Start of packet
-                                    if last_pkt_ended {
-                                        self.pkt_insns = 0;
-                                    }
-                                }
-                                // Emit pkt start if we are in IID, D, or ID scenario (should be EndDuplexEndPacket)
-                                // Remaining case is I I D or I D
-                                else {
-                                    trace!("this duplex instruction pair DOES terminate a packet");
-                                    self.subinsn_map.insert(
-                                        unwrapped_pc + 2,
-                                        SubinstructionData::EndDuplexEndPacket(
-                                            duplex_slots.1 as u32,
-                                        ),
-                                    );
-                                }
-                            }
+                            PktLoopParseBits::Duplex => self.handle_duplex(
+                                backend,
+                                &mut context_opts,
+                                saved_last_insn_was_end_of_pkt,
+                                unwrapped_pc,
+                                insn_data,
+                            )?,
                             // First instruction in the program won't have anything taken care of
                             PktLoopParseBits::NotEndOfPacket1
                             | PktLoopParseBits::NotEndOfPacket2
-                                if self.first_insn_setup =>
+                                if self.state.first_insn_setup =>
                             {
                                 trace!(
                                     "First instruction helper has seen, setting up context opts"
                                 );
-                                self.first_insn_setup = false;
-                                self.last_pkt_ended = false;
 
-                                context_opts.push(ContextOption::HexagonImmext(0xffffffff));
-                                context_opts
-                                    .push(ContextOption::HexagonPktStart(unwrapped_pc as u32));
-
-                                backend
-                                    .shared_state
-                                    .insert(SharedStateKey::HexagonPktStart, unwrapped_pc as u128);
+                                self.state.handle_first_insn(
+                                    &mut context_opts,
+                                    backend,
+                                    unwrapped_pc,
+                                );
                             }
 
                             // The start of a new packet
@@ -391,123 +539,63 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                             // They also set pkt_next, but pkt_next isn't used in the slaspec (thankfully).
                             PktLoopParseBits::NotEndOfPacket1
                             | PktLoopParseBits::NotEndOfPacket2
-                                if last_pkt_ended =>
+                                if saved_last_insn_was_end_of_pkt =>
                             {
                                 trace!("hexagon start of packet");
 
-                                // Hardware loop handling needs to be done here.
-                                // There shouldn't be duplexes at the beginning of a hwloop?
-                                let lc0 = backend
-                                    .read_register::<u32>(HexagonRegister::Lc0)
-                                    .map_err(|_| GeneratePcodeError::InvalidAddress)?;
-                                let lc1 = backend
-                                    .read_register::<u32>(HexagonRegister::Lc1)
-                                    .map_err(|_| GeneratePcodeError::InvalidAddress)?;
+                                // These are not required in the "start and end of packet"
+                                // as a hardware loop will always have 4 slots (with no ops)
+                                self.detect_hwloop_start_of_packet(backend, pkt_type, parse_next)?;
+                                // This is okay to not perform in "start and end of pkt,"
+                                // since the key set here is set at the end of EndofPacket
+                                // handler
+                                self.detect_handle_branch(backend, unwrapped_pc);
 
-                                // check for hardware loop
-                                // check if lc0/lc1 is greater than 0
-                                trace!("hwloop help: lc0 {} lc1 {}", lc0, lc1);
-
-                                // check if this packet is the last packet in a hardware loop
-                                if lc0 > 0 || lc1 > 0 {
-                                    // last in loop 1
-                                    if pkt_type == PktLoopParseBits::NotEndOfPacket1 {
-                                        trace!("hwloop help: last in loop 1");
-                                        self.pkt_endloop = 2;
-                                    }
-                                    // last in loop 0
-                                    else if pkt_type == PktLoopParseBits::NotEndOfPacket2
-                                        && (parse_next == PktLoopParseBits::NotEndOfPacket1
-                                            || parse_next == PktLoopParseBits::EndOfPacket)
-                                    {
-                                        trace!("hwloop help: last in loop 0");
-                                        self.pkt_endloop = 1;
-                                    }
-                                    // last in loop 0 and 1
-                                    else if pkt_type == PktLoopParseBits::NotEndOfPacket2
-                                        && parse_next == PktLoopParseBits::NotEndOfPacket2
-                                    {
-                                        trace!("hwloop help: last in loop 0 and loop 1");
-                                        self.pkt_endloop = 3;
-                                    }
-                                    // not last pkt in loop
-                                    else {
-                                        trace!("hwloop help: not the last packet in a hwloop");
-                                        self.pkt_endloop = 0;
-                                    }
-                                }
-
-                                // NOTE: there's a truncation here, but since hexagon pointers
-                                // are 32 bits this shouldn't matter?
-
-                                // In case of branching, we need to do a quick sanity check
-                                // to make sure that value in our shared state matches, otherwise
-                                // we need to update it here.
-                                match backend.shared_state.get(&SharedStateKey::HexagonPktStart) {
-                                    Some(next_pkt_start)
-                                        if *next_pkt_start != unwrapped_pc as u128 =>
-                                    {
-                                        trace!("helper detected a branch, updating shared state for consistency");
-                                        backend.shared_state.insert(
-                                            SharedStateKey::HexagonPktStart,
-                                            unwrapped_pc as u128,
-                                        );
-                                    }
-                                    _ => {}
-                                }
-
-                                context_opts
-                                    .push(ContextOption::HexagonPktStart(unwrapped_pc as u32));
-
-                                self.last_pkt_ended = false;
-                                self.pkt_insns = 0;
+                                self.state
+                                    .common_handle_start_of_pkt(&mut context_opts, unwrapped_pc);
                             }
                             PktLoopParseBits::NotEndOfPacket1
                             | PktLoopParseBits::NotEndOfPacket2 => {
                                 trace!("hexagon prefetch is middle of packet");
-                                self.last_pkt_ended = false;
                             }
                             PktLoopParseBits::EndOfPacket => {
-                                // This is both the start and end of a packet
                                 // Special care is taken for an end of packet
                                 // that is the first packet seen
-                                if self.first_insn_setup {
+                                if self.state.first_insn_setup {
                                     trace!(
                                         "First instruction helper but the packet has only 1 insn"
                                     );
 
-                                    self.first_insn_setup = false;
-
-                                    context_opts.push(ContextOption::HexagonImmext(0xffffffff));
+                                    self.state.handle_first_insn(
+                                        &mut context_opts,
+                                        backend,
+                                        unwrapped_pc,
+                                    );
                                 }
-
-                                if last_pkt_ended {
+                                // This is both the start and end of a packet (single insn pkt)
+                                else if saved_last_insn_was_end_of_pkt {
                                     trace!("start and end of pkt");
-                                    context_opts
-                                        .push(ContextOption::HexagonPktStart(unwrapped_pc as u32));
+                                    // Normally, this would be handled in the "hexagon start of packet" handler,
+                                    // that arm of the match is never taken if we have both a start and end of a packet.
+                                    // Therefore, it is important to update the "packet start" as the start of the
+                                    // single-instruction packet here.
+                                    //
+                                    // NOTE: handling the branching stuff here is redundant
+                                    self.state.common_handle_start_of_pkt(
+                                        &mut context_opts,
+                                        unwrapped_pc,
+                                    );
                                 } else {
                                     trace!("got to end of pkt");
                                 }
 
-                                self.pkt_end = unwrapped_pc;
-                                self.last_pkt_ended = true;
-
-                                if self.pkt_endloop != 0 {
-                                    context_opts
-                                        .push(ContextOption::HexagonEndloop(self.pkt_endloop));
-
-                                    self.pkt_endloop = 0;
-                                    self.pkt_endloop_cleared = false;
-                                } else if !self.pkt_endloop_cleared {
-                                    context_opts.push(ContextOption::HexagonEndloop(0));
-
-                                    self.pkt_endloop_cleared = true;
-                                }
                                 // Not a duplex, so next ins is +4 away in packet distance
-                                backend.shared_state.insert(
-                                    SharedStateKey::HexagonPktStart,
-                                    (unwrapped_pc + 4) as u128,
-                                );
+                                self.state.mark_end_of_pkt(backend, unwrapped_pc + 4);
+
+                                // A single instruction packet can't have an endloop
+                                // section 10.6: endloop0 has to have 2 or more instructions
+                                // endloop3 has to have 3 or more.
+                                self.state.handle_endloop_set(&mut context_opts);
                             }
                             // TODO
                             PktLoopParseBits::Other => {
@@ -517,10 +605,17 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                         }
                     }
                 }
+
+                // Check this after the duplex handler runs
+
+                if self.state.duplex_ended {
+                    self.state.duplex_ended = false;
+                    context_opts.push(ContextOption::HexagonSubinsn(0));
+                }
             }
         }
 
-        self.pkt_insns = self.pkt_insns + 1;
+        self.state.pkt_insns += 1;
         Ok(context_opts)
     }
 }

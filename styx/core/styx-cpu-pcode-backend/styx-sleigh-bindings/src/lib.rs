@@ -140,7 +140,6 @@ pub mod ffi {
         fn getVarnodeSpace(data: &VarnodeData) -> *mut AddrSpace;
         fn getVarnodeOffset(data: &VarnodeData) -> u64;
 
-
         type DocumentStorage;
         fn newDocumentStorage(s: &CxxString) -> Result<UniquePtr<DocumentStorage>>;
 
@@ -154,7 +153,13 @@ pub mod ffi {
         ) -> UniquePtr<Sleigh>;
         fn getRegisterProxy<'a>(sleigh: &'a Sleigh, reg: &CxxString) -> Result<&'a VarnodeData>;
         fn initialize(self: Pin<&mut Sleigh>, dom: Pin<&mut DocumentStorage>) -> Result<()>;
-        fn setContextVariableCached(self: Pin<&mut Sleigh>, str: &CxxString, addr: &Address, value: u32);
+        fn setContextVariableCached(
+            self: Pin<&mut Sleigh>,
+            str: &CxxString,
+            addr_lo: &Address,
+            addr_hi: &Address,
+            value: u32,
+        );
 
         type SleighBase;
         fn getUserOps(sleigh: &Sleigh) -> UniquePtr<CxxVector<UserOpData>>;
@@ -173,7 +178,12 @@ pub mod ffi {
         type ContextInternal;
         fn new_context_internal() -> UniquePtr<ContextInternal>;
         type ContextDatabase;
-        fn setVariable(self: Pin<&mut ContextDatabase>, str: &CxxString, addr: &Address, value: u32);
+        fn setVariable(
+            self: Pin<&mut ContextDatabase>,
+            str: &CxxString,
+            addr: &Address,
+            value: u32,
+        );
 
         type LoadImage;
         type RustLoadImageProxy;
