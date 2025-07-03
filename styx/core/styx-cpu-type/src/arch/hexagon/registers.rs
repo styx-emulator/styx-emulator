@@ -93,10 +93,10 @@ create_basic_register_enums!(
     (D14, 64),
     (D15, 64),
     // Predicate registers
-    (P0, 32),
-    (P1, 32),
-    (P2, 32),
-    (P3, 32),
+    (P0, 8),
+    (P1, 8),
+    (P2, 8),
+    (P3, 8),
     // Control registers
     (Sa0, 32),  // Alias to C0
     (Lc0, 32),  // Alias to C1
