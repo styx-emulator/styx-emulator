@@ -7,6 +7,7 @@ mod pc_manager;
 // Anything related to packet semantics
 mod dotnew;
 mod pkt_semantics;
+mod regpairs;
 
 #[cfg(test)]
 pub mod tests;
@@ -30,6 +31,8 @@ pub fn build() -> ArchSpecBuilder<sla::Hexagon> {
     spec.call_other_manager
         .add_handler_other_sla(HexagonUserOps::Newreg, NewReg {})
         .unwrap();
+
+    regpairs::add_register_pair_handlers(&mut spec);
 
     spec
 }

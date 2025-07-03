@@ -172,12 +172,35 @@ fn test_dotnew_basic(
     (cpu, mmu, ev)
 }
 
+#[test]
+fn test_regpairs() {
+    const LO: u64 = 0x29884433;
+    // pretty sure this has to be a byte unless you want to copy from another
+    // register
+    const HI: u64 = 100;
+    let (mut cpu, mut mmu, mut ev) =
+        setup_asm(&format!("{{ r13:12 = combine(#{}, #{}) }}", HI, LO), None);
+
+    let exit = cpu.execute(&mut mmu, &mut ev, 2).unwrap();
+    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+
+    let reg_lo = cpu.read_register::<u32>(HexagonRegister::R12).unwrap();
+    let reg_hi = cpu.read_register::<u32>(HexagonRegister::R13).unwrap();
+
+    let reg_pair = cpu.read_register::<u64>(HexagonRegister::D6).unwrap();
+
+    assert_eq!(reg_lo, LO as u32);
+    assert_eq!(reg_hi, HI as u32);
+    assert_eq!(reg_pair, (HI << 32) | LO);
+}
+
 // TODO:
-// also need one that does something like R2 = mpyi(R0, add(R1, #1))
 // need to test load/stores (non dotnew) here
 //
 // also need something that tests the position of duplex instructions within a larger packet
 // VERY heavily.
+//
+// need some tests related to register pairs
 //
 // also need some real programs, compiled with clang
 
@@ -490,6 +513,7 @@ fn test_duplex_immext() {
 }
 
 // TODO: can you mix a duplex instruction with some other stuff in a packet?
+// (yes, this is tested somewhere here)
 #[test]
 fn test_packet_instructions() {
     // Packet instructions are interesting, as they are reordered to reflect the
