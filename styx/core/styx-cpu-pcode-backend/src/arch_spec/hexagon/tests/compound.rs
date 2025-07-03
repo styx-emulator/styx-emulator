@@ -22,54 +22,45 @@
 // CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-use super::ArchSpecBuilder;
-use super::GeneratorHelper;
-use super::PcManager;
+use crate::arch_spec::hexagon::tests::*;
 
-mod helpers;
-mod pc_manager;
-// Anything related to packet semantics
-mod dotnew;
-mod pkt_semantics;
-mod regpairs;
+#[test]
+fn test_compound() {
+    // More instructions that were taken from the manual
+    // Can only do in slot 2 and 3.
+    let (mut cpu, mut mmu, mut ev) = setup_asm(
+        "{ R2 = add(R0, mpyi(R1, #3)); } { R7 = add(R4, sub(#15, R3)); R10 &= and(R11, R12) }",
+        Some(vec![
+            0x60, 0xc2, 0x81, 0xdf, 0xe3, 0x67, 0x84, 0xdb, 0x0a, 0xcc, 0x4b, 0xef,
+        ]),
+    );
 
-mod system;
+    // for add mpyi
 
-#[cfg(test)]
-pub mod tests;
+    cpu.write_register(HexagonRegister::R0, 12u32).unwrap();
+    cpu.write_register(HexagonRegister::R1, 9u32).unwrap();
 
-pub use helpers::HexagonGeneratorHelper;
-pub use pc_manager::StandardPcManager;
+    // for add sub
 
-use pkt_semantics::NewReg;
-use styx_pcode_translator::sla::{self, HexagonUserOps};
+    cpu.write_register(HexagonRegister::R4, 200u32).unwrap();
+    cpu.write_register(HexagonRegister::R3, 7u32).unwrap();
 
-fn parse_iclass(insn: u32) -> u32 {
-    (insn >> 28) & 0xf
-}
+    // for and, and
 
-// Adapted from PPC
-pub fn build() -> ArchSpecBuilder<sla::Hexagon> {
-    let mut spec = ArchSpecBuilder::default();
-
-    // Generator + pc manager. For now use the default pc manager
-    spec.set_generator(GeneratorHelper::Hexagon(HexagonGeneratorHelper::default()));
-    spec.set_pc_manager(PcManager::Hexagon(StandardPcManager::default()));
-
-    // TODO: callother manager for system instructions, reg manager
-
-    spec.call_other_manager
-        .add_handler_other_sla(HexagonUserOps::Newreg, NewReg {})
+    cpu.write_register(HexagonRegister::R10, 8872u32).unwrap();
+    cpu.write_register(HexagonRegister::R11, 39939201u32)
+        .unwrap();
+    cpu.write_register(HexagonRegister::R12, 0xf8f8f8f8u32)
         .unwrap();
 
-    system::tlb::add_tlb_callothers(&mut spec);
-    system::icache::add_icache_callothers(&mut spec);
-    system::dcache::add_dcache_callothers(&mut spec);
-    system::l2::add_l2_callothers(&mut spec);
-    system::interrupt::add_interrupt_callothers(&mut spec);
+    let exit = cpu.execute(&mut mmu, &mut ev, 3).unwrap();
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
-    regpairs::add_register_pair_handlers(&mut spec);
-    regpairs::add_vector_register_pair_handlers(&mut spec);
+    let r2 = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
+    let r7 = cpu.read_register::<u32>(HexagonRegister::R7).unwrap();
+    let r10 = cpu.read_register::<u32>(HexagonRegister::R10).unwrap();
 
-    spec
+    assert_eq!(r2, 39);
+    assert_eq!(r7, (15 - 7) + 200);
+    assert_eq!(r10, (0xf8f8f8f8 & 39939201) & 8872);
 }

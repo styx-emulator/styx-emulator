@@ -10,7 +10,7 @@ pub struct ContextInternal {
 }
 
 impl ContextInternal {
-    pub fn set_variable(
+    pub fn _set_variable(
         &mut self,
         name: impl AsRef<str>,
         addr_space: *mut ffi::AddrSpace,

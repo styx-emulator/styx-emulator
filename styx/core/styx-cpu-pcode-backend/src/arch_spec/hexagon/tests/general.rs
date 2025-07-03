@@ -22,43 +22,24 @@
 // CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-use log::trace;
-use styx_pcode::pcode::VarnodeData;
-use styx_processor::{event_controller::EventController, memory::Mmu};
+use crate::arch_spec::hexagon::tests::*;
 
-use crate::{
-    call_other::{CallOtherCallback, CallOtherHandleError},
-    PCodeStateChange, PcodeBackend,
-};
+#[test]
+fn test_single_instruction() {
+    let (mut cpu, mut mmu, mut ev) = setup_asm("{ r5 = r0; }", None);
+    const WRITTEN: u32 = 0x29177717;
+    cpu.write_register(HexagonRegister::R0, WRITTEN).unwrap();
 
-// For dotnew
-#[derive(Debug)]
-pub struct NewReg {}
+    let initial_isa_pc = get_isa_pc(&mut cpu);
+    let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
 
-impl CallOtherCallback for NewReg {
-    fn handle(
-        &mut self,
-        backend: &mut PcodeBackend,
-        _mmu: &mut Mmu,
-        _ev: &mut EventController,
-        inputs: &[VarnodeData],
-        output: Option<&VarnodeData>,
-    ) -> Result<PCodeStateChange, CallOtherHandleError> {
-        debug_assert_eq!(inputs.len(), 1);
-        debug_assert!(output.is_some());
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
-        // Should I be unwrapping?
-        let input = &inputs[0];
-        let reg_val = backend.read(input).unwrap();
+    let r5 = cpu.read_register::<u32>(HexagonRegister::R5).unwrap();
 
-        // For now, since there are no packet semantics, we should just
-        // use the previously set value.
-        //
-        // TODO: update when packet semantics come into play
-        trace!("newreg varnode input is {}", input);
+    // This *should* be the ISA PC
+    let end_isa_pc = get_isa_pc(&mut cpu);
 
-        backend.write(output.unwrap(), reg_val).unwrap();
-
-        Ok(PCodeStateChange::Fallthrough)
-    }
+    assert_eq!(r5, WRITTEN);
+    assert_eq!(end_isa_pc - initial_isa_pc, 4);
 }

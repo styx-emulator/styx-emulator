@@ -34,6 +34,9 @@ pub trait GeneratorHelp: Debug {
 
 /// Use [GeneratorHelper::default()] for a "do-nothing" helper.
 #[enum_dispatch(GeneratorHelp)]
+// We derive Clone here because the GeneratorHelper
+// is saved and restored in context_save and
+// context_restore using .clone().
 #[derive(Debug, Clone)]
 pub enum GeneratorHelper {
     #[cfg(feature = "arch_aarch64")]

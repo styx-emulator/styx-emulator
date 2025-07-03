@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::{PcodeBackend, DEFAULT_REG_ALLOCATION};
+use crate::PcodeBackend;
 use enum_dispatch::enum_dispatch;
 use smallvec::SmallVec;
 use std::fmt::Debug;
@@ -34,7 +34,10 @@ use super::hexagon;
 ///
 /// Each architecture should implement the [ArchPcManager] trait and supply it to the pcode machine.
 #[enum_dispatch(ArchPcManager)]
-#[derive(Debug)]
+// We derive Clone here because the PcManager
+// is saved and restored in context_save and
+// context_restore using .clone().
+#[derive(Debug, Clone)]
 pub enum PcManager {
     #[cfg(feature = "arch_aarch64")]
     Aarch64(aarch64::StandardPcManager),

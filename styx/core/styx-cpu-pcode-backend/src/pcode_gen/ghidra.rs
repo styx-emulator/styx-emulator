@@ -97,7 +97,6 @@ impl GhidraPcodeGenerator {
         for option in context_options.into_iter() {
             trace!("Setting context option: {option:?}");
             translator.set_context_option(option);
-
         }
 
         let data = MmuLoaderDependencies::new(cpu, mmu, ev, &mut err);
