@@ -172,8 +172,10 @@ fn test_dotnew_basic(
     (cpu, mmu, ev)
 }
 
+fn test_all_regpairs() {}
+
 #[test]
-fn test_regpairs() {
+fn test_regpair_helper() {
     const LO: u64 = 0x29884433;
     // pretty sure this has to be a byte unless you want to copy from another
     // register

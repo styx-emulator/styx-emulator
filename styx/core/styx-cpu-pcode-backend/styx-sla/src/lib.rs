@@ -719,11 +719,11 @@ mod hexagon {
             HexagonRegister::Gpmucnt6 => "G18",
             HexagonRegister::Gpmucnt7 => "G19",
             HexagonRegister::Gpcyclelo => "G24",
-            HexagonRegister::Gpcyclehii => "G25",
+            HexagonRegister::Gpcyclehi => "G25",
             HexagonRegister::Gpmucnt0 => "G26",
             HexagonRegister::Gpmucnt1 => "G27",
             HexagonRegister::Gpmucnt2 => "G28",
-            HexagonRegister::Gpmnucnt3 => "G29",
+            HexagonRegister::Gpmucnt3 => "G29",
             HexagonRegister::G30 | HexagonRegister::G31 => default_name,
             HexagonRegister::G1G0
             | HexagonRegister::G3G2

@@ -140,7 +140,7 @@ create_basic_register_enums!(
     (C11C10, 64),
     (Cs, 64),       // Alias to C13C12
     (Upcycle, 64),  // Alias to C15C14
-    (C17C16, 64),   // Alias to C15C14
+    (C17C16, 64),   // Alias to C17C16
     (PktCount, 64), // Alias to C19C18
     (Utimer, 64),   // Alias to C31C30
     // Skipping HVX extensions for now
@@ -268,38 +268,38 @@ create_basic_register_enums!(
     (S77S76, 64),
     (S79S78, 64),
     // Guest registers
-    (Gelr, 32),       // G0
-    (Gsr, 32),        // G1
-    (Gosp, 32),       // G2
-    (G3, 32),         // G3
-    (G4, 32),         // G4
-    (G5, 32),         // G5
-    (G6, 32),         // G6
-    (G7, 32),         // G7
-    (G8, 32),         // G8
-    (G9, 32),         // G9
-    (G10, 32),        // G10
-    (G11, 32),        // G11
-    (G12, 32),        // G12
-    (G13, 32),        // G13
-    (G14, 32),        // G14
-    (G15, 32),        // G15
-    (Gpmucnt4, 32),   // G16
-    (Gpmucnt5, 32),   // G17
-    (Gpmucnt6, 32),   // G18
-    (Gpmucnt7, 32),   // G19
-    (G20, 32),        // G20
-    (G21, 32),        // G21
-    (G22, 32),        // G22
-    (G23, 32),        // G23
-    (Gpcyclelo, 32),  // G24
-    (Gpcyclehii, 32), // G25
-    (Gpmucnt0, 32),   // G26
-    (Gpmucnt1, 32),   // G27
-    (Gpmucnt2, 32),   // G28
-    (Gpmnucnt3, 32),  // G29
-    (G30, 32),        // G30
-    (G31, 32),        // G31
+    (Gelr, 32),      // G0
+    (Gsr, 32),       // G1
+    (Gosp, 32),      // G2
+    (G3, 32),        // G3
+    (G4, 32),        // G4
+    (G5, 32),        // G5
+    (G6, 32),        // G6
+    (G7, 32),        // G7
+    (G8, 32),        // G8
+    (G9, 32),        // G9
+    (G10, 32),       // G10
+    (G11, 32),       // G11
+    (G12, 32),       // G12
+    (G13, 32),       // G13
+    (G14, 32),       // G14
+    (G15, 32),       // G15
+    (Gpmucnt4, 32),  // G16
+    (Gpmucnt5, 32),  // G17
+    (Gpmucnt6, 32),  // G18
+    (Gpmucnt7, 32),  // G19
+    (G20, 32),       // G20
+    (G21, 32),       // G21
+    (G22, 32),       // G22
+    (G23, 32),       // G23
+    (Gpcyclelo, 32), // G24
+    (Gpcyclehi, 32), // G25
+    (Gpmucnt0, 32),  // G26
+    (Gpmucnt1, 32),  // G27
+    (Gpmucnt2, 32),  // G28
+    (Gpmucnt3, 32),  // G29
+    (G30, 32),       // G30
+    (G31, 32),       // G31
     // Guest register pairs
     (G1G0, 64),
     (G3G2, 64),
