@@ -8,7 +8,6 @@ use styx_cpu_type::arch::{
     hexagon::HexagonRegister,
 };
 use styx_errors::anyhow::anyhow;
-use styx_processor::cpu::backend::ReadRegisterError;
 use styx_processor::cpu::CpuBackendExt;
 use styx_sync::lazy_static;
 
