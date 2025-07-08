@@ -558,6 +558,8 @@ fn test_hwloop01() {
       10:	01 80 01 f3	f3018001   	r1 = add(r1,r0)
       14:	00 c0 00 7f	7f00c000   	nop }  :endloop01
       18:	03 f2 00 78	7800f203 { 	r3 = #0x190 }
+      1c:	24 f2 00 78	7800f224 { 	r4 = #0x191 }
+      20:	45 f2 00 78	7800f245 { 	r5 = #0x192 }
     "#,
         )
         .unwrap(),
@@ -567,18 +569,22 @@ fn test_hwloop01() {
     cpu.write_register(HexagonRegister::R1, 0u32).unwrap();
     cpu.write_register(HexagonRegister::R2, 1u32).unwrap();
 
-    let exit = cpu.execute(&mut mmu, &mut ev, 35).unwrap();
+    let exit = cpu.execute(&mut mmu, &mut ev, 37).unwrap();
     assert_eq!(exit, TargetExitReason::InstructionCountComplete);
 
     let r0 = cpu.read_register::<u32>(HexagonRegister::R0).unwrap();
     let r1 = cpu.read_register::<u32>(HexagonRegister::R1).unwrap();
     let r2 = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
     let r3 = cpu.read_register::<u32>(HexagonRegister::R3).unwrap();
+    let r4 = cpu.read_register::<u32>(HexagonRegister::R4).unwrap();
+    let r5 = cpu.read_register::<u32>(HexagonRegister::R5).unwrap();
 
     assert_eq!(r0, 3);
     assert_eq!(r1, (1 * 3) + (2 * 3) + (3 * 3));
     assert_eq!(r2, 512); // 2 ** 9
-    assert_eq!(r3, 400); // 2 ** 9
+    assert_eq!(r3, 0x190); // 2 ** 9
+    assert_eq!(r4, 0x191);
+    assert_eq!(r5, 0x192);
 }
 
 #[test]

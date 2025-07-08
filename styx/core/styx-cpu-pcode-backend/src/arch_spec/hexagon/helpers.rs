@@ -142,6 +142,27 @@ impl HexagonGeneratorHelperState {
         if unwrapped_pc > self.latest_endloop {
             self.pkt_endloop_cleared = true;
         }
+        self.pkt_insns = 0;
+    }
+
+    fn handle_endloop_set(
+        &mut self,
+        unwrapped_pc: u64,
+        context_opts: &mut SmallVec<[ContextOption; 4]>,
+    ) {
+        if self.pkt_endloop != 0 {
+            context_opts.push(ContextOption::HexagonEndloop(self.pkt_endloop));
+
+            // HACK: we need to clear "endloop" for all instructions
+            // up to and including the first packet after the loop ends
+            // This stores that.
+            if unwrapped_pc > self.latest_endloop {
+                self.latest_endloop = unwrapped_pc;
+            }
+
+            self.pkt_endloop = 0;
+            self.pkt_endloop_cleared = false;
+        }
     }
 }
 
@@ -519,8 +540,6 @@ impl GeneratorHelp for HexagonGeneratorHelper {
 
                                 self.state
                                     .handle_start_of_pkt(&mut context_opts, unwrapped_pc);
-
-                                self.state.pkt_insns = 0;
                             }
                             PktLoopParseBits::NotEndOfPacket1
                             | PktLoopParseBits::NotEndOfPacket2 => {
@@ -552,21 +571,8 @@ impl GeneratorHelp for HexagonGeneratorHelper {
 
                                 // Not a duplex, so next ins is +4 away in packet distance
                                 self.state.mark_end_of_pkt(backend, unwrapped_pc + 4);
-
-                                if self.state.pkt_endloop != 0 {
-                                    context_opts.push(ContextOption::HexagonEndloop(
-                                        self.state.pkt_endloop,
-                                    ));
-
-                                    // HACK: we need to clear "endloop" for all instructions
-                                    // up to and including the first packet after the loop ends
-                                    if unwrapped_pc > self.state.latest_endloop {
-                                        self.state.latest_endloop = unwrapped_pc;
-                                    }
-
-                                    self.state.pkt_endloop = 0;
-                                    self.state.pkt_endloop_cleared = false;
-                                }
+                                self.state
+                                    .handle_endloop_set(unwrapped_pc, &mut context_opts);
                             }
                             // TODO
                             PktLoopParseBits::Other => {
