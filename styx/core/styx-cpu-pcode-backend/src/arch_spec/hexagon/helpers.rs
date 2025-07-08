@@ -65,9 +65,8 @@ pub struct HexagonGeneratorHelper {
     // map code address -> subinsn type
     subinsn_map: FxHashMap<u64, SubinstructionData>,
     pc_varnode: VarnodeData,
-    pkt_end: u64,
     // Stores if the last instruction was the end of a packet.
-    last_pkt_ended: bool,
+    last_insn_was_end_of_pkt: bool,
     duplex_ended: bool,
     first_insn_setup: bool,
     pkt_insns: usize,
@@ -88,8 +87,7 @@ impl Default for HexagonGeneratorHelper {
                 offset: 0,
                 size: 4,
             },
-            pkt_end: 0,
-            last_pkt_ended: true,
+            last_insn_was_end_of_pkt: true,
             // Presumably this needs to be set once, and never again.
             // TODO: make sure this is true by trying an instruction that would actually use an immext
             first_insn_setup: true,
@@ -167,8 +165,8 @@ impl GeneratorHelp for HexagonGeneratorHelper {
         let mut context_opts: SmallVec<[ContextOption; 4]> = SmallVec::new();
 
         // Save this off
-        let last_pkt_ended = self.last_pkt_ended;
-        self.last_pkt_ended = true;
+        let saved_last_insn_was_end_of_pkt = self.last_insn_was_end_of_pkt;
+        self.last_insn_was_end_of_pkt = true;
 
         // Get the PC
         match backend.pc() {
@@ -186,7 +184,7 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                             SubinstructionData::EndDuplexEndPacket(ty) => {
                                 trace!("in end duplex that's an end of packet, pushing the next packet and such");
 
-                                self.last_pkt_ended = true;
+                                self.last_insn_was_end_of_pkt = true;
                                 backend.shared_state.insert(
                                     SharedStateKey::HexagonPktStart,
                                     (unwrapped_pc + 2) as u128,
@@ -402,7 +400,7 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                                     );
 
                                     // Start of packet
-                                    if last_pkt_ended {
+                                    if saved_last_insn_was_end_of_pkt {
                                         self.pkt_insns = 0;
                                     }
                                 }
@@ -427,7 +425,7 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                                     "First instruction helper has seen, setting up context opts"
                                 );
                                 self.first_insn_setup = false;
-                                self.last_pkt_ended = false;
+                                self.last_insn_was_end_of_pkt = false;
 
                                 context_opts.push(ContextOption::HexagonImmext(0xffffffff));
                                 context_opts
@@ -443,7 +441,7 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                             // They also set pkt_next, but pkt_next isn't used in the slaspec (thankfully).
                             PktLoopParseBits::NotEndOfPacket1
                             | PktLoopParseBits::NotEndOfPacket2
-                                if last_pkt_ended =>
+                                if saved_last_insn_was_end_of_pkt =>
                             {
                                 trace!("hexagon start of packet");
 
@@ -471,16 +469,15 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                                 context_opts
                                     .push(ContextOption::HexagonPktStart(unwrapped_pc as u32));
 
-                                self.last_pkt_ended = false;
+                                self.last_insn_was_end_of_pkt = false;
                                 self.pkt_insns = 0;
                             }
                             PktLoopParseBits::NotEndOfPacket1
                             | PktLoopParseBits::NotEndOfPacket2 => {
                                 trace!("hexagon prefetch is middle of packet");
-                                self.last_pkt_ended = false;
+                                self.last_insn_was_end_of_pkt = false;
                             }
                             PktLoopParseBits::EndOfPacket => {
-                                // This is both the start and end of a packet
                                 // Special care is taken for an end of packet
                                 // that is the first packet seen
                                 if self.first_insn_setup {
@@ -493,16 +490,22 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                                     context_opts.push(ContextOption::HexagonImmext(0xffffffff));
                                 }
 
-                                if last_pkt_ended {
+                                // This is both the start and end of a packet (single insn pkt)
+                                if saved_last_insn_was_end_of_pkt {
                                     trace!("start and end of pkt");
+                                    // Normally, this would be handled in the "hexagon start of packet" handler,
+                                    // that arm of the match is never taken if we have both a start and end of a packet.
+                                    // Therefore, it is important to update the "packet start" as the start of the
+                                    // single-instruction packet here.
                                     context_opts
                                         .push(ContextOption::HexagonPktStart(unwrapped_pc as u32));
                                 } else {
                                     trace!("got to end of pkt");
                                 }
 
-                                self.pkt_end = unwrapped_pc;
-                                self.last_pkt_ended = true;
+                                // Mark that the "last instruction was the end of a packet"
+                                // and update the location of the end of the packet
+                                self.last_insn_was_end_of_pkt = true;
 
                                 if self.pkt_endloop != 0 {
                                     context_opts
