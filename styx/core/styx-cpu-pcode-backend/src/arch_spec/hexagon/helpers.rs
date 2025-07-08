@@ -164,9 +164,82 @@ impl HexagonGeneratorHelperState {
             self.pkt_endloop_cleared = false;
         }
     }
+
+    fn handle_duplex_immext(
+        &mut self,
+        parse_next: PktLoopParseBits,
+        insn_next: u32,
+        unwrapped_pc: u64,
+        context_opts: &mut SmallVec<[ContextOption; 4]>,
+    ) {
+        // This is only needed for immext
+        if parse_next == PktLoopParseBits::Duplex && insn_next != 0 {
+            context_opts.push(ContextOption::HexagonDuplexNext(unwrapped_pc as u32 + 6));
+            self.duplex_next_set = true;
+        } else if self.duplex_next_set {
+            self.duplex_next_set = false;
+            context_opts.push(ContextOption::HexagonDuplexNext(0));
+        }
+    }
 }
 
 impl HexagonGeneratorHelper {
+    fn handle_dotnew(
+        &mut self,
+        insn_data: u32,
+        backend: &mut PcodeBackend,
+        context_opts: &mut SmallVec<[ContextOption; 4]>,
+    ) {
+        if self.state.dotnew_should_unset {
+            trace!("unsetting hexagon hasnew");
+
+            // there's no point in setting dotnew, it's only ever used if
+            // hasnew is 1, but just for good measure
+            context_opts.push(ContextOption::HexagonHasnew(0));
+            context_opts.push(ContextOption::HexagonDotnew(0));
+
+            self.state.dotnew_should_unset = false;
+        }
+
+        match dotnew::parse_dotnew(insn_data) {
+            Some(referenced_dotnew_pkt) => {
+                // get current start
+                if let Some(current) = backend
+                    .shared_state
+                    .get(&SharedStateKey::HexagonTrueInsnCount)
+                {
+                    trace!(
+                        "dotnew: this is a dotnew packet, finding register at {} - {}",
+                        *current,
+                        referenced_dotnew_pkt
+                    );
+                    if let Some(register_num) =
+                        backend
+                            .shared_state
+                            .get(&SharedStateKey::HexagonInsnRegDest(
+                                (*current - referenced_dotnew_pkt as u128) as usize,
+                            ))
+                    {
+                        trace!("dotnew: this is a dotnew packet, setting context opts");
+                        context_opts.push(ContextOption::HexagonDotnew(*register_num as u32));
+                        context_opts.push(ContextOption::HexagonHasnew(1));
+                        self.state.dotnew_should_unset = true;
+                    }
+                }
+            }
+            None => {
+                trace!("dotnew: this isn't a dotnew insn")
+            }
+        }
+
+        // TODO: put our dotnew handlers here
+        // if dotnew_insn {
+        // off = get dotnew offset(dst, offset)
+        // get Q current - off -> regval
+        //  set hasnew 1
+        //  set dotnew Q
+        // }
+    }
     fn handle_duplex(
         &mut self,
         _backend: &mut PcodeBackend,
@@ -433,66 +506,13 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                         let parse_next1 = PktLoopParseBits::new_from_insn(insn_next1);
                         let _parse_next2 = PktLoopParseBits::new_from_insn(insn_next2);
 
-                        // This is only needed for immext
-                        if parse_next == PktLoopParseBits::Duplex && insn_next != 0 {
-                            context_opts
-                                .push(ContextOption::HexagonDuplexNext(unwrapped_pc as u32 + 6));
-                            self.state.duplex_next_set = true;
-                        } else if self.state.duplex_next_set {
-                            self.state.duplex_next_set = false;
-                            context_opts.push(ContextOption::HexagonDuplexNext(0));
-                        }
-
-                        if self.state.dotnew_should_unset {
-                            trace!("unsetting hexagon hasnew");
-
-                            // there's no point in setting dotnew, it's only ever used if
-                            // hasnew is 1, but just for good measure
-                            context_opts.push(ContextOption::HexagonHasnew(0));
-                            context_opts.push(ContextOption::HexagonDotnew(0));
-
-                            self.state.dotnew_should_unset = false;
-                        }
-
-                        match dotnew::parse_dotnew(insn_data) {
-                            Some(referenced_dotnew_pkt) => {
-                                // get current start
-                                if let Some(current) = backend
-                                    .shared_state
-                                    .get(&SharedStateKey::HexagonTrueInsnCount)
-                                {
-                                    trace!(
-                                        "dotnew: this is a dotnew packet, finding register at {} - {}",
-                                        *current , referenced_dotnew_pkt
-                                    );
-                                    if let Some(register_num) = backend.shared_state.get(
-                                        &SharedStateKey::HexagonInsnRegDest(
-                                            (*current - referenced_dotnew_pkt as u128) as usize,
-                                        ),
-                                    ) {
-                                        trace!(
-                                            "dotnew: this is a dotnew packet, setting context opts"
-                                        );
-                                        context_opts.push(ContextOption::HexagonDotnew(
-                                            *register_num as u32,
-                                        ));
-                                        context_opts.push(ContextOption::HexagonHasnew(1));
-                                        self.state.dotnew_should_unset = true;
-                                    }
-                                }
-                            }
-                            None => {
-                                trace!("dotnew: this isn't a dotnew insn")
-                            }
-                        }
-
-                        // TODO: put our dotnew handlers here
-                        // if dotnew_insn {
-                        // off = get dotnew offset(dst, offset)
-                        // get Q current - off -> regval
-                        //  set hasnew 1
-                        //  set dotnew Q
-                        // }
+                        self.state.handle_duplex_immext(
+                            parse_next,
+                            insn_next,
+                            unwrapped_pc,
+                            &mut context_opts,
+                        );
+                        self.handle_dotnew(insn_data, backend, &mut context_opts);
 
                         trace!("insn data is 0x{:x}", insn_data);
 
