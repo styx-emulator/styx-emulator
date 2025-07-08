@@ -102,9 +102,14 @@ impl Default for HexagonGeneratorHelper {
 }
 
 impl HexagonGeneratorHelper {
+    fn handle_first_insn(&mut self, context_opts: &mut SmallVec<[ContextOption; 4]>) {
+        self.first_insn_setup = false;
+
+        context_opts.push(ContextOption::HexagonImmext(0xffffffff));
+    }
     fn handle_duplex(
         &mut self,
-        backend: &mut PcodeBackend,
+        _backend: &mut PcodeBackend,
         context_opts: &mut SmallVec<[ContextOption; 4]>,
         saved_last_insn_was_end_of_pkt: bool,
         unwrapped_pc: u64,
@@ -437,16 +442,14 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                                 trace!(
                                     "First instruction helper has seen, setting up context opts"
                                 );
-                                self.first_insn_setup = false;
                                 self.last_insn_was_end_of_pkt = false;
-
-                                context_opts.push(ContextOption::HexagonImmext(0xffffffff));
                                 context_opts
                                     .push(ContextOption::HexagonPktStart(unwrapped_pc as u32));
-
                                 backend
                                     .shared_state
                                     .insert(SharedStateKey::HexagonPktStart, unwrapped_pc as u128);
+
+                                self.handle_first_insn(&mut context_opts);
                             }
 
                             // The start of a new packet
@@ -498,9 +501,7 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                                         "First instruction helper but the packet has only 1 insn"
                                     );
 
-                                    self.first_insn_setup = false;
-
-                                    context_opts.push(ContextOption::HexagonImmext(0xffffffff));
+                                    self.handle_first_insn(&mut context_opts);
                                 }
 
                                 // This is both the start and end of a packet (single insn pkt)
