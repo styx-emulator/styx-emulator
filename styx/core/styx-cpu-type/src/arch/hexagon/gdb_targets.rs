@@ -70,6 +70,7 @@ lazy_static! {
         (29, HexagonRegister::Sp.register()),
         (30, HexagonRegister::Fp.register()),
         (31, HexagonRegister::Lr.register()),
+        // Start control registers
         (32, HexagonRegister::Sa0.register()),
         (33, HexagonRegister::Lc0.register()),
         (34, HexagonRegister::Sa1.register()),
