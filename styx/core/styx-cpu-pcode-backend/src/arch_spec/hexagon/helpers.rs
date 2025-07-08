@@ -102,6 +102,123 @@ impl Default for HexagonGeneratorHelper {
 }
 
 impl HexagonGeneratorHelper {
+    fn handle_duplex(
+        &mut self,
+        backend: &mut PcodeBackend,
+        context_opts: &mut SmallVec<[ContextOption; 4]>,
+        saved_last_insn_was_end_of_pkt: bool,
+        unwrapped_pc: u64,
+        insn_data: u32,
+        parse_next: PktLoopParseBits,
+        parse_next1: PktLoopParseBits,
+    ) -> Result<(), GeneratePcodeError> {
+        {
+            let insclass = ((insn_data >> 28) & 0b1110) | ((insn_data >> 13) & 0b1);
+            trace!("duplex instruction, insclass {}", insclass);
+            // From https://github.com/toshipiazza/ghidra-plugin-hexagon/blob/main/Ghidra/Processors/Hexagon/src/main/java/ghidra/app/plugin/core/analysis/HexagonInstructionInfo.java#L68
+            let duplex_slots = match insclass {
+                0 => (DuplexInsClass::L1, DuplexInsClass::L1),
+                1 => (DuplexInsClass::L2, DuplexInsClass::L1),
+                2 => (DuplexInsClass::L2, DuplexInsClass::L2),
+                3 => (DuplexInsClass::A, DuplexInsClass::A),
+                4 => (DuplexInsClass::L1, DuplexInsClass::A),
+                5 => (DuplexInsClass::L2, DuplexInsClass::A),
+                6 => (DuplexInsClass::S1, DuplexInsClass::A),
+                7 => (DuplexInsClass::S2, DuplexInsClass::A),
+                8 => (DuplexInsClass::S1, DuplexInsClass::L1),
+                9 => (DuplexInsClass::S1, DuplexInsClass::L2),
+                10 => (DuplexInsClass::S1, DuplexInsClass::S1),
+                11 => (DuplexInsClass::S2, DuplexInsClass::S1),
+                12 => (DuplexInsClass::S2, DuplexInsClass::L1),
+                13 => (DuplexInsClass::S2, DuplexInsClass::L2),
+                14 => (DuplexInsClass::S2, DuplexInsClass::S2),
+                // Realistically, this should be some sort of bad instruction thing
+                _ => unreachable!(),
+            };
+
+            // TODO: why use a hashmap? it may make it easier to implement
+            // larger blocks of prefetches in the future.
+            // If the performance impact is negligible, just switch to a
+            // next_subinsn_class variable
+            //
+            // Also, maybe saving the current pc might be useful if some exception
+            // occurs
+            // TODO: overflow checks?
+
+            trace!("duplex slot 1 slot 2 subinsn type {:?}", duplex_slots);
+
+            context_opts.push(ContextOption::HexagonSubinsn(duplex_slots.0 as u32));
+
+            // First insn in duplex is a pkt start
+            if self.first_insn_setup {
+                self.first_insn_setup = false;
+
+                // If standalone, this should be EndDuplexEndPacket
+
+                // D I Ie or D Ie
+                if parse_next == PktLoopParseBits::EndOfPacket
+                    || ((parse_next == PktLoopParseBits::NotEndOfPacket1
+                        || parse_next == PktLoopParseBits::NotEndOfPacket2)
+                        && parse_next1 == PktLoopParseBits::EndOfPacket)
+                {
+                    self.subinsn_map.insert(
+                        unwrapped_pc + 2,
+                        SubinstructionData::EndDuplex(duplex_slots.1 as u32),
+                    );
+                }
+                // Standalone
+                else {
+                    self.subinsn_map.insert(
+                        unwrapped_pc + 2,
+                        SubinstructionData::EndDuplexEndPacket(duplex_slots.1 as u32),
+                    );
+                }
+
+                context_opts.push(ContextOption::HexagonPktStart(unwrapped_pc as u32));
+                // None of this should require last_pkt_ended, as we're not at the end of an instruction
+            }
+            // If not, we should inspect the following insns to figure out whether this duplex is at the end of the packet
+            // Duplex comes in these combos:
+            // Ie = end
+            // I I D |
+            // I D Ie |
+            // D I Ie |
+            //
+            // D
+            //
+            // I D
+            // D Iend
+            else if self.pkt_insns <= 1 &&
+                                // D I (end) or I D I (end)
+                                (parse_next == PktLoopParseBits::EndOfPacket ||
+                                        // D I I (end)
+                                         ( (parse_next == PktLoopParseBits::NotEndOfPacket1 || parse_next == PktLoopParseBits::NotEndOfPacket2)
+                                              && parse_next1 == PktLoopParseBits::EndOfPacket))
+            {
+                trace!("this duplex instruction pair does not terminate a packet");
+                self.subinsn_map.insert(
+                    unwrapped_pc + 2,
+                    SubinstructionData::EndDuplex(duplex_slots.1 as u32),
+                );
+
+                // Start of packet
+                if saved_last_insn_was_end_of_pkt {
+                    self.pkt_insns = 0;
+                }
+            }
+            // Emit pkt start if we are in IID, D, or ID scenario (should be EndDuplexEndPacket)
+            // Remaining case is I I D or I D
+            else {
+                trace!("this duplex instruction pair DOES terminate a packet");
+                self.subinsn_map.insert(
+                    unwrapped_pc + 2,
+                    SubinstructionData::EndDuplexEndPacket(duplex_slots.1 as u32),
+                );
+            }
+        }
+        Ok(())
+    }
+
     fn detect_hwloop_start_of_packet(
         &mut self,
         backend: &mut PcodeBackend,
@@ -303,119 +420,15 @@ impl GeneratorHelp for HexagonGeneratorHelper {
 
                         let pkt_type = PktLoopParseBits::new_from_insn(insn_data);
                         match pkt_type {
-                            PktLoopParseBits::Duplex => {
-                                let insclass =
-                                    ((insn_data >> 28) & 0b1110) | ((insn_data >> 13) & 0b1);
-                                trace!("duplex instruction, insclass {}", insclass);
-                                // From https://github.com/toshipiazza/ghidra-plugin-hexagon/blob/main/Ghidra/Processors/Hexagon/src/main/java/ghidra/app/plugin/core/analysis/HexagonInstructionInfo.java#L68
-                                let duplex_slots = match insclass {
-                                    0 => (DuplexInsClass::L1, DuplexInsClass::L1),
-                                    1 => (DuplexInsClass::L2, DuplexInsClass::L1),
-                                    2 => (DuplexInsClass::L2, DuplexInsClass::L2),
-                                    3 => (DuplexInsClass::A, DuplexInsClass::A),
-                                    4 => (DuplexInsClass::L1, DuplexInsClass::A),
-                                    5 => (DuplexInsClass::L2, DuplexInsClass::A),
-                                    6 => (DuplexInsClass::S1, DuplexInsClass::A),
-                                    7 => (DuplexInsClass::S2, DuplexInsClass::A),
-                                    8 => (DuplexInsClass::S1, DuplexInsClass::L1),
-                                    9 => (DuplexInsClass::S1, DuplexInsClass::L2),
-                                    10 => (DuplexInsClass::S1, DuplexInsClass::S1),
-                                    11 => (DuplexInsClass::S2, DuplexInsClass::S1),
-                                    12 => (DuplexInsClass::S2, DuplexInsClass::L1),
-                                    13 => (DuplexInsClass::S2, DuplexInsClass::L2),
-                                    14 => (DuplexInsClass::S2, DuplexInsClass::S2),
-                                    // Realistically, this should be some sort of bad instruction thing
-                                    _ => unreachable!(),
-                                };
-
-                                // TODO: why use a hashmap? it may make it easier to implement
-                                // larger blocks of prefetches in the future.
-                                // If the performance impact is negligible, just switch to a
-                                // next_subinsn_class variable
-                                //
-                                // Also, maybe saving the current pc might be useful if some exception
-                                // occurs
-                                // TODO: overflow checks?
-
-                                trace!("duplex slot 1 slot 2 subinsn type {:?}", duplex_slots);
-
-                                context_opts
-                                    .push(ContextOption::HexagonSubinsn(duplex_slots.0 as u32));
-
-                                // First insn in duplex is a pkt start
-                                if self.first_insn_setup {
-                                    self.first_insn_setup = false;
-
-                                    // If standalone, this should be EndDuplexEndPacket
-
-                                    // D I Ie or D Ie
-                                    if parse_next == PktLoopParseBits::EndOfPacket
-                                        || ((parse_next == PktLoopParseBits::NotEndOfPacket1
-                                            || parse_next == PktLoopParseBits::NotEndOfPacket2)
-                                            && parse_next1 == PktLoopParseBits::EndOfPacket)
-                                    {
-                                        self.subinsn_map.insert(
-                                            unwrapped_pc + 2,
-                                            SubinstructionData::EndDuplex(duplex_slots.1 as u32),
-                                        );
-                                    }
-                                    // Standalone
-                                    else {
-                                        self.subinsn_map.insert(
-                                            unwrapped_pc + 2,
-                                            SubinstructionData::EndDuplexEndPacket(
-                                                duplex_slots.1 as u32,
-                                            ),
-                                        );
-                                    }
-
-                                    context_opts
-                                        .push(ContextOption::HexagonPktStart(unwrapped_pc as u32));
-                                    // None of this should require last_pkt_ended, as we're not at the end of an instruction
-                                }
-                                // If not, we should inspect the following insns to figure out whether this duplex is at the end of the packet
-                                // Duplex comes in these combos:
-                                // Ie = end
-                                // I I D |
-                                // I D Ie |
-                                // D I Ie |
-                                //
-                                // D
-                                //
-                                // I D
-                                // D Iend
-                                else if self.pkt_insns <= 1 &&
-                                // D I (end) or I D I (end)
-                                (parse_next == PktLoopParseBits::EndOfPacket ||
-                                        // D I I (end)
-                                         ( (parse_next == PktLoopParseBits::NotEndOfPacket1 || parse_next == PktLoopParseBits::NotEndOfPacket2)
-                                              && parse_next1 == PktLoopParseBits::EndOfPacket))
-                                {
-                                    trace!(
-                                        "this duplex instruction pair does not terminate a packet"
-                                    );
-                                    self.subinsn_map.insert(
-                                        unwrapped_pc + 2,
-                                        SubinstructionData::EndDuplex(duplex_slots.1 as u32),
-                                    );
-
-                                    // Start of packet
-                                    if saved_last_insn_was_end_of_pkt {
-                                        self.pkt_insns = 0;
-                                    }
-                                }
-                                // Emit pkt start if we are in IID, D, or ID scenario (should be EndDuplexEndPacket)
-                                // Remaining case is I I D or I D
-                                else {
-                                    trace!("this duplex instruction pair DOES terminate a packet");
-                                    self.subinsn_map.insert(
-                                        unwrapped_pc + 2,
-                                        SubinstructionData::EndDuplexEndPacket(
-                                            duplex_slots.1 as u32,
-                                        ),
-                                    );
-                                }
-                            }
+                            PktLoopParseBits::Duplex => self.handle_duplex(
+                                backend,
+                                &mut context_opts,
+                                saved_last_insn_was_end_of_pkt,
+                                unwrapped_pc,
+                                insn_data,
+                                parse_next,
+                                parse_next1,
+                            )?,
                             // First instruction in the program won't have anything taken care of
                             PktLoopParseBits::NotEndOfPacket1
                             | PktLoopParseBits::NotEndOfPacket2
