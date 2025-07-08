@@ -779,6 +779,59 @@ fn test_immediates() {
     assert_eq!(r4, r2);
 }
 
+#[test]
+fn test_basic_branching_single_insn_pkt() {
+    styx_util::logging::init_logging();
+
+    const R1: u32 = 47;
+    // similar to basic branching, but ensures that the pkts are standalone with only 1 insn
+    let (mut cpu, mut mmu, mut ev) = setup_cpu(
+        0x1000,
+        styx_util::parse_objdump(
+            r#"
+       0:	04 c0 01 17	1701c004 { 	r0 = r1 ; jump 0x8 }
+       4:	a0 fd 00 78	7800fda0 { 	r0 = #0x1ed }
+       8:	00 c7 00 b0	b000c700 { 	r0 = add(r0,#0x38) }
+       c:	42 c0 00 b0	b000c042 { 	r2 = add(r0,#0x2) }
+"#,
+        )
+        .unwrap(),
+    );
+    cpu.write_register(HexagonRegister::R1, R1).unwrap();
+
+    // Check jump
+    let initial_isa_pc = get_isa_pc(&mut cpu);
+
+    trace!("starting initial jump");
+    // register transfer jump is 1 insn
+    let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+
+    let mid_isa_pc = get_isa_pc(&mut cpu);
+    assert_eq!(mid_isa_pc - initial_isa_pc, 8);
+
+    trace!("starting initial multiply");
+    let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+
+    let end_branch_isa_pc = get_isa_pc(&mut cpu);
+    assert_eq!(end_branch_isa_pc - initial_isa_pc, 12);
+
+    // Last addition
+    trace!("starting addition");
+    let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+
+    let end_isa_pc = get_isa_pc(&mut cpu);
+    assert_eq!(end_isa_pc - initial_isa_pc, 16);
+
+    let r0 = cpu.read_register::<u32>(HexagonRegister::R0).unwrap();
+    let r2 = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
+
+    assert_eq!(r0, R1 + 56);
+    assert_eq!(r2, r0 + 2);
+}
+
 // TODO: jumpr branch (indirect), conditional branch,
 // and a branch that isn't at the end of the packet!
 #[test]
@@ -788,6 +841,9 @@ fn test_basic_branching() {
     // this is a cool test because it's a register transfer jump
     // so the first packet is actually 1 instruction, which adds
     // some lovely edge cases
+    //
+    // assembler inserts some immexts here, so it's not 1 insnn, hence basic branching
+    // single instruction pkt (probably from double pounds)
     let (mut cpu, mut mmu, mut ev) = setup_asm(
         r#"
 { r0 = r1;
