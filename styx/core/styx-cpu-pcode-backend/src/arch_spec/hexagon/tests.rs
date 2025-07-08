@@ -209,7 +209,7 @@ fn test_dotnew_basic(
 fn test_all_regpairs() {
     styx_util::logging::init_logging();
     // we're not going to run anything, just write and read stuff from and to registers
-    let (mut cpu, mut mmu, mut ev) = setup_cpu(0, vec![]);
+    let (mut cpu, _mmu, _ev) = setup_cpu(0, vec![]);
 
     let re = Regex::new(r"[A-Z]*\d*").unwrap();
 
@@ -228,13 +228,12 @@ fn test_all_regpairs() {
             v.0,
             v.1
         );
-        test_regpair_helper(&mut cpu, &keystone_regpair_str, *k, v.0, v.1);
+        test_regpair_helper(&mut cpu, *k, v.0, v.1);
     }
 }
 
 fn test_regpair_helper(
     cpu: &mut PcodeBackend,
-    regpair_str: &str,
     hex_regpair: HexagonRegister,
     hex_hi_reg: HexagonRegister,
     hex_lo_reg: HexagonRegister,
@@ -436,7 +435,10 @@ fn test_hwloop_inner() {
       10:	20 40 00 b0	b0004020 { 	r0 = add(r0,#0x1)
       14:	00 80 00 7f	7f008000   	nop
       18:	00 c0 00 7f	7f00c000   	nop }  :endloop1
-      1c:	03 f2 00 78	7800f203 { 	r3 = #0x190 }
+      1c:	03 72 00 78	78007203 { 	r3 = #0x190
+      20:	44 d0 14 78	7814d044   	r4 = #0x2882 }
+      24:	06 42 00 78	78004206 { 	r6 = #0x10
+      28:	47 d0 01 78	7801d047   	r7 = #0x282 }
         "#,
         )
         .unwrap(),
@@ -446,7 +448,55 @@ fn test_hwloop_inner() {
     cpu.write_register(HexagonRegister::R1, 0u32).unwrap();
     cpu.write_register(HexagonRegister::R2, 3u32).unwrap();
 
-    let exit = cpu.execute(&mut mmu, &mut ev, 32).unwrap();
+    let exit = cpu.execute(&mut mmu, &mut ev, 35).unwrap();
+    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+
+    // TODO: need to check that the last packet sets context option for hexagonendloop, and
+    // that their pcodes are only length 1 each.
+
+    let r0 = cpu.read_register::<u32>(HexagonRegister::R0).unwrap();
+    let r1 = cpu.read_register::<u32>(HexagonRegister::R1).unwrap();
+    let r2 = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
+    let r3 = cpu.read_register::<u32>(HexagonRegister::R3).unwrap();
+    let r4 = cpu.read_register::<u32>(HexagonRegister::R4).unwrap();
+    let r6 = cpu.read_register::<u32>(HexagonRegister::R6).unwrap();
+    let r7 = cpu.read_register::<u32>(HexagonRegister::R7).unwrap();
+
+    assert_eq!(r0, 5);
+    assert_eq!(r1, (2 * 3) + (3 * 3) + (4 * 3));
+    assert_eq!(r2, 3 * 512);
+    assert_eq!(r3, 400);
+    assert_eq!(r4, 0x2882);
+    assert_eq!(r6, 0x10);
+    assert_eq!(r7, 0x282);
+}
+
+#[test]
+fn test_hwloop0_iteronce() {
+    styx_util::logging::init_logging();
+    // multiply by 2 to r0, add 1 to r1.
+
+    // a loop1 should have at min 3 insns in its packet
+    // runs 3 times
+    let (mut cpu, mut mmu, mut ev) = setup_cpu(
+        0x1000,
+        styx_util::parse_objdump(
+            r#"
+       0:	09 c0 20 69	6920c009 { 	loop1(0x4,#0x1) }
+       4:	40 40 00 e1	e1004040 { 	r0 += mpyi(r0,#0x2)
+       8:	21 80 01 b0	b0018021   	r1 = add(r1,#0x1)
+       c:	00 c0 00 7f	7f00c000   	nop }  :endloop1
+      10:	62 6e 09 78	78096e62 { 	r2 = #0x1373
+      14:	83 d7 07 78	7807d783   	r3 = #0xebc }
+        "#,
+        )
+        .unwrap(),
+    );
+
+    cpu.write_register(HexagonRegister::R0, 3u32).unwrap();
+    cpu.write_register(HexagonRegister::R1, 29u32).unwrap();
+
+    let exit = cpu.execute(&mut mmu, &mut ev, 6).unwrap();
     assert_eq!(exit, TargetExitReason::InstructionCountComplete);
 
     let r0 = cpu.read_register::<u32>(HexagonRegister::R0).unwrap();
@@ -454,10 +504,10 @@ fn test_hwloop_inner() {
     let r2 = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
     let r3 = cpu.read_register::<u32>(HexagonRegister::R3).unwrap();
 
-    assert_eq!(r0, 5);
-    assert_eq!(r1, (2 * 3) + (3 * 3) + (4 * 3));
-    assert_eq!(r2, 3 * 512);
-    assert_eq!(r3, 400);
+    assert_eq!(r0, 9);
+    assert_eq!(r1, 30);
+    assert_eq!(r2, 0x1373);
+    assert_eq!(r3, 0xebc);
 }
 
 #[test]

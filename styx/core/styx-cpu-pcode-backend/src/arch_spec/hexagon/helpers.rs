@@ -72,6 +72,7 @@ struct HexagonGeneratorHelperState {
     pub pkt_endloop: u32,
     pub pkt_endloop_cleared: bool,
     pub dotnew_should_unset: bool,
+    pub latest_endloop: u64,
 }
 
 #[derive(Debug, Clone)]
@@ -104,6 +105,7 @@ impl Default for HexagonGeneratorHelper {
                 pkt_endloop: 0,
                 pkt_endloop_cleared: true,
                 dotnew_should_unset: false,
+                latest_endloop: 0,
             },
         }
     }
@@ -123,6 +125,23 @@ impl HexagonGeneratorHelperState {
         backend
             .shared_state
             .insert(SharedStateKey::HexagonPktStart, next_start_pc as u128);
+    }
+
+    fn handle_start_of_pkt(
+        &mut self,
+        context_opts: &mut SmallVec<[ContextOption; 4]>,
+        unwrapped_pc: u64,
+    ) {
+        context_opts.push(ContextOption::HexagonPktStart(unwrapped_pc as u32));
+
+        // endloop is cleared at the start of the next packet
+        if self.pkt_endloop == 0 && !self.pkt_endloop_cleared {
+            context_opts.push(ContextOption::HexagonEndloop(0));
+        }
+
+        if unwrapped_pc > self.latest_endloop {
+            self.pkt_endloop_cleared = true;
+        }
     }
 }
 
@@ -258,11 +277,12 @@ impl HexagonGeneratorHelper {
             .map_err(|_| GeneratePcodeError::InvalidAddress)?;
 
         // check for hardware loop
-        // check if lc0/lc1 is greater than 0
+        // check if lc0/lc1 is greater than 1, since
+        //
         trace!("hwloop help: lc0 {} lc1 {}", lc0, lc1);
 
         // check if this packet is the last packet in a hardware loop
-        if lc0 > 0 || lc1 > 0 {
+        if lc0 > 1 || lc1 > 1 {
             // last in loop 1
             if pkt_type == PktLoopParseBits::NotEndOfPacket1 {
                 trace!("hwloop help: last in loop 1");
@@ -440,8 +460,11 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                                     }
                                 }
                             }
-                            None => {}
+                            None => {
+                                trace!("dotnew: this isn't a dotnew insn")
+                            }
                         }
+
                         // TODO: put our dotnew handlers here
                         // if dotnew_insn {
                         // off = get dotnew offset(dst, offset)
@@ -489,11 +512,13 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                             {
                                 trace!("hexagon start of packet");
 
+                                // These are not required in the "start and end of packet"
+                                // as a hardware loop will always have 4 slots (with no ops)
                                 self.detect_hwloop_start_of_packet(backend, pkt_type, parse_next)?;
                                 self.detect_handle_branch(backend, unwrapped_pc);
 
-                                context_opts
-                                    .push(ContextOption::HexagonPktStart(unwrapped_pc as u32));
+                                self.state
+                                    .handle_start_of_pkt(&mut context_opts, unwrapped_pc);
 
                                 self.state.pkt_insns = 0;
                             }
@@ -519,8 +544,8 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                                     // that arm of the match is never taken if we have both a start and end of a packet.
                                     // Therefore, it is important to update the "packet start" as the start of the
                                     // single-instruction packet here.
-                                    context_opts
-                                        .push(ContextOption::HexagonPktStart(unwrapped_pc as u32));
+                                    self.state
+                                        .handle_start_of_pkt(&mut context_opts, unwrapped_pc);
                                 } else {
                                     trace!("got to end of pkt");
                                 }
@@ -533,12 +558,14 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                                         self.state.pkt_endloop,
                                     ));
 
+                                    // HACK: we need to clear "endloop" for all instructions
+                                    // up to and including the first packet after the loop ends
+                                    if unwrapped_pc > self.state.latest_endloop {
+                                        self.state.latest_endloop = unwrapped_pc;
+                                    }
+
                                     self.state.pkt_endloop = 0;
                                     self.state.pkt_endloop_cleared = false;
-                                } else if !self.state.pkt_endloop_cleared {
-                                    context_opts.push(ContextOption::HexagonEndloop(0));
-
-                                    self.state.pkt_endloop_cleared = true;
                                 }
                             }
                             // TODO
