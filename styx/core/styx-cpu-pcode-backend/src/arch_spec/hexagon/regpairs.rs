@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 
 use log::trace;
-use num_traits::FromPrimitive;
-use num_traits::ToPrimitive;
 use styx_cpu_type::arch::{
     backends::{ArchRegister, BasicArchRegister},
     hexagon::HexagonRegister,
@@ -14,7 +12,7 @@ use styx_sync::lazy_static;
 use crate::{
     arch_spec::ArchSpecBuilder,
     memory::sized_value::SizedValue,
-    register_manager::{RegisterCallback, RegisterHandleError, RegisterManager},
+    register_manager::{RegisterCallback, RegisterHandleError},
     PcodeBackend,
 };
 
@@ -350,7 +348,7 @@ lazy_static! {
             ),
             (
                 HexagonRegister::PktCount,
-                (HexagonRegister::PktCountHi, HexagonRegister::PktCountHi)
+                (HexagonRegister::PktCountHi, HexagonRegister::PktCountLo)
             ),
             (
                 HexagonRegister::Utimer,
@@ -369,29 +367,6 @@ impl RegpairHandler {
                 return REGPAIR_MAP.get(&reg).copied();
             }
             _ => unreachable!(),
-        }
-    }
-
-    fn get_pair(
-        target: HexagonRegister,
-        start: HexagonRegister,
-        end: HexagonRegister,
-        start_map: HexagonRegister,
-    ) -> Option<(HexagonRegister, HexagonRegister)> {
-        let target_val = target.to_u32()?;
-        let start_val = start.to_u32()?;
-        let start_map_val = start_map.to_u32()?;
-        let end_val = end.to_u32()?;
-
-        if target_val >= start_val && target_val <= end_val {
-            let offset = target_val - start_val;
-
-            let reg_lo = HexagonRegister::from_u32(start_map_val + (offset * 2))?;
-            let reg_hi = HexagonRegister::from_u32(start_map_val + (offset * 2) + 1)?;
-
-            Some((reg_lo, reg_hi))
-        } else {
-            None
         }
     }
 }

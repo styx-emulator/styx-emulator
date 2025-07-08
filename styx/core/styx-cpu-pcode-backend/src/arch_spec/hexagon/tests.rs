@@ -1,9 +1,11 @@
 use keystone_engine::Keystone;
 use log::trace;
+use regex::Regex;
 use styx_cpu_type::{
     arch::hexagon::{HexagonRegister, HexagonVariants},
     Arch, ArchEndian, TargetExitReason,
 };
+use styx_pcode_translator::sla::hexagon_reg_to_str;
 use styx_processor::{
     event_controller::EventController,
     memory::{helpers::WriteExt, Mmu},
@@ -12,6 +14,8 @@ use test_case::test_case;
 
 use crate::{register_manager::RegisterManager, PcodeBackend};
 use styx_processor::cpu::{CpuBackend, CpuBackendExt};
+
+use super::regpairs::REGPAIR_MAP;
 
 fn setup_asm(asm_str: &str, expected_asm: Option<Vec<u8>>) -> (PcodeBackend, Mmu, EventController) {
     styx_util::logging::init_logging();
@@ -64,6 +68,35 @@ fn get_isa_pc(cpu: &mut PcodeBackend) -> u32 {
         .unwrap()
         .to_u64()
         .unwrap() as u32
+}
+
+#[test]
+fn verify_regpairs() {
+    // make sure the mapping is acceptable by going through
+    // the styx sla mapping and making sure they both align
+    // TODO: not clear how to do this, but maybe make sure that every
+    // regpair is mapped?? this may not be what we want if there are regpairs
+    // we intentionally haven't implemented yet.
+    styx_util::logging::init_logging();
+    let re = Regex::new(r"[A-Z]*\d*").unwrap();
+    for (k, v) in REGPAIR_MAP.iter() {
+        let regpair_str = hexagon_reg_to_str(&k);
+        let reglo_str = hexagon_reg_to_str(&v.1);
+        let reghi_str = hexagon_reg_to_str(&v.0);
+
+        let regs: Vec<&str> = re.find_iter(&regpair_str).map(|m| m.as_str()).collect();
+        trace!(
+            "regs for {} are {:?} and hi {} lo {}",
+            regpair_str,
+            regs,
+            reghi_str,
+            reglo_str
+        );
+        // check these regs aginst the values, make sure the first value in regs
+        // aligns with the hi in the map and second aligns with lo in the map
+        assert_eq!(reghi_str, regs[0].into());
+        assert_eq!(reglo_str, regs[1].into());
+    }
 }
 
 // need a separate conditional too
