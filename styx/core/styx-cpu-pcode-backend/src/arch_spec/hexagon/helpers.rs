@@ -163,30 +163,28 @@ impl HexagonGeneratorHelperState {
             context_opts.push(ContextOption::HexagonDuplexNext(0));
         }
     }
-}
 
-impl HexagonGeneratorHelper {
-    fn handle_start_of_pkt(
+    fn common_handle_start_of_pkt(
         &mut self,
         backend: &mut PcodeBackend,
         context_opts: &mut SmallVec<[ContextOption; 4]>,
         unwrapped_pc: u64,
     ) {
-        self.detect_handle_branch(backend, unwrapped_pc);
-
         context_opts.push(ContextOption::HexagonPktStart(unwrapped_pc as u32));
 
         // endloop is cleared at the start of the next packet
-        if self.state.pkt_endloop == 0 && !self.state.pkt_endloop_cleared {
+        if self.pkt_endloop == 0 && !self.pkt_endloop_cleared {
             context_opts.push(ContextOption::HexagonEndloop(0));
         }
 
-        if unwrapped_pc > self.state.latest_endloop {
-            self.state.pkt_endloop_cleared = true;
+        if unwrapped_pc > self.latest_endloop {
+            self.pkt_endloop_cleared = true;
         }
-        self.state.pkt_insns = 0;
+        self.pkt_insns = 0;
     }
+}
 
+impl HexagonGeneratorHelper {
     fn handle_dotnew(
         &mut self,
         insn_data: u32,
@@ -559,8 +557,16 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                                 // These are not required in the "start and end of packet"
                                 // as a hardware loop will always have 4 slots (with no ops)
                                 self.detect_hwloop_start_of_packet(backend, pkt_type, parse_next)?;
+                                // This is okay to not perform in "start and end of pkt,"
+                                // since the key set here is set at the end of EndofPacket
+                                // handler
+                                self.detect_handle_branch(backend, unwrapped_pc);
 
-                                self.handle_start_of_pkt(backend, &mut context_opts, unwrapped_pc);
+                                self.state.common_handle_start_of_pkt(
+                                    backend,
+                                    &mut context_opts,
+                                    unwrapped_pc,
+                                );
                             }
                             PktLoopParseBits::NotEndOfPacket1
                             | PktLoopParseBits::NotEndOfPacket2 => {
@@ -584,7 +590,9 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                                     // that arm of the match is never taken if we have both a start and end of a packet.
                                     // Therefore, it is important to update the "packet start" as the start of the
                                     // single-instruction packet here.
-                                    self.handle_start_of_pkt(
+                                    //
+                                    // NOTE: handling the branching stuff here is redundant
+                                    self.state.common_handle_start_of_pkt(
                                         backend,
                                         &mut context_opts,
                                         unwrapped_pc,
