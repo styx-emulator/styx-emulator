@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use log::trace;
+use log::{debug, trace};
 use styx_cpu_type::arch::{
     backends::{ArchRegister, BasicArchRegister},
     hexagon::HexagonRegister,
@@ -355,6 +355,50 @@ lazy_static! {
                 (HexagonRegister::UtimerHi, HexagonRegister::UtimerLo)
             )
         ]);
+
+    pub static ref VECTOR_REGPAIR_MAP: HashMap<HexagonRegister, (HexagonRegister, HexagonRegister)> =
+        HashMap::from([
+            (HexagonRegister::W0, (HexagonRegister::V1, HexagonRegister::V0)),
+            (HexagonRegister::W1, (HexagonRegister::V3, HexagonRegister::V2)),
+            (HexagonRegister::W2, (HexagonRegister::V5, HexagonRegister::V4)),
+            (HexagonRegister::W3, (HexagonRegister::V7, HexagonRegister::V6)),
+            (HexagonRegister::W4, (HexagonRegister::V9, HexagonRegister::V8)),
+            (HexagonRegister::W5, (HexagonRegister::V11, HexagonRegister::V10)),
+            (HexagonRegister::W6, (HexagonRegister::V13, HexagonRegister::V12)),
+            (HexagonRegister::W7, (HexagonRegister::V15, HexagonRegister::V14)),
+            (HexagonRegister::W8, (HexagonRegister::V17, HexagonRegister::V16)),
+            (HexagonRegister::W9, (HexagonRegister::V19, HexagonRegister::V18)),
+            (HexagonRegister::W10, (HexagonRegister::V21, HexagonRegister::V20)),
+            (HexagonRegister::W11, (HexagonRegister::V23, HexagonRegister::V22)),
+            (HexagonRegister::W12, (HexagonRegister::V25, HexagonRegister::V24)),
+            (HexagonRegister::W13, (HexagonRegister::V27, HexagonRegister::V26)),
+            (HexagonRegister::W14, (HexagonRegister::V29, HexagonRegister::V28)),
+            (HexagonRegister::W15, (HexagonRegister::V31, HexagonRegister::V30)),
+            (HexagonRegister::WR0, (HexagonRegister::V0, HexagonRegister::V1)),
+            (HexagonRegister::WR1, (HexagonRegister::V2, HexagonRegister::V3)),
+            (HexagonRegister::WR2, (HexagonRegister::V4, HexagonRegister::V5)),
+            (HexagonRegister::WR3, (HexagonRegister::V6, HexagonRegister::V7)),
+            (HexagonRegister::WR4, (HexagonRegister::V8, HexagonRegister::V9)),
+            (HexagonRegister::WR5, (HexagonRegister::V10, HexagonRegister::V11)),
+            (HexagonRegister::WR6, (HexagonRegister::V12, HexagonRegister::V13)),
+            (HexagonRegister::WR7, (HexagonRegister::V14, HexagonRegister::V15)),
+            (HexagonRegister::WR8, (HexagonRegister::V16, HexagonRegister::V17)),
+            (HexagonRegister::WR9, (HexagonRegister::V18, HexagonRegister::V19)),
+            (HexagonRegister::WR10, (HexagonRegister::V20, HexagonRegister::V21)),
+            (HexagonRegister::WR11, (HexagonRegister::V22, HexagonRegister::V23)),
+            (HexagonRegister::WR12, (HexagonRegister::V24, HexagonRegister::V25)),
+            (HexagonRegister::WR13, (HexagonRegister::V26, HexagonRegister::V27)),
+            (HexagonRegister::WR14, (HexagonRegister::V28, HexagonRegister::V29)),
+            (HexagonRegister::WR15, (HexagonRegister::V30, HexagonRegister::V31)),
+            (HexagonRegister::VQ0, (HexagonRegister::W1, HexagonRegister::W0)),
+            (HexagonRegister::VQ1, (HexagonRegister::W3, HexagonRegister::W2)),
+            (HexagonRegister::VQ2, (HexagonRegister::W5, HexagonRegister::W4)),
+            (HexagonRegister::VQ3, (HexagonRegister::W7, HexagonRegister::W6)),
+            (HexagonRegister::VQ4, (HexagonRegister::W9, HexagonRegister::W8)),
+            (HexagonRegister::VQ5, (HexagonRegister::W11, HexagonRegister::W10)),
+            (HexagonRegister::VQ6, (HexagonRegister::W13, HexagonRegister::W12)),
+            (HexagonRegister::VQ7, (HexagonRegister::W15, HexagonRegister::W14))
+        ]);
 }
 
 impl RegpairHandler {
@@ -436,6 +480,30 @@ impl RegisterCallback for RegpairHandler {
     }
 }
 
+// TODO: when we implement, just do it in the normal Regpair handler.
+#[derive(Debug, Default)]
+pub struct VectorRegpairQuadStub;
+impl RegisterCallback for VectorRegpairQuadStub {
+    fn read(
+        &mut self,
+        _register: ArchRegister,
+        _cpu: &mut PcodeBackend,
+    ) -> Result<SizedValue, RegisterHandleError> {
+        debug!("vector register pair/quad read");
+        Ok(0u32.into())
+    }
+
+    fn write(
+        &mut self,
+        _register: ArchRegister,
+        _value: SizedValue,
+        _cpu: &mut PcodeBackend,
+    ) -> Result<(), RegisterHandleError> {
+        debug!("vector register pair/quad write");
+        Ok(())
+    }
+}
+
 // TODO: vector register pairs
 
 pub fn add_register_pair_handlers<S>(spec: &mut ArchSpecBuilder<S>) {
@@ -445,5 +513,15 @@ pub fn add_register_pair_handlers<S>(spec: &mut ArchSpecBuilder<S>) {
         register_manager
             .add_handler(*reg, RegpairHandler)
             .expect("couldn't add regpair handler");
+    }
+}
+
+pub fn add_vector_register_pair_handlers<S>(spec: &mut ArchSpecBuilder<S>) {
+    let register_manager = &mut spec.register_manager;
+    for reg in VECTOR_REGPAIR_MAP.keys() {
+        trace!("adding vector regpair handler for {}", reg);
+        register_manager
+            .add_handler(*reg, VectorRegpairQuadStub)
+            .expect("couldn't add vector regpair handler");
     }
 }

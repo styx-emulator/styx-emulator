@@ -41,6 +41,7 @@ pub fn build() -> ArchSpecBuilder<sla::Hexagon> {
     system::interrupt::add_interrupt_callothers(&mut spec);
 
     regpairs::add_register_pair_handlers(&mut spec);
+    regpairs::add_vector_register_pair_handlers(&mut spec);
 
     spec
 }
