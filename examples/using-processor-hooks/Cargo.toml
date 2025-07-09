@@ -1,0 +1,25 @@
+[package]
+name = "using-processor-hooks"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[dependencies]
+styx-emulator = { workspace = true }
+async-trait = { workspace = true }
+binary-heap-plus = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+styx-workspace-hack = { version = "0.1", path = "../../styx/workspace-hack" }
+clap = { workspace = true }
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "proc"
+path = "src/proc.rs"
+
+[[bin]]
+name = "user"
+path = "src/user.rs"

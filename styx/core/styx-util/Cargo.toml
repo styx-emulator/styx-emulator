@@ -1,0 +1,27 @@
+[package]
+name = "styx-util"
+description = "Provides utility functions, types and const's useful to the styx ecosystem"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+#
+# NOTE:
+# The only `styx` library this crate is allowed to depend on is
+# `styx-sync`
+#
+[dependencies]
+styx-sync = { path = "../styx-sync" }
+num-traits = { workspace = true }
+log = { workspace = true }
+tracing-subscriber = { workspace = true }
+convert_case = { workspace = true }
+tempfile = { workspace = true }
+tracing-appender = { workspace = true }
+chrono = { workspace = true }
+prost-wkt-types = { workspace = true }
+thiserror = { workspace = true }
+styx-workspace-hack = { version = "0.1", path = "../../workspace-hack" }

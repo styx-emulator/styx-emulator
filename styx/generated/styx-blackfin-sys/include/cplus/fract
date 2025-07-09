@@ -1,0 +1,710 @@
+#pragma once
+#ifndef __NO_BUILTIN
+#pragma system_header /* fract */
+#endif
+/************************************************************************
+ *
+ * fract : $Revision: 1.8.6.2 $
+ *
+ * (c) Copyright 1998-2010 Analog Devices, Inc.  All rights reserved.
+ *
+ ************************************************************************/
+
+/* Support for fract (fractional fixed point) operations. */
+
+#ifndef __FRACT_DEFINED
+#define __FRACT_DEFINED
+
+#if !defined(__cplusplus)
+#  error <fract> only available with -c++
+#endif
+
+#ifndef ETSI_SOURCE
+#  define ETSI_SOURCE
+#endif
+
+#ifndef __USE_FRACT16_MUL
+# define __USE_FRACT16_MUL 0
+#endif
+
+
+#  include <flt2fr.h>
+#  include <fract.h>
+#  include <fract_math.h>
+#  include <libetsi.h>
+#  include <fract2float_conv.h>
+
+class shortfract;
+
+#pragma define_fract
+class fract {
+  public:
+    fract32 v;
+
+//----------------------------------------------------------------
+// Select a Conversion Routine
+//----------------------------------------------------------------
+#ifdef USE_16BIT_CONVERSIONS
+	// These will reduce accuracy.
+#define C_FR16_TO_FLT(x) fract16_to_float(x)
+#define C_FLT_TO_FR16(x) float_to_fract16(x)
+#define C_FR32_TO_FLT(x) fract16_to_float(extract_h(x))
+#define C_FLT_TO_FR32(x) L_deposit_h(float_to_fract16(x))
+#else
+#define C_FR16_TO_FLT(x) fr16_to_float(x)
+#define C_FLT_TO_FR16(x) float_to_fr16(x)
+#define C_FR32_TO_FLT(x) fr32_to_float(x)
+#define C_FLT_TO_FR32(x) float_to_fr32(x)
+#endif
+
+//----------------------------------------------------------------
+// Create an uninitialized fract.
+//----------------------------------------------------------------
+fract (): v(0)
+{
+}
+
+//----------------------------------------------------------------
+// Construct a fract from various types.
+//----------------------------------------------------------------
+fract (fract16 val)
+{
+	v = L_deposit_h(val);
+}
+
+fract (fract32 val)
+{
+	v = val;
+}
+
+fract (shortfract val);
+
+fract (double val)
+{
+	v = C_FLT_TO_FR32(val);
+}
+
+fract (float val)
+{
+	v = C_FLT_TO_FR32(val);
+}
+
+fract (int val)
+{
+	// Used when initialising fract with zero
+	v = val;
+}
+
+fract (unsigned int val)
+{
+	v = val;
+}
+
+
+//--------------------------------------------------------------
+// Copy Operators
+//--------------------------------------------------------------
+
+fract &operator = (const fract16 val )
+{
+	v = L_deposit_h(val);
+	return *this;
+}
+
+fract &operator = (const fract32 val )
+{
+	v = val ;
+	return *this;
+}
+
+fract &operator = (const double val )
+{
+	v = C_FLT_TO_FR32(val);
+	return *this;
+}
+
+fract &operator = (const float val )
+{
+	v = C_FLT_TO_FR32(val);
+	return *this;
+}
+
+fract &operator = (const shortfract val );
+
+fract &operator = (const int val )
+{
+	v = val;
+	return *this;
+}
+
+fract &operator = (const unsigned int val )
+{
+	v = val;
+	return *this;
+}
+
+fract &operator = (const fract val )
+{
+	v = val.v;
+	return *this;
+}
+
+// volatile copies
+
+volatile fract &operator = (const fract16 val ) volatile
+{
+	v = L_deposit_h(val);
+	return *this;
+}
+
+volatile fract &operator = (const fract32 val ) volatile
+{
+	v = val ;
+	return *this;
+}
+
+volatile fract &operator = (const double val ) volatile
+{
+	v = C_FLT_TO_FR32(val);
+	return *this;
+}
+
+volatile fract &operator = (const float val ) volatile
+{
+	v = C_FLT_TO_FR32(val);
+	return *this;
+}
+
+volatile fract &operator = (const shortfract val ) volatile;
+
+volatile fract &operator = (const int val ) volatile
+{
+	v = val ;
+	return *this;
+}
+
+volatile fract &operator = (const unsigned int val ) volatile
+{
+	v = val ;
+	return *this;
+}
+
+volatile fract &operator = (const fract val ) volatile
+{
+	v = val.v;
+	return *this;
+}
+
+fract (const fract& rcl) : v(rcl.v) { }
+fract (const volatile fract& rcl) : v(rcl.v) { }
+
+
+//--------------------------------------------------------------
+// Various Operators
+//--------------------------------------------------------------
+
+
+fract operator- () const
+{
+	return fract(L_negate(v));
+}
+
+fract operator- () const volatile
+{
+	return fract(L_negate(v));
+}
+
+fract operator >> ( const short sval) const
+{
+	return fract(L_shr(v,sval));
+}
+
+fract operator >> ( const short sval) const volatile
+{
+	return fract(L_shr(v,sval));
+}
+
+fract& operator >>= (const short sval)
+{
+	v = L_shr(v,sval);
+	return *this;
+}
+
+volatile fract& operator >>= (const short sval) volatile
+{
+	v = L_shr(v,sval);
+	return *this;
+}
+
+fract operator << ( const short sval ) const
+{
+	return fract(L_shl(v,sval));
+}
+
+volatile fract operator << ( const short sval ) const volatile
+{
+	return fract(L_shl(v,sval));
+}
+
+fract& operator <<= (const short sval )
+{
+	v = L_shl(v,sval);
+	return *this;
+}
+
+volatile fract& operator <<= (const short sval ) volatile
+{
+	v = L_shl(v,sval);
+	return *this;
+}
+
+fract operator + (const fract s) const
+{
+	return fract(L_add(v,s.v));
+}
+
+fract operator + (const fract s) const volatile
+{
+	return fract(L_add(v,s.v));
+}
+
+fract operator + ( const double d) const
+{
+	fract f2(d);
+	return fract(L_add(v,f2.v));
+}
+
+fract operator + ( const double d) const volatile
+{
+	fract f2(d);
+	return fract(L_add(v,f2.v));
+}
+
+fract& operator += (const fract s)
+{
+	v = L_add(v,s.v);
+	return *this;
+}
+
+volatile fract& operator += (const fract s) volatile
+{
+	v = L_add(v,s.v);
+	return *this;
+}
+
+fract& operator += (const double d)
+{
+	fract f2(d);
+	v = L_add(v,f2.v);
+	return *this;
+}
+
+volatile fract& operator += (const double d) volatile
+{
+	fract f2(d);
+	v = L_add(v,f2.v);
+	return *this;
+}
+
+fract operator - (const fract s) const
+{
+	return fract(L_sub(v,s.v));
+}
+
+fract operator - (const fract s) const volatile
+{
+	return fract(L_sub(v,s.v));
+}
+
+fract operator - (const double d) const
+{
+	fract f2(d);
+	return fract(L_sub(v,f2.v));
+}
+
+fract operator - (const double d) const volatile
+{
+	fract f2(d);
+	return fract(L_sub(v,f2.v));
+}
+
+fract& operator -= (const fract s)
+{
+	v = L_sub(v,s.v);
+	return *this;
+}
+
+volatile fract& operator -= (const fract s) volatile
+{
+	v = L_sub(v,s.v);
+	return *this;
+}
+
+fract& operator -= (const double d)
+{
+	fract f2(d);
+	v = L_sub(v,f2.v);
+	return *this;
+}
+
+volatile fract& operator -= (const double d) volatile
+{
+	fract f2(d);
+	v = L_sub(v,f2.v);
+	return *this;
+}
+
+fract operator *(const fract s) const
+{
+#if __USE_FRACT16_MUL
+	return fract(L_mult(extract_h(v),extract_h(s.v)));
+#else
+   return fract(mult_fr1x32x32(v,s.v));
+#endif
+}
+
+fract operator *(const fract s) const volatile
+{
+#if __USE_FRACT16_MUL
+	return fract(L_mult(extract_h(v),extract_h(s.v)));
+#else
+   return fract(mult_fr1x32x32(v,s.v));
+#endif
+}
+
+fract operator *(const double d) const
+{
+	fract f2(d);
+#if __USE_FRACT16_MUL
+	return fract(L_mult(extract_h(v),extract_h(f2.v)));
+#else
+   return fract(mult_fr1x32x32(v,f2.v));
+#endif
+}
+
+fract operator *(const double d) const volatile
+{
+	fract f2(d);
+#if __USE_FRACT16_MUL
+	return fract(L_mult(extract_h(v),extract_h(f2.v)));
+#else
+   return fract(mult_fr1x32x32(v,f2.v));
+#endif
+}
+
+fract& operator *=(const fract s)
+{
+#if __USE_FRACT16_MUL
+	v = L_mult(extract_h(v),extract_h(s.v));
+#else
+   v = mult_fr1x32x32(v,s.v);
+#endif
+	return *this;
+}
+
+volatile fract& operator *=(const fract s) volatile
+{
+#if __USE_FRACT16_MUL
+	v = L_mult(extract_h(v),extract_h(s.v));
+#else
+   v = mult_fr1x32x32(v,s.v);
+#endif
+	return *this;
+}
+
+fract& operator *=(const double d)
+{
+	fract f2(d);
+#if __USE_FRACT16_MUL
+	v = L_mult(extract_h(v),extract_h(f2.v));
+#else
+   v = mult_fr1x32x32(v,f2.v);
+#endif
+	return *this;
+}
+
+volatile fract& operator *=(const double d) volatile
+{
+	fract f2(d);
+#if __USE_FRACT16_MUL
+	v = L_mult(extract_h(v),extract_h(f2.v));
+#else
+   v = mult_fr1x32x32(v,f2.v);
+#endif
+	return *this;
+}
+
+fract operator / (const fract s) const volatile
+{
+		int lsh;
+		fract32 res, L_num=v, L_denom=s.v;
+		fract16 denom_lo, denom_hi;
+		int negate=0;
+		if (L_num<0) {
+			L_num=L_negate(L_num);
+			negate=1;
+		}
+		if (L_denom<0) {
+			L_denom=L_negate(L_denom);
+			negate=!negate;
+		}
+		lsh=norm_l(L_denom);
+		L_denom=L_shl(L_denom,(fract16)lsh);
+		L_Extract(L_denom, &denom_hi, &denom_lo);
+		res=L_shl(Div_32(L_num,denom_hi,denom_lo),(fract16)lsh);
+		if (negate) res=L_negate(res);
+		return fract(res);
+}
+
+fract operator / (const fract s) const
+{
+		int lsh;
+		fract32 res, L_num=v, L_denom=s.v;
+		fract16 denom_lo, denom_hi;
+		int negate=0;
+		if (L_num<0) {
+			L_num=L_negate(L_num);
+			negate=1;
+		}
+		if (L_denom<0) {
+			L_denom=L_negate(L_denom);
+			negate=!negate;
+		}
+		lsh=norm_l(L_denom);
+		L_denom=L_shl(L_denom,(fract16)lsh);
+		L_Extract(L_denom, &denom_hi, &denom_lo);
+		res=L_shl(Div_32(L_num,denom_hi,denom_lo),(fract16)lsh);
+		if (negate) res=L_negate(res);
+		return fract(res);
+}
+
+volatile fract& operator /= (const fract s) volatile
+{
+		int lsh;
+		fract32 L_num=v, L_denom=s.v;
+		fract16 denom_lo, denom_hi;
+		int negate=0;
+		if (L_num<0) {
+			L_num=L_negate(L_num);
+			negate=1;
+		}
+		if (L_denom<0) {
+			L_denom=L_negate(L_denom);
+			negate=!negate;
+		}
+		lsh=norm_l(L_denom);
+		L_denom=L_shl(L_denom,(fract16)lsh);
+		L_Extract(L_denom, &denom_hi, &denom_lo);
+		v=L_shl(Div_32(L_num,denom_hi,denom_lo),(fract16)lsh);
+		if (negate) v=L_negate(v);
+		return *this;
+}
+
+fract& operator /= (const fract s)
+{
+		int lsh;
+		fract32 L_num=v, L_denom=s.v;
+		fract16 denom_lo, denom_hi;
+		int negate=0;
+		if (L_num<0) {
+			L_num=L_negate(L_num);
+			negate=1;
+		}
+		if (L_denom<0) {
+			L_denom=L_negate(L_denom);
+			negate=!negate;
+		}
+		lsh=norm_l(L_denom);
+		L_denom=L_shl(L_denom,(fract16)lsh);
+		L_Extract(L_denom, &denom_hi, &denom_lo);
+		v=L_shl(Div_32(L_num,denom_hi,denom_lo),(fract16)lsh);
+		if (negate) v=L_negate(v);
+		return *this;
+}
+
+bool operator <  (const fract s) const          { return ( v <  s.v ); }
+bool operator <  (const fract s) const volatile { return ( v <  s.v ); }
+bool operator <  (const double d) const
+{
+	fract f2(d);
+	return ( v <  f2.v );
+}
+bool operator >  (const fract s) const          { return ( v >  s.v ); }
+bool operator >  (const fract s) const volatile { return ( v >  s.v ); }
+bool operator >  (const double d) const
+{
+	fract f2(d);
+	return ( v >  f2.v );
+}
+
+bool operator <= (const fract s) const          { return ( v <= s.v ); }
+bool operator <= (const fract s) const volatile { return ( v <= s.v ); }
+bool operator <= (const double d) const
+{
+	fract f2(d);
+	return ( v <= f2.v );
+}
+bool operator >= (const fract s) const          { return ( v >= s.v ); }
+bool operator >= (const fract s) const volatile { return ( v >= s.v ); }
+bool operator >= (const double d) const
+{
+	fract f2(d);
+	return ( v >= f2.v );
+}
+bool operator == (const fract s) const          { return ( v == s.v ); }
+bool operator == (const fract s) const volatile { return ( v == s.v ); }
+bool operator == (const double d) const
+{
+	fract f2(d);
+	return ( v == f2.v );
+}
+bool operator != (const fract s) const          { return ( v != s.v ); }
+bool operator != (const fract s) const volatile { return ( v != s.v ); }
+bool operator != (const double d) const
+{
+	fract f2(d);
+	return ( v != f2.v );
+}
+
+operator float () const
+{
+	return C_FR32_TO_FLT(v);
+}
+operator double () const
+{
+	return C_FR32_TO_FLT(v);
+}
+
+operator fract16 () const
+{
+	return extract_h(v);
+}
+
+operator fract32 () const
+{
+	return v;
+}
+
+};
+
+
+#include <shortfract>
+
+inline fract::fract (shortfract val)
+{
+        // Uses the shortfract operation fract32 ()
+        v = val;
+}
+
+inline fract &fract::operator = (const shortfract val )
+{
+        v = val;
+        return *this;
+}
+
+inline volatile fract &fract::operator = (const shortfract val ) volatile
+{
+        v = val;
+        return *this;
+}
+
+// Global operators
+
+#pragma always_inline
+static __inline double operator + (double d, fract f)
+{
+	double d2 = double(f);
+	return (d2+d);
+}
+
+#pragma always_inline
+static __inline double operator - (double d,fract f)
+{
+	double d2 = double(f);
+	return (d-d2);
+}
+
+#pragma always_inline
+static __inline double operator * (double d,fract f)
+{
+	double d2 = double(f);
+	return (d*d2);
+}
+
+
+#pragma always_inline
+static __inline bool operator <  (const double d, const fract s)
+{
+	double d2(s);
+	return ( d <  d2 );
+}
+#pragma always_inline
+static __inline bool operator >  (const double d, const fract s)
+{
+	double d2(s);
+	return ( d >  d2 );
+}
+#pragma always_inline
+static __inline bool operator <= (const double d,const fract s)
+{
+	double d2(s);
+	return ( d <= d2 );
+}
+#pragma always_inline
+static __inline bool operator >= (const double d,const fract s)
+{
+	double d2(s);
+	return ( d >= d2 );
+}
+#pragma always_inline
+static __inline bool operator == (double d, const fract s)
+{
+	double d2(s);
+	return ( d == d2 );
+}
+#pragma always_inline
+static __inline bool operator != (double d, const fract s)
+{
+	double d2(s);
+	return ( d != d2 );
+}
+
+#ifdef __ADSPBLACKFIN__
+
+/*
+** Blackfin does not have the saturation modes of 21xx and 21xxx
+** processors, so the functions to change mode - either permanently,
+** for or a single statement - are no-ops on Blackfin. This also
+** means Blackfin may give different results, depending on the
+** mode that the application expected the operation to be performed in.
+*/
+
+#define set_saturate_mode()
+#define reset_saturate_mode()
+#define SATURATE(X) { X ; }
+#define UNSATURATE(X) { X ; }
+#define SAFE_SATURATE(X) { X ; }
+#define SAFE_UNSATURATE(X) { X ; }
+
+#pragma always_inline
+static __inline fract add_sat(fract _a, fract _b) { return _a + _b ; }
+#pragma always_inline
+static __inline fract sub_sat(fract _a, fract _b) { return _a - _b ; }
+#pragma always_inline
+static __inline fract neg_sat(fract _a) { return -_a ; }
+
+#pragma always_inline
+static __inline fract add_unsat(fract _a, fract _b) {
+  return fract(fract32(_a) + fract32(_b));
+}
+#pragma always_inline
+static __inline fract sub_unsat(fract _a, fract _b) {
+  return fract(fract32(_a) - fract32(_b));
+}
+#pragma always_inline
+static __inline fract neg_unsat(fract _a) {
+  return fract(-fract32(_a));
+}
+#endif /* __ADSPBLACKFIN__ */
+
+#endif /* __FRACT_DEFINED */

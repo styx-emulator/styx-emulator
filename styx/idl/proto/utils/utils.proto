@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+package utils;
+
+option java_multiple_files = true;
+
+message NetworkAddress {
+  string network = 1;
+  uint32 port = 2;
+}
+
+/**
+ * Token retrieved when Beginning emulation
+ */
+message Token { uint64 inner_token = 1; }
+
+
+enum EmulationState {
+  Unknown = 0;
+  Error = 1;
+  Creating = 2;
+  Created = 3;
+  Initializing = 4;
+  Initialized = 5;
+  Starting = 6;
+  Running = 7;
+  Stopping = 8;
+  Stopped = 9;
+  Paused = 10;
+  Finalizing = 11;
+  Killing = 12;
+  Dropped = 13;
+}
+
+message EmuMetadataList { repeated EmuMetadata meta_data = 1; }
+
+message ProcessorInfo {
+  string target_name = 1;
+  string arch_name = 2;
+  string arch_variant = 3;
+  uint64 memory_start = 4;
+  uint64 memory_end = 5;
+}
+
+message EmuMetadata {
+  utils.Token token = 1;
+  string trace_file_path = 2;
+  uint32 process_id = 3;
+  uint32 port = 4;
+  string url = 5;
+  EmulationState state = 6;
+  ProcessorInfo processor_info = 7;
+}
+
+message ResponseStatus {
+  enum Result {
+    OK = 0;
+    ERR = 1;
+    WARN = 2;
+  }
+
+  // Result of the operation for which Response is being returned
+  Result result = 1;
+  // a message suitable for human consumption
+  string message = 2;
+  // the state of the emulation after the operation for which Response is being
+  // returned
+  EmulationState state = 3;
+}
+
+message ServiceResponse {
+  enum Result {
+    OK = 0;
+    ERR = 1;
+    WARN = 2;
+  }
+  Result result = 1;
+  string message = 2;
+}
+
+message Empty {}

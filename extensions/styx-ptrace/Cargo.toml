@@ -1,0 +1,30 @@
+[package]
+name = "styx-ptrace"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "ptrace"
+path = "src/ptrace-main.rs"
+
+[dependencies]
+emulation-service = { path = "../../styx/services/styx-emulation-service" }
+styx-emulator = { workspace = true }
+
+styx-trace-tools = { path = "../../incubation/trace-tools" }
+traceapp-service = { path = "../../styx/services/styx-traceapp-service" }
+typhunix-server-bin = { path = "../typhunix/rust/typhunix-server" }
+
+tracing = { workspace = true }
+tonic = { workspace = true }
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+clap = { workspace = true }
+futures-util = { workspace = true }
+signal-hook = { workspace = true }
+signal-hook-tokio = { workspace = true }
+styx-workspace-hack = { version = "0.1", path = "../../styx/workspace-hack" }

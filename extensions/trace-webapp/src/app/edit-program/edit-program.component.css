@@ -1,0 +1,72 @@
+.file-upload {
+    margin-top: 10px;
+    margin-left: 10px;
+}
+
+
+.file-input {
+    display: none;
+}
+
+.upload-btn {
+    margin-left: 5px;
+    margin-right: 5px;
+    width: 30px;
+    height: 30px;
+}
+
+/* this is needed to hide ng-bootstrap debug info */
+div.visually-hidden {
+    display: none;
+}
+
+.ngb-live {
+    display: none;
+}
+
+.flex-container {
+    display: flex;
+    flex-wrap: wrap;
+    /* width: 90%; */
+    /* border: 1px solid red; */
+    margin: 5px;
+}
+
+.flex-item {
+    /* width: 60%; */
+    min-height: 50px;
+    /* Adjust as needed */
+    box-sizing: border-box;
+    display: flex;
+    justify-content: left;
+    align-items: first baseline;
+}
+
+.flex-item.content {
+    margin-left: 2px;
+}
+
+.flex-item.content-tall {
+    height: 300px;
+    overflow: auto;
+}
+
+.flex-item.label {
+    font-weight: bold;
+    min-width: 200px;
+    margin-left: 2px;
+}
+
+.stack {
+    display: block
+}
+
+.pr1em {
+    padding-right: 1em;
+}
+
+.number-input {
+    width: 100px;
+    margin-left: 5px;
+    margin-right: 5px;
+}

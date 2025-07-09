@@ -1,0 +1,38 @@
+[package]
+name = "styx-blackfin-processor"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+styx-core = { workspace = true }
+styx-blackfin-sys = { path = "../../../generated/styx-blackfin-sys" }
+
+tonic = { workspace = true }
+tracing = { workspace = true }
+derivative = { workspace = true }
+num_enum = { workspace = true }
+enum-map = { workspace = true }
+tokio = { workspace = true }
+tokio-timerfd = { workspace = true }
+tokio-stream = { workspace = true }
+styx-workspace-hack = { version = "0.1", path = "../../../workspace-hack" }
+futures = { workspace = true }
+bilge = { workspace = true }
+tap = { workspace = true }
+arbitrary-int = { workspace = true }
+
+
+[dev-dependencies]
+styx-plugins = { path = "../../../plugins" }
+test-case = { workspace = true }
+
+[features]
+default = []
+tracy = ["styx-plugins/tracy"]
+
+[package.metadata.cargo-udeps.ignore]
+development = ["styx-plugins"]

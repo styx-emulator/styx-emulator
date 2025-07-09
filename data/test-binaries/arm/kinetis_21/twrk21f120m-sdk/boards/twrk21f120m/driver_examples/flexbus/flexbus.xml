@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ksdk:examples xmlns:ksdk="http://nxp.com/ksdk/2.0/ksdk_manifest_v3.0.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://nxp.com/ksdk/2.0/ksdk_manifest_v3.0.xsd manifest.xsd">
+  <externalDefinitions>
+    <definition extID="com.nxp.mcuxpresso"/>
+    <definition extID="platform.devices.MK21FA12_CMSIS.MK21FA12"/>
+    <definition extID="platform.devices.MK21FA12_startup.MK21FA12"/>
+    <definition extID="platform.drivers.clock.MK21FA12"/>
+    <definition extID="platform.drivers.common.MK21FA12"/>
+    <definition extID="platform.drivers.flash.MK21FA12"/>
+    <definition extID="platform.drivers.flexbus.MK21FA12"/>
+    <definition extID="platform.drivers.gpio.MK21FA12"/>
+    <definition extID="platform.drivers.port.MK21FA12"/>
+    <definition extID="platform.drivers.sim.MK21FA12"/>
+    <definition extID="platform.drivers.smc.MK21FA12"/>
+    <definition extID="platform.drivers.uart.MK21FA12"/>
+    <definition extID="platform.utilities.assert.MK21FA12"/>
+    <definition extID="platform.utilities.debug_console.MK21FA12"/>
+    <definition extID="iar"/>
+    <definition extID="mdk"/>
+    <definition extID="kds"/>
+    <definition extID="atl"/>
+    <definition extID="mcuxpresso"/>
+    <definition extID="armgcc"/>
+  </externalDefinitions>
+  <example id="twrk21f120m_flexbus" name="flexbus" category="driver_examples" dependency="platform.drivers.clock.MK21FA12 platform.drivers.flash.MK21FA12 platform.drivers.common.MK21FA12 platform.devices.MK21FA12_CMSIS.MK21FA12 platform.devices.MK21FA12_startup.MK21FA12 platform.drivers.uart.MK21FA12 platform.drivers.port.MK21FA12 platform.drivers.smc.MK21FA12 platform.utilities.debug_console.MK21FA12 platform.drivers.gpio.MK21FA12 platform.utilities.assert.MK21FA12 platform.drivers.sim.MK21FA12 platform.drivers.flexbus.MK21FA12" toolchain="iar mdk armgcc kds mcuxpresso">
+    <projects>
+      <project type="com.crt.advproject.projecttype.exe" nature="org.eclipse.cdt.core.cnature"/>
+    </projects>
+    <toolchainSettings>
+      <!-- Curently, mcux just supports one common settings set for both debug and release -->
+      <toolchainSetting id_refs="com.nxp.mcuxpresso">
+        <!-- asm compiler -->
+        <!-- gcc compiler -->
+        <option id="com.crt.advproject.c.misc.dialect" type="enum">
+          <value>com.crt.advproject.misc.dialect.gnu99</value>
+        </option>
+        <option id="com.crt.advproject.gcc.exe.debug.option.debugging.level" type="enum">
+          <value>gnu.c.debugging.level.default</value>
+        </option>
+        <option id="com.crt.advproject.gcc.exe.release.option.debugging.level" type="enum">
+          <value>gnu.c.debugging.level.default</value>
+        </option>
+        <option id="gnu.c.compiler.option.preprocessor.def.symbols" type="stringList">
+          <value>CPU_MK21FN1M0AVMC12</value>
+          <value>TWR_K21F120M</value>
+          <value>TOWER</value>
+        </option>
+        <option id="gnu.c.compiler.option.optimization.flags" type="string">
+          <value>-fno-common</value>
+        </option>
+        <option id="gnu.c.compiler.option.misc.other" type="string">
+          <value>-c  -ffunction-sections  -fdata-sections  -ffreestanding  -fno-builtin</value>
+        </option>
+        <!-- gcc linker -->
+        <option id="gnu.c.link.option.nostdlibs" type="boolean">
+          <value>true</value>
+        </option>
+        <option id="gnu.c.link.option.other" type="stringList">
+          <value>--gc-sections</value>
+        </option>
+      </toolchainSetting>
+    </toolchainSettings>
+    <source path="boards/twrk21f120m/driver_examples/flexbus" target_path="board" type="c_include">
+      <files mask="board.h"/>
+      <files mask="clock_config.h"/>
+      <files mask="pin_mux.h"/>
+    </source>
+    <source path="boards/twrk21f120m/driver_examples/flexbus" target_path="board" type="src">
+      <files mask="board.c"/>
+      <files mask="clock_config.c"/>
+      <files mask="pin_mux.c"/>
+    </source>
+    <source path="boards/twrk21f120m/driver_examples/flexbus" target_path="doc" type="doc" toolchain="iar mdk kds atl mcuxpresso">
+      <files mask="readme.txt"/>
+    </source>
+    <source path="boards/twrk21f120m/driver_examples/flexbus" target_path="source" type="src">
+      <files mask="flexbus.c"/>
+    </source>
+  </example>
+</ksdk:examples>

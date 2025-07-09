@@ -1,0 +1,42 @@
+// cstddef standard header
+#if defined (_ADI_COMPILER)
+/************************************************************************
+ *
+ * cstddef
+ *
+ * (c) Copyright 2001-2009 Analog Devices, Inc.  All rights reserved.
+ * (c) Copyright 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * $Revision: 1.4 $
+ ************************************************************************/
+
+#pragma once
+#ifndef __NO_BUILTIN
+#pragma system_header /* cstddef */
+#endif
+#endif /* _ADI_COMPILER */
+
+#ifndef _CSTDDEF_
+#define _CSTDDEF_
+#include <yvals.h>
+
+#ifdef _STD_USING
+ #undef _STD_USING
+  #include <stddef.h>
+ #define _STD_USING
+
+#else /* _STD_USING */
+ #include <stddef.h>
+#endif /* _STD_USING */
+
+ #ifdef _GLOBAL_USING
+_STD_BEGIN
+using _CSTD ptrdiff_t; using _CSTD size_t;
+_STD_END
+ #endif /* _GLOBAL_USING */
+
+#endif /* _CSTDDEF_ */
+
+/*
+ * Copyright (c) 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * Consult your license regarding permissions and restrictions.
+V5.03:1134 */

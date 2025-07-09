@@ -1,0 +1,57 @@
+// SPDX-License-Identifier: BSD-2-Clause
+#[doc = "Register `ctrlgrp_protruleid` reader"]
+pub type R = crate::R<CtrlgrpProtruleidSpec>;
+#[doc = "Register `ctrlgrp_protruleid` writer"]
+pub type W = crate::W<CtrlgrpProtruleidSpec>;
+#[doc = "Field `lowid` reader - AxID for the protection rule. Incoming AxID needs to be greater than or equal to this value. For all AxIDs from a port, AxID high should be programmed to all ones."]
+pub type LowidR = crate::FieldReader<u16>;
+#[doc = "Field `lowid` writer - AxID for the protection rule. Incoming AxID needs to be greater than or equal to this value. For all AxIDs from a port, AxID high should be programmed to all ones."]
+pub type LowidW<'a, REG> = crate::FieldWriter<'a, REG, 12, u16>;
+#[doc = "Field `highid` reader - AxID for the protection rule. Incoming AxID needs to be less than or equal to this value. For all AxIDs from a port, AxID high should be programmed to all ones."]
+pub type HighidR = crate::FieldReader<u16>;
+#[doc = "Field `highid` writer - AxID for the protection rule. Incoming AxID needs to be less than or equal to this value. For all AxIDs from a port, AxID high should be programmed to all ones."]
+pub type HighidW<'a, REG> = crate::FieldWriter<'a, REG, 12, u16>;
+impl R {
+    #[doc = "Bits 0:11 - AxID for the protection rule. Incoming AxID needs to be greater than or equal to this value. For all AxIDs from a port, AxID high should be programmed to all ones."]
+    #[inline(always)]
+    pub fn lowid(&self) -> LowidR {
+        LowidR::new((self.bits & 0x0fff) as u16)
+    }
+    #[doc = "Bits 12:23 - AxID for the protection rule. Incoming AxID needs to be less than or equal to this value. For all AxIDs from a port, AxID high should be programmed to all ones."]
+    #[inline(always)]
+    pub fn highid(&self) -> HighidR {
+        HighidR::new(((self.bits >> 12) & 0x0fff) as u16)
+    }
+}
+impl W {
+    #[doc = "Bits 0:11 - AxID for the protection rule. Incoming AxID needs to be greater than or equal to this value. For all AxIDs from a port, AxID high should be programmed to all ones."]
+    #[inline(always)]
+    #[must_use]
+    pub fn lowid(&mut self) -> LowidW<CtrlgrpProtruleidSpec> {
+        LowidW::new(self, 0)
+    }
+    #[doc = "Bits 12:23 - AxID for the protection rule. Incoming AxID needs to be less than or equal to this value. For all AxIDs from a port, AxID high should be programmed to all ones."]
+    #[inline(always)]
+    #[must_use]
+    pub fn highid(&mut self) -> HighidW<CtrlgrpProtruleidSpec> {
+        HighidW::new(self, 12)
+    }
+}
+#[doc = "\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`ctrlgrp_protruleid::R`](R).  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`ctrlgrp_protruleid::W`](W). You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
+pub struct CtrlgrpProtruleidSpec;
+impl crate::RegisterSpec for CtrlgrpProtruleidSpec {
+    type Ux = u32;
+    const OFFSET: u64 = 20628u64;
+}
+#[doc = "`read()` method returns [`ctrlgrp_protruleid::R`](R) reader structure"]
+impl crate::Readable for CtrlgrpProtruleidSpec {}
+#[doc = "`write(|w| ..)` method takes [`ctrlgrp_protruleid::W`](W) writer structure"]
+impl crate::Writable for CtrlgrpProtruleidSpec {
+    type Safety = crate::Unsafe;
+    const ZERO_TO_MODIFY_FIELDS_BITMAP: u32 = 0;
+    const ONE_TO_MODIFY_FIELDS_BITMAP: u32 = 0;
+}
+#[doc = "`reset()` method sets ctrlgrp_protruleid to value 0"]
+impl crate::Resettable for CtrlgrpProtruleidSpec {
+    const RESET_VALUE: u32 = 0;
+}

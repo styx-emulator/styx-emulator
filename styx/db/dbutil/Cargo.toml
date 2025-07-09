@@ -1,0 +1,38 @@
+[package]
+name = "styx-dbutil"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[[bin]]
+name = "styx-dbutil-testbin"
+path = "src/testbin.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+styx-core = { workspace = true }
+styx-dbmodel = { path = "../dbmodel" }
+styx-migration = { path = "../migration" }
+
+
+sea-orm = { workspace = true, features = ["mock"] }
+tokio = { workspace = true }
+url = { workspace = true }
+serde_json = { workspace = true }
+testcontainers-modules = { workspace = true, features = ["postgres"] }
+tracing = { workspace = true }
+
+thiserror = { workspace = true }
+log = { workspace = true }
+rand = { workspace = true }
+uuid = { workspace = true, features = ["serde"] }
+
+# [dev-dependencies]
+styx-workspace-hack = { version = "0.1", path = "../../workspace-hack" }
+typhunix-client-bin = { path = "../../../extensions/typhunix/rust/typhunix-client" }
+typhunix-server-bin = { path = "../../../extensions/typhunix/rust/typhunix-server" }
+tonic = { workspace = true }
+styx-trace-tools = { path = "../../../incubation/trace-tools" }
+workspace-service = { path = "../../services/styx-workspace-service" }

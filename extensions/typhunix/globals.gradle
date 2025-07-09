@@ -1,0 +1,19 @@
+
+ext {
+    // where to look for protobuf files (*.proto)
+    ghidraStateProtoDir = "${rootDir}/rust/typhunix-proto/src/proto"
+    generatedSourcesDir = "generated-sources"
+    protoGeneratedSourceDir = "generated-sources/proto"
+}
+
+tasks.register('cargoBuild') {
+    new File(System.properties['user.dir']).eachFileRecurse(FILES) {
+        if(it.name.equals('Cargo.toml')) {
+            String manifestPath = it.getCanonicalPath()
+            println "cargo build --manifest-path " +  manifestPath
+            exec {
+                commandLine "cargo", "build", "--manifest-path", manifestPath
+            }
+        }
+    }
+}

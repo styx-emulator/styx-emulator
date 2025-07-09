@@ -1,0 +1,23 @@
+[package]
+name = "styx-gic"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+styx-core = { workspace = true }
+
+async-trait = { workspace = true }
+binary-heap-plus = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tonic = { workspace = true }
+tracing = { workspace = true }
+num-traits = { workspace = true }
+num-derive = { workspace = true }
+styx-workspace-hack = { version = "0.1", path = "../../../workspace-hack" }

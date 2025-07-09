@@ -1,0 +1,152 @@
+syntax = "proto3";
+package args;
+
+option java_multiple_files = true;
+
+// All parameters for a trace execution session
+message TraceAppSessionArgs {
+  // type of tracing being performed
+  enum TraceMode {
+    // Active emulation
+    EMULATED = 0;
+    // Raw trace file emitted by an emulation
+    RAW = 1;
+    // Ring buffer file, emitted by, or being emitted by an emulation
+    SRB = 2;
+  }
+  /// persistence identifier
+  int32 id = 1;
+
+  // The trace mode
+  TraceMode mode = 2;
+  // Session identifier used to track the trace execution session
+  string session_id = 3;
+  // Indicates if a session is being resumed or a new session is being started
+  bool resume = 4;
+  // Ghidra program for symbols and data types
+  ProgramIdentifierArgs pid = 5;
+  // OS path to the trace file
+  string trace_filepath = 6;
+  // Options for tracing of raw files
+  RawTraceArgs raw_trace_args = 7;
+  // Emulation inputs for active emulations
+  EmulationArgs emulation_args = 8;
+  // Thresholds that stop/pause emulations, based on raw events counts
+  RawEventLimits limits = 9;
+  // Options for identifying which symbols should be tracked during trace
+  // execution
+  SymbolSearchOptions symbol_options = 10;
+  // WsProgram persistence identifier
+  int32 ws_program_id = 11;
+}
+
+// Inputs to an emulation
+message EmulationArgs {
+  // persistence identifier
+  int32 id = 1;
+
+  // emulation target
+  Target target = 2;
+  // os path to firmware file
+  string firmware_path = 3;
+  // trace plugin parameters
+  TracePluginArgs trace_plugin_args = 4;
+  // Emulation limits
+  EmuRunLimits emu_run_limits = 5;
+  // Raw loader args
+  RawLoaderArgs raw_loader_args = 6;
+  // Peripheral IPC port
+  sint32 ipc_port = 7;
+}
+
+// A tareget is a moniker that translates to a unique architecture variant
+enum Target {
+  // Kinetis21: ArmVariants::ArmCortexM4
+  Kinetis21 = 0;
+  // PowerQuicc: Ppc32Variants::Mpc852T
+  PowerQUICC = 1;
+  // Stm32f107: ArmVariants::ArmCortexM3
+  Stm32f107 = 2;
+  // CycloneV: : ArmVariants::ArmCortexA9
+  CycloneV = 3;
+  // Blackfin512: BlackfinVariants::Bf512
+  Blackfin512 = 4;
+}
+
+// Thresholds for limiting raw event counts during execution tracing.
+message RawEventLimits {
+  /// persistence identifier
+  int32 id = 1;
+  // instructions
+  uint64 max_insn = 2;
+  // read events
+  uint64 max_mem_read_events = 3;
+  // write events
+  uint64 max_mem_write_events = 4;
+}
+
+// Ghidra program identifier
+message ProgramIdentifierArgs {
+  // program name from ghidra
+  string name = 1;
+  // program source_id from ghidra
+  string source_id = 2;
+};
+
+// Parameters for raw event files
+message RawTraceArgs {
+  // os path (directory)
+  string trace_directory = 1;
+  // flag indicating wait for file
+  bool trace_wait_file = 2;
+}
+
+// Options to include and omit from search
+message SymbolSearchOptions {
+  // Include this regular expr
+  string regex_include = 1;
+  // Exclude this regular expr
+  string regex_exclude = 2;
+
+  bool mem_reads= 3;
+  bool mem_writes= 4;
+  bool anon_reads= 5;
+  bool anon_writes= 6;
+}
+
+// Raw events to enable
+message TracePluginArgs {
+  // trace plugin: enable Instruction events
+  bool insn_event = 1;
+  // trace plugin: enable MemWrite events
+  bool write_memory_event = 2;
+  // trace plugin: enable MemRead events
+  bool read_memory_event = 3;
+  // trace plugin: enable Interrupt events
+  bool interrupt_event = 4;
+  // trace plugin: enable Block events
+  bool block_event = 5;
+}
+
+// GDB plugin args
+message GdbPluginArgs {
+  // Listen port for remote server
+  uint32 remote_port = 1;
+}
+
+message RawLoaderArgs {
+  /// Base address
+  uint64 base_addr = 1;
+  /// Min valid range
+  uint64 valid_range_min = 2;
+  /// Max valid range
+  uint64 valid_range_max = 3;
+}
+
+// Thresholds that stop or pause an active emulation
+message EmuRunLimits {
+  // Stop/pause when max instructions hit
+  uint64 emu_max_insn = 1;
+  // Stop/pause after this many seconds
+  uint64 emu_seconds = 2;
+}

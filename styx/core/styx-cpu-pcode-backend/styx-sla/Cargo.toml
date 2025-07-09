@@ -1,0 +1,43 @@
+[package]
+name = "styx-sla"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+styx-pcode = { path = "../styx-pcode" }
+styx-cpu-type = { path = "../../styx-cpu-type" }
+derive_more = { workspace = true }
+styx-workspace-hack = { version = "0.1", path = "../../../workspace-hack" }
+
+[build-dependencies]
+styx-pcode-sleigh-backend = { path = "../styx-pcode-sleigh-backend" }
+heck = { workspace = true }
+walkdir = { workspace = true }
+diffy = { workspace = true }
+copy_dir = { workspace = true }
+
+[features]
+default = [
+  "arch_arm",
+  "arch_aarch64",
+  "arch_bfin",
+  "arch_superh",
+  "arch_ppc",
+  "arch_m32r",
+  "arch_mips32",
+  "arch_mips64",
+  "arch_msp430",
+]
+arch_arm = []
+arch_aarch64 = []
+arch_bfin = []
+arch_superh = []
+arch_ppc = []
+arch_m32r = []
+arch_mips32 = []
+arch_mips64 = []
+arch_msp430 = []

@@ -1,0 +1,24 @@
+name: Release Flow
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  build:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Latest Changelog Update
+        run: |
+          git diff ./CHANGELOG.md | grep '^+' | grep -v '^+++' | sed 's/^+//' > message.txt
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          make_latest: true
+          body_path: message.txt
+          files: |
+            LICENSE
+            CHANGELOG.md

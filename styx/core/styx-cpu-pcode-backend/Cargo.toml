@@ -1,0 +1,67 @@
+[package]
+name = "styx-cpu-pcode-backend"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[features]
+default = [
+  "arch_arm",
+  "arch_aarch64",
+  "arch_bfin",
+  "arch_m32r",
+  "arch_mips32",
+  "arch_mips64",
+  "arch_ppc",
+  "arch_superh",
+]
+blackfin-binutils-tests = ["dep:styx-blackfin-testdata", "dep:styx-loader"]
+# This is a hack to disable the blackfin tests in the CI
+# when passing `--all-features` to cargo
+disable-blackfin-tests = []
+arch_arm = ["styx-pcode-translator/arch_arm"]
+arch_aarch64 = ["styx-pcode-translator/arch_aarch64"]
+arch_bfin = ["styx-pcode-translator/arch_bfin"]
+arch_m32r = ["styx-pcode-translator/arch_m32r"]
+arch_mips32 = ["styx-pcode-translator/arch_mips32"]
+arch_mips64 = ["styx-pcode-translator/arch_mips64"]
+arch_ppc = ["styx-pcode-translator/arch_ppc"]
+arch_superh = ["styx-pcode-translator/arch_superh"]
+
+
+[dependencies]
+styx-memory = { path = "../styx-memory" }
+styx-sync = { path = "../styx-sync" }
+styx-macros = { path = "../styx-macros" }
+styx-util = { path = "../styx-util" }
+styx-errors = { path = "../styx-errors" }
+styx-processor = { path = "../styx-processor" }
+styx-cpu-type = { path = "../styx-cpu-type" }
+styx-pcode = { path = "./styx-pcode" }
+styx-pcode-translator = { path = "./styx-pcode-translator" }
+styx-blackfin-testdata = { path = "../../../data/test-binaries/styx-blackfin-testdata", features = [
+  "binutils-tests",
+], optional = true }
+styx-loader = { path = "../styx-loader", optional = true }
+
+thiserror = { workspace = true }
+log = { workspace = true }
+enum_dispatch = { workspace = true }
+arbitrary-int = { workspace = true }
+half = { workspace = true }
+vector-map = { workspace = true }
+derivative = { workspace = true }
+paste = { workspace = true }
+bitfield-struct = { workspace = true }
+tap = { workspace = true }
+styx-workspace-hack = { version = "0.1", path = "../../workspace-hack" }
+derive_more = { workspace = true }
+smallvec = { workspace = true }
+
+[dev-dependencies]
+keystone-engine = { workspace = true }
+test-case = { workspace = true }
+
+
+[lints]
+workspace = true

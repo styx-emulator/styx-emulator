@@ -1,0 +1,28 @@
+[package]
+name = "styx-py-api"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "stub_gen"
+test = false
+bench = false
+path = "src/bin/stub_gen.rs"
+
+
+[dependencies]
+bitflags = "*"
+log = "*"
+paste = "*"
+pyo3 = { version = "0.25", features = ["anyhow"] }
+pyo3-stub-gen = "0.9"
+styx-emulator = { path = "../../", package = "styx-emulator" }
+
+[dev-dependencies]
+temp-dir = "0.1.16"
+folder_compare = "0.4.0"

@@ -1,0 +1,91 @@
+syntax = "proto3";
+
+package styx.meta.arch;
+
+import "arm-architecture.proto";
+
+enum Arch {
+  Arm = 0;
+  Blackfin = 1;
+  MIPS = 2;
+  X86 = 3;
+  Ppc32 = 4;
+  Sparc = 5;
+  M68k = 6;
+  Riscv = 7;
+  Tricore = 8;
+  Sharc = 9;
+  Microblaze = 10;
+  Tms320C1x = 11;
+  Tms320C2x = 12;
+  Tms320C3x = 13;
+  Tms320C4x = 14;
+  Tms320C8x = 15;
+  Tms320C5x = 16;
+  Tms320C6x = 17;
+  Avr8 = 18;
+  Avr32 = 19;
+  Sh4 = 20;
+  Sh8 = 21;
+  Pic = 22;
+  Arch8051 = 23;
+  Z80 = 24;
+  S390 = 25;
+}
+
+enum ArchEndian {
+    LittleEndian = 0;
+    BigEndian = 1;
+}
+
+message BitSizeInvalid {
+    uint32 bitSize = 1;
+}
+message BadConversion {
+    string from = 1;
+    string to = 2;
+}
+message UnmatchingArchitecture {
+    Arch expected = 1;
+    Arch actual = 2;
+}
+message NotSupported {
+    Arch arch = 1;
+}
+message InvalidArchEndian {
+    ArchEndian endian = 1;
+}
+message UnsupportedArchModel {
+    Arch arch = 1;
+    string model = 2;
+}
+
+message RegisterValue {
+  bytes value = 1;
+  uint32 bit_length = 2;
+}
+
+message RegisterDescription {
+  string name = 1;
+  uint32 bit_length = 2;
+  RegisterValue value = 3;
+  ArchRegister register_enum = 4;
+}
+
+message ArchRegister {
+    oneof register {
+        styx.meta.arch.ArmRegister arm_register = 1;
+
+    }
+}
+
+message StyxCpuArchError {
+    oneof error {
+        BitSizeInvalid bit_size_invalid = 1;
+        BadConversion bad_conversion = 2;
+        UnmatchingArchitecture unmatching_architecture = 3;
+        NotSupported not_supported = 4;
+        InvalidArchEndian invalid_arch_endian = 5;
+        UnsupportedArchModel unsupported_arch_model = 6;
+    }
+}

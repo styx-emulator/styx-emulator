@@ -1,0 +1,87 @@
+// SPDX-License-Identifier: BSD-2-Clause
+#[doc = "Register `OTG_FS_DOEPMSK` reader"]
+pub type R = crate::R<OtgFsDoepmskSpec>;
+#[doc = "Register `OTG_FS_DOEPMSK` writer"]
+pub type W = crate::W<OtgFsDoepmskSpec>;
+#[doc = "Field `XFRCM` reader - Transfer completed interrupt mask"]
+pub type XfrcmR = crate::BitReader;
+#[doc = "Field `XFRCM` writer - Transfer completed interrupt mask"]
+pub type XfrcmW<'a, REG> = crate::BitWriter<'a, REG>;
+#[doc = "Field `EPDM` reader - Endpoint disabled interrupt mask"]
+pub type EpdmR = crate::BitReader;
+#[doc = "Field `EPDM` writer - Endpoint disabled interrupt mask"]
+pub type EpdmW<'a, REG> = crate::BitWriter<'a, REG>;
+#[doc = "Field `STUPM` reader - SETUP phase done mask"]
+pub type StupmR = crate::BitReader;
+#[doc = "Field `STUPM` writer - SETUP phase done mask"]
+pub type StupmW<'a, REG> = crate::BitWriter<'a, REG>;
+#[doc = "Field `OTEPDM` reader - OUT token received when endpoint disabled mask"]
+pub type OtepdmR = crate::BitReader;
+#[doc = "Field `OTEPDM` writer - OUT token received when endpoint disabled mask"]
+pub type OtepdmW<'a, REG> = crate::BitWriter<'a, REG>;
+impl R {
+    #[doc = "Bit 0 - Transfer completed interrupt mask"]
+    #[inline(always)]
+    pub fn xfrcm(&self) -> XfrcmR {
+        XfrcmR::new((self.bits & 1) != 0)
+    }
+    #[doc = "Bit 1 - Endpoint disabled interrupt mask"]
+    #[inline(always)]
+    pub fn epdm(&self) -> EpdmR {
+        EpdmR::new(((self.bits >> 1) & 1) != 0)
+    }
+    #[doc = "Bit 3 - SETUP phase done mask"]
+    #[inline(always)]
+    pub fn stupm(&self) -> StupmR {
+        StupmR::new(((self.bits >> 3) & 1) != 0)
+    }
+    #[doc = "Bit 4 - OUT token received when endpoint disabled mask"]
+    #[inline(always)]
+    pub fn otepdm(&self) -> OtepdmR {
+        OtepdmR::new(((self.bits >> 4) & 1) != 0)
+    }
+}
+impl W {
+    #[doc = "Bit 0 - Transfer completed interrupt mask"]
+    #[inline(always)]
+    #[must_use]
+    pub fn xfrcm(&mut self) -> XfrcmW<OtgFsDoepmskSpec> {
+        XfrcmW::new(self, 0)
+    }
+    #[doc = "Bit 1 - Endpoint disabled interrupt mask"]
+    #[inline(always)]
+    #[must_use]
+    pub fn epdm(&mut self) -> EpdmW<OtgFsDoepmskSpec> {
+        EpdmW::new(self, 1)
+    }
+    #[doc = "Bit 3 - SETUP phase done mask"]
+    #[inline(always)]
+    #[must_use]
+    pub fn stupm(&mut self) -> StupmW<OtgFsDoepmskSpec> {
+        StupmW::new(self, 3)
+    }
+    #[doc = "Bit 4 - OUT token received when endpoint disabled mask"]
+    #[inline(always)]
+    #[must_use]
+    pub fn otepdm(&mut self) -> OtepdmW<OtgFsDoepmskSpec> {
+        OtepdmW::new(self, 4)
+    }
+}
+#[doc = "OTG_FS device OUT endpoint common interrupt mask register (OTG_FS_DOEPMSK)\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`otg_fs_doepmsk::R`](R).  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`otg_fs_doepmsk::W`](W). You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
+pub struct OtgFsDoepmskSpec;
+impl crate::RegisterSpec for OtgFsDoepmskSpec {
+    type Ux = u32;
+    const OFFSET: u64 = 20u64;
+}
+#[doc = "`read()` method returns [`otg_fs_doepmsk::R`](R) reader structure"]
+impl crate::Readable for OtgFsDoepmskSpec {}
+#[doc = "`write(|w| ..)` method takes [`otg_fs_doepmsk::W`](W) writer structure"]
+impl crate::Writable for OtgFsDoepmskSpec {
+    type Safety = crate::Unsafe;
+    const ZERO_TO_MODIFY_FIELDS_BITMAP: u32 = 0;
+    const ONE_TO_MODIFY_FIELDS_BITMAP: u32 = 0;
+}
+#[doc = "`reset()` method sets OTG_FS_DOEPMSK to value 0"]
+impl crate::Resettable for OtgFsDoepmskSpec {
+    const RESET_VALUE: u32 = 0;
+}

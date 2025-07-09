@@ -1,0 +1,18 @@
+[package]
+name = "typhunix-config"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+serde = { workspace = true }
+serde_derive = { workspace = true }
+confique = { workspace = true }
+serde_yaml = { workspace = true }
+url = { workspace = true }
+styx-workspace-hack = { version = "0.1", path = "../../../../styx/workspace-hack" }

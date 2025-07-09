@@ -1,0 +1,103 @@
+syntax = "proto3";
+
+package emulation_registry;
+
+import public "utils.proto";
+import public "args.proto";
+
+option java_multiple_files = true;
+
+service EmulationRegistryService {
+  // Allocate, create, and initialize a new emulation service controllable
+  // using the SingleEmulationService grpc/rpc
+  rpc Initialize(StartTraceExecutionRequest)
+      returns (StartTraceExecutionResponse) {}
+
+  // Starts the initialized emulation:
+  // emulation::SingleEmulationService::start()
+  rpc Start(utils.Token) returns (utils.ResponseStatus) {}
+
+  // Stops the initialized emulation: emulation::SingleEmulationService::start()
+  rpc Stop(utils.Token) returns (utils.ResponseStatus) {}
+
+  // Remove the emulation instance from the internally managed list
+  // the emulation::SingleEmulationService instance is torn down
+  rpc Drop(utils.Token) returns (utils.ResponseStatus) {}
+
+  // Lists the emulation instances
+  rpc List(utils.Empty) returns (utils.EmuMetadataList) {}
+
+  // IdentityMapping: architectures, variants,backends,...
+  rpc GetIdentityMapping(utils.Empty) returns (IdentityMappingResponse) {}
+}
+
+
+
+message StartTraceExecutionRequest {
+  /// Inputs to emulation
+  args.EmulationArgs args = 1;
+}
+
+// message includes token for subsequent communications to the service and
+// metadata about the running emulation.
+message StartTraceExecutionResponse {
+  utils.Token token = 1;
+  utils.EmuMetadata emu_metadata = 2;
+}
+
+
+message IdentityMappingResponse {
+  repeated ArchIdentityCompatability architectures = 1;
+  repeated ArchIdentity arch_idens = 2;
+  repeated VariantIdentity variant_idens = 3;
+  repeated EndianIdentity endian_idens = 4;
+  repeated LoaderIdentity loader_idens = 5;
+  repeated BackendIdentity backend_idens = 6;
+  repeated SupportedConfig supported_configs = 7;
+}
+
+message ArchIdentity {
+  uint32 id = 1;
+  string name = 2;
+}
+
+
+message LoaderIdentity {
+  uint32 id = 1;
+  string name = 2;
+}
+
+message EndianIdentity {
+  uint32 id = 1;
+  string name = 2;
+}
+
+message VariantIdentity {
+  uint32 id = 1;
+  string name = 2;
+}
+
+message BackendIdentity {
+  uint32 id = 1;
+  string name = 2;
+}
+
+message Config {
+  ArchIdentity arch_iden = 3;
+  VariantIdentity variant_iden = 4;
+  EndianIdentity endian_iden = 5;
+  LoaderIdentity loader_iden = 6;
+  BackendIdentity backend_iden = 7;
+}
+
+message SupportedConfig {
+  uint32 id = 1;
+  string name = 2;
+  Config config = 3;
+}
+
+message ArchIdentityCompatability {
+  ArchIdentity arch_identity = 1;
+  EndianIdentity endian = 2;
+  repeated VariantIdentity variants = 3;
+}

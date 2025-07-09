@@ -1,0 +1,32 @@
+[package]
+name = "typhunix-python-bindings"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+crate-type = ["cdylib"]
+name = "pytyphunix"
+
+[dependencies]
+pyo3 = { workspace = true, optional = true }
+styx-emulator = { workspace = true, optional = true, features = [
+  "pyo3_bindings",
+] }
+typhunix-config = { workspace = true }
+typhunix-proto = { path = "../typhunix-proto", optional = true, features = [
+  "pyo3_bindings",
+] }
+tonic = { workspace = true }
+styx-workspace-hack = { version = "0.1", path = "../../../../styx/workspace-hack" }
+
+[features]
+default = []
+pyo3_bindings = ["pyo3", "styx-emulator", "typhunix-proto"]
+
+[package.metadata.cargo-udeps.ignore]
+normal = ["typhunix-config", "tonic"]

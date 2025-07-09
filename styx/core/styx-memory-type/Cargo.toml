@@ -1,0 +1,15 @@
+[package]
+name = "styx-memory-type"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bitflags = { workspace = true }
+derive_more = { workspace = true }
+styx-workspace-hack = { version = "0.1", path = "../../workspace-hack" }

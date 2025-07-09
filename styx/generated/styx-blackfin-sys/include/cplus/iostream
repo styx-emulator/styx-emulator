@@ -1,0 +1,34 @@
+// iostream standard header
+#if defined (_ADI_COMPILER)
+/************************************************************************
+ *
+ * iostream
+ *
+ * (c) Copyright 2001-2009 Analog Devices, Inc.  All rights reserved.
+ * (c) Copyright 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * $Revision: 1.4 $
+ ************************************************************************/
+
+#pragma once
+#ifndef __NO_BUILTIN
+#pragma system_header /* iostream */
+#endif
+#endif /* _ADI_COMPILER */
+
+#ifndef _IOSTREAM_
+#define _IOSTREAM_
+#include <istream>
+_STD_BEGIN
+
+		// OBJECTS
+static ios_base::Init _Ios_init;	// force initialization of byte streams
+
+extern istream cin;
+extern ostream cout;
+_STD_END
+#endif /* _IOSTREAM_ */
+
+/*
+ * Copyright (c) 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * Consult your license regarding permissions and restrictions.
+V5.03:1134 */

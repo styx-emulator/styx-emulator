@@ -1,0 +1,34 @@
+[package]
+name = "styx-ppc4xx-processor"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+styx-plugins = { path = "../../../plugins" }
+styx-core = { workspace = true, features = ["arch_ppc"] }
+styx-peripherals = { path = "../../../peripherals" }
+
+async-trait = { workspace = true }
+async-stream = { workspace = true }
+tonic = { workspace = true }
+num_enum = { workspace = true }
+enum-map = { workspace = true }
+bitfield-struct = { workspace = true }
+tracing = { workspace = true }
+derivative = { workspace = true }
+tokio-stream = { workspace = true }
+tokio = { workspace = true }
+styx-workspace-hack = { version = "0.1", path = "../../../workspace-hack" }
+crc32fast = "1.4.2"
+thiserror = { workspace = true }
+
+[dev-dependencies]
+test-case = { workspace = true }
+styx-integration-tests = { path = "../../../integration-tests" }
+gdbmi = { workspace = true }                                     # required for gdb integration tests

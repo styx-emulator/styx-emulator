@@ -1,0 +1,1 @@
+dist/guix/shell-manifest.scm

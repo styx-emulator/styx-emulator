@@ -1,0 +1,143 @@
+wolfSSL_for_Kinetis_SDK_v2.0
+
+Content
+-------
+1. Installation.
+2. wolfSSL Add-on for Kinetis SDK 2.0 directory structure.
+3. Try examples with wolfSSL.
+4. How to add wolfSSL support to user applications.
+5. Release Notes
+
+1. Installation.
+----------------
+1.1. Install Kinetis SDK 2.0 package
+1.2. Copy content of the wolfSSL add-on to the root directory of the Kinetis SDK 2.0 installation
+     The package does not overwrite or modify any Kinetis SDK 2.0 file, just adds new ones.
+
+2. wolfSSL_for_Kinetis_SDK_v2.0 directory structure.
+----------------------------------------------------------
+  wolfSSL_for_Kinetis_SDK_v2.0
+  |-- boards
+  |   -- <board>                           - see 3. Try examples with wolfSSL.
+  |      -- demo_apps
+  |         -- wolfssl
+  |            -- wolfssl_benchmark        - Measure throughput of various crypto algorithms.
+  |            -- wolfssl_selftest         - Tests right output from various crypto algorithms.
+  |         -- lwip
+  |            -- lwip_httpssrv_wolfssl    - Secure HTTPS web server demo (for boards with ethernet only).
+  |-- middleware
+  |   -- wolfssl_<version>                 - see 3. Try examples with wolfSSL.
+  |      -- src
+  |         -- *.c
+  |      -- wolfcrypt
+  |         -- src
+  |            *.c
+  |      -- wolfssl
+  |         -- openssl
+  |            -- *.h
+  |         -- wolfcrypt
+  |            -- *.h
+  |         -- *.h
+  |-- wolfSSL_cyaSSL_evaluation_license_agreement.pdf
+  |-- README.txt
+  |-- ChangeLogKSDK.txt
+
+
+3. Try examples with wolfSSL.
+-----------------------------
+The package contains two demo applications: wolfssl_benchmark and wolfssl_selftest.
+The build projects can be found in boards/<board>/demo_apps/wolfssl/wolfssl_selftest and
+boards/<board>/demo_apps/wolfssl/wolfssl_benchmark.
+
+For some boards there is also an example implementation of HTTPS secure web
+server using LWIP TCP/IP stack and wolfSSL for certificates, TLS protocol and crypto library.
+This demo application can be found under demo_apps/lwip/lwip_httpssrv_wolfssl.
+
+As wolfSSL contains software implementation of algorithms, it could be used on any devices
+with enough FLASH and RAM size (see section 4 of this readme).
+
+4. How to add wolfSSL support to user applications.
+---------------------------------------------------
+4.1. Add "middleware/wolfssl_<version>/wolfssl" to compiler include path settings.
+4.2. Add source files to the application build project.
+     Not all source files have to be added, if only subset of wolfssl functionality is to be used.
+     For example, to use AES cipher API, you can just add "middleware/wolfssl_<version>/wolfcrypt/aes.h"
+     and "middleware/wolfssl_<version>/wolfcrypt/src/aes.c".
+4.3. Review and possibly configure wolfSSL configuration file "middleware/wolfssl_<version>/wolfcrypt/settings.h"
+     according to the application needs. Hardware crypto acceleration can be enabled or disabled
+     at compile time in this file.
+4.4. If you're using hardware acceleration for crypto algorithms (such as Kinetis MMCAU or LTC modules)
+     make sure their driver is also included in the application build project.
+     For MMCAU acceleration, add "middleware/mmcau_<version>" to compiler include path settings
+     and add "middleware/mmcau_<version>/asm-<core>/lib_mmcau.a" to the linker settings.
+     For LTC acceleration, add "devices/<your_device>/drivers/fsl_ltc.h"
+     and "devices/<your_device>/drivers/fsl_ltc.c" to your application build project.
+
+5. Release notes.
+-----------------
+
+5.1. wolfSSL 3.6.8
+     middleware/wolfssl_3.6.8 is based on WolfSSL version 3.6.8.
+     The release notes for the library can be found on https://www.wolfssl.com
+
+     Modifications introduced to the original library source code:
+
+     Features
+      * Added support for Freescale Kinetis LTC hardware acceleration module.
+        Accelerates AES, 3DES, TFM module (modular integer arithmetic) and ECC wolfSSL modules.
+      * Added support for Freescale Kinetis random number generator modules TRNG and RNGA.
+
+     Bugfix
+
+     Changes
+      * Freescale MMCAU acceleration now uses "fsl_mmcau.h" instead of "cau_api.h".
+      * In DSA, wc_dsaSign() changed to repeat wc_RNG_GenerateBlock() until k is less than q.
+      * wolfssl/wolfcrypt/settings.h is changed to remove unused macros and add support for Freescale KSDK 2.0.
+      * In wolfcrypt/src/asn.c, ksdk_time(time_t) changed to extern, to be defined by application.
+
+5.2 wolfSSL 3.8.0
+    middleware/wolfssl_3.8.0 is based on WolfSSL version 3.8.0.
+    The release notes for the library can be found on https://www.wolfssl.com
+
+    Modifications introduced to the original library source code:
+
+    Features
+      * Added support for Freescale Kinetis LTC hardware acceleration module.
+        Accelerates AES, 3DES, TFM module (modular integer arithmetic) and ECC wolfSSL modules.
+      * Added support for Freescale Kinetis random number generator modules TRNG and RNGA.
+
+    Bugfix
+
+    Changes
+      * Freescale MMCAU acceleration now uses "fsl_mmcau.h" instead of "cau_api.h".
+      * In DSA, wc_dsaSign() changed to repeate wc_RNG_GenerateBlock() until k is less than q.
+      * wolfssl/wolfcrypt/settings.h is changed to remove unused macros and add support for Freescale KSDK 2.0.
+      * In wolfcrypt/src/asn.c, ksdk_time(time_t) changed to extern, to be defined by application.
+
+5.3. wolfSSL 3.9.0
+    middleware/wolfssl_3.9.0 is based on WolfSSL version 3.9.0.
+    The release notes for the library can be found on https://www.wolfssl.com
+
+    Modifications introduced to the original library source code:
+
+  - All changes introduced to 3.8.0 (see 5.2) plus:
+    - New Features:
+      - Added more LTC public key acceleration (curve25519, ed25519 and RSA4096)
+      - FREESCALE_LTC_TFM_RSA_4096_ENABLE macro added to enable RSA4096 on K8x/KL8x LTC
+      - LTC_MAX_ECC_BITS increased to 384 to enable ECC-384 curve acceleration on LTC
+      - FREESCALE_LTC_SHA added for KL8x SHA-1 and SHA-256 hardware acceleration
+
+    - Other changes:
+      - wolfssl/wolfcrypt/settings.h is changed to remove unused macros and add support for KSDK 2.0.
+      - LTC public key acceleration is implemented in separate source file ksdk_port.h and ksdk_port.c
+
+5.4. wolfSSL 3.9.8
+    middleware/wolfssl_3.9.8 is based on WolfSSL version 3.9.8.
+    The release notes for the library can be found on https://www.wolfssl.com
+
+    Modifications introduced to the original library source code:
+
+  - All changes introduced to 3.9.0 (see 5.3) plus:
+    - New Features:
+      - Added support for AES and SHA acceleration modules of LPC devices.
+        Accelerates AES and SHA wolfSSL modules.

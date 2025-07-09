@@ -1,0 +1,104 @@
+.tableFixHead {
+  overflow-y: auto;
+  /* scrollable */
+  height: 200px;
+  width: 100%;
+}
+
+.tableFixHead thead th {
+  position: sticky;
+  top: 0px;
+}
+
+.tableFixHead table {
+  border-width: 1px;
+  border-style: solid;
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.tableFixHead tr:hover {
+  /* background-color: hsl(300deg 75% 50%); */
+  filter: brightness(0.8);
+}
+
+.tableFixHead tbody tr {
+  cursor: pointer;
+  margin: 0;
+}
+
+.tableFixHead th,
+td {
+  font-family: "Consolas";
+  font-size: 12px;
+  padding: 8px 16px 8px 8px;
+  word-wrap: break-word;
+}
+
+.tableFixHead th {
+  background: white;
+  color: black;
+  border: 1px solid black;
+  font-weight: bold;
+}
+
+.tableFixHead td {
+  padding: 0 0.25em 0 0.25em;
+  margin: 0;
+}
+
+.watchvar {
+  /* border-color: green;
+  border-width: 1px;
+  border-style: solid;
+  border-collapse: collapse; */
+  margin: 10px;
+  display: inline;
+}
+
+.watchvar table {
+  margin-left: 20px;
+}
+
+.watchvar tr:hover {
+  /* background-color: hsl(300deg 75% 50%); */
+  filter: brightness(0.8);
+}
+
+.watchvar tbody tr {
+  cursor: pointer;
+  margin: 0;
+}
+
+.watchvar th,
+td {
+  font-family: "Consolas";
+  font-size: 12px;
+  padding: 8px 16px 8px 8px;
+  word-wrap: break-word;
+}
+
+.watchvar th {
+  background: white;
+  color: black;
+  border: 1px solid black;
+  font-weight: bold;
+}
+
+.watchvar td {
+  padding: 0 0.25em 0 0.25em;
+  margin: 0;
+  font-family: Consolas;
+}
+
+.datatype {
+  color: black;
+}
+
+.varname {
+  color: white;
+}
+
+.varvalue {
+  color: red;
+}

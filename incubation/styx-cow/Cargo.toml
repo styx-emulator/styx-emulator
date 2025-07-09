@@ -1,0 +1,20 @@
+[package]
+name = "styx-cow"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+criterion = "0.5.1"
+libc = "0.2.162"
+thiserror = { workspace = true }
+styx-workspace-hack = { version = "0.1", path = "../../styx/workspace-hack" }
+
+[[bench]]
+name = "benchmark"
+harness = false

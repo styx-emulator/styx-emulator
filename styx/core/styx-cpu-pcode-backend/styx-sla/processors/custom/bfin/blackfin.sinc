@@ -1,0 +1,389 @@
+# sleigh specification for the analog devices blackfin series
+
+define endian=$(ENDIAN);
+define alignment=$(ALIGNMENT);
+
+define space ram type=ram_space size=4 default;
+define space register type=register_space size=2;
+
+@define IMASK "0xffe02104"
+
+# Data registers
+define register offset=0 size=4
+    [R0        R1        R2        R3       R4         R5        R6        R7];
+define register offset=0 size=2
+    [R0.L R0.H R1.L R1.H R2.L R2.H R3.L R3.H R4.L R4.H R5.L R5.H R6.L R6.H R7.L R7.H];
+define register offset=0 size=1
+    [R0.B _ _ _ R1.B _ _ _ R2.B _ _ _ R3.B _ _ _ R4.B _ _ _ R5.B _ _ _ R6.B _ _ _ R7.B];
+
+# Pointer registers
+define register offset=0x20 size=4 [P0 P1 P2 P3 P4 P5 SP FP];
+define register offset=0x20 size=2 [P0.L P0.H P1.L P1.H P2.L P2.H P3.L P3.H P4.L P4.H P5.L P5.H SP.L SP.H FP.L FP.H];
+
+# Data address registers
+define register offset=0x40 size=4 [
+    I0 L0 B0 M0
+    I1 L1 B1 M1
+    I2 L2 B2 M2
+    I3 L3 B3 M3
+];
+
+define register offset=0x40 size=2 [
+    I0.L I0.H L0.L L0.H B0.L B0.H M0.L M0.H
+    I1.L I1.H L1.L L1.H B1.L B1.H M1.L M1.H
+    I2.L I2.H L2.L L2.H B2.L B2.H M2.L M2.H
+    I3.L I3.H L3.L L3.H B3.L B3.H M3.L M3.H
+];
+
+# Accumulators (40 bit)
+# A0.X and A1.X only contain 8 bit
+define register offset=0x80 size=8 [ A0        A1 ];
+define register offset=0x80 size=4 [ A0.W A0.X A1.W A1.X];
+define register offset=0x80 size=2 [ A0.L A0.H _ _ A1.L A1.H _ _ ];
+
+# Status register and flags
+define register offset=0xA0 size=4 [
+    ASTAT
+];
+define register offset=0xa4 size=1 [
+    CCflag AZflag ANflag AQflag RND_MODflag AC0flag AC1flag AV0flag AV0Sflag AV1flag AV1Sflag Vflag VSflag
+];
+
+# user stack pointer and emudat
+define register offset=0xc0 size=4 [
+    USP EMUDAT
+];
+
+# Sequencer registers
+define register offset=0x100 size=4 [
+    SEQSTAT
+    RETX RETN RETI RETE RETS
+    LC0 LC1 LT0 LT1 LB0 LB1
+    SYSCFG
+    CYCLES CYCLES2
+    PC
+];
+
+# Context register
+define register offset=0x200 size=4 [
+    contextreg
+];
+
+define token inst(16)
+    op16 = (0,15)
+
+    op2 = (14,15)
+    op4 = (12,15)
+    op5 = (11,15)
+    op6 = (10,15)
+    op7 = (9,15)
+    op8 = (8,15)
+    op9 = (7,15)
+    op10 = (6,15)
+    op11 = (5,15)
+    op12 = (4,15)
+    op13 = (3,15)
+    op14 = (2,15)
+
+    op0010 = (0,10)
+    op0410 = (4,10)
+    op0510 = (5,10)
+    op0610 = (6,10)
+    op0910 = (9,10)
+
+# load/store
+    LdSt_w = (9,9)
+    LdSt_z = (6,6)
+    LdSt_sz = (10,11)
+    LdSt_aop = (7,8)
+    z06 = (6,6)
+    sz1011 = (10,11)
+    aop0708 = (7,8)
+
+    LdStIFP_w = (9,9)
+    LdStIFP_g = (3,3)
+    LdStIFP_off = (4,8)
+
+    LdStIdxI_w = (9,9)
+    LdStIdxI_z = (8,8)
+    LdStIdxI_sz = (6,7)
+    w09 = (9,9)
+    z08 = (8,8)
+    sz0607 = (6,7)
+    s05 = (5,5)
+    h06 = (6,6)
+    z07 = (7,7)
+
+    op1011 = (10,11)
+    LdStII_offset = (6,9)
+    w12 = (12,12)
+    w11 = (11,11)
+
+    aop0910 = (9,10)
+
+    opc0609 = (6,9)
+    opc0810 = (8,10)
+    opc0911 = (9,11)
+
+    uimm50307 = (3,7)
+
+# ccflag
+    g06 = (6,6)
+    opc0709 = (7,9)
+    imm3 = (3,5) signed
+    uimm3 = (3,5)
+    opc0304 = (3,4)
+
+# data reg
+    Dreg0 = (0,2)
+    Dreg0_2 = (0,2)
+    Dreg3 = (3,5)
+    Dreg6 = (6,8)
+    Dreg_l0 = (0,2)
+    Dreg_l3 = (3,5)
+    Dreg_l6 = (6,8)
+    Dreg_h0 = (0,2)
+    Dreg_h6 = (6,8)
+    Dreg_b3 = (3,5)
+
+# pointer reg
+    Preg0 = (0,2)
+    Preg0_2 = (0,2)
+    Preg3 = (3,5)
+    Preg6 = (6,8)
+
+    opc0608 = (6,8)
+
+    t11 = (11,11)
+    pcrel13m2 = (0,11) signed
+
+# move registers
+    destgrp = (9,11)
+    srcgrp = (6,8)
+    destreg_0 = (3,5)
+    destreg_1 = (3,5)
+    destreg_2 = (3,5)
+    destreg_3 = (3,5)
+    destreg_4 = (3,5)
+    destreg_5 = (3,5)
+    destreg_6 = (3,5)
+    destreg_7 = (3,5)
+    srcreg_0 = (0,2)
+    srcreg_1 = (0,2)
+    srcreg_2 = (0,2)
+    srcreg_3 = (0,2)
+    srcreg_4 = (0,2)
+    srcreg_5 = (0,2)
+    srcreg_6 = (0,2)
+    srcreg_7 = (0,2)
+
+    d07 = (7,7)
+    s06 = (6,6)
+
+# push/pop
+    d08 = (8,8)
+    p07 = (7,7)
+    w06 = (6,6)
+
+    AllReg = (0,5)
+
+    s09 = (9,9)
+    imm7 = (3,9) signed
+
+    opc0407 = (4,7)
+    x03 = (3,3)
+    uimm4 = (0,3)
+
+    opc10 = (10,10)
+    g11 = (11,11)
+
+    b10 = (10,10)
+    pcrel11 = (0,9) signed
+
+    cbit0004 = (0,4)
+    op0506 = (5,6)
+
+    uimm7 = (4,8)
+
+    a05 = (5,5)
+
+    pcrel25hi = (0,7) signed
+
+    AllReg5 = (0,4)
+    AllReg5_lo = (0,4)
+    AllReg5_hi = (0,4)
+
+    opc0203 = (2,3)
+    b07 = (7,7)
+    op0406 = (4,6)
+
+    Mreg2 = (2,3)
+    Mreg5 = (5,6)
+
+    Ireg0 = (0,1)
+    Ireg3 = (3,4)
+
+    sopc0003 = (0,3)
+    aopc0004 = (0,4)
+
+    hl05 = (5,5)
+
+# loop setup
+    c04 = (4,4)
+    soffs = (0,3)
+    rop0506 = (5,6)
+
+# dsp fields
+    mmod0508 = (5,8)
+    mm04 = (4,4)
+    p03 = (3,3)
+    w102 = (2,2)
+    op10001 = (0,1)
+;
+
+
+define token inst2(16)
+    pcrel25lo = (0,15)
+    data16 = (0,15)
+    uimm16 = (0,15)
+    imm16 = (0,15) signed
+
+# loop setup
+    eoffs = (0,9)
+    li15 = (15,15)
+    lpreg = (12,14)
+
+# dsp fields
+    xop1215 = (12,15)
+    xaop1415 = (14,15)
+    sign08 = (8,8)
+    dimm603 = (3,8) signed
+    xreg0 = (0,2)
+    xreg0_2 = (0,2)
+    xreg0_l = (0,2)
+    xreg0_h = (0,2)
+    xreg3 = (3,5)
+    xreg3_2 = (3,5)
+    xreg3_l = (3,5)
+    xreg3_h = (3,5)
+    xreg6 = (6,8)
+    xreg6_l = (6,8)
+    xreg6_h = (6,8)
+    xreg6_e = (6,8)
+    xreg6_o = (6,8)
+    xreg9 = (9,11)
+    xreg9_l = (9,11)
+    xreg9_h = (9,11)
+    xh01 = (15,15)
+    xh11 = (14,14)
+    xw0 = (13,13)
+    xh00 = (10,10)
+    xh10 = (9,9)
+    xop01112 = (11,12)
+    xsop1415 = (14,15)
+    xop14 = (14,14)
+    xop15 = (15,15)
+    xhls1213 = (12,13)
+    xh13 = (13,13)
+    xh12 = (12,12)
+    xsx1213 = (12,13)
+    xs13 = (13,13)
+    xx12 = (12,12)
+;
+
+
+define context contextreg
+    phase = (0,0)
+    loop0active = (1,1) noflow
+    loop1active = (2,2) noflow
+;
+
+attach values [LdSt_sz] [4 2 1 0];
+
+attach variables [ Dreg0 Dreg0_2 Dreg3 Dreg6 xreg0 xreg0_2 xreg3 xreg3_2 xreg6 xreg9 ] [ R0 R1 R2 R3 R4 R5 R6 R7];
+attach variables [ Preg0 Preg0_2 Preg3 Preg6 lpreg ] [ P0 P1 P2 P3 P4 P5 SP FP];
+attach variables [ Ireg0 Ireg3 ] [ I0 I1 I2 I3 ];
+attach variables [ Mreg2 Mreg5 ] [ M0 M1 M2 M3 ];
+
+attach variables [ xreg6_o ] [ R1 _ R3 _ R5 _ R7 _ ];
+attach variables [ xreg6_e ] [ R0 _ R2 _ R4 _ R6 _ ];
+
+attach variables [ Dreg_l0 Dreg_l3 Dreg_l6 xreg0_l xreg3_l xreg6_l xreg9_l ] [ R0.L R1.L R2.L R3.L R4.L R5.L R6.L R7.L];
+attach variables [ Dreg_h0 Dreg_h6 xreg0_h xreg3_h xreg6_h xreg9_h ] [ R0.H R1.H R2.H R3.H R4.H R5.H R6.H R7.H];
+attach variables [ Dreg_b3 ] [ R0.B R1.B R2.B R3.B R4.B R5.B R6.B R7.B];
+
+attach variables [ AllReg ] [
+    R0 R1 R2 R3 R4 R5 R6 R7
+    P0 P1 P2 P3 P4 P5 SP FP
+    I0 I1 I2 I3 M0 M1 M2 M3
+    B0 B1 B2 B3 L0 L1 L2 L3
+    A0.X A0.W A1.X A1.W _ _ ASTAT RETS
+    _  _  _  _  _  _  _  _
+    LC0 LT0 LB0 LC1 LT1 LB1 CYCLES CYCLES2
+    USP SEQSTAT SYSCFG RETI RETX RETN RETE EMUDAT
+];
+
+attach variables [ AllReg5 ] [
+    R0 R1 R2 R3 R4 R5 R6 R7
+    P0 P1 P2 P3 P4 P5 SP FP
+    I0 I1 I2 I3 M0 M1 M2 M3
+    B0 B1 B2 B3 L0 L1 L2 L3
+];
+
+attach variables [ AllReg5_lo ] [
+    R0.L R1.L R2.L R3.L R4.L R5.L R6.L R7.L
+    P0.L P1.L P2.L P3.L P4.L P5.L SP.L FP.L
+    I0.L I1.L I2.L I3.L M0.L M1.L M2.L M3.L
+    B0.L B1.L B2.L B3.L L0.L L1.L L2.L L3.L
+];
+
+attach variables [ AllReg5_hi ] [
+    R0.H R1.H R2.H R3.H R4.H R5.H R6.H R7.H
+    P0.H P1.H P2.H P3.H P4.H P5.H SP.H FP.H
+    I0.H I1.H I2.H I3.H M0.H M1.H M2.H M3.H
+    B0.H B1.H B2.H B3.H L0.H L1.H L2.H L3.H
+];
+
+attach variables [ destreg_0 srcreg_0 ] [R0 R1 R2 R3 R4 R5 R6 R7];
+attach variables [ destreg_1 srcreg_1 ] [P0 P1 P2 P3 P4 P5 SP FP];
+attach variables [ destreg_2 srcreg_2 ] [I0 I1 I2 I3 M0 M1 M2 M3];
+attach variables [ destreg_3 srcreg_3 ] [B0 B1 B2 B3 L0 L1 L2 L3];
+attach variables [ destreg_4 srcreg_4 ] [A0.X A0.W A1.X A1.W _ _ ASTAT RETS];
+#attach variables [ destreg_5 srcreg_5 ] []
+attach variables [ destreg_6 srcreg_6 ] [LC0 LT0 LB0 LC1 LT1 LB1 CYCLES CYCLES2];
+attach variables [ destreg_7 srcreg_7 ] [USP SEQSTAT SYSCFG RETI RETX RETN RETE EMUDAT];
+
+define pcodeop idle;
+define pcodeop csync;
+define pcodeop ssync;
+define pcodeop raise;
+define pcodeop excpt;
+
+define pcodeop prefetch;
+define pcodeop flushinv;
+define pcodeop flush;
+define pcodeop iflush;
+
+#setting bogus operations to make decompilation clearer
+define pcodeop SIGNBITS;
+define pcodeop EXTRACT;
+define pcodeop EXTRACTx;
+define pcodeop EXTRACTz;
+define pcodeop DEPOSIT;
+define pcodeop DEPOSITx;
+define pcodeop ROT;
+define pcodeop ASHv;
+define pcodeop ASHs;
+define pcodeop ASHvs;
+define pcodeop DIVQ;
+define pcodeop DIVS;
+define pcodeop NEG;
+define pcodeop MOVE;
+define pcodeop SEARCH;
+define pcodeop ADDSAT;
+define pcodeop VECTORADD;
+define pcodeop VECTORSUB;
+define pcodeop VECTORADDSUB;
+define pcodeop MIN;
+define pcodeop SATURATE;
+define pcodeop MAC;

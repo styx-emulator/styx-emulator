@@ -1,0 +1,14 @@
+<mat-toolbar *ngIf="true" class="toolbar">
+  <button mat-icon-button class="tb-icon">
+    <mat-icon>menu</mat-icon>
+  </button>
+  <span>Execution Tracing</span>
+  <span class="toolbar-icon-spacer"></span>
+  <button
+    mat-icon-button
+    class="tb-icon favorite-icon"
+    [routerLink]="[Rts.About]"
+  >
+    <mat-icon>help</mat-icon>
+  </button>
+</mat-toolbar>

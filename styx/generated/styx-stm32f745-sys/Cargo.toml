@@ -1,0 +1,225 @@
+[package]
+name = "styx-stm32f745-sys"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+# need extra lints for this crate, so we can't use the workspace
+# defaults :upside_down_face:
+[lints.rust]
+non_camel_case_types = "allow"
+non_snake_case = "allow"
+dead_code = "allow"
+
+[lints.clippy]
+empty_docs = "allow"
+
+[lints.rustdoc]
+bare_urls = "allow"
+broken_intra_doc_links = "deny"
+
+
+[dependencies]
+vcell = { workspace = true }
+styx-workspace-hack = { version = "0.1", path = "../../workspace-hack" }
+
+[features]
+default = ["uart4", "usart6"]
+ac = []
+adc1 = []
+adc2 = []
+adc3 = []
+c_adc = []
+can1 = []
+can2 = []
+cec = []
+crc = []
+cryp = []
+dac = []
+dbg = []
+dcmi = []
+dma1 = []
+dma2 = []
+dma2d = []
+ethernet_dma = []
+ethernet_mac = []
+ethernet_mmc = []
+ethernet_ptp = []
+exti = []
+flash = []
+fmc = []
+fpu = []
+fpu_cpacr = []
+gpioa = []
+gpiob = []
+gpioc = []
+gpiod = []
+gpioe = []
+gpiof = []
+gpiog = []
+gpioh = []
+gpioi = []
+gpioj = []
+gpiok = []
+hash = []
+i2c1 = []
+i2c2 = []
+i2c3 = []
+i2c4 = []
+iwdg = []
+lptim1 = []
+ltdc = []
+mpu = []
+nvic = []
+nvic_stir = []
+otg_fs_device = []
+otg_fs_global = []
+otg_fs_host = []
+otg_fs_pwrclk = []
+otg_hs_device = []
+otg_hs_global = []
+otg_hs_host = []
+otg_hs_pwrclk = []
+pf = []
+pwr = []
+quadspi = []
+rcc = []
+rng = []
+rtc = []
+sai1 = []
+sai2 = []
+scb = []
+scb_actrl = []
+sdmmc1 = []
+spdif_rx = []
+spi1 = []
+spi2 = []
+spi3 = []
+spi4 = []
+spi5 = []
+spi6 = []
+stk = []
+syscfg = []
+tim1 = []
+tim10 = []
+tim11 = []
+tim12 = []
+tim13 = []
+tim14 = []
+tim2 = []
+tim3 = []
+tim4 = []
+tim5 = []
+tim6 = []
+tim7 = []
+tim8 = []
+tim9 = []
+uart4 = []
+uart5 = []
+uart7 = []
+uart8 = []
+usart1 = []
+usart2 = []
+usart3 = []
+usart6 = []
+wwdg = []
+all-peripherals = [
+  "ac",
+  "adc1",
+  "adc2",
+  "adc3",
+  "c_adc",
+  "can1",
+  "can2",
+  "cec",
+  "crc",
+  "cryp",
+  "dac",
+  "dbg",
+  "dcmi",
+  "dma1",
+  "dma2",
+  "dma2d",
+  "ethernet_dma",
+  "ethernet_mac",
+  "ethernet_mmc",
+  "ethernet_ptp",
+  "exti",
+  "flash",
+  "fmc",
+  "fpu",
+  "fpu_cpacr",
+  "gpioa",
+  "gpiob",
+  "gpioc",
+  "gpiod",
+  "gpioe",
+  "gpiof",
+  "gpiog",
+  "gpioh",
+  "gpioi",
+  "gpioj",
+  "gpiok",
+  "hash",
+  "i2c1",
+  "i2c2",
+  "i2c3",
+  "i2c4",
+  "iwdg",
+  "lptim1",
+  "ltdc",
+  "mpu",
+  "nvic",
+  "nvic_stir",
+  "otg_fs_device",
+  "otg_fs_global",
+  "otg_fs_host",
+  "otg_fs_pwrclk",
+  "otg_hs_device",
+  "otg_hs_global",
+  "otg_hs_host",
+  "otg_hs_pwrclk",
+  "pf",
+  "pwr",
+  "quadspi",
+  "rcc",
+  "rng",
+  "rtc",
+  "sai1",
+  "sai2",
+  "scb",
+  "scb_actrl",
+  "sdmmc1",
+  "spdif_rx",
+  "spi1",
+  "spi2",
+  "spi3",
+  "spi4",
+  "spi5",
+  "spi6",
+  "stk",
+  "syscfg",
+  "tim1",
+  "tim10",
+  "tim11",
+  "tim12",
+  "tim13",
+  "tim14",
+  "tim2",
+  "tim3",
+  "tim4",
+  "tim5",
+  "tim6",
+  "tim7",
+  "tim8",
+  "tim9",
+  "uart4",
+  "uart5",
+  "uart7",
+  "uart8",
+  "usart1",
+  "usart2",
+  "usart3",
+  "usart6",
+  "wwdg",
+]

@@ -1,0 +1,32 @@
+[package]
+name = "styx-macros-args"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+# definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+proc-macro = true
+
+
+[dependencies]
+clap = { workspace = true }
+proc-macro2 = { workspace = true }
+macrolib = { path = "../../styx/core/macrolib" }
+quote = { workspace = true }
+serde = { workspace = true }
+serde_yaml = { workspace = true }
+syn = { workspace = true }
+styx-workspace-hack = { version = "0.1", path = "../../styx/workspace-hack" }
+
+[dev-dependencies]
+gdbstub = { workspace = true }      # for doctests
+gdbstub_arch = { workspace = true } # for doctests
+clap = { workspace = true }
+
+[package.metadata.cargo-udeps.ignore]
+development = ["gdbstub", "gdbstub_arch"]

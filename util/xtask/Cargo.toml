@@ -1,0 +1,40 @@
+[package]
+name = "xtask"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+## begin core includes
+# This is allowed so this only depends on the bottom of the
+# styx dependency DAG instead of requiring everything working
+# to build the repo-helper
+styx-util = { path = "../../styx/core/styx-util" }
+styx-sync = { path = "../../styx/core/styx-sync" }
+## end core includes
+##
+anyhow = { workspace = true }
+globwalk = { workspace = true }
+rayon = { workspace = true }
+clap = { workspace = true }
+convert_case = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+strum_macros = { workspace = true }
+toml_edit = { workspace = true }
+styx-workspace-hack = { version = "0.1", path = "../../styx/workspace-hack" }
+serde_json = { workspace = true }
+codesort = { workspace = true }
+lazy-regex = { workspace = true }
+termimad = { workspace = true }
+
+[dev-dependencies]
+ctor = "0.2.8"
+temp-dir = { workspace = true }
+test-case = { workspace = true }
+tempfile = { workspace = true }

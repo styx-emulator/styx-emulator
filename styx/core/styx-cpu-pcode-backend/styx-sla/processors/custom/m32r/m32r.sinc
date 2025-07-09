@@ -1,0 +1,611 @@
+define alignment=1;
+
+define space mem type=ram_space size=4 default;
+define space register type=register_space size=4;
+
+define register offset=0 size=4
+	[ R0 R1 R2 R3 R4 R5 R6 R7 R8 R9 R10 R11 R12 FP R14 SP ];
+
+define register offset=0x40 size=4 [ PSW CBR SPI SPU CR4 CR5 BPC FPSR PC];
+
+define register offset=0x100 size=8 [ ACC ];
+
+
+@define C		"PSW[0,1]"		# migrate to this
+#@define C		"CBR[0,1]"		# migrate to this
+#@define C_flag	"PSW[0,1]"		# C: 	Condition Bit
+@define IE		"PSW[6,1]"		# IE:	Interrupt Enable Bit
+@define SM		"PSW[7,1]"		# SM:	Stack Mode Bit
+								#		0 = Uses R15 as the interrupt stack pointer
+								#		1 = Uses R15 as the user stack pointer
+@define BC		"PSW[8,1]"		# BC:	Backup C Bit (Saves value of C bit when EIT occurs)
+@define BIE		"PSW[14,1]"		# BIE:	Backup IE Bit (Saves value of IE bit when EIT occurs)
+@define BSM		"PSW[15,1]"		# BSM:	Backup SM Bit (Saves value of SM bit when EIT occurs)
+
+
+define pcodeop write_creg;
+define pcodeop read_creg;
+
+# Tokens
+
+
+define token opword(8)
+	op1		= (4,7)
+	op2		= (0,3)
+	op12	= (0,7)
+	Rdest	= (0,3)
+	Rsrc1	= (0,3)
+	CRdest	= (0,2)
+	op2_1	= (3,3)
+	bitpos	= (0,2)
+;
+
+attach variables [ Rdest Rsrc1 ] [ R0 R1 R2 R3 R4 R5 R6 R7 R8 R9 R10 R11 R12 FP R14 SP];
+attach variables [ CRdest ] [ PSW CBR SPI SPU CR4 CR5 BPC FPSR ];
+
+define token pcdisp24inp (24)
+	pcdisp24	= (0,23) signed
+	imm24		= (0,23)
+;
+
+define token data8 (8)
+	imm8	= (0,7)
+	simm8	= (0,7) signed
+	rel8	= (0,7) signed
+	Rsrc	= (0,3)
+	CRsrc	= (0,2)
+	op3		= (4,7)
+	op3_3	= (5,7)
+	imm5	= (0,4)
+	Rsrc2	= (0,3)
+	op34	= (0,7)
+	op4		= (0,3)
+;
+
+attach variables [ Rsrc Rsrc2 ] [ R0 R1 R2 R3 R4 R5 R6 R7 R8 R9 R10 R11 R12 FP R14 SP];
+attach variables [ CRsrc ] [ PSW CBR SPI SPU CR4 CR5 BPC FPSR ];
+
+define token data16 (16)
+	imm16	= (0,15)
+	rel16	= (0,15) signed
+	simm16	= (0,15) signed
+;
+
+macro setAddFlags(op1,op2) {
+	#$(C_flag) = carry(op1,op2);
+	$(C) = carry(op1,op2);
+}
+
+REL8:		reloc				is	rel8	[ reloc = (inst_start & 0xFFFFFFFC) + (rel8 << 2); ] { export *:4 reloc; }
+REL16:		reloc				is	rel16	[ reloc = (inst_start & 0xFFFFFFFC) + (rel16 << 2); ] { export *:4 reloc; }
+REL24:		reloc				is	pcdisp24 [ reloc = (inst_start & 0xFFFFFFFC) + (pcdisp24 << 2); ] { export *:4 reloc; }
+FPREL:		rel					is	rel16	[ rel = rel16 + 0x80c000; ] { export *:4 rel; }
+FPREL_1:	rel					is	rel16	[ rel = rel16 + 0x80c000; ] { export *:1 rel; }
+FPREL_2:	rel					is	rel16	[ rel = rel16 + 0x80c000; ] { export *:2 rel; }
+FP_ADDRESS:	rel					is	rel16	[ rel = rel16 + 0x80c000; ] { export &:4 rel; }
+
+
+
+:ADD	Rdest, Rsrc				is op1=0 & Rdest; op3=10 & Rsrc {
+	Rdest = Rdest + Rsrc;
+}
+
+:ADD3	Rdest, Rsrc,"#"simm16	is op1=8 & Rdest; op3=10 & Rsrc; simm16 {
+	Rdest = Rsrc + simm16;
+}
+
+# hack to show the relative offset to FP
+:ADD3	Rdest, "fp("FP_ADDRESS")"		is op1=8 & Rdest; op3=10 & Rsrc=13; FP_ADDRESS {
+	Rdest = FP_ADDRESS;
+}
+
+
+:ADDI	Rdest, "#"simm8			is op1=4 & Rdest; simm8 {
+	#Rdest = Rdest + sext(simm8:1);
+	Rdest = Rdest + simm8;
+}
+
+:ADDV	Rdest, Rsrc				is op1=0 & Rdest; op3=8 & Rsrc {
+	setAddFlags(Rdest,Rsrc);
+	Rdest = Rdest + Rsrc;
+}
+
+:ADDV3	Rdest, Rsrc, "#"simm16	is op1=8 & Rdest; op3=8 & Rsrc; simm16 {
+	setAddFlags(Rsrc,simm16);
+	Rdest = Rsrc + simm16;
+}
+
+:ADDX	Rdest, Rsrc				is op1=0 & Rdest; op3=9 & Rsrc {
+	local tmp = Rdest + Rsrc;
+	#local tmp2 = tmp + zext($(C_flag));
+	local tmp2 = tmp + zext($(C));
+	#$(C_flag) = (carry(Rdest, Rsrc) | carry(tmp, tmp2));
+	$(C) = (carry(Rdest, Rsrc) | carry(tmp, tmp2));
+	CBR = zext(carry(Rdest, Rsrc) | carry(tmp, tmp2));
+	Rdest = Rdest + Rsrc + CBR;
+}
+
+:AND	Rdest, Rsrc				is op1=0 & Rdest; op3=12 & Rsrc {
+	Rdest = Rdest & Rsrc;
+}
+
+:AND3	Rdest, Rsrc, "#"imm16	is op1=8 & Rdest; Rsrc & op3=12; imm16 {
+	Rdest = Rsrc & imm16;
+}
+
+:BC		REL8					is op12=0x7C; REL8 {
+	#if ($(C_flag) == 1) goto REL8;
+	if ($(C) == 1) goto REL8;
+}
+
+:BC		REL24					is op12=0xFC; REL24 {
+	#if ($(C_flag) == 1) goto REL24;
+	if ($(C) == 1) goto REL24;
+}
+
+:BCLR	"#"bitpos, "@("rel16,Rsrc")"	is op1=10 & op2_1=0 & bitpos; op3=7 & Rsrc; rel16 {
+	local address = Rsrc + rel16;
+	local value = *:1 address & ~(1 << (7 - bitpos));
+	#*:1 address = value:1;
+	*:1 address = value;
+}
+
+:BCLR	"#"bitpos,"@fp("FPREL_1")"	is op1=10 & op2_1=0 & bitpos; op3=7 & Rsrc=13; FPREL_1 {
+	FPREL_1 = (FPREL_1) & ~(1 << (7 - bitpos));
+}
+
+:BEQ	Rsrc1, Rsrc2, REL16		is op1=11 & Rsrc1; op3=0 & Rsrc2; REL16 {
+	if (Rsrc1 == Rsrc2) goto REL16;
+}
+
+:BEQZ	Rsrc, REL16				is op12=0xB0; op3=8 & Rsrc; REL16 {
+	if (Rsrc == 0) goto REL16;
+}
+
+:BGEZ	Rsrc, REL16				is op12=0xB0; op3=11 & Rsrc; REL16 {
+	if (Rsrc s>= 0) goto REL16;
+}
+
+:BGTZ	Rsrc, REL16				is op12=0xB0; op3=13 & Rsrc; REL16 {
+	if (Rsrc s> 0) goto REL16;
+}
+
+:BL		REL8					is op12=0x7e; REL8 {
+	local tmp:4 = inst_start & 0xFFFFFFFc; 
+	R14 = tmp + 4;
+	call REL8;
+}
+
+:BL		REL24					is op12=0xFE; REL24 {
+	local tmp:4 = inst_start & 0xFFFFFFFc; 
+	R14 = tmp + 4;
+	call REL24;
+}
+
+:BLEZ	Rsrc, REL16				is op12=0xB0; op3=12 & Rsrc; REL16 {
+	if (Rsrc s<= 0) goto REL16;
+}
+
+:BLTZ	Rsrc, REL16				is op12=0xB0; op3=10 & Rsrc; REL16 {
+	if (Rsrc s< 0) goto REL16;
+}
+
+:BNC	REL8					is op12=0x7D; REL8 {
+	#if ($(C_flag) == 0) goto REL8;
+	if ($(C) == 0) goto REL8;
+}
+
+:BNC	REL24					is op12=0xFD; REL24 {
+	#if ($(C_flag) == 0) goto REL24;
+	if ($(C) == 0) goto REL24;
+}
+
+:BNE	Rsrc1, Rsrc2, REL16		is op1=11 & Rsrc1; Rsrc2 & op3=1; REL16 {
+	if (Rsrc1 != Rsrc2) goto REL16;
+}
+
+:BNEZ	Rsrc, REL16				is op12=0xB0; Rsrc & op3=9; REL16 {
+	if (Rsrc != 0) goto REL16;
+}
+
+:BRA	REL8" | NOP"			is op12=0x7F; REL8; imm16=0xF000 {
+	goto REL8;
+}
+
+:BRA	REL8					is op12=0x7F; REL8 {
+	goto REL8;
+}
+
+:BRA	REL24					is op12=0xFF; REL24 {
+	goto REL24;
+}
+
+:BSET	"#"bitpos, "@("rel16,Rsrc")" 	is op1=10 & op2_1=0 & bitpos; op3=6 & Rsrc; rel16 {
+	local address = (Rsrc + rel16);
+	*address = *:1 address | 1 << (7 - bitpos);
+}
+
+:BSET	"#"bitpos, "@fp("FPREL_1")" 	is op1=10 & op2_1=0 & bitpos; op3=6 & Rsrc=13; FPREL_1 {
+	FPREL_1 = FPREL_1 | 1 << (7-bitpos);
+}
+
+:BTST	"#"bitpos, Rsrc			is op1=0 & op2_1=0 & bitpos; op3=15 & Rsrc {
+	#$(C_flag) = (((Rsrc >> (7 - bitpos)) & 1) == 0);
+	# the way below seems to help Ghidra's decompiler, especially when using ENUM.
+	local tmp = Rsrc:1 & (1 << (7 - bitpos));
+	$(C) = (tmp != 0);
+	CBR = zext(tmp != 0);
+}
+
+:CLRPSW	"#"imm8					is op12=0x72; imm8 {
+	PSW = PSW & imm8;
+}
+
+:CMP	Rsrc1, Rsrc2			is op1=0 & Rsrc1; Rsrc2 & op3=4 {
+	#$(C_flag) = (Rsrc1 s< Rsrc2);
+	$(C) = (Rsrc1 s< Rsrc2);
+	CBR = zext(Rsrc1 s< Rsrc2);
+}
+
+:CMPI	Rsrc, "#"simm16			is op12=0x80; Rsrc & op3=4; simm16 {
+	#$(C_flag) = (Rsrc s< simm16);
+	$(C) = (Rsrc s< simm16);
+	CBR = zext(Rsrc s< simm16);
+}
+
+:CMPU	Rsrc1, Rsrc2			is op1=0 & Rsrc1; op3=5 & Rsrc2 {
+	#$(C_flag) = (Rsrc1 < Rsrc2);
+	$(C) = (Rsrc1 < Rsrc2);
+	CBR = zext(Rsrc1 < Rsrc2);
+}
+
+:CMPUI	Rsrc, "#"imm16			is op12=0x80; op3=5 & Rsrc; imm16 {
+	#$(C_flag) = (Rsrc < imm16);
+	$(C) = (Rsrc < imm16);
+	CBR = zext(Rsrc < imm16);
+}
+
+:DIV	Rdest, Rsrc				is op1=9 & Rdest; Rsrc & op3 = 0; imm16 = 0 {
+	# Note, if Rsrc = 0, Rdest is unchanged
+	Rdest = Rdest s/ Rsrc;
+}
+
+:DIVU	Rdest, Rsrc				is op1=9 & Rdest; Rsrc & op3 = 1; imm16 = 0 {
+	# Note, if Rsrc = 0, Rdest is unchanged
+	Rdest  = Rdest / Rsrc;
+}
+
+#:FADD
+#:FCMP
+#:FCMPE
+#:FDIV
+#:FMADD
+#:FMSUB
+#:FMUL
+#:FSUB
+#:FTOI
+#:FTOS
+#:ITOF
+
+:JL		Rsrc					is op12=0x1E; op3=12 & Rsrc {
+	R14 = (inst_start & 0xFFFFFFFC) + 4;
+	#local tmp = Rsrc & 0xFFFFFFFC;
+	#call [tmp];
+	call [Rsrc & 0xFFFFFFFC];
+}
+
+:JMP	Rsrc					is op12=0x1F; Rsrc & op3=12 {
+	goto [Rsrc & 0xFFFFFFFC];
+}
+
+# Alias for: JMP R14
+:RET							is op12=0x1F; op34=0xCE {
+	return [R14];
+}
+
+:LD		Rdest,"@"Rsrc			is op1=2 & Rdest; Rsrc & op3=12 {
+	Rdest = *Rsrc;
+}
+
+# pop also
+:LD		Rdest,"@"Rsrc"+"		is op1=2 & Rdest; Rsrc & op3=14 {
+	Rdest = *Rsrc;
+	Rsrc = Rsrc + 4;
+}
+
+:POP 	Rdest					is op1=2 & Rdest; op34=0xEF {
+	Rdest = *SP;
+	SP = SP + 4;
+}
+
+:LD		Rdest,"@("rel16,Rsrc")"	is op1=10 & Rdest; Rsrc & op3=12; rel16 {
+	Rdest = *(Rsrc + rel16);
+}
+
+:LD		Rdest,"@fp("FPREL")"	is op1=10 & Rdest; Rsrc=13 & op3=12; FPREL {
+	#Rdest = *(FPREL);
+	Rdest = FPREL;
+}
+
+:LD24	Rdest,"#"imm24			is op1=0xE & Rdest; imm24 {
+	Rdest = zext(imm24:3);
+}
+
+:LDB	Rdest,"@("Rsrc")"		is op1=2 & Rdest; op3=8 & Rsrc {
+	Rdest = sext(*:1 Rsrc);
+}
+
+:LDB	Rdest,"@("rel16,Rsrc")"	is op1=10 & Rdest; op3=8 & Rsrc; rel16 {
+	Rdest = sext(*:1 (Rsrc + rel16));
+}
+
+:LDB	Rdest,"@fp("FPREL_1")"	is op1=10 & Rdest; op3=8 & Rsrc=13; FPREL_1 {
+	Rdest = sext(FPREL_1);
+}
+
+:LDH	Rdest,"@"Rsrc			is op1=2 & Rdest; op3=10 & Rsrc {
+	Rdest = sext(*:2 Rsrc);
+}
+
+:LDH	Rdest, "@("rel16, Rsrc")"	is op1=10 & Rdest; op3=10 & Rsrc; rel16 {
+	Rdest = sext(*:2 Rsrc + rel16);
+}
+
+:LDI	Rdest,"#"simm8			is op1=6 & Rdest; simm8 {
+	#Rdest = sext(imm8:1);
+	Rdest = simm8;
+}
+
+:LDI	Rdest,"#"simm16			is op1=9 & Rdest; op34=0xF0; simm16 {
+	#Rdest = sext(imm16:2);
+	Rdest = simm16;
+}
+
+:LDUB	Rdest,"@"Rsrc			is op1=2 & Rdest; op3=9 & Rsrc {
+	#Rdest = zext(*:2 Rsrc);
+	Rdest = zext(*:1 Rsrc);
+}
+
+:LDUB 	Rdest,"@("rel16,Rsrc")"	is op1=10 & Rdest; Rsrc & op3=9; rel16 {
+	Rdest = zext(*:1 (Rsrc + rel16));
+}
+
+:LDUB	Rdest,"@"FPREL_1		is op1=10 & Rdest; Rsrc=13 & op3=9; FPREL_1 {
+	Rdest = zext(FPREL_1);
+}
+
+:LDUH	Rdest,"@("Rsrc")"		is op1=2 & Rdest; Rsrc & op3=11 {
+	Rdest = zext(*:2 Rsrc);
+}
+
+:LDUH	Rdest,"@("rel16,Rsrc")"	is op1=10 & Rdest; Rsrc & op3=11; rel16 {
+	Rdest = zext(*:2 (Rsrc + rel16));
+}
+
+:LDUH	Rdest,"@fp("FPREL_2")"	is op1=10 & Rdest; Rsrc=13 & op3=11; FPREL_2 {
+	Rdest = zext(FPREL_2);
+}
+
+:LOCK	Rdest, "@"Rsrc			is op1=2 & Rdest; op3=13 & Rsrc {
+	Rdest = *Rsrc;
+}
+
+#:MACHI
+#:MACLO
+#:MACWHI
+#:MACWLO
+
+:MUL	Rdest, Rsrc				is op1=1 & Rdest; op3=6 & Rsrc {
+	Rdest = Rdest * Rsrc;
+}
+
+#:MULHI
+#:MULLO
+#:MULWHI
+#:MULWLO
+
+:MV		Rdest,Rsrc				is op1=1 & Rdest; op3=8 & Rsrc {
+	Rdest = Rsrc;
+}
+
+#:MVFACHI
+#:MVFACLO
+#:MVFACMI
+
+#Test for decompiler
+:MVFC	Rdest",CBRd"				is op1=1 & Rdest; op34=0x91 {
+	#Rdest = zext($(C));
+	Rdest = CBR;
+}
+
+:MVFC	Rdest,CRsrc				is op1=1 & Rdest; op3=9 & CRsrc {
+	#read_creg(Rdest, CRsrc);
+	Rdest = CRsrc;
+}
+
+#:MVTACHI
+#:MVTACLO
+
+:MVTC	Rsrc,CRdest				is op1=1 & CRdest; Rsrc {
+	write_creg(Rsrc, CRdest);
+	CRdest = Rsrc;
+	
+}
+
+:NEG	Rdest, Rsrc				is op1=0 & Rdest; op3=3 & Rsrc {
+	Rdest = (0 - Rsrc);
+}
+
+:NOP							is (op12=0xF0 | op12=0x70); imm8 {
+	# This is just to avoid NOP warnings
+	local n = 0:1;
+	n = n;
+}
+
+:NOT	Rdest,Rsrc				is op1=0 & Rdest; Rsrc & op3=11 {
+	Rdest = ~Rsrc;
+}
+
+:OR		Rdest,Rsrc				is op1=0 & Rdest; op3=14 & Rsrc {
+	Rdest = Rdest | Rsrc;
+}
+
+:OR3	Rdest,Rsrc,"#"imm16		is op1=8 & Rdest; Rsrc & op3=14; imm16 {
+	Rdest = Rsrc | imm16;
+}
+
+#:RAC
+#:RACH
+
+:REM	Rdest, Rsrc				is op1=9 & Rdest; op3=2 & Rsrc; imm16=0 {
+	Rdest = Rdest s% Rsrc;
+}
+
+:REMU	Rdest, Rsrc				is op1=9 & Rdest; op3=3 & Rsrc; imm16=0 {
+	Rdest= Rdest % Rsrc;
+}
+
+:RTE							is imm16=0x10D6 {
+	# Need to add other flags
+	goto [BPC];
+}
+
+:SETH	Rdest,"#"imm16			is op1=13 & Rdest; op34=0xC0; imm16 {
+	Rdest = (imm16 << 16);
+}
+
+:SETPSW							is op12=0x71; imm8 {
+	PSW = PSW | imm8;
+}
+
+:SLL	Rdest, Rsrc				is op1=1 & Rdest; op3=4 & Rsrc {
+	Rdest = Rdest << (Rsrc & 31);
+}
+
+:SLL3	Rdest, Rsrc,"#"imm16	is op1=9 & Rdest; op3=12 & Rsrc; imm16 {
+	Rdest = Rsrc << (imm16 & 31);
+}
+
+:SLLI	Rdest,"#"imm5			is op1=5 & Rdest; op3_3=2 & imm5 {
+	Rdest = Rdest << imm5;
+}
+
+:SRA	Rdest, Rsrc				is op1=1 & Rdest; op3=2 & Rsrc {
+	Rdest = Rdest s>> (Rsrc & 31);
+}
+
+:SRA3	Rdest, Rsrc,"#"imm16	is op1=9 & Rdest; op3=10 & Rsrc; imm16 {
+	Rdest = Rsrc s>> (imm16 & 31);
+}
+
+:SRAI	Rdest,"#"imm5			is op1=5 & Rdest; op3_3=1 & imm5 {
+	Rdest = Rdest s>> imm5;
+}
+
+:SRL	Rdest, Rsrc				is op1=1 & Rdest; op3=0 & Rsrc {
+	Rdest = Rdest >> (Rsrc & 31);
+}
+
+:SRL3	Rdest, Rsrc,"#"imm16	is op1=9 & Rdest; op3=8 & Rsrc; imm16 {
+	Rdest = Rsrc >> (imm16 & 31);
+}
+
+:SRLI	Rdest,"#"imm5			is op1=5 & Rdest; op3_3=0 & imm5 {
+	Rdest = Rdest >> (imm5 & 31);
+}
+
+:ST		Rsrc1,"@"Rsrc2			is op1=2 & Rsrc1; Rsrc2 & op3=4 {
+	*Rsrc2 = Rsrc1;
+}
+
+:ST		Rsrc1,"@+"Rsrc2			is op1=2 & Rsrc1; Rsrc2 & op3=6 {
+	Rsrc2 = Rsrc2 + 4;
+	*Rsrc2 = Rsrc1;
+}
+
+:ST		Rsrc1,"@-"Rsrc2			is op1=2 & Rsrc1; Rsrc2 & op3=7 {
+	Rsrc2 = Rsrc2 - 4;
+	*Rsrc2 = Rsrc1;
+}
+
+# push
+:PUSH	Rsrc1					is op1=2 & Rsrc1; op34=0x7f {
+	SP = SP - 4;
+	*SP = Rsrc1;
+}
+
+:ST		Rsrc1,"@("rel16,Rsrc2")"	is op1=10 & Rsrc1; Rsrc2 & op3=4; rel16 {
+	*(Rsrc2 + rel16) = Rsrc1;
+}
+:ST		Rsrc1,"@fp("FPREL")"	is op1=10 & Rsrc1; op3=4 & Rsrc2=13; FPREL {
+	FPREL = Rsrc1;
+}
+
+:STB	Rsrc1,"@"Rsrc2			is (op1=2) & Rsrc1; Rsrc2 & op3=0 {
+	*:1 Rsrc2 = Rsrc1:1; # & 0xFF;
+}
+
+:STB	Rsrc1,"@("rel16,Rsrc2")"	is op1=10 & Rsrc1; op3=0 & Rsrc2; rel16 {
+	*:1 (Rsrc2 + rel16) = Rsrc1:1;
+}
+
+:STB	Rsrc1,"@fp("FPREL_1")"	is op1=10 & Rsrc1; op3=0 & Rsrc2=13; FPREL_1 {
+	FPREL_1 = Rsrc1:1;
+}
+
+:STH	Rsrc1,"@"Rsrc2			is op1=2 & Rsrc1; Rsrc2 & op3=2 {
+	*:2 Rsrc2 = Rsrc1:2;
+}
+
+:STH	Rsrc1,"@"Rsrc2"+"		is op1=2 & Rsrc1; Rsrc2 & op3=3 {
+	*:2 Rsrc2 = Rsrc1:2;
+	Rsrc2 = Rsrc2 + 2;
+}
+
+:STH	Rsrc1,"@("rel16,Rsrc2")"	is op1=10 & Rsrc1; Rsrc2 & op3=2; rel16 {
+	*:2 (Rsrc2 + rel16) = Rsrc1:2;
+}
+
+:STH	Rsrc1,"@fp("FPREL_2")"	is op1=10 & Rsrc1; Rsrc2=13 & op3=2; FPREL_2 {
+	FPREL_2 = Rsrc1:2;
+}
+
+:SUB	Rdest,Rsrc				is op1=0 & Rdest; op3=2 & Rsrc {
+	Rdest = Rdest - Rsrc;
+}
+
+:SUBV	Rdest,Rsrc				is op1=0 & Rdest; op3=0 & Rsrc {
+	#$(C_flag) = sborrow(Rdest, Rsrc);
+	$(C) = sborrow(Rdest, Rsrc);
+	CBR = zext(sborrow(Rdest, Rsrc));
+	Rdest = Rdest - Rsrc;
+}
+
+:SUBX	Rdest, Rsrc		is op1=0 & Rdest; op3=1 & Rsrc { #fix
+	# This is incorrect and needs to have C flag added for borrow
+	Rdest = Rdest - Rsrc;
+	#$(C_flag) = sborrow(Rdest, Rsrc);
+	$(C) = sborrow(Rdest, Rsrc);
+	CBR = zext(sborrow(Rdest, Rsrc));
+}
+
+:TRAP	"#"op4					is op12=0x10; op3=15 & op4 {
+	BPC = inst_start + 4;
+	#$(C_flag) = 0;
+	$(C) = 0;
+	# need to 1inish
+} #TODO
+
+:UNLOCK	Rsrc1,"@"Rsrc2			is op1=2 & Rsrc1; op3=5 & Rsrc2 {
+	*Rsrc2 = Rsrc1;
+}
+
+#:UTOF
+
+:XOR	Rdest,Rsrc				is op1=0 & Rdest; op3=13 & Rsrc {
+	Rdest = Rdest ^ Rsrc;
+}
+
+:XOR3	Rdest,Rsrc,"#"imm16		is op1=8 & Rdest; op3=13 & Rsrc; imm16 {
+	Rdest = Rsrc ^ imm16;
+}

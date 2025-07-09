@@ -1,0 +1,16 @@
+[package]
+name = "styx-devices"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[dependencies]
+styx-core = { path = "../core" }
+
+thiserror = { workspace = true }
+tracing = { workspace = true }
+rand = { workspace = true }
+styx-workspace-hack = { version = "0.1", path = "../workspace-hack" }
+
+[lints]
+workspace = true

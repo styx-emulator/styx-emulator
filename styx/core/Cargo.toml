@@ -1,0 +1,43 @@
+[package]
+name = "styx-core"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[features]
+default = [
+  "arch_arm",
+  "arch_aarch64",
+  "arch_bfin",
+  "arch_m32r",
+  "arch_mips64",
+  "arch_ppc",
+  "arch_superh",
+]
+arch_arm = ["styx-cpu/arch_arm"]
+arch_aarch64 = ["styx-cpu/arch_aarch64"]
+arch_bfin = ["styx-cpu/arch_bfin"]
+arch_m32r = ["styx-cpu/arch_m32r"]
+arch_mips64 = ["styx-cpu/arch_mips64"]
+arch_ppc = ["styx-cpu/arch_ppc"]
+arch_superh = ["styx-cpu/arch_superh"]
+pyo3_bindings = ["styx-grpc/pyo3_bindings"]
+
+[lints]
+workspace = true
+
+[dependencies]
+macrolib = { path = "./macrolib" }
+styx-arch-utils = { path = "./styx-arch-utils" }
+styx-cpu = { path = "./styx-cpu" }
+styx-errors = { path = "./styx-errors" }
+styx-peripheral-clients = { path = "./styx-peripheral-clients" }
+styx-grpc = { path = "./styx-grpc" }
+styx-loader = { path = "./styx-loader" }
+styx-macros = { path = "./styx-macros" }
+styx-memory = { path = "./styx-memory" }
+styx-processor = { path = "./styx-processor" }
+styx-sync = { path = "./styx-sync" }
+styx-tracebus = { path = "./styx-tracebus" }
+styx-util = { path = "./styx-util" }
+styx-workspace-hack = { version = "0.1", path = "../workspace-hack" }

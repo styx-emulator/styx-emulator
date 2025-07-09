@@ -1,0 +1,52 @@
+syntax = "proto3";
+
+package uart;
+
+service UartPort {
+    // send a message to the UART port to process
+    rpc Receive(BytesMessage) returns (Ack) {}
+    // subscribe to all outbound messages from the requested
+    // UART port
+    rpc Subscribe(SubscribeRequest) returns (stream BytesMessage) {}
+}
+
+// direction here is defined from the POV of the CPU
+// i.e. tx is sending data from the cpu to a peripheral
+// and rx is sending data from a peripheral to the cpu
+message TxDirection {}
+message RxDirection {}
+message BothDirection {}
+
+message SubscribeRequest {
+    oneof direction {
+        TxDirection tx = 1;
+        RxDirection rx = 2;
+        BothDirection both = 3;
+    }
+    PortRequest port = 4;
+}
+
+message PortRequest {
+    // UART port to request
+    string port = 1;
+}
+
+message BytesMessage {
+    // UART port involved with this message
+    string port = 1;
+    // Data for the message
+    oneof data {
+        TxData tx_data = 2;
+        RxData rx_data = 3;
+    }
+}
+
+message TxData {
+    bytes data = 1;
+}
+
+message RxData {
+    bytes data = 1;
+}
+
+message Ack {}

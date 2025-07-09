@@ -1,0 +1,290 @@
+// stdexcept standard header
+#if defined (_ADI_COMPILER)
+/************************************************************************
+ *
+ * stdexcept
+ *
+ * (c) Copyright 2001-2009 Analog Devices, Inc.  All rights reserved.
+ * (c) Copyright 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * $Revision: 1.4 $
+ ************************************************************************/
+
+#pragma once
+#ifndef __NO_BUILTIN
+#pragma system_header /* stdexcept */
+#endif
+#endif /* _ADI_COMPILER */
+
+#ifndef _STDEXCEPT_
+#define _STDEXCEPT_
+#include <exception>
+#include <xstring>
+_STD_BEGIN
+
+#ifndef _Mbstinit
+ #define _Mbstinit(x)	_Mbstatet x = {0}
+#endif /* _Mbstinit */
+
+		// CLASS logic_error
+class logic_error
+	: public _XSTD exception
+	{	// base of all logic-error exceptions
+public:
+	explicit logic_error(const string& _Message)
+		: _Str(_Message)
+		{	// construct from message string
+		}
+
+	virtual ~logic_error() _THROW0()
+		{	// destroy the object
+		}
+
+	virtual const char *what() const _THROW0()
+		{	// return pointer to message string
+		return (_Str.c_str());
+		}
+
+ #if _HAS_EXCEPTIONS
+
+ #else /* _HAS_EXCEPTIONS */
+
+protected:
+	virtual void _Doraise() const
+		{	// perform class-specific exception handling
+		_RAISE(*this);
+		}
+ #endif /* _HAS_EXCEPTIONS */
+
+private:
+	string _Str;	// the stored message string
+	};
+
+		// CLASS domain_error
+class domain_error
+	: public logic_error
+	{	// base of all domain-error exceptions
+public:
+	explicit domain_error(const string& _Message)
+		: logic_error(_Message)
+		{	// construct from message string
+		}
+
+	virtual ~domain_error() _THROW0()
+		{	// destroy the object
+		}
+
+ #if _HAS_EXCEPTIONS
+
+ #else /* _HAS_EXCEPTIONS */
+
+protected:
+	virtual void _Doraise() const
+		{	// perform class-specific exception handling
+		_RAISE(*this);
+		}
+ #endif /* _HAS_EXCEPTIONS */
+
+	};
+
+		// CLASS invalid_argument
+class invalid_argument
+	: public logic_error
+	{	// base of all invalid-argument exceptions
+public:
+	explicit invalid_argument(const string& _Message)
+		: logic_error(_Message)
+		{	// construct from message string
+		}
+
+	virtual ~invalid_argument() _THROW0()
+		{	// destroy the object
+		}
+
+ #if _HAS_EXCEPTIONS
+
+ #else /* _HAS_EXCEPTIONS */
+
+protected:
+	virtual void _Doraise() const
+		{	// perform class-specific exception handling
+		_RAISE(*this);
+		}
+ #endif /* _HAS_EXCEPTIONS */
+
+	};
+
+		// CLASS length_error
+class length_error
+	: public logic_error
+	{	// base of all length-error exceptions
+public:
+	explicit length_error(const string& _Message)
+		: logic_error(_Message)
+		{	// construct from message string
+		}
+
+	virtual ~length_error() _THROW0()
+		{	// destroy the object
+		}
+
+ #if _HAS_EXCEPTIONS
+
+ #else /* _HAS_EXCEPTIONS */
+
+protected:
+	virtual void _Doraise() const
+		{	// perform class-specific exception handling
+		_RAISE(*this);
+		}
+ #endif /* _HAS_EXCEPTIONS */
+
+	};
+
+		// CLASS out_of_range
+class out_of_range
+	: public logic_error
+	{	// base of all out-of-range exceptions
+public:
+	explicit out_of_range(const string& _Message)
+		: logic_error(_Message)
+		{	// construct from message string
+		}
+
+	virtual ~out_of_range() _THROW0()
+		{	// destroy the object
+		}
+
+ #if _HAS_EXCEPTIONS
+
+ #else /* _HAS_EXCEPTIONS */
+
+protected:
+	virtual void _Doraise() const
+		{	// perform class-specific exception handling
+		_RAISE(*this);
+		}
+ #endif /* _HAS_EXCEPTIONS */
+
+	};
+
+		// CLASS runtime_error
+class runtime_error
+	: public _XSTD exception
+	{	// base of all runtime-error exceptions
+public:
+	explicit runtime_error(const string& _Message)
+		: _Str(_Message)
+		{	// construct from message string
+		}
+
+	virtual ~runtime_error() _THROW0()
+		{	// destroy the object
+		}
+
+	virtual const char *what() const _THROW0()
+		{	// return pointer to message string
+		return (_Str.c_str());
+		}
+
+ #if _HAS_EXCEPTIONS
+
+ #else /* _HAS_EXCEPTIONS */
+
+protected:
+	virtual void _Doraise() const
+		{	// perform class-specific exception handling
+		_RAISE(*this);
+		}
+ #endif /* _HAS_EXCEPTIONS */
+
+private:
+	string _Str;	// the stored message string
+	};
+
+		// CLASS overflow_error
+class overflow_error
+	: public runtime_error
+	{	// base of all overflow-error exceptions
+public:
+	explicit overflow_error(const string& _Message)
+		: runtime_error(_Message)
+		{	// construct from message string
+		}
+
+	virtual ~overflow_error() _THROW0()
+		{	// destroy the object
+		}
+
+ #if _HAS_EXCEPTIONS
+
+ #else /* _HAS_EXCEPTIONS */
+
+protected:
+	virtual void _Doraise() const
+		{	// perform class-specific exception handling
+		_RAISE(*this);
+		}
+ #endif /* _HAS_EXCEPTIONS */
+
+	};
+
+		// CLASS underflow_error
+class underflow_error
+	: public runtime_error
+	{	// base of all underflow-error exceptions
+public:
+	explicit underflow_error(const string& _Message)
+		: runtime_error(_Message)
+		{	// construct from message string
+		}
+
+	virtual ~underflow_error() _THROW0()
+		{	// destroy the object
+		}
+
+ #if _HAS_EXCEPTIONS
+
+ #else /* _HAS_EXCEPTIONS */
+
+protected:
+	virtual void _Doraise() const
+		{	// perform class-specific exception handling
+		_RAISE(*this);
+		}
+ #endif /* _HAS_EXCEPTIONS */
+
+	};
+
+		// CLASS range_error
+class range_error
+	: public runtime_error
+	{	// base of all range-error exceptions
+public:
+	explicit range_error(const string& _Message)
+		: runtime_error(_Message)
+		{	// construct from message string
+		}
+
+	virtual ~range_error() _THROW0()
+		{	// destroy the object
+		}
+
+ #if _HAS_EXCEPTIONS
+
+ #else /* _HAS_EXCEPTIONS */
+
+protected:
+	virtual void _Doraise() const
+		{	// perform class-specific exception handling
+		_RAISE(*this);
+		}
+ #endif /* _HAS_EXCEPTIONS */
+
+	};
+_STD_END
+#endif /* _STDEXCEPT_ */
+
+/*
+ * Copyright (c) 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * Consult your license regarding permissions and restrictions.
+V5.03:1134 */

@@ -1,0 +1,4 @@
+language = "Cython"
+
+[parse.expand]
+crates = ["styx-bindings"]

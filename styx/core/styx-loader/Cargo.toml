@@ -1,0 +1,29 @@
+[package]
+name = "styx-loader"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+styx-memory = { path = "../styx-memory" }
+styx-errors = { path = "../styx-errors" }
+styx-memory-type = { path = "../styx-memory-type" }
+styx-cpu-type = { path = "../styx-cpu-type" }
+
+thiserror = { workspace = true }
+serde = { workspace = true }
+serde_yaml = { workspace = true }
+goblin = { workspace = true }
+log = { workspace = true }
+binrw = { workspace = true }
+bitflags = { workspace = true }
+styx-workspace-hack = { version = "0.1", path = "../../workspace-hack" }
+iset = { workspace = true }
+
+[dev-dependencies]
+mockall = { workspace = true }

@@ -1,0 +1,14 @@
+- !MemoryRegion
+    # The space that this region belongs to
+    space: !Code
+    # Base address for the region.
+    base: 0x0
+    # Size for the region.
+    size: 1024
+    # Permissions for the region.
+    perms: !All
+- !MemoryRegion
+    space: !Data
+    base: 0x0
+    size: 32
+    perms: !All

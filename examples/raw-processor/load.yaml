@@ -1,0 +1,52 @@
+# Actions to be taken as part of the load to set up an execution environment.
+# Valid actions are:
+#   - FileElf - load an ELF
+#   - FileRaw - load a raw file
+#   - MemoryRegion - map a memory region
+#   - RegisterImmediate - initialize a register with an immediate value
+#   - RegisterMemoryAddress - initialize a register with a value read from memory.
+- !FileElf
+    # Base address for the file to be loaded.
+    base: 0x10000
+    # ELF file backing this region
+    file: foo.elf
+- !FileRaw
+    base: 0x80000
+    file: bar.bin
+    # Permissions for the allocated memory. Valid permissions are ReadOnly,
+    # WriteOnly, ExecuteOnly, ReadWrite, ReadExecute and AllowAll.
+    perms: !ReadWrite
+- !FileRaw
+    base: 0x90000
+    file: baz.bin
+    perms: !ReadExecute
+- !FileRaw
+    base: 0x90040
+    file: hurr.bin
+    # No permissions are provided, so no memory will be allocated. The target
+    # memory region should already exist.
+- !MemoryRegion
+    # Base address for the region.
+    base: 0x100000
+    # Size for the region.
+    size: 0x800000
+    # Permissions for the region. See above for valid permission options.
+    perms: !ReadWrite
+- !MemoryRegion
+    base: 0x1000000
+    size: 0x2000000
+    perms: !AllowAll
+- !RegisterImmediate
+    # Register to be loaded with a value.
+    register: pc
+    # Immediate value to load into the register.
+    value: 0x1000
+- !RegisterMemoryAddress
+    # Register to be loaded with a value.
+    register: r4
+    # Address from which to load the register value.
+    address: 0x40000
+- !EnvironmentStateVariable
+    # Define a processor-specific environment state variable.
+    - derp
+    - 0xF00BA8

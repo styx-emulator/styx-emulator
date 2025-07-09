@@ -1,0 +1,20 @@
+[package]
+name = "styx-event-controllers"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+# deps for the "void" event controller
+styx-core = { workspace = true }
+
+# and all the actual event controllers
+styx-nvic = { path = "./arm/styx-nvic" }
+styx-gic = { path = "./arm/styx-gic" }
+styx-mpc866m = { path = "./ppc/styx-mpc866m" }
+styx-workspace-hack = { version = "0.1", path = "../workspace-hack" }

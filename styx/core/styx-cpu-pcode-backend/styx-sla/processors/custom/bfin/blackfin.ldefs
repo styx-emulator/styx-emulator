@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<language_definitions>
+
+  <language processor="Blackfin"
+            endian="little"
+            size="32"
+            variant="default"
+            version="1.0"
+            slafile="blackfin.sla"
+            processorspec="blackfin.pspec"
+            id="blackfin:LE:32:default">
+    <description>Analog Devices Blackfin family</description>
+    <compiler name="default" spec="blackfin.cspec" id="default"/>
+  </language>
+
+  <language processor="Blackfin"
+            endian="little"
+            size="32"
+            variant="BF52x"
+            version="1.0"
+            slafile="blackfin.sla"
+            processorspec="bf52x.pspec"
+            manualindexfile="../manuals/bf5xx.idx"
+            id="blackfin:LE:32:BF52x">
+    <description>Analog Devices Blackfin family</description>
+    <compiler name="default" spec="blackfin.cspec" id="default"/>
+  </language>
+
+  <language processor="Blackfin"
+            endian="little"
+            size="32"
+            variant="BF51x"
+            version="1.0"
+            slafile="blackfin.sla"
+            processorspec="bf51x.pspec"
+            manualindexfile="../manuals/bf5xx.idx"
+            id="blackfin:LE:32:BF51x">
+    <description>Analog Devices Blackfin family</description>
+    <compiler name="default" spec="blackfin.cspec" id="default"/>
+  </language>
+
+  <language processor="Blackfin"
+            endian="little"
+            size="32"
+            variant="BF548"
+            version="1.0"
+            slafile="blackfin.sla"
+            processorspec="bf548.pspec"
+            manualindexfile="../manuals/bf5xx.idx"
+            id="blackfin:LE:32:BF548">
+    <description>Analog Devices Blackfin family</description>
+    <compiler name="default" spec="blackfin.cspec" id="default"/>
+  </language>
+
+
+</language_definitions>

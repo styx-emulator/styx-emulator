@@ -1,0 +1,117 @@
+// SPDX-License-Identifier: BSD-2-Clause
+#[doc = "Register `FS_GOTGINT` reader"]
+pub type R = crate::R<FsGotgintSpec>;
+#[doc = "Register `FS_GOTGINT` writer"]
+pub type W = crate::W<FsGotgintSpec>;
+#[doc = "Field `SEDET` reader - Session end detected"]
+pub type SedetR = crate::BitReader;
+#[doc = "Field `SEDET` writer - Session end detected"]
+pub type SedetW<'a, REG> = crate::BitWriter<'a, REG>;
+#[doc = "Field `SRSSCHG` reader - Session request success status change"]
+pub type SrsschgR = crate::BitReader;
+#[doc = "Field `SRSSCHG` writer - Session request success status change"]
+pub type SrsschgW<'a, REG> = crate::BitWriter<'a, REG>;
+#[doc = "Field `HNSSCHG` reader - Host negotiation success status change"]
+pub type HnsschgR = crate::BitReader;
+#[doc = "Field `HNSSCHG` writer - Host negotiation success status change"]
+pub type HnsschgW<'a, REG> = crate::BitWriter<'a, REG>;
+#[doc = "Field `HNGDET` reader - Host negotiation detected"]
+pub type HngdetR = crate::BitReader;
+#[doc = "Field `HNGDET` writer - Host negotiation detected"]
+pub type HngdetW<'a, REG> = crate::BitWriter<'a, REG>;
+#[doc = "Field `ADTOCHG` reader - A-device timeout change"]
+pub type AdtochgR = crate::BitReader;
+#[doc = "Field `ADTOCHG` writer - A-device timeout change"]
+pub type AdtochgW<'a, REG> = crate::BitWriter<'a, REG>;
+#[doc = "Field `DBCDNE` reader - Debounce done"]
+pub type DbcdneR = crate::BitReader;
+#[doc = "Field `DBCDNE` writer - Debounce done"]
+pub type DbcdneW<'a, REG> = crate::BitWriter<'a, REG>;
+impl R {
+    #[doc = "Bit 2 - Session end detected"]
+    #[inline(always)]
+    pub fn sedet(&self) -> SedetR {
+        SedetR::new(((self.bits >> 2) & 1) != 0)
+    }
+    #[doc = "Bit 8 - Session request success status change"]
+    #[inline(always)]
+    pub fn srsschg(&self) -> SrsschgR {
+        SrsschgR::new(((self.bits >> 8) & 1) != 0)
+    }
+    #[doc = "Bit 9 - Host negotiation success status change"]
+    #[inline(always)]
+    pub fn hnsschg(&self) -> HnsschgR {
+        HnsschgR::new(((self.bits >> 9) & 1) != 0)
+    }
+    #[doc = "Bit 17 - Host negotiation detected"]
+    #[inline(always)]
+    pub fn hngdet(&self) -> HngdetR {
+        HngdetR::new(((self.bits >> 17) & 1) != 0)
+    }
+    #[doc = "Bit 18 - A-device timeout change"]
+    #[inline(always)]
+    pub fn adtochg(&self) -> AdtochgR {
+        AdtochgR::new(((self.bits >> 18) & 1) != 0)
+    }
+    #[doc = "Bit 19 - Debounce done"]
+    #[inline(always)]
+    pub fn dbcdne(&self) -> DbcdneR {
+        DbcdneR::new(((self.bits >> 19) & 1) != 0)
+    }
+}
+impl W {
+    #[doc = "Bit 2 - Session end detected"]
+    #[inline(always)]
+    #[must_use]
+    pub fn sedet(&mut self) -> SedetW<FsGotgintSpec> {
+        SedetW::new(self, 2)
+    }
+    #[doc = "Bit 8 - Session request success status change"]
+    #[inline(always)]
+    #[must_use]
+    pub fn srsschg(&mut self) -> SrsschgW<FsGotgintSpec> {
+        SrsschgW::new(self, 8)
+    }
+    #[doc = "Bit 9 - Host negotiation success status change"]
+    #[inline(always)]
+    #[must_use]
+    pub fn hnsschg(&mut self) -> HnsschgW<FsGotgintSpec> {
+        HnsschgW::new(self, 9)
+    }
+    #[doc = "Bit 17 - Host negotiation detected"]
+    #[inline(always)]
+    #[must_use]
+    pub fn hngdet(&mut self) -> HngdetW<FsGotgintSpec> {
+        HngdetW::new(self, 17)
+    }
+    #[doc = "Bit 18 - A-device timeout change"]
+    #[inline(always)]
+    #[must_use]
+    pub fn adtochg(&mut self) -> AdtochgW<FsGotgintSpec> {
+        AdtochgW::new(self, 18)
+    }
+    #[doc = "Bit 19 - Debounce done"]
+    #[inline(always)]
+    #[must_use]
+    pub fn dbcdne(&mut self) -> DbcdneW<FsGotgintSpec> {
+        DbcdneW::new(self, 19)
+    }
+}
+#[doc = "OTG_FS interrupt register (OTG_FS_GOTGINT)\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`fs_gotgint::R`](R).  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`fs_gotgint::W`](W). You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
+pub struct FsGotgintSpec;
+impl crate::RegisterSpec for FsGotgintSpec {
+    type Ux = u32;
+    const OFFSET: u64 = 4u64;
+}
+#[doc = "`read()` method returns [`fs_gotgint::R`](R) reader structure"]
+impl crate::Readable for FsGotgintSpec {}
+#[doc = "`write(|w| ..)` method takes [`fs_gotgint::W`](W) writer structure"]
+impl crate::Writable for FsGotgintSpec {
+    type Safety = crate::Unsafe;
+    const ZERO_TO_MODIFY_FIELDS_BITMAP: u32 = 0;
+    const ONE_TO_MODIFY_FIELDS_BITMAP: u32 = 0;
+}
+#[doc = "`reset()` method sets FS_GOTGINT to value 0"]
+impl crate::Resettable for FsGotgintSpec {
+    const RESET_VALUE: u32 = 0;
+}

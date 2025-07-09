@@ -1,0 +1,141 @@
+version: "3"
+
+services:
+  envoy:
+    image: envoyproxy/envoy:v1.27-latest
+    volumes:
+      - ${ENVOY_CONFIG_DIR}:/cfg
+    environment:
+      - ENVOY_CONFIG_BASENAME
+    command:
+      [
+        "envoy",
+        "-c /cfg/${ENVOY_CONFIG_BASENAME}",
+        "-l trace",
+        "--log-path /tmp/envoy_info.log"
+      ]
+
+    ports:
+      - "${ENVOY_URL_PORT}:${ENVOY_URL_PORT}"
+
+  typhunix:
+    image: ${PYTHON_IMAGE}
+    environment:
+      - RUST_LOG
+      - RUST_BACKTRACE
+      - TYPHUNIX_URL
+      - TRACE_WEBAPP_LOGDIR
+      - TYPHUNIX_HOME
+    volumes:
+      - ${TYPHUNIX_HOME}:${TYPHUNIX_HOME}
+      - ${DEPLOY_BINS_DIR}/typhunix-client:/usr/local/bin/typhunix-client
+      - ${DEPLOY_BINS_DIR}/typhunix-server:/usr/local/bin/typhunix-server
+      - ${TRACE_WEBAPP_LOGDIR}:${TRACE_WEBAPP_LOGDIR}
+    command: /usr/local/bin/typhunix-server -i
+    ports:
+      - "${TYPHUNIX_URL_PORT}:${TYPHUNIX_URL_PORT}"
+
+  webapi:
+    image: ${PYTHON_IMAGE}
+    depends_on:
+      - typhunix
+    volumes:
+      - ${DEPLOY_BINS_DIR}/traceapp-svc:/usr/local/bin/traceapp-svc
+      # trace file dir
+      - /tmp:/tmp
+      - ${CI_PROJECT_DIR}/firmware:/firmware:ro
+      - ${TRACE_WEBAPP_LOGDIR}:${TRACE_WEBAPP_LOGDIR}
+    environment:
+      - RUST_LOG
+      - RUST_BACKTRACE
+      - TRACE_EXECUTION_URL
+      - TYPHUNIX_URL
+      - TRACE_DIR
+      - TRACE_WEBAPP_LOGDIR
+      - DATABASE_URL
+      - WORKSPACE_URL
+    command: /usr/local/bin/traceapp-svc
+    ports:
+      - ${WEBAPI_URL_PORT}:${WEBAPI_URL_PORT}
+
+  workspace-svc:
+    image: ${PYTHON_IMAGE}
+    depends_on:
+      styxdb:
+        condition: service_healthy
+    volumes:
+      - ${DEPLOY_BINS_DIR}/workspace-svc:/usr/local/bin/workspace-svc
+      - ${TRACE_WEBAPP_LOGDIR}:${TRACE_WEBAPP_LOGDIR}
+    environment:
+      - RUST_LOG
+      - RUST_BACKTRACE
+      - WORKSPACE_URL
+      - TRACE_WEBAPP_LOGDIR
+      - DATABASE_URL
+      - TYPHUNIX_URL
+    command: /usr/local/bin/workspace-svc
+    ports:
+      - ${WORKSPACE_URL_PORT}:${WORKSPACE_URL_PORT}
+
+  webapp:
+    image: trace-webapp
+    build: ./docker/webapp
+    environment:
+      - TYPHUNIX_URL
+      - CI_PROJECT_DIR="/project"
+      - SERVE_ENV=docker
+    working_dir: /project/extensions/trace-webapp
+    volumes:
+      - ${CI_PROJECT_DIR}:/project
+    command:
+      - ng serve --host 0.0.0.0 --disable-host-check
+
+    ports:
+      - "${WEBAPP_URL_PORT}:${WEBAPP_URL_PORT}"
+
+  emulation-registry-service:
+    image: ${PYTHON_IMAGE}
+
+    volumes:
+      - ${DEPLOY_BINS_DIR}/emuregsvc-svc:/usr/local/bin/emuregsvc-svc
+      - ${DEPLOY_BINS_DIR}/emusvc-svc:/usr/local/bin/emusvc-svc
+      # paths to target programs
+      - ${CI_PROJECT_DIR}/firmware:/firmware:ro
+      # trace file dir
+      - /tmp:/tmp
+      - ${TRACE_WEBAPP_LOGDIR}:${TRACE_WEBAPP_LOGDIR}
+
+    environment:
+      - RUST_LOG
+      - RUST_BACKTRACE
+      - TYPHUNIX_URL
+      - TRACE_DIR
+      - TRACE_WEBAPP_LOGDIR
+
+    command: /usr/local/bin/emuregsvc-svc
+    ports:
+      - ${TRACE_EXECUTION_URL_PORT}:${TRACE_EXECUTION_URL_PORT}
+
+  styxdb:
+    image: postgres
+    restart: always
+    environment:
+      - POSTGRES_PASSWORD
+      - PGUSER
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - ${POSTGRES_PORT}:${POSTGRES_PORT}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 1s
+      timeout: 5s
+      retries: 10
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - ${POSTGRES_ADMIN_PORT}:${POSTGRES_ADMIN_PORT}
+
+volumes:
+  pgdata:

@@ -1,0 +1,233 @@
+/************************************************************************
+ *
+ * complex
+ *
+ * (c) Copyright 1999-2005 Analog Devices, Inc.  All rights reserved.
+ * $Revision: 1.9 $
+ ************************************************************************/
+
+/* Template support for complex operations. */
+
+#pragma once
+#ifndef __NO_BUILTIN
+#pragma system_header /* complex */
+#endif
+
+#include <xstddef>
+
+#ifndef __COMPLEX_DEFINED
+#define __COMPLEX_DEFINED
+
+#ifndef __cplusplus
+ #error This file only valid in C++
+#endif
+
+_STD_BEGIN
+extern "C++" {
+
+  template<class C> class complex {
+  private:
+    C _real;
+    C _imag;
+  public:
+    //------------------------------------------------------------
+    // Construct an empty complex object
+    //------------------------------------------------------------
+    complex () {}
+
+    //------------------------------------------------------------
+    // Construct a complex object (real, imag) --> {real, imag}
+    //------------------------------------------------------------
+    complex (C _re, C _im) : _real(_re), _imag(_im) {}
+
+    //------------------------------------------------------------
+    // Construct a complex object ( complex<C> ) --> {real, imag}
+    //------------------------------------------------------------
+    complex (const complex<C> &_c) : _real(_c._real), _imag(_c._imag) {}
+
+    //------------------------------------------------------------
+    // Return real part of complex number
+    //------------------------------------------------------------
+    C real() const { return _real; }
+
+    //------------------------------------------------------------
+    // Return imaginary part of complex number
+    //------------------------------------------------------------
+    C imag() const { return _imag; }
+
+    //------------------------------------------------------------
+    // Add 2 complex numbers: {A, B} + {X, Y} --> {A+X, B+Y}
+    //------------------------------------------------------------
+    complex operator + (const complex _s) const
+    {
+      return complex(_real + _s._real, _imag + _s._imag);
+    }
+
+    complex& operator +=(const complex _s)
+    {
+      *this = *this + _s;
+      return *this;
+    }
+
+    //------------------------------------------------------------
+    // Subtract 2 complex numbers: {A, B} - {X, Y} --> {A-X, B-Y}
+    //------------------------------------------------------------
+    complex operator - (const complex _s) const
+    {
+      return complex(_real - _s._real, _imag - _s._imag);
+    }
+
+    complex& operator -=(const complex _s)
+    {
+      *this = *this - _s;
+      return *this;
+    }
+
+    //------------------------------------------------------------
+    // Multiply 2 complex numbers:
+    //       {A, B} * {X, Y} --> {A*X - B+Y, A*Y + B*X}
+    //------------------------------------------------------------
+    complex operator * (const complex _s) const
+    {
+      return complex(_real * _s._real - _imag * _s._imag,
+                     _real * _s._imag + _imag * _s._real);
+    }
+
+    complex& operator *=(const complex _s)
+    {
+      *this = *this * _s;
+      return *this;
+    }
+
+    //------------------------------------------------------------
+    // Divide 2 complex numbers:
+    //       {A, B} / {X, Y} --> {(A*X+B*Y)/(X*X+Y*Y),(X*B-A*Y)/(X*X+Y*Y)}
+    //------------------------------------------------------------
+    complex operator / (const complex _s) const
+    {
+      C temp = _s._real * _s._real + _s._imag * _s._imag;
+      if( !temp )
+        return complex(0,0);
+
+      return complex
+               ( (_real * _s._real + _imag * _s._imag) / temp,
+                 (_imag * _s._real - _real * _s._imag) / temp );
+    }
+
+    complex& operator /=(const complex _s)
+    {
+      *this = *this / _s;
+      return *this;
+    }
+
+    //------------------------------------------------------------
+    // Negate a complex number: -{A, B} --> {-A, -B}
+    //------------------------------------------------------------
+    complex operator -()
+    {
+      return complex(-_real, -_imag);
+    }
+
+    //------------------------------------------------------------
+    // Boolean == comparison
+    //------------------------------------------------------------
+    bool operator == (const complex _s) const
+    {
+      return((_real == _s._real) && (_imag == _s._imag));
+    }
+
+    //------------------------------------------------------------
+    // Boolean != comparison
+    //------------------------------------------------------------
+    bool operator != (const complex _s) const
+    {
+      return !(*this == _s);
+    }
+
+    //------------------------------------------------------------
+    // Complex conjugate
+    //------------------------------------------------------------
+    complex conj()
+    {
+      return complex (_real, -_imag);
+    }
+
+    //------------------------------------------------------------
+    // Scale up complex
+    //------------------------------------------------------------
+    complex operator *(C _scale)
+    {
+      return complex(_real * _scale, _imag * _scale);
+    }
+
+    //------------------------------------------------------------
+    // Scale down complex
+    //------------------------------------------------------------
+    complex operator /(C _scale)
+    {
+      return complex(_real / _scale, _imag / _scale);
+    }
+
+  };
+}
+
+#if !defined(__ADSP21XX__)
+#  if defined(__ADSPBLACKFIN__)
+  typedef complex<float>    Complex_float;
+#  else
+  typedef complex<float>    complex_float;
+#  endif
+#endif
+
+#ifdef __ADSPTS__
+  typedef complex<long double>  complex_long_double;
+
+  #ifdef __DOUBLES_ARE_FLOATS__  /*32-bit doubles*/
+    #define  complex_double  complex_float
+  #else  /*64-bit doubles*/
+    #define  complex_double  complex_long_double
+  #endif
+#endif
+
+
+#if !defined(__ADSP21XX__) && !defined(__ADSPBLACKFIN__)
+/* Library functions */
+
+  float  cabsf(complex_float _s);
+
+  float  argf(complex_float _s);
+
+  complex_float  cexpf(float _a);
+  complex_float  cexpf(complex_float _s);
+
+  complex_float  normf(complex_float _s);
+
+  complex_float  polarf(float _mag, float _phase);
+
+#ifdef __ADSPTS__
+  long double cabsd(complex_long_double _s);
+  long double argd(complex_long_double _s);
+  complex_long_double cexpd(long double _a);
+  complex_long_double cexpd(complex_long_double _s);
+  complex_long_double normd(complex_long_double _s);
+  complex_long_double polard(long double _mag, long double _phase);
+
+  #ifdef __DOUBLES_ARE_FLOATS__  /*32-bit doubles*/
+    #define  cabs  cabsf
+    #define  arg   argf
+    #define  cexp  cexpf
+    #define  norm  normf
+    #define  polar polarf
+  #else  /*64-bit doubles*/
+    #define  cabs  cabsd
+    #define  arg   argd
+    #define  cexp  cexpd
+    #define  norm  normd
+    #define  polar polard
+  #endif
+#endif
+
+#endif /*__ADSP21XX__ && __ADSPBLACKFIN__ */
+
+_STD_END
+#endif /* __COMPLEX_DEFINED */

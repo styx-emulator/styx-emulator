@@ -1,0 +1,42 @@
+[package]
+name = "styx-cpu"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[features]
+default = [
+  "arch_arm",
+  "arch_aarch64",
+  "arch_bfin",
+  "arch_m32r",
+  "arch_mips64",
+  "arch_ppc",
+  "arch_superh",
+]
+arch_arm = ["styx-cpu-pcode-backend/arch_arm"]
+arch_aarch64 = ["styx-cpu-pcode-backend/arch_aarch64"]
+arch_bfin = ["styx-cpu-pcode-backend/arch_bfin"]
+arch_m32r = ["styx-cpu-pcode-backend/arch_m32r"]
+arch_mips64 = ["styx-cpu-pcode-backend/arch_mips64"]
+arch_ppc = ["styx-cpu-pcode-backend/arch_ppc"]
+arch_superh = ["styx-cpu-pcode-backend/arch_superh"]
+
+[lints]
+workspace = true
+
+[dependencies]
+styx-memory = { path = "../styx-memory" }
+styx-sync = { path = "../styx-sync" }
+styx-errors = { path = "../styx-errors" }
+styx-cpu-type = { path = "../styx-cpu-type" }
+styx-cpu-unicorn-backend = { path = "../styx-cpu-unicorn-backend" }
+styx-cpu-pcode-backend = { path = "../styx-cpu-pcode-backend" }
+styx-workspace-hack = { version = "0.1", path = "../../workspace-hack" }
+derivative = { workspace = true }
+
+[dev-dependencies]
+keystone-engine = { workspace = true }
+styx-processor = { path = "../styx-processor" }
+styx-util = { path = "../styx-util" }
+test-case = { workspace = true }

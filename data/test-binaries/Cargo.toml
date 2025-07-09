@@ -1,0 +1,16 @@
+[package]
+name = "styx-test-binaries"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+
+[dependencies]
+styx-blackfin-testdata = { path = "./styx-blackfin-testdata" }
+styx-workspace-hack = { version = "0.1", path = "../../styx/workspace-hack" }
+
+[package.metadata.cargo-udeps.ignore]
+normal = ["styx-blackfin-testdata"]

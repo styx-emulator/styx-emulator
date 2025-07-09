@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package styx.svc.processor_plugin;
+
+option java_multiple_files = true;
+
+message PluginID {
+    uint64 uuid = 1;
+}
+
+message PluginDescriptor {
+    PluginID plugin_id = 1;
+    string name = 2;
+    string description = 3;
+    int32 version = 4;
+}
+
+enum PluginStatus {
+    RUNNING = 0;
+    STOPPED = 1;
+    ERROR = 2;
+}
+
+service ProcessorPluginService {
+    rpc PluginStatus(PluginStatusRequest) returns (PluginStatusResponse) {}
+}
+
+service ProcessorPluginMetadataService {
+    rpc AvailablePlugins(AvailablePluginsRequest) returns (AvailablePluginsResponse) {}
+}
+
+message PluginStatusRequest {
+    PluginID plugin_id = 1;
+    string name = 2;
+}
+
+message PluginStatusResponse {
+    PluginStatus status = 1;
+    string message = 2;
+}
+
+message AvailablePluginsRequest {}
+
+message AvailablePluginsResponse {
+    repeated string names = 1;
+}

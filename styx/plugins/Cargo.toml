@@ -1,0 +1,23 @@
+[package]
+name = "styx-plugins"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+styx-debug-tools = { path = "./styx-debug-tools" }
+styx-fuzzer = { path = "./styx-fuzzer" }
+styx-gdbserver = { path = "./styx-gdbserver" }
+styx-trace-plugin = { path = "./styx-trace-plugin" }
+tracing-plugins = { path = "./tracing-plugins" }
+styx-workspace-hack = { version = "0.1", path = "../workspace-hack" }
+
+[features]
+default = []
+tracy = ["tracing-plugins/tracy"]
+tui = ["styx-fuzzer/tui"]

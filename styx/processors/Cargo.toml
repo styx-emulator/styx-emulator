@@ -1,0 +1,26 @@
+[package]
+name = "styx-processors"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+styx-stm32f107-processor = { path = "./arm/styx-stm32f107-processor" }
+styx-stm32f405-processor = { path = "./arm/styx-stm32f405-processor" }
+styx-kinetis21-processor = { path = "./arm/styx-kinetis21-processor" }
+styx-cyclonev-processor = { path = "./arm/styx-cyclonev-processor" }
+styx-powerquicci-processor = { path = "./ppc/styx-powerquicci-processor" }
+styx-ppc4xx-processor = { path = "./ppc/styx-ppc4xx-processor" }
+styx-blackfin-processor = { path = "./bfin/styx-blackfin-processor" }
+styx-superh2a-processor = { path = "./superh/styx-superh2a-processor" }
+styx-core = { workspace = true }
+styx-event-controllers = { path = "../event-controllers" }
+styx-workspace-hack = { version = "0.1", path = "../workspace-hack" }
+
+thiserror = { workspace = true }
+tokio = { workspace = true }

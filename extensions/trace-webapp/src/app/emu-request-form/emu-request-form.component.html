@@ -1,0 +1,272 @@
+<mat-label class="request-param-block-title"> Supported CPUs </mat-label>
+<div class="request-params-container">
+  <mat-radio-group after [(ngModel)]="targetModel">
+    <mat-radio-button
+      *ngFor="let tcm of this.targetChoiceModels"
+      enabled
+      class="xsmall-font"
+      [value]="tcm"
+      (change)="onTargetChange($event)"
+    >
+      {{ tcm }}
+    </mat-radio-button>
+  </mat-radio-group>
+</div>
+
+<div *ngIf="targetModel != undefined">
+  <!-- Ghidra program (firmware)selection -->
+  <mat-label class="request-param-block-title">
+    Ghidra Program / Firmware Selection
+  </mat-label>
+
+  <div class="request-params-container">
+    <mat-radio-group
+      *ngFor="let p of targetModel.ghidraPrograms; let i = index"
+      after
+      [(ngModel)]="targetModel.selectedGhidraProgram"
+    >
+      <mat-radio-button
+        class="xsmall-font"
+        [matTooltip]="programToolTip(p)"
+        [value]="p"
+        [checked]="p == targetModel.selectedGhidraProgram"
+      >
+        {{ getProgramLabel(p) }}
+      </mat-radio-button>
+
+      <mat-form-field class="firmware-choice">
+        <mat-select [(ngModel)]="targetModel.selectedFirmwarePath">
+          <mat-option
+            [value]="targetModel.selectedFirmwarePath"
+            *ngFor="let fw of targetModel.firmwares"
+            >{{ fw }}
+          </mat-option>
+        </mat-select>
+      </mat-form-field>
+    </mat-radio-group>
+  </div>
+</div>
+
+<div *ngIf="targetModel?.selectedGhidraProgram">
+  <mat-label class="request-param-block-title">Trace Mode</mat-label>
+  <div *ngIf="targetModel != undefined" class="request-params-container">
+    <mat-radio-group after [(ngModel)]="traceMode">
+      <!-- Run Emulation -->
+      <mat-radio-button enabled class="xsmall-font" [value]="EMULATED">
+        Run Emulation
+      </mat-radio-button>
+      <mat-divider></mat-divider>
+
+      <!-- Raw trace file -->
+      <mat-radio-button class="xsmall-font" [value]="RAW">
+        Raw trace file:
+      </mat-radio-button>
+
+      <mat-form-field
+        *ngIf="traceMode.isRaw && !waitForTraceFile"
+        class="remote-filename"
+        appearance="outline"
+        hintLabel="This is a full path on the emulation GRPC service host"
+      >
+        <mat-label>Remote File Name</mat-label>
+        <input
+          matInput
+          [(ngModel)]="traceFilename"
+          [value]="traceFilename"
+          placeholder="path"
+        />
+      </mat-form-field>
+
+      <mat-checkbox
+        *ngIf="traceMode.isRaw"
+        class="remote-filename"
+        [(ngModel)]="waitForTraceFile"
+        checked="false"
+        enabled
+        [checked]="waitForTraceFile"
+      >
+        Wait for raw in folder:
+      </mat-checkbox>
+
+      <mat-form-field
+        *ngIf="waitForTraceFile"
+        class="remote-filename"
+        appearance="outline"
+        hintLabel="Path on GRPC service host"
+      >
+        <mat-label>Trace Directory</mat-label>
+        <input
+          matInput
+          [(ngModel)]="traceDirectory"
+          [value]="traceDirectory"
+          placeholder="path"
+        />
+      </mat-form-field>
+      <mat-divider></mat-divider>
+
+      <!-- SRB File: not currently supported  -->
+      <mat-radio-button
+        *ngIf="false"
+        disabled
+        class="xsmall-font"
+        [value]="SRB"
+      >
+        SRB event file location:
+      </mat-radio-button>
+      <mat-form-field
+        *ngIf="traceMode.isSrb"
+        class="remote-filename"
+        appearance="outline"
+        hintLabel="Path on GRPC service host"
+      >
+        <mat-label>Trace Directory</mat-label>
+        <input
+          matInput
+          [(ngModel)]="traceDirectory"
+          [value]="traceDirectory"
+          placeholder="path"
+        />
+      </mat-form-field>
+      <mat-divider></mat-divider>
+    </mat-radio-group>
+  </div>
+</div>
+
+<div *ngIf="targetModel?.selectedGhidraProgram">
+  <mat-label class="request-param-block-title"
+    >Trace Plugin Parameters</mat-label
+  >
+  <div class="request-params-container pad20">
+    <mat-checkbox
+      class="pad20"
+      [(ngModel)]="this.tracePluginArgsModel.insnEvent"
+      checked="this.tracePluginArgsModel.insnEvent"
+      [checked]="this.tracePluginArgsModel.insnEvent"
+    >
+      Enable Instruction Events
+    </mat-checkbox>
+
+    <mat-checkbox
+      class="pad20"
+      [(ngModel)]="this.tracePluginArgsModel.interruptEvent"
+      checked="this.tracePluginArgsModel.interruptEvent"
+      enabled
+      [checked]="this.tracePluginArgsModel.interruptEvent"
+    >
+      Enable ISRs Events
+    </mat-checkbox>
+
+    <mat-checkbox
+      class="pad20"
+      [(ngModel)]="this.tracePluginArgsModel.writeMemoryEvent"
+      checked="this.tracePluginArgsModel.writeMemoryEvent"
+      enabled
+      [checked]="this.tracePluginArgsModel.writeMemoryEvent"
+    >
+      Enable Memory Write Events
+    </mat-checkbox>
+
+    <mat-checkbox
+      class="pad20"
+      [(ngModel)]="this.tracePluginArgsModel.readMemoryEvent"
+      checked="this.tracePluginArgsModel.readMemoryEvent"
+      disabled="true"
+      [checked]="this.tracePluginArgsModel.readMemoryEvent"
+    >
+      Enable Memory Read Events (too slow atm)
+    </mat-checkbox>
+  </div>
+</div>
+
+<!-- ====================================== -->
+
+<div *ngIf="targetModel?.selectedGhidraProgram">
+  <mat-label class="request-param-block-title">Symbol Options</mat-label>
+  <div class="request-params-container pad20">
+    <mat-form-field
+      class="regex-field"
+      appearance="outline"
+      hintLabel="Regular Expression to match Symbol names"
+    >
+      <mat-label>Regular Expression</mat-label>
+      <input
+        matInput
+        [(ngModel)]="this.symbolOptionsModel.regexInclude"
+        [value]="this.symbolOptionsModel.regexInclude"
+        placeholder="regex to match symbol names"
+      />
+    </mat-form-field>
+    <div>
+      <mat-checkbox
+        class="pad20"
+        [(ngModel)]="this.symbolOptionsModel.memWrites"
+        checked="this.symbolOptionsModel.memWrites"
+        [checked]="this.symbolOptionsModel.memWrites"
+      >
+        Memory Change Events
+      </mat-checkbox>
+      <mat-checkbox
+        class="pad20"
+        [(ngModel)]="this.symbolOptionsModel.anonWrites"
+        checked="this.symbolOptionsModel.anonWrites"
+        [checked]="this.symbolOptionsModel.anonWrites"
+      >
+        Anonymous Memory Change Events
+      </mat-checkbox>
+
+      <mat-checkbox
+        class="pad20"
+        [(ngModel)]="this.symbolOptionsModel.memReads"
+        checked="this.symbolOptionsModel.memReads"
+        [checked]="this.symbolOptionsModel.memReads"
+      >
+        Memory Read Events (slow!)
+      </mat-checkbox>
+      <mat-checkbox
+        class="pad20"
+        [(ngModel)]="this.symbolOptionsModel.anonReads"
+        checked="this.symbolOptionsModel.anonReads"
+        [checked]="this.symbolOptionsModel.anonReads"
+      >
+        Anonymous Memory Read Events (slow!)
+      </mat-checkbox>
+    </div>
+  </div>
+</div>
+
+<!-- --------------------------------------------- -->
+<mat-label *ngIf="!targetModel" class="hinttext"> Select a target </mat-label>
+
+<mat-label
+  *ngIf="targetModel && !targetModel.selectedGhidraProgram"
+  class="errors"
+>
+  Must select a Ghidra program.
+</mat-label>
+
+<!-- <mat-label
+  *ngIf="traceMode.isEmulation && !targetModel.selectedFirmwarePath"
+  class="errors">
+  Must select a firmware path.
+</mat-label> -->
+
+<div>
+  @for (alert of alerts; track alert) {
+    <ngb-alert [type]="alert.type" (closed)="close(alert)">{{
+      alert.message
+    }}</ngb-alert>
+  }
+
+  <button
+    mat-raised-button
+    color="primary"
+    (click)="save()"
+    [disabled]="!validateRequest()"
+  >
+    Save
+  </button>
+
+  <button mat-raised-button color="secondary" (click)="onCancel()">
+    Cancel
+  </button>
+</div>

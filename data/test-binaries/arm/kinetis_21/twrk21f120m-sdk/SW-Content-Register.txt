@@ -1,0 +1,156 @@
+Release Name: MCUXpresso Software Development Kit (SDK)
+Release Version: 2.3.1
+
+AwsRemoteControl           Location: boards/<board>/aws_examples/remote_contr
+                           ol_android/AwsRemoteControl.apk
+                           Description: AWS Remote Control example Android
+                           application
+                           License: Apache-2-Clause & BSD
+                           Author: Android Open Source Project & NXP
+                           name: AWS Remote Control
+                           version: 1.1
+                           Format: binary
+
+CMSIS Core header files    Author: ARM
+                           parentversion: 5.0.1
+                           URL: http://silver.arm.com
+                           name: CMSIS Core header files
+                           Format: source code
+                           License: Apache License 2.0, See
+                           <rootfolder>/CMSIS/LICENSE.txt
+                           Location: CMSIS/Include
+                           version: 5.0.1 (CMSIS Download 5.0.1)
+                           Description: Industry-standard header files
+                           distributes by ARM for cortex-M cores
+
+CMSIS DSP Library          name: CMSIS DSP Library
+                           Format: source code
+                           License: Apache License 2.0, See
+                           <rootfolder>/CMSIS/LICENSE.txt
+                           parentversion: 5.0.1
+                           Author: ARM
+                           version: 5.0.1 (CMSIS download 5.0.1)
+                           URL: http://silver.arm.com
+                           Location: CMSIS/DSP_Lib
+                           Description: A digital signal processing library
+                           for Cortex-M cores from ARM
+
+DMA Manager                Format: source code
+                           Location: middleware/dma_manager
+                           Description: A software component used for manage
+                           on-chip DMA channel resources.
+                           name: DMA Manager
+                           License: Open Source - BSD-3-Clause Clear
+                           version: 2.1.0
+                           Author: Freescale
+
+EMV L1 stack               Author: Freescale
+                           Description: The EMV (Europay-MasterCard-Visa) L1
+                           stack which complies to EMV_v4.3_Book_1
+                           specification.
+                           Format: source code
+                           License: Open Source - BSD-3-Clause Clear
+                           Location: middleware/emv
+                           name: EMV L1 stack
+                           version: 2.1.0
+
+FatFs                      Approved Open Source License: Yes
+                           Author: Electronic Lives Mfg. by ChaN of Ageo
+                           city, Japan (hobbyist)
+                           Description: FatFs is a generic FAT file system
+                           module for small embedded systems.
+                           Format: source code
+                           License: Open Source - FatFs License,
+                           <rootfolder>/middleware/fatfs/doc/en/appnote.html
+                           Location: middleware/fatfs
+                           name: FatFs
+                           URL: http://elm-chan.org/fsw/ff/00index_e.html
+                           version: 0.12c
+
+FreeRTOS(tm)               Author: Real Time Engineers, Ltd.
+                           Description: A real-time operating system(RTOS)
+                           from Real Time Engineers, Ltd.
+                           Format: source code
+                           License: Modified GPLv2. See
+                           ,<rootfolder>/rtos/freertos/License/license.txt.
+                           Location: rtos/freertos
+                           name: FreeRTOS(tm)
+                           URL: http://www.freertos.org
+                           version: 9.0.0
+
+KSDK Peripheral Driver     Description: Peripheral drivers are designed for
+                           the most common use cases indentified for
+                           the underlying hardware block.
+                           Author: Freescale
+                           Version: 2.x.x
+                           License: Open Source - BSD-3-Clause Clear
+                           Format: source code
+                           Location: devices/<device_name>/drivers
+
+MBED TLS stack             Author: ARM
+                           Description: Cryptographic and SSL/TLS Library
+                           Format: source code
+                           License: Apache-2-Clause
+                           Location: middleware/mbedtls
+                           name: MBED TLS stack
+                           URL: https://tls.mbed.org/
+                           version: 2.6.0
+
+Percepio Tracealyzer -     version: 3.0.9
+Snapshot Demo              Location: boards/<board>/rtos_examples/visualizati
+                           on/freertos_percepio_snapshot
+                           Description: Percepio Tracealyzer
+                           License: Open Source - BSD-3-Clause
+                           Author: Percepio
+                           name: Percepio Tracealyzer - Snapshot Demo
+                           Format: source code
+
+SD MMC Card middleware     name: SD MMC Card middleware
+                           Location: middleware/sdmmc
+                           License: Open Source - BSD-3-Clause Clear
+                           Description: A software component support SD card,
+                           eMMC card.
+                           Author: Freescale
+                           version: 2.1.2
+                           Format: source code
+
+Segger SystemView Demo     version: 2.40a
+                           Location: boards/<board>/rtos_examples/visualizati
+                           on/freertos_segger_sysview
+                           Description: Segger systemview demo
+                           License: Open Source - BSD-3-Clause
+                           Author: Segger
+                           name: Segger SystemView Demo
+                           Format: source code
+
+USB                        version: 1.6.3
+                           Location: middleware/usb
+                           Description: Freescale USB stack. This is a
+                           version of the USB stack that has been integrated
+                           with the MCUXpresso SDK.
+                           License: Open Source - BSD-3-Clause Clear
+                           Author: Freescale
+                           name: USB
+                           Format: source code
+
+mmCAU S/W Library          Author: Freescale
+                           Description: S/W library that works with the
+                           memory-mapped cryptographic acceleration unit
+                           present on some MCUXpresso SoCs
+                           Format: source code
+                           License: Open Source - BSD-3-Clause Clear
+                           Location: middleware/mmcau
+                           name: mmCAU S/W Library
+                           version: 2.0.1
+
+wolfSSL                    Author: wolfSSL Inc.
+                           Description: wolfSSL is cryptography and SSL/TLS
+                           library
+                           Format: source code
+                           License: 3rd party evaluation. See <rootfolder>/mi
+                           ddleware/wolfssl/wolfSSL_cyaSSL_evaluation_license
+                           _agreement.pdf
+                           Location: middleware/wolfssl
+                           name: wolfSSL
+                           URL: https://www.wolfssl.com
+                           version: 3.9.8

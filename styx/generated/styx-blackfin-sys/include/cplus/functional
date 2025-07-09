@@ -1,0 +1,890 @@
+// functional standard header
+#if defined (_ADI_COMPILER)
+/************************************************************************
+ *
+ * functional
+ *
+ * (c) Copyright 2001-2009 Analog Devices, Inc.  All rights reserved.
+ * (c) Copyright 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * $Revision: 1.4 $
+ ************************************************************************/
+
+#pragma once
+#ifndef __NO_BUILTIN
+#pragma system_header /* functional */
+#endif
+#endif /* _ADI_COMPILER */
+
+#ifndef _FUNCTIONAL_
+#define _FUNCTIONAL_
+#include <cstdlib>
+#include <xstring>
+
+_STD_BEGIN
+
+		// TEMPLATE STRUCT unary_function
+template<class _Arg,
+	class _Result>
+	struct unary_function
+	{	// base class for unary functions
+	typedef _Arg argument_type;
+	typedef _Result result_type;
+	};
+
+		// TEMPLATE STRUCT binary_function
+template<class _Arg1,
+	class _Arg2,
+	class _Result>
+	struct binary_function
+	{	// base class for binary functions
+	typedef _Arg1 first_argument_type;
+	typedef _Arg2 second_argument_type;
+	typedef _Result result_type;
+	};
+
+		// TEMPLATE STRUCT plus
+template<class _Ty>
+	struct plus
+		: public binary_function<_Ty, _Ty, _Ty>
+	{	// functor for operator+
+	_Ty operator()(const _Ty& _Left, const _Ty& _Right) const
+		{	// apply operator+ to operands
+		return (_Left + _Right);
+		}
+	};
+
+		// TEMPLATE STRUCT minus
+template<class _Ty>
+	struct minus
+		: public binary_function<_Ty, _Ty, _Ty>
+	{	// functor for operator-
+	_Ty operator()(const _Ty& _Left, const _Ty& _Right) const
+		{	// apply operator- to operands
+		return (_Left - _Right);
+		}
+	};
+
+		// TEMPLATE STRUCT multiplies
+template<class _Ty>
+	struct multiplies
+		: public binary_function<_Ty, _Ty, _Ty>
+	{	// functor for operator*
+	_Ty operator()(const _Ty& _Left, const _Ty& _Right) const
+		{	// apply operator* to operands
+		return (_Left * _Right);
+		}
+	};
+
+		// TEMPLATE STRUCT divides
+template<class _Ty>
+	struct divides
+		: public binary_function<_Ty, _Ty, _Ty>
+	{	// functor for operator/
+	_Ty operator()(const _Ty& _Left, const _Ty& _Right) const
+		{	// apply operator/ to operands
+		return (_Left / _Right);
+		}
+	};
+
+		// TEMPLATE STRUCT modulus
+template<class _Ty>
+	struct modulus
+		: public binary_function<_Ty, _Ty, _Ty>
+	{	// functor for operator%
+	_Ty operator()(const _Ty& _Left, const _Ty& _Right) const
+		{	// apply operator% to operands
+		return (_Left % _Right);
+		}
+	};
+
+		// TEMPLATE STRUCT negate
+template<class _Ty>
+	struct negate
+		: public unary_function<_Ty, _Ty>
+	{	// functor for unary operator-
+	_Ty operator()(const _Ty& _Left) const
+		{	// apply operator- to operand
+		return (-_Left);
+		}
+	};
+
+		// TEMPLATE STRUCT equal_to
+template<class _Ty>
+	struct equal_to
+		: public binary_function<_Ty, _Ty, bool>
+	{	// functor for operator==
+	bool operator()(const _Ty& _Left, const _Ty& _Right) const
+		{	// apply operator== to operands
+		return (_Left == _Right);
+		}
+	};
+
+		// TEMPLATE STRUCT not_equal_to
+template<class _Ty>
+	struct not_equal_to
+		: public binary_function<_Ty, _Ty, bool>
+	{	// functor for operator!=
+	bool operator()(const _Ty& _Left, const _Ty& _Right) const
+		{	// apply operator!= to operands
+		return (_Left != _Right);
+		}
+	};
+
+		// TEMPLATE STRUCT greater
+template<class _Ty>
+	struct greater
+		: public binary_function<_Ty, _Ty, bool>
+	{	// functor for operator>
+	bool operator()(const _Ty& _Left, const _Ty& _Right) const
+		{	// apply operator> to operands
+		return (_Left > _Right);
+		}
+	};
+
+		// TEMPLATE STRUCT less
+template<class _Ty>
+	struct less
+		: public binary_function<_Ty, _Ty, bool>
+	{	// functor for operator<
+	bool operator()(const _Ty& _Left, const _Ty& _Right) const
+		{	// apply operator< to operands
+		return (_Left < _Right);
+		}
+	};
+
+		// TEMPLATE STRUCT greater_equal
+template<class _Ty>
+	struct greater_equal
+		: public binary_function<_Ty, _Ty, bool>
+	{	// functor for operator>=
+	bool operator()(const _Ty& _Left, const _Ty& _Right) const
+		{	// apply operator>= to operands
+		return (_Left >= _Right);
+		}
+	};
+
+		// TEMPLATE STRUCT less_equal
+template<class _Ty>
+	struct less_equal
+		: public binary_function<_Ty, _Ty, bool>
+	{	// functor for operator<=
+	bool operator()(const _Ty& _Left, const _Ty& _Right) const
+		{	// apply operator<= to operands
+		return (_Left <= _Right);
+		}
+	};
+
+		// TEMPLATE STRUCT logical_and
+template<class _Ty>
+	struct logical_and
+		: public binary_function<_Ty, _Ty, bool>
+	{	// functor for operator&&
+	bool operator()(const _Ty& _Left, const _Ty& _Right) const
+		{	// apply operator&& to operands
+		return (_Left && _Right);
+		}
+	};
+
+		// TEMPLATE STRUCT logical_or
+template<class _Ty>
+	struct logical_or
+		: public binary_function<_Ty, _Ty, bool>
+	{	// functor for operator||
+	bool operator()(const _Ty& _Left, const _Ty& _Right) const
+		{	// apply operator|| to operands
+		return (_Left || _Right);
+		}
+	};
+
+		// TEMPLATE STRUCT logical_not
+template<class _Ty>
+	struct logical_not
+		: public unary_function<_Ty, bool>
+	{	// functor for unary operator!
+	bool operator()(const _Ty& _Left) const
+		{	// apply operator! to operand
+		return (!_Left);
+		}
+	};
+
+		// TEMPLATE CLASS unary_negate
+template<class _Fn1>
+	class unary_negate
+	: public unary_function<typename _Fn1::argument_type, bool>
+	{	// functor adapter !_Func(left)
+public:
+	explicit unary_negate(const _Fn1& _Func)
+		: _Functor(_Func)
+		{	// construct from functor
+		}
+
+	bool operator()(const typename _Fn1::argument_type& _Left) const
+		{	// apply functor to operand
+		return (!_Functor(_Left));
+		}
+
+protected:
+	_Fn1 _Functor;	// the functor to apply
+	};
+
+		// TEMPLATE FUNCTION not1
+template<class _Fn1> inline
+	unary_negate<_Fn1> not1(const _Fn1& _Func)
+	{	// return a unary_negate functor adapter
+	return (_STD unary_negate<_Fn1>(_Func));
+	}
+
+		// TEMPLATE CLASS binary_negate
+template<class _Fn2>
+	class binary_negate
+		: public binary_function<typename _Fn2::first_argument_type,
+			typename _Fn2::second_argument_type, bool>
+	{	// functor adapter !_Func(left, right)
+public:
+	explicit binary_negate(const _Fn2& _Func)
+		: _Functor(_Func)
+		{	// construct from functor
+		}
+
+	bool operator()(const typename _Fn2::first_argument_type& _Left,
+		const typename _Fn2::second_argument_type& _Right) const
+		{	// apply functor to operands
+		return (!_Functor(_Left, _Right));
+		}
+
+protected:
+	_Fn2 _Functor;	// the functor to apply
+	};
+
+		// TEMPLATE FUNCTION not2
+template<class _Fn2> inline
+	binary_negate<_Fn2> not2(const _Fn2& _Func)
+	{	// return a binary_negate functor adapter
+	return (_STD binary_negate<_Fn2>(_Func));
+	}
+
+		// TEMPLATE CLASS binder1st
+template<class _Fn2>
+	class binder1st
+		: public unary_function<typename _Fn2::second_argument_type,
+			typename _Fn2::result_type>
+	{	// functor adapter _Func(stored, right)
+public:
+	typedef unary_function<typename _Fn2::second_argument_type,
+		typename _Fn2::result_type> _Base;
+	typedef typename _Base::argument_type argument_type;
+	typedef typename _Base::result_type result_type;
+
+	binder1st(const _Fn2& _Func,
+		const typename _Fn2::first_argument_type& _Left)
+		: op(_Func), value(_Left)
+		{	// construct from functor and left operand
+		}
+
+	result_type operator()(const argument_type& _Right) const
+		{	// apply functor to operands
+		return (op(value, _Right));
+		}
+
+	result_type operator()(argument_type& _Right) const
+		{	// apply functor to operands
+		return (op(value, _Right));
+		}
+
+protected:
+	_Fn2 op;	// the functor to apply
+	typename _Fn2::first_argument_type value;	// the left operand
+	};
+
+		// TEMPLATE FUNCTION bind1st
+template<class _Fn2,
+	class _Ty> inline
+	binder1st<_Fn2> bind1st(const _Fn2& _Func, const _Ty& _Left)
+		{	// return a binder1st functor adapter
+		typename _Fn2::first_argument_type _Val(_Left);
+		return (_STD binder1st<_Fn2>(_Func, _Val));
+		}
+
+		// TEMPLATE CLASS binder2nd
+template<class _Fn2>
+	class binder2nd
+		: public unary_function<typename _Fn2::first_argument_type,
+			typename _Fn2::result_type>
+	{	// functor adapter _Func(left, stored)
+public:
+	typedef unary_function<typename _Fn2::first_argument_type,
+		typename _Fn2::result_type> _Base;
+	typedef typename _Base::argument_type argument_type;
+	typedef typename _Base::result_type result_type;
+
+	binder2nd(const _Fn2& _Func,
+		const typename _Fn2::second_argument_type& _Right)
+		: op(_Func), value(_Right)
+		{	// construct from functor and right operand
+		}
+
+	result_type operator()(const argument_type& _Left) const
+		{	// apply functor to operands
+		return (op(_Left, value));
+		}
+
+	result_type operator()(argument_type& _Left) const
+		{	// apply functor to operands
+		return (op(_Left, value));
+		}
+
+protected:
+	_Fn2 op;	// the functor to apply
+	typename _Fn2::second_argument_type value;	// the right operand
+	};
+
+		// TEMPLATE FUNCTION bind2nd
+template<class _Fn2,
+	class _Ty> inline
+	binder2nd<_Fn2> bind2nd(const _Fn2& _Func, const _Ty& _Right)
+	{	// return a binder2nd functor adapter
+	typename _Fn2::second_argument_type _Val(_Right);
+	return (_STD binder2nd<_Fn2>(_Func, _Val));
+	}
+
+		// TEMPLATE CLASS pointer_to_unary_function
+template<class _Arg,
+	class _Result>
+	class pointer_to_unary_function
+		: public unary_function<_Arg, _Result>
+	{	// functor adapter (*pfunc)(left)
+public:
+	explicit pointer_to_unary_function(_Result (*_Left)(_Arg))
+		: _Pfun(_Left)
+		{	// construct from pointer
+		}
+
+	_Result operator()(_Arg _Left) const
+		{	// call function with operand
+		return (_Pfun(_Left));
+		}
+
+protected:
+	_Result (*_Pfun)(_Arg);	// the function pointer
+	};
+
+		// TEMPLATE CLASS pointer_to_binary_function
+template<class _Arg1,
+	class _Arg2,
+	class _Result>
+	class pointer_to_binary_function
+		: public binary_function<_Arg1, _Arg2, _Result>
+	{	// functor adapter (*pfunc)(left, right)
+public:
+	explicit pointer_to_binary_function(
+		_Result (*_Left)(_Arg1, _Arg2))
+		: _Pfun(_Left)
+		{	// construct from pointer
+		}
+
+	_Result operator()(_Arg1 _Left, _Arg2 _Right) const
+		{	// call function with operands
+		return (_Pfun(_Left, _Right));
+		}
+
+protected:
+	_Result (*_Pfun)(_Arg1, _Arg2);	// the function pointer
+	};
+
+		// TEMPLATE FUNCTION ptr_fun
+template<class _Arg,
+	class _Result> inline
+	pointer_to_unary_function<_Arg, _Result>
+		ptr_fun(_Result (*_Left)(_Arg))
+	{	// return pointer_to_unary_function functor adapter
+	return (_STD pointer_to_unary_function<_Arg, _Result>(_Left));
+	}
+
+template<class _Arg1,
+	class _Arg2,
+	class _Result> inline
+	pointer_to_binary_function<_Arg1, _Arg2, _Result>
+		ptr_fun(_Result (*_Left)(_Arg1, _Arg2))
+	{	// return pointer_to_binary_function functor adapter
+	return (_STD pointer_to_binary_function<_Arg1, _Arg2, _Result>(_Left));
+	}
+
+		// TEMPLATE CLASS mem_fun_t
+template<class _Result,
+	class _Ty>
+	class mem_fun_t
+		: public unary_function<_Ty *, _Result>
+	{	// functor adapter (*p->*pfunc)(), non-const *pfunc
+public:
+	explicit mem_fun_t(_Result (_Ty::*_Pm)())
+		: _Pmemfun(_Pm)
+		{	// construct from pointer
+		}
+
+	_Result operator()(_Ty *_Pleft) const
+		{	// call function
+		return ((_Pleft->*_Pmemfun)());
+		}
+
+private:
+	_Result (_Ty::*_Pmemfun)();	// the member function pointer
+	};
+
+		// TEMPLATE CLASS mem_fun1_t
+template<class _Result,
+	class _Ty,
+	class _Arg>
+	class mem_fun1_t
+		: public binary_function<_Ty *, _Arg, _Result>
+	{	// functor adapter (*p->*pfunc)(val), non-const *pfunc
+public:
+	explicit mem_fun1_t(_Result (_Ty::*_Pm)(_Arg))
+		: _Pmemfun(_Pm)
+		{	// construct from pointer
+		}
+
+	_Result operator()(_Ty *_Pleft, _Arg _Right) const
+		{	// call function with operand
+		return ((_Pleft->*_Pmemfun)(_Right));
+		}
+
+private:
+	_Result (_Ty::*_Pmemfun)(_Arg);	// the member function pointer
+	};
+
+		// TEMPLATE CLASS const_mem_fun_t
+template<class _Result,
+	class _Ty>
+	class const_mem_fun_t
+		: public unary_function<const _Ty *, _Result>
+	{	// functor adapter (*p->*pfunc)(), const *pfunc
+public:
+	explicit const_mem_fun_t(_Result (_Ty::*_Pm)() const)
+		: _Pmemfun(_Pm)
+		{	// construct from pointer
+		}
+
+	_Result operator()(const _Ty *_Pleft) const
+		{	// call function
+		return ((_Pleft->*_Pmemfun)());
+		}
+
+private:
+	_Result (_Ty::*_Pmemfun)() const;	// the member function pointer
+	};
+
+		// TEMPLATE CLASS const_mem_fun1_t
+template<class _Result,
+	class _Ty,
+	class _Arg>
+	class const_mem_fun1_t
+		: public binary_function<const _Ty *, _Arg, _Result>
+	{	// functor adapter (*p->*pfunc)(val), const *pfunc
+public:
+	explicit const_mem_fun1_t(_Result (_Ty::*_Pm)(_Arg) const)
+		: _Pmemfun(_Pm)
+		{	// construct from pointer
+		}
+
+	_Result operator()(const _Ty *_Pleft, _Arg _Right) const
+		{	// call function with operand
+		return ((_Pleft->*_Pmemfun)(_Right));
+		}
+
+private:
+	_Result (_Ty::*_Pmemfun)(_Arg) const;	// the member function pointer
+	};
+
+		// TEMPLATE FUNCTION mem_fun
+template<class _Result,
+	class _Ty> inline
+	mem_fun_t<_Result, _Ty> mem_fun(_Result (_Ty::*_Pm)())
+	{	// return a mem_fun_t functor adapter
+	return (_STD mem_fun_t<_Result, _Ty>(_Pm));
+	}
+
+template<class _Result,
+	class _Ty,
+	class _Arg> inline
+	mem_fun1_t<_Result, _Ty, _Arg> mem_fun(_Result (_Ty::*_Pm)(_Arg))
+	{	// return a mem_fun1_t functor adapter
+	return (_STD mem_fun1_t<_Result, _Ty, _Arg>(_Pm));
+	}
+
+template<class _Result,
+	class _Ty> inline
+	const_mem_fun_t<_Result, _Ty>
+		mem_fun(_Result (_Ty::*_Pm)() const)
+	{	// return a const_mem_fun_t functor adapter
+	return (_STD const_mem_fun_t<_Result, _Ty>(_Pm));
+	}
+
+template<class _Result,
+	class _Ty,
+	class _Arg> inline
+	const_mem_fun1_t<_Result, _Ty, _Arg>
+		mem_fun(_Result (_Ty::*_Pm)(_Arg) const)
+	{	// return a const_mem_fun1_t functor adapter
+	return (_STD const_mem_fun1_t<_Result, _Ty, _Arg>(_Pm));
+	}
+
+		// TEMPLATE FUNCTION mem_fun1 (retained)
+template<class _Result,
+	class _Ty,
+	class _Arg> inline
+	mem_fun1_t<_Result, _Ty, _Arg> mem_fun1(_Result (_Ty::*_Pm)(_Arg))
+	{	// return a mem_fun1_t functor adapter
+	return (_STD mem_fun1_t<_Result, _Ty, _Arg>(_Pm));
+	}
+
+		// TEMPLATE CLASS mem_fun_ref_t
+template<class _Result,
+	class _Ty>
+	class mem_fun_ref_t
+		: public unary_function<_Ty, _Result>
+	{	// functor adapter (*left.*pfunc)(), non-const *pfunc
+public:
+	explicit mem_fun_ref_t(_Result (_Ty::*_Pm)())
+		: _Pmemfun(_Pm)
+		{	// construct from pointer
+		}
+
+	_Result operator()(_Ty& _Left) const
+		{	// call function
+		return ((_Left.*_Pmemfun)());
+		}
+
+private:
+	_Result (_Ty::*_Pmemfun)();	// the member function pointer
+	};
+
+		// TEMPLATE CLASS mem_fun1_ref_t
+template<class _Result,
+	class _Ty,
+	class _Arg>
+	class mem_fun1_ref_t
+		: public binary_function<_Ty, _Arg, _Result>
+	{	// functor adapter (*left.*pfunc)(val), non-const *pfunc
+public:
+	explicit mem_fun1_ref_t(_Result (_Ty::*_Pm)(_Arg))
+		: _Pmemfun(_Pm)
+		{	// construct from pointer
+		}
+
+	_Result operator()(_Ty& _Left, _Arg _Right) const
+		{	// call function with operand
+		return ((_Left.*_Pmemfun)(_Right));
+		}
+
+private:
+	_Result (_Ty::*_Pmemfun)(_Arg);	// the member function pointer
+	};
+
+		// TEMPLATE CLASS const_mem_fun_ref_t
+template<class _Result,
+	class _Ty>
+	class const_mem_fun_ref_t
+		: public unary_function<_Ty, _Result>
+	{	// functor adapter (*left.*pfunc)(), const *pfunc
+public:
+	explicit const_mem_fun_ref_t(_Result (_Ty::*_Pm)() const)
+		: _Pmemfun(_Pm)
+		{	// construct from pointer
+		}
+
+	_Result operator()(const _Ty& _Left) const
+		{	// call function
+		return ((_Left.*_Pmemfun)());
+		}
+
+private:
+	_Result (_Ty::*_Pmemfun)() const;	// the member function pointer
+	};
+
+		// TEMPLATE CLASS const_mem_fun1_ref_t
+template<class _Result,
+	class _Ty,
+	class _Arg>
+	class const_mem_fun1_ref_t
+		: public binary_function<_Ty, _Arg, _Result>
+	{	// functor adapter (*left.*pfunc)(val), const *pfunc
+public:
+	explicit const_mem_fun1_ref_t(_Result (_Ty::*_Pm)(_Arg) const)
+		: _Pmemfun(_Pm)
+		{	// construct from pointer
+		}
+
+	_Result operator()(const _Ty& _Left, _Arg _Right) const
+		{	// call function with operand
+		return ((_Left.*_Pmemfun)(_Right));
+		}
+
+private:
+	_Result (_Ty::*_Pmemfun)(_Arg) const;	// the member function pointer
+	};
+
+		// TEMPLATE FUNCTION mem_fun_ref
+template<class _Result,
+	class _Ty> inline
+	mem_fun_ref_t<_Result, _Ty> mem_fun_ref(_Result (_Ty::*_Pm)())
+	{	// return a mem_fun_ref_t functor adapter
+	return (_STD mem_fun_ref_t<_Result, _Ty>(_Pm));
+	}
+
+template<class _Result,
+	class _Ty,
+	class _Arg> inline
+	mem_fun1_ref_t<_Result, _Ty, _Arg>
+		mem_fun_ref(_Result (_Ty::*_Pm)(_Arg))
+	{	// return a mem_fun1_ref_t functor adapter
+	return (_STD mem_fun1_ref_t<_Result, _Ty, _Arg>(_Pm));
+	}
+
+template<class _Result,
+	class _Ty> inline
+	const_mem_fun_ref_t<_Result, _Ty>
+		mem_fun_ref(_Result (_Ty::*_Pm)() const)
+	{	// return a const_mem_fun_ref_t functor adapter
+	return (_STD const_mem_fun_ref_t<_Result, _Ty>(_Pm));
+	}
+
+template<class _Result,
+	class _Ty,
+	class _Arg> inline
+	const_mem_fun1_ref_t<_Result, _Ty, _Arg>
+		mem_fun_ref(_Result (_Ty::*_Pm)(_Arg) const)
+	{	// return a const_mem_fun1_ref_t functor adapter
+	return (_STD const_mem_fun1_ref_t<_Result, _Ty, _Arg>(_Pm));
+	}
+
+		// TEMPLATE FUNCTION mem_fun1_ref (retained)
+template<class _Result,
+	class _Ty,
+	class _Arg> inline
+	mem_fun1_ref_t<_Result, _Ty, _Arg> mem_fun1_ref(_Result (_Ty::*_Pm)(_Arg))
+	{	// return a mem_fun1_ref_t functor adapter
+	return (_STD mem_fun1_ref_t<_Result, _Ty, _Arg>(_Pm));
+	}
+
+ #if _HAS_TRADITIONAL_STL
+		// TEMPLATE STRUCT identity
+template<class _Arg>
+	struct identity
+		: public unary_function<_Arg, _Arg>
+	{	// functor for unary identity operator
+	_Arg operator()(const _Arg& _Left) const
+		{	// apply identity operator to operand
+		return (_Left);
+		}
+	};
+
+		// TEMPLATE STRUCT project1st
+template<class _Arg1,
+	class _Arg2>
+	struct project1st
+		: public binary_function<_Arg1, _Arg2, _Arg1>
+	{	// functor for binary first of two arg selector operator
+	_Arg1 operator()(const _Arg1& _Left, const _Arg2&) const
+		{	// apply first selector operator to two operands
+		return (_Left);
+		}
+	};
+
+		// TEMPLATE STRUCT project2nd
+template<class _Arg1,
+	class _Arg2>
+	struct project2nd
+		: public binary_function<_Arg1, _Arg2, _Arg2>
+	{	// functor for binary second of two arg selector operator
+	_Arg2 operator()(const _Arg1&, const _Arg2& _Right) const
+		{	// apply second selector operator to two operands
+		return (_Right);
+		}
+	};
+
+		// TEMPLATE STRUCT select1st
+template<class _Pair>
+	struct select1st
+		: public unary_function<_Pair, typename _Pair::first_type>
+	{	// functor for unary first of pair selector operator
+	const typename _Pair::first_type& operator()(const _Pair& _Left) const
+		{	// apply first selector operator to pair operand
+		return (_Left.first);
+		}
+	};
+
+		// TEMPLATE STRUCT select2nd
+template<class _Pair>
+	struct select2nd
+		: public unary_function<_Pair, typename _Pair::second_type>
+	{	// functor for unary second of pair selector operator
+	const typename _Pair::second_type& operator()(const _Pair& _Left) const
+		{	// apply second selector operator to pair operand
+		return (_Left.second);
+		}
+	};
+
+		// TEMPLATE CLASS unary_compose
+template<class _Fn1,
+	class _Fn2>
+	class unary_compose
+		: public unary_function<typename _Fn2::argument_type,
+			typename _Fn1::result_type>
+	{	// functor for f1(f2(x))
+public:
+	unary_compose(const _Fn1& _Func1, const _Fn2& _Func2)
+		: _Functor1(_Func1), _Functor2(_Func2)
+		{	// construct from functors
+		}
+
+	typename _Fn1::result_type operator()(
+		const typename _Fn2::argument_type& _Left) const
+		{	// apply functors to operand
+		return (_Functor1(_Functor2(_Left)));
+		}
+
+protected:
+	_Fn1 _Functor1;
+	_Fn2 _Functor2;
+	};
+
+		// TEMPLATE FUNCTION compose1
+template<class _Fn1,
+	class _Fn2> inline
+	unary_compose<_Fn1, _Fn2> compose1(const _Fn1& _Func1,
+		const _Fn2& _Func2)
+	{	// return a unary_compose<_Fn1, _Fn2> functor adapter
+	return (unary_compose<_Fn1, _Fn2>(_Func1, _Func2));
+	}
+
+		// TEMPLATE CLASS binary_compose
+template<class _Fn1,
+	class _Fn2,
+	class _Fn3>
+	class binary_compose
+		: public unary_function<typename _Fn2::argument_type,
+			typename _Fn1::result_type>
+	{	// functor for f1(f2(x), f3(x))
+public:
+	binary_compose(const _Fn1& _Func1, const _Fn2& _Func2, const _Fn3& _Func3)
+		: _Functor1(_Func1), _Functor2(_Func2), _Functor3(_Func3)
+		{	// construct from functors
+		}
+
+	typename _Fn1::result_type operator()(
+		const typename _Fn2::argument_type& _Left) const
+		{	// apply functors to operand
+		return (_Functor1(_Functor2(_Left), _Functor3(_Left)));
+		}
+
+protected:
+	_Fn1 _Functor1;
+	_Fn2 _Functor2;
+	_Fn3 _Functor3;
+	};
+
+		// TEMPLATE FUNCTION compose2
+template<class _Fn1,
+	class _Fn2,
+	class _Fn3> inline
+	binary_compose<_Fn1, _Fn2, _Fn3> compose2(const _Fn1& _Func1,
+		const _Fn2& _Func2, const _Fn3& _Func3)
+	{	// return a binary_compose<_Fn1, _Fn2, _Fn3> functor adapter
+	return (binary_compose<_Fn1, _Fn2, _Fn3>(_Func1, _Func2, _Func3));
+	}
+ #endif /* _HAS_TRADITIONAL_STL */
+
+_STD_END
+
+
+_STD_BEGIN
+	namespace tr1 {	// always include std::tr1::hash for unordered_map/set
+	// TEMPLATE CLASS hash
+template<class _Kty>
+	class hash
+		: public unary_function<_Kty, size_t>
+	{	// hash functor
+public:
+	size_t operator()(const _Kty& _Keyval) const
+		{	// hash _Keyval to size_t value by pseudorandomizing transform
+		ldiv_t _Qrem = ldiv((size_t)_Keyval, 127773);
+
+		_Qrem.rem = 16807 * _Qrem.rem - 2836 * _Qrem.quot;
+		if (_Qrem.rem < 0)
+			_Qrem.rem += 2147483647;
+		return ((size_t)_Qrem.rem);
+		}
+	};
+
+template<>
+	class hash<_STD string>
+	{	// hash functor
+public:
+	typedef _STD string _Kty;
+
+	size_t operator()(const _Kty& _Keyval) const
+		{	// hash _Keyval to size_t value by pseudorandomizing transform
+		size_t _Val = 2166136261U;
+		size_t _First = 0;
+		size_t _Last = _Keyval.size();
+		size_t _Stride = 1 + _Last / 10;
+
+		if (_Stride < _Last)
+			_Last -= _Stride;
+		for(; _First < _Last; _First += _Stride)
+			_Val = 16777619U * _Val ^ (size_t)_Keyval[_First];
+		return (_Val);
+		}
+	};
+
+ #if _IS_EMBEDDED
+
+ #else /* _IS_EMBEDDED */
+template<>
+	class hash<_STD wstring>
+	{	// hash functor
+public:
+	typedef _STD wstring _Kty;
+
+	size_t operator()(const _Kty& _Keyval) const
+		{	// hash _Keyval to size_t value by pseudorandomizing transform
+		size_t _Val = 2166136261U;
+		size_t _First = 0;
+		size_t _Last = _Keyval.size();
+		size_t _Stride = 1 + _Last / 10;
+
+		if (_Stride < _Last)
+			_Last -= _Stride;
+		for(; _First < _Last; _First += _Stride)
+			_Val = 16777619U * _Val ^ (size_t)_Keyval[_First];
+		return (_Val);
+		}
+	};
+ #endif /* _IS_EMBEDDED */
+
+	}	// namespace tr1
+_STD_END
+#endif /* _FUNCTIONAL_ */
+
+
+/*
+ * This file is derived from software bearing the following
+ * restrictions:
+ *
+ * Copyright (c) 1994
+ * Hewlett-Packard Company
+ *
+ * Permission to use, copy, modify, distribute and sell this
+ * software and its documentation for any purpose is hereby
+ * granted without fee, provided that the above copyright notice
+ * appear in all copies and that both that copyright notice and
+ * this permission notice appear in supporting documentation.
+ * Hewlett-Packard Company makes no representations about the
+ * suitability of this software for any purpose. It is provided
+ * "as is" without express or implied warranty.
+ */
+
+/*
+ * Copyright (c) 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * Consult your license regarding permissions and restrictions.
+V5.03:1134 */

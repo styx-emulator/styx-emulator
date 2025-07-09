@@ -1,0 +1,40 @@
+[package]
+name = "styx-stm32f107-processor"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+styx-core = { workspace = true }
+styx-stm32f107-sys = { path = "../../../generated/styx-stm32f107-sys" }
+styx-nvic = { path = "../../../event-controllers/arm/styx-nvic" }
+
+async-stream = { workspace = true }
+tokio = { workspace = true }
+tonic = { workspace = true }
+tracing = { workspace = true }
+thiserror = { workspace = true }
+derivative = { workspace = true }
+bilge = { workspace = true }
+getset = { workspace = true }
+tokio-stream = { workspace = true }
+styx-workspace-hack = { version = "0.1", path = "../../../workspace-hack" }
+
+[dev-dependencies]
+styx-plugins = { path = "../../../plugins" }
+styx-integration-tests = { path = "../../../integration-tests" }
+gdbmi = { workspace = true }
+tap = { workspace = true }
+
+
+[features]
+default = []
+tracy = ["styx-plugins/tracy"]
+
+[package.metadata.cargo-udeps.ignore]
+development = ["styx-plugins"]

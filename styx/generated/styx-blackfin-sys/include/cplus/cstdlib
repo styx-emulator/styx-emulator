@@ -1,0 +1,97 @@
+// cstdlib standard header
+#if defined (_ADI_COMPILER)
+/************************************************************************
+ *
+ * cstdlib
+ *
+ * (c) Copyright 2001-2009 Analog Devices, Inc.  All rights reserved.
+ * (c) Copyright 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * $Revision: 1.9 $
+ ************************************************************************/
+
+#pragma once
+#ifndef __NO_BUILTIN
+#pragma system_header /* cstdlib */
+#endif
+#endif /* _ADI_COMPILER */
+
+#ifndef _CSTDLIB_
+#define _CSTDLIB_
+#include <yvals.h>
+
+#ifdef _STD_USING
+ #undef _STD_USING
+  #include <stdlib.h>
+ #define _STD_USING
+
+#else /* _STD_USING */
+ #include <stdlib.h>
+#endif /* _STD_USING */
+
+
+ #ifdef _GLOBAL_USING
+
+ #if defined(__APPLE__)	/* compiler test */
+_C_STD_BEGIN
+_C_LIB_DECL
+_NO_RETURN(abort(void));
+_END_C_LIB_DECL
+_C_STD_END
+ #endif /* defined(__APPLE__) */
+
+ #if defined(__BORLANDC__)	/* compiler test */
+_C_STD_BEGIN
+using _STD abs;
+_C_STD_END
+ #endif /* defined(__BORLANDC__) */
+
+_STD_BEGIN
+
+ #if defined(__SUNPRO_CC) && !defined(__sun)	/* compiler test */ \
+	|| defined(__GLIBC__) || defined(__BORLANDC__) \
+	|| defined(__MINGW32__) || defined(__APPLE__)
+		/* long OVERLOADS */
+inline long abs(long _Left)
+	{	// compute abs
+	return (labs(_Left));
+	}
+
+inline ldiv_t div(long _Left, long _Right)
+	{	// compute quotient and remainder
+	return (ldiv(_Left, _Right));
+	}
+ #endif /* defined(__SUNPRO_CC) etc. */
+
+using _CSTD size_t; using _CSTD div_t; using _CSTD ldiv_t;
+
+using _CSTD abort; using _CSTD abs; using _CSTD atexit;
+using _CSTD atof; using _CSTD atoi; using _CSTD atol;
+using _CSTD bsearch; using _CSTD calloc; using _CSTD div;
+using _CSTD exit; using _CSTD free; using _CSTD getenv;
+using _CSTD labs; using _CSTD ldiv; using _CSTD malloc;
+#ifdef _USING_DINKUM_C_LIBRARY
+using _CSTD mblen; using _CSTD mbstowcs; using _CSTD mbtowc;
+#endif /* _USING_DINKUM_C_LIBRARY */
+using _CSTD qsort; using _CSTD rand; using _CSTD realloc;
+using _CSTD srand; using _CSTD strtod; using _CSTD strtol;
+using _CSTD strtoul; using _CSTD system;
+#ifdef _USING_DINKUM_C_LIBRARY
+using _CSTD wcstombs; using _CSTD wctomb;
+#endif /* _USING_DINKUM_C_LIBRARY */
+
+ #if _HAS_C9X
+using _CSTD atoll; using _CSTD llabs; using _CSTD lldiv;
+using _CSTD strtof; using _CSTD strtold;
+using _CSTD strtoll; using _CSTD strtoull;
+using _CSTD _Exit;
+ #endif /* _HAS_C9X */
+
+_STD_END
+ #endif /* _GLOBAL_USING */
+
+#endif /* _CSTDLIB_ */
+
+/*
+ * Copyright (c) 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * Consult your license regarding permissions and restrictions.
+V5.03:1134 */

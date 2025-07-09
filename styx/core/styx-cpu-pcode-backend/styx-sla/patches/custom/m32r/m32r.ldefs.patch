@@ -1,0 +1,25 @@
+diff --git a/data/languages/m32r.ldefs b/data/languages/m32r.ldefs
+index bcf6d09..74da846 100644
+--- a/data/languages/m32r.ldefs
++++ b/data/languages/m32r.ldefs
+@@ -1,15 +1,15 @@
+ <?xml version="1.0" encoding="UTF-8"?>
+ 
+ <language_definitions>
+-    <language processor="M32R"
++    <language processor="m32r"
+               endian="big"
+               size="32"
+-              variant="default"
++              variant="cc32r"
+               version="1.0"
+               slafile="m32r.sla"
+               processorspec="m32r.pspec"
+-              id="m32r:2:default">
++              id="m32r:BE:32:cc32r">
+         <description>m32r</description>
+-        <compiler name="default" spec="m32r.cspec" id="default"/>
++        <compiler name="cc32r" spec="m32r.cspec" id="cc32r"/>
+     </language>
+ </language_definitions>
+\ No newline at end of file

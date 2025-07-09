@@ -1,0 +1,111 @@
+syntax = "proto3";
+
+package emulation;
+
+import public "utils.proto";
+
+option java_multiple_files = true;
+
+// A service that controls a single styx emulation. The emulation has already
+// been created and is ready to run in a process.
+service SingleEmulationService {
+  // Start the Emulation
+  rpc Start(StartSingleEmulationRequest)
+      returns (StartSingleEmulationResponse) {}
+
+  // Stop the Emulation
+  rpc Stop(utils.Empty) returns (utils.ResponseStatus) {}
+
+  // Drop and cleanup
+  rpc Drop(utils.Empty) returns (utils.ResponseStatus) {}
+
+  // get information about the emulation
+  rpc Info(utils.Empty) returns (utils.ProcessorInfo) {}
+}
+
+message StartSingleEmulationRequest {
+  // the max number of instructions to execute
+  uint64 n = 1;
+}
+
+/**
+ * Represents the target endianness.
+ *
+ * Tracks `styx-cpu::ArchEndian`
+ */
+enum Endian {
+  Little = 0;
+  Big = 1;
+}
+
+/**
+ * Represents the target architecture.
+ *
+ * Tracks `styx-cpu::Architecture`
+ */
+enum Architecture {
+  Arm = 0;
+  Blackfin = 1;
+  MIPS = 2;
+  X86 = 3;
+  Ppc32 = 4;
+  Sparc = 5;
+  M68k = 6;
+  Riscv = 7;
+  Tricore = 8;
+  Sharc = 9;
+  Microblaze = 10;
+  Tms320C1x = 11;
+  Tms320C2x = 12;
+  Tms320C3x = 13;
+  Tms320C4x = 14;
+  Tms320C8x = 15;
+  Tms320C5x = 16;
+  Tms320C6x = 17;
+  Avr8 = 18;
+  Avr32 = 19;
+  Sh4 = 20;
+  Sh8 = 21;
+  Pic = 22;
+  Arch8051 = 23;
+  Z80 = 24;
+  S390 = 25;
+}
+
+/**
+ * Message used to initiate the creation of an emulator
+ *
+ * This needs the architecture, cpu models, loader information,
+ * and anything else required by the ``styx-machine`` or
+ * ``styx-cpu`` libraries to create an instance.
+ */
+message CreateEmulationRequest {
+  Architecture arch = 1;
+  Endian endian = 2;
+}
+
+/**
+ * Message returned after creating an emulation instance
+ *
+ * This returns all specific tokens, ip address tuples,
+ * or any specific information needed to further communicate
+ * with the emulator.
+ */
+message CreateEmulationResponse { uint32 port = 1; }
+
+message StartSingleEmulationResponse {
+  utils.ProcessorInfo processor_info = 1;
+  utils.ResponseStatus response_status = 2;
+}
+
+message EndEmulationRequest {}
+
+message EndEmulationResponse {
+  enum Status {
+    OK = 0;
+    FAILED = 1;
+  }
+
+  Status status = 1;
+  repeated string messages = 2;
+}

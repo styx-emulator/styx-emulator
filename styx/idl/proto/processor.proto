@@ -1,0 +1,139 @@
+syntax = "proto3";
+
+package processor;
+
+import public "utils.proto";
+
+option java_multiple_files = true;
+
+service ProcessorService {
+    rpc StartExecution(StartExecutionRequest) returns (StartExecutionResponse) {}
+    rpc StopExecution(StopExecutionRequest) returns (StopExecutionResponse) {}
+    rpc ReadMemory(ReadMemoryRequest) returns (ReadMemoryResponse) {}
+    rpc WriteMemory(WriteMemoryRequest) returns (WriteMemoryResponse) {}
+    rpc AddCodeHook(AddCodeHookRequest) returns (stream CodeHookEvent) {}
+    rpc RemoveCodeHook(RemoveCodeHookRequest) returns (RemoveCodeHookResponse) {}
+    rpc AddWriteMemoryHook(AddWriteMemoryHookRequest) returns (stream WriteMemoryHookEvent) {}
+    rpc RemoveWriteMemoryHook(RemoveWriteMemoryHookRequest) returns (RemoveWriteMemoryHookResponse) {}
+    rpc AddReadMemoryHook(AddReadMemoryHookRequest) returns (stream ReadMemoryHookEvent) {}
+    rpc RemoveReadMemoryHook(RemoveReadMemoryHookRequest) returns (RemoveReadMemoryHookResponse) {}
+}
+
+message HookToken {
+    uint64 hook_token = 1;
+}
+
+message StartExecutionRequest {
+    utils.Token token = 1;
+    uint64 instruction_count = 2;
+}
+
+message StartExecutionResponse {
+    utils.Token token = 1;
+}
+
+message StopExecutionRequest {
+    utils.Token token = 1;
+}
+
+message StopExecutionResponse {}
+
+message ReadMemoryRequest {
+    utils.Token token = 1;
+    MemoryRegion region = 2;
+}
+
+message ReadMemoryResponse {
+    utils.Token token = 1;
+    MemoryRegion region = 2;
+}
+
+message WriteMemoryRequest {
+    utils.Token token = 1;
+    MemoryRegion region = 2;
+}
+
+message WriteMemoryResponse {
+    utils.Token token = 1;
+    MemoryRegion region = 2;
+}
+
+message AddCodeHookRequest {
+    utils.Token token = 1;
+    uint64 address = 2;
+}
+
+// streamed back, everytime the breakpoint is hit
+message CodeHookEvent {
+    utils.Token token = 1;
+    uint64 address = 2;
+}
+
+message RemoveCodeHookRequest {
+    utils.Token token = 1;
+    HookToken hook_token = 2;
+    uint64 address = 3;
+}
+
+message RemoveCodeHookResponse {}
+
+message AddWriteMemoryHookRequest {
+    utils.Token token = 1;
+    uint64 address = 2;
+    uint64 size = 3;
+}
+
+message WriteMemoryHookEvent {
+    MemoryRegion region = 1;
+}
+
+message RemoveWriteMemoryHookRequest {
+    utils.Token token = 1;
+    uint64 address = 2;
+    uint64 size = 3;
+}
+
+message RemoveWriteMemoryHookResponse {}
+
+message AddReadMemoryHookRequest {
+    utils.Token token = 1;
+    uint64 address = 2;
+    uint64 size = 3;
+}
+
+message ReadMemoryHookEvent {
+    MemoryRegion region = 1;
+}
+
+message RemoveReadMemoryHookRequest {
+    utils.Token token = 1;
+    uint64 address = 2;
+    uint64 size = 3;
+}
+
+message RemoveReadMemoryHookResponse {}
+
+
+/**
+ * Describes a portion of memory. The data field
+ * is optional.
+ */
+message MemoryRegion {
+    uint64 address = 1;
+    uint64 size = 2;
+    bytes data = 3;
+}
+
+/**
+ * The return code from processor services
+ */
+enum ProcessorError {
+    Ok = 0;
+    Error = 1;
+    InvalidMemoryAddress = 2;
+    IncorrectMemoryPermissions = 3;
+}
+
+message Ack {
+    ProcessorError return = 1;
+}

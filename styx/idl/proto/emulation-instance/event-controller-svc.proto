@@ -1,0 +1,101 @@
+syntax = "proto3";
+
+package styx.svc.event_controller;
+
+option java_multiple_files = true;
+
+import "event-peripheral-svc.proto";
+
+service EventControllerService {
+    rpc ControllerStatus(ControllerStatusRequest) returns (ControllerStatusResponse) {}
+    rpc QueuedEvents(GetQueuedEventsRequest) returns (GetQueuedEventsResponse) {}
+    rpc CurrentEventStatus(CurrentEventStatusRequest) returns (CurrentEventStatusResponse) {}
+    rpc CurrentEventStack(CurrentEventStackRequest) returns (CurrentEventStackResponse) {}
+    rpc CurrentEventMask(CurrentEventMaskRequest) returns (CurrentEventMaskResponse) {}
+    rpc EnqueueEvent(EnqueueEventRequest) returns (EnqueueEventResponse) {}
+    rpc DequeueEvent(DequeueEventRequest) returns (DequeueEventResponse) {}
+    rpc ClearEventQueue(ClearEventQueueRequest) returns (ClearEventQueueResponse) {}
+    rpc MaskEvent(MaskEventRequest) returns (MaskEventResponse) {}
+    rpc ConnectedPeripherals(ConnectedPeripheralRequest) returns (ConnectedPeripheralResponse) {}
+}
+
+message ControllerStatusRequest {}
+
+enum EventControllerState {
+    RUNNING = 0;
+    PAUSED = 1;
+    STOPPED = 2;
+}
+
+message ControllerStatusResponse {
+    EventControllerState state = 1;
+}
+
+message GetQueuedEventsRequest {}
+
+message GetQueuedEventsResponse {
+    repeated EventDescription events = 1;
+}
+
+message CurrentEventStatusRequest {}
+
+message CurrentEventStatusResponse {
+    EventDescription event = 1;
+}
+
+message CurrentEventStackRequest {}
+
+message CurrentEventStackResponse {
+    repeated EventDescription events = 1;
+}
+
+message CurrentEventMaskRequest {}
+
+message CurrentEventMaskResponse {
+    repeated EventDescription events = 1;
+}
+
+message EnqueueEventRequest {
+    EventDescription event = 1;
+}
+
+message EnqueueEventResponse {}
+
+message DequeueEventRequest {}
+
+message DequeueEventResponse {
+    EventDescription event = 1;
+}
+
+message ClearEventQueueRequest {}
+
+message ClearEventQueueResponse {}
+
+message MaskEventRequest {
+    EventDescription event = 1;
+}
+
+message MaskEventResponse {}
+
+message ConnectedPeripheralRequest {}
+
+
+message ConnectedPeripheralResponse {
+    repeated styx.svc.event_peripheral.EventPeripheralDescription peripherals = 1;
+}
+
+service EventControllerMetadataService {
+    rpc AvailableEvents(AvailableEventsRequest) returns (AvailableEventsResponse) {}
+}
+
+message EventDescription {
+    int32 number = 1;
+    int32 priority = 2;
+    string event_name = 3;
+}
+
+message AvailableEventsRequest {}
+
+message AvailableEventsResponse {
+    repeated EventDescription events = 1;
+}

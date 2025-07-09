@@ -1,0 +1,42 @@
+/************************************************************************
+ *
+ * heapnew
+ *
+ * (c) Copyright 2003-2007 Analog Devices, Inc.  All rights reserved.
+ * $Revision: 1.3 $
+ ************************************************************************/
+
+#pragma once
+#ifndef __NO_BUILTIN
+#pragma system_header /* heapnew */
+#endif
+
+#ifndef _HEAPNEW_
+#define _HEAPNEW_
+
+#include <new>
+#include <stdlib.h>
+
+void *operator new(_CSTD size_t, int heapID)
+	_THROW1(_STD bad_alloc);	// allocate or throw exception
+
+void *operator new(_CSTD size_t, const _STD nothrow_t&, int heapID)
+	_THROW0();	// allocate or return null pointer
+
+void *operator new[](_CSTD size_t, int heapID)
+	_THROW1(_STD bad_alloc);	// allocate array or throw exception
+
+void *operator new[](_CSTD size_t, const _STD nothrow_t&, int heapID)
+	_THROW0();	// allocate array or return null pointer
+
+void operator delete(void *, int heapID) _THROW0();
+
+void operator delete[](void *, int heapID) _THROW0();
+
+void operator delete(void *, const _STD nothrow_t&,int heapID)
+  _THROW0();  // delete if nothrow new fails -- REPLACEABLE
+
+void operator delete[](void *, const _STD nothrow_t&,int heapID)
+  _THROW0();  // delete if nothrow array new fails -- REPLACEABLE
+
+#endif /* _HEAPNEW_ */

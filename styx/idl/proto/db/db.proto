@@ -1,0 +1,9 @@
+syntax = "proto3";
+package db;
+option java_multiple_files = true;
+
+/// Pagination: items per request/page
+message ItemsPerPage { uint64 per_page = 1; }
+
+/// Database ID
+message DbId { int32 id = 1; }

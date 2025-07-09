@@ -1,0 +1,2678 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<processor_spec>
+  <programcounter register="PC"/>
+
+  <default_symbols>
+    <!-- Boot ROM function entries -->
+    <symbol name="bfrom_reset"         address="0xef000000" entry="true" />
+    <symbol name="bfrom_FinalInit"     address="0xef000002" entry="true" />
+    <symbol name="bfrom_PDma"          address="0xef000004" entry="true" />
+    <symbol name="bfrom_MDma"          address="0xef000006" entry="true" />
+    <symbol name="bfrom_MemBoot"       address="0xef000008" entry="true" />
+    <symbol name="bfrom_SpiBoot"       address="0xef00000a" entry="true" />
+    <symbol name="bfrom_TwiBoot"       address="0xef00000c" entry="true" />
+    <symbol name="bfrom_OtpBoot"       address="0xef00000e" entry="true" />
+    <symbol name="bfrom_NandBoot"      address="0xef000010" entry="true" />
+    <symbol name="bfrom_OtpCommand"    address="0xef000018" entry="true" />
+    <symbol name="bfrom_OtpRead"       address="0xef00001a" entry="true" />
+    <symbol name="bfrom_OtpWrite"      address="0xef00001c" entry="true" />
+    <symbol name="bfrom_BootKernel"    address="0xef000020" entry="true" />
+    <symbol name="bfrom_Crc32"         address="0xef000030" entry="true" />
+    <symbol name="bfrom_Crc32Poly"     address="0xef000032" entry="true" />
+    <symbol name="bfrom_Crc32Callback" address="0xef000034" entry="true" />
+    <symbol name="bfrom_Crc32Initcode" address="0xef000036" entry="true" />
+    <symbol name="bfrom_SysControl"    address="0xef000038" entry="true" />
+
+
+    <!-- System MMR -->
+    <!-- defBF54x_base.h -->
+    <!-- PLL Registers -->
+    <symbol name="PLL_CTL" address="0xffc00000" />
+    <symbol name="PLL_DIV" address="0xffc00004" />
+    <symbol name="VR_CTL" address="0xffc00008" />
+    <symbol name="PLL_STAT" address="0xffc0000c" />
+    <symbol name="PLL_LOCKCNT" address="0xffc00010" />
+
+    <!-- Debug/MP/Emulation Registers (0xFFC00014 - 0xFFC00014) -->
+    <symbol name="CHIPID" address="0xffc00014" />
+
+    <!-- System Reset and Interrupt Controller (0xFFC00100 - 0xFFC00104)  -->
+    <symbol name="SWRST" address="0xffc00100" />
+    <symbol name="SYSCR" address="0xffc00104" />
+
+    <!-- SIC Registers -->
+    <symbol name="SIC_IMASK0" address="0xffc0010c" />
+    <symbol name="SIC_IMASK1" address="0xffc00110" />
+    <symbol name="SIC_IMASK2" address="0xffc00114" />
+    <symbol name="SIC_ISR0" address="0xffc00118" />
+    <symbol name="SIC_ISR1" address="0xffc0011c" />
+    <symbol name="SIC_ISR2" address="0xffc00120" />
+    <symbol name="SIC_IWR0" address="0xffc00124" />
+    <symbol name="SIC_IWR1" address="0xffc00128" />
+    <symbol name="SIC_IWR2" address="0xffc0012c" />
+    <symbol name="SIC_IAR0" address="0xffc00130" />
+    <symbol name="SIC_IAR1" address="0xffc00134" />
+    <symbol name="SIC_IAR2" address="0xffc00138" />
+    <symbol name="SIC_IAR3" address="0xffc0013c" />
+    <symbol name="SIC_IAR4" address="0xffc00140" />
+    <symbol name="SIC_IAR5" address="0xffc00144" />
+    <symbol name="SIC_IAR6" address="0xffc00148" />
+    <symbol name="SIC_IAR7" address="0xffc0014c" />
+    <symbol name="SIC_IAR8" address="0xffc00150" />
+    <symbol name="SIC_IAR9" address="0xffc00154" />
+    <symbol name="SIC_IAR10" address="0xffc00158" />
+    <symbol name="SIC_IAR11" address="0xffc0015c" />
+
+    <!-- Watchdog Timer Registers -->
+    <symbol name="WDOG_CTL" address="0xffc00200" />
+    <symbol name="WDOG_CNT" address="0xffc00204" />
+    <symbol name="WDOG_STAT" address="0xffc00208" />
+
+    <!--  RTC Registers -->
+    <symbol name="RTC_STAT" address="0xffc00300" />
+    <symbol name="RTC_ICTL" address="0xffc00304" />
+    <symbol name="RTC_ISTAT" address="0xffc00308" />
+    <symbol name="RTC_SWCNT" address="0xffc0030c" />
+    <symbol name="RTC_ALARM" address="0xffc00310" />
+    <symbol name="RTC_PREN" address="0xffc00314" />
+
+    <!-- UART0 Registers -->
+    <symbol name="UART0_DLL" address="0xffc00400" />
+    <symbol name="UART0_DLH" address="0xffc00404" />
+    <symbol name="UART0_GCTL" address="0xffc00408" />
+    <symbol name="UART0_LCR" address="0xffc0040c" />
+    <symbol name="UART0_MCR" address="0xffc00410" />
+    <symbol name="UART0_LSR" address="0xffc00414" />
+    <symbol name="UART0_MSR" address="0xffc00418" />
+    <symbol name="UART0_SCR" address="0xffc0041c" />
+    <symbol name="UART0_IER_SET" address="0xffc00420" />
+    <symbol name="UART0_IER_CLEAR" address="0xffc00424" />
+    <symbol name="UART0_THR" address="0xffc00428" />
+    <symbol name="UART0_RBR" address="0xffc0042c" />
+
+    <!-- SPI0 Registers -->
+    <symbol name="SPI_CTL" address="0xffc00500" />
+    <symbol name="SPI_FLG" address="0xffc00504" />
+    <symbol name="SPI_STAT" address="0xffc00508" />
+    <symbol name="SPI_TDBR" address="0xffc0050c" />
+    <symbol name="SPI_RDBR" address="0xffc00510" />
+    <symbol name="SPI_BAUD" address="0xffc00514" />
+    <symbol name="SPI_SHADOW" address="0xffc00518" />
+
+    <!-- Two Wire Interface Registers (TWI0) -->
+    <symbol name="TWI0_CLKDIV" address="0xffc00700" />
+    <symbol name="TWI0_CONTROL" address="0xffc00704" />
+    <symbol name="TWI0_SLAVE_CTL" address="0xffc00708" />
+    <symbol name="TWI0_SLAVE_STAT" address="0xffc0070c" />
+    <symbol name="TWI0_SLAVE_ADDR" address="0xffc00710" />
+    <symbol name="TWI0_MASTER_CTL" address="0xffc00714" />
+    <symbol name="TWI0_MASTER_STAT" address="0xffc00718" />
+    <symbol name="TWI0_MASTER_ADDR" address="0xffc0071c" />
+    <symbol name="TWI0_INT_STAT" address="0xffc00720" />
+    <symbol name="TWI0_INT_MASK" address="0xffc00724" />
+    <symbol name="TWI0_FIFO_CTL" address="0xffc00728" />
+    <symbol name="TWI0_FIFO_STAT" address="0xffc0072c" />
+    <symbol name="TWI0_XMT_DATA8" address="0xffc00780" />
+    <symbol name="TWI0_XMT_DATA16" address="0xffc00784" />
+    <symbol name="TWI0_RCV_DATA8" address="0xffc00788" />
+    <symbol name="TWI0_RCV_DATA16" address="0xffc0078c" />
+
+    <!-- SPORT1 Registers -->
+    <symbol name="SPORT1_TCR1" address="0xffc00900" />
+    <symbol name="SPORT1_TCR2" address="0xffc00904" />
+    <symbol name="SPORT1_TCLKDIV" address="0xffc00908" />
+    <symbol name="SPORT1_TFSDIV" address="0xffc0090c" />
+    <symbol name="SPORT1_TX" address="0xffc00910" />
+    <symbol name="SPORT1_RX" address="0xffc00918" />
+    <symbol name="SPORT1_RCR1" address="0xffc00920" />
+    <symbol name="SPORT1_RCR2" address="0xffc00924" />
+    <symbol name="SPORT1_RCLKDIV" address="0xffc00928" />
+    <symbol name="SPORT1_RFSDIV" address="0xffc0092c" />
+    <symbol name="SPORT1_STAT" address="0xffc00930" />
+    <symbol name="SPORT1_CHNL" address="0xffc00934" />
+    <symbol name="SPORT1_MCMC1" address="0xffc00938" />
+    <symbol name="SPORT1_MCMC2" address="0xffc0093c" />
+    <symbol name="SPORT1_MTCS0" address="0xffc00940" />
+    <symbol name="SPORT1_MTCS1" address="0xffc00944" />
+    <symbol name="SPORT1_MTCS2" address="0xffc00948" />
+    <symbol name="SPORT1_MTCS3" address="0xffc0094c" />
+    <symbol name="SPORT1_MRCS0" address="0xffc00950" />
+    <symbol name="SPORT1_MRCS1" address="0xffc00954" />
+    <symbol name="SPORT1_MRCS2" address="0xffc00958" />
+    <symbol name="SPORT1_MRCS3" address="0xffc0095c" />
+
+    <!-- Asynchronous Memory Control Registers -->
+    <symbol name="EBIU_AMGCTL"  address="0xffc00a00" />
+    <symbol name="EBIU_AMBCTL0" address="0xffc00a04" />
+    <symbol name="EBIU_AMBCTL1" address="0xffc00a08" />
+    <symbol name="EBIU_MBSCTL" address="0xffc00a0c" />
+
+    <symbol name="EBIU_ARBSTAT" address="0xffc00a10" />
+    <symbol name="EBIU_MODE" address="0xffc00a14" />
+    <symbol name="EBIU_FCTL" address="0xffc00a18" />
+
+    <!-- DDR Memory Control Registers -->
+    <symbol name="EBIU_DDRCTL0" address="0xffc00a20" />
+    <symbol name="EBIU_DDRCTL1" address="0xffc00a24" />
+    <symbol name="EBIU_DDRCTL2" address="0xffc00a28" />
+    <symbol name="EBIU_DDRCTL3" address="0xffc00a2c" />
+    <symbol name="EBIU_DDRQUE" address="0xffc00a30" />
+    <symbol name="EBIU_ERRADD" address="0xffc00a34" />
+    <symbol name="EBIU_ERRMST" address="0xffc00a38" />
+    <symbol name="EBIU_RSTCTL" address="0xffc00a3c" />
+
+    <!-- DDR BankRead and Write Count Registers -->
+    <symbol name="EBIU_DDRBRC0" address="0xffc00a60" />
+    <symbol name="EBIU_DDRBRC1" address="0xffc00a64" />
+    <symbol name="EBIU_DDRBRC2" address="0xffc00a68" />
+    <symbol name="EBIU_DDRBRC3" address="0xffc00a6c" />
+    <symbol name="EBIU_DDRBRC4" address="0xffc00a70" />
+    <symbol name="EBIU_DDRBRC5" address="0xffc00a74" />
+    <symbol name="EBIU_DDRBRC6" address="0xffc00a78" />
+    <symbol name="EBIU_DDRBRC7" address="0xffc00a7c" />
+    <symbol name="EBIU_DDRBWC0" address="0xffc00a80" />
+    <symbol name="EBIU_DDRBWC1" address="0xffc00a84" />
+    <symbol name="EBIU_DDRBWC2" address="0xffc00a88" />
+    <symbol name="EBIU_DDRBWC3" address="0xffc00a8c" />
+    <symbol name="EBIU_DDRBWC4" address="0xffc00a90" />
+    <symbol name="EBIU_DDRBWC5" address="0xffc00a94" />
+    <symbol name="EBIU_DDRBWC6" address="0xffc00a98" />
+    <symbol name="EBIU_DDRBWC7" address="0xffc00a9c" />
+    <symbol name="EBIU_DDRACCT" address="0xffc00aa0" />
+    <symbol name="EBIU_DDRTACT" address="0xffc00aa8" />
+    <symbol name="EBIU_DDRARCT" address="0xffc00aac" />
+    <symbol name="EBIU_DDRGC0" address="0xffc00ab0" />
+    <symbol name="EBIU_DDRGC1" address="0xffc00ab4" />
+    <symbol name="EBIU_DDRGC2" address="0xffc00ab8" />
+    <symbol name="EBIU_DDRGC3" address="0xffc00abc" />
+    <symbol name="EBIU_DDRMCEN" address="0xffc00ac0" />
+    <symbol name="EBIU_DDRMCCL" address="0xffc00ac4" />
+
+
+    <!-- DMAC0 Registers -->
+    <symbol name="DMAC0_TCPER" address="0xffc00b0c" />
+    <symbol name="DMAC0_TCCNT" address="0xffc00b10" />
+
+
+    <!-- DMA Channel 0 Registers -->
+    <symbol name="DMA0_NEXT_DESC_PTR" address="0xffc00c00" />
+    <symbol name="DMA0_START_ADDR" address="0xffc00c04" />
+    <symbol name="DMA0_CONFIG" address="0xffc00c08" />
+    <symbol name="DMA0_X_COUNT" address="0xffc00c10" />
+    <symbol name="DMA0_X_MODIFY" address="0xffc00c14" />
+    <symbol name="DMA0_Y_COUNT" address="0xffc00c18" />
+    <symbol name="DMA0_Y_MODIFY" address="0xffc00c1c" />
+    <symbol name="DMA0_CURR_DESC_PTR" address="0xffc00c20" />
+
+    <symbol name="DMA0_CURR_ADDR" address="0xffc00c24" />
+    <symbol name="DMA0_IRQ_STATUS" address="0xffc00c28" />
+    <symbol name="DMA0_PERIPHERAL_MAP" address="0xffc00c2c" />
+    <symbol name="DMA0_CURR_X_COUNT" address="0xffc00c30" />
+    <symbol name="DMA0_CURR_Y_COUNT" address="0xffc00c38" />
+
+    <!-- DMA Channel 1 Registers -->
+    <symbol name="DMA1_NEXT_DESC_PTR" address="0xffc00c40" />
+    <symbol name="DMA1_START_ADDR" address="0xffc00c44" />
+    <symbol name="DMA1_CONFIG" address="0xffc00c48" />
+    <symbol name="DMA1_X_COUNT" address="0xffc00c50" />
+    <symbol name="DMA1_X_MODIFY" address="0xffc00c54" />
+    <symbol name="DMA1_Y_COUNT" address="0xffc00c58" />
+    <symbol name="DMA1_Y_MODIFY" address="0xffc00c5c" />
+    <symbol name="DMA1_CURR_DESC_PTR" address="0xffc00c60" />
+
+    <symbol name="DMA1_CURR_ADDR" address="0xffc00c64" />
+    <symbol name="DMA1_IRQ_STATUS" address="0xffc00c68" />
+    <symbol name="DMA1_PERIPHERAL_MAP" address="0xffc00c6c" />
+    <symbol name="DMA1_CURR_X_COUNT" address="0xffc00c70" />
+    <symbol name="DMA1_CURR_Y_COUNT" address="0xffc00c78" />
+
+    <!-- DMA Channel 2 Registers -->
+    <symbol name="DMA2_NEXT_DESC_PTR" address="0xffc00c80" />
+    <symbol name="DMA2_START_ADDR" address="0xffc00c84" />
+    <symbol name="DMA2_CONFIG" address="0xffc00c88" />
+    <symbol name="DMA2_X_COUNT" address="0xffc00c90" />
+    <symbol name="DMA2_X_MODIFY" address="0xffc00c94" />
+    <symbol name="DMA2_Y_COUNT" address="0xffc00c98" />
+    <symbol name="DMA2_Y_MODIFY" address="0xffc00c9c" />
+    <symbol name="DMA2_CURR_DESC_PTR" address="0xffc00ca0" />
+
+    <symbol name="DMA2_CURR_ADDR" address="0xffc00ca8" />
+    <symbol name="DMA2_IRQ_STATUS" address="0xffc00ca8" />
+    <symbol name="DMA2_PERIPHERAL_MAP" address="0xffc00cac" />
+    <symbol name="DMA2_CURR_X_COUNT" address="0xffc00cb0" />
+    <symbol name="DMA2_CURR_Y_COUNT" address="0xffc00cb8" />
+
+    <!-- DMA Channel 3 Registers -->
+
+    <symbol name="DMA3_NEXT_DESC_PTR" address="0xffc00cc0" />
+    <symbol name="DMA3_START_ADDR" address="0xffc00cc4" />
+    <symbol name="DMA3_CONFIG" address="0xffc00cc8" />
+    <symbol name="DMA3_X_COUNT" address="0xffc00cd0" />
+    <symbol name="DMA3_X_MODIFY" address="0xffc00cd4" />
+    <symbol name="DMA3_Y_COUNT" address="0xffc00cd8" />
+    <symbol name="DMA3_Y_MODIFY" address="0xffc00cdc" />
+    <symbol name="DMA3_CURR_DESC_PTR" address="0xffc00ce0" />
+
+    <symbol name="DMA3_CURR_ADDR" address="0xffc00ce4" />
+    <symbol name="DMA3_IRQ_STATUS" address="0xffc00ce8" />
+    <symbol name="DMA3_PERIPHERAL_MAP" address="0xffc00cec" />
+    <symbol name="DMA3_CURR_X_COUNT" address="0xffc00cf0" />
+    <symbol name="DMA3_CURR_Y_COUNT" address="0xffc00cf8" />
+
+    <!-- DMA Channel 4 Registers -->
+    <symbol name="DMA4_NEXT_DESC_PTR" address="0xffc00d00" />
+    <symbol name="DMA4_START_ADDR" address="0xffc00d04" />
+    <symbol name="DMA4_CONFIG" address="0xffc00d08" />
+    <symbol name="DMA4_X_COUNT" address="0xffc00d10" />
+    <symbol name="DMA4_X_MODIFY" address="0xffc00d14" />
+    <symbol name="DMA4_Y_COUNT" address="0xffc00d18" />
+    <symbol name="DMA4_Y_MODIFY" address="0xffc00d1c" />
+    <symbol name="DMA4_CURR_DESC_PTR" address="0xffc00d20" />
+
+    <symbol name="DMA4_CURR_ADDR" address="0xffc00d24" />
+    <symbol name="DMA4_IRQ_STATUS" address="0xffc00d28" />
+    <symbol name="DMA4_PERIPHERAL_MAP" address="0xffc00d2c" />
+    <symbol name="DMA4_CURR_X_COUNT" address="0xffc00d30" />
+    <symbol name="DMA4_CURR_Y_COUNT" address="0xffc00d38" />
+
+    <!-- DMA Channel 5 Registers -->
+    <symbol name="DMA5_NEXT_DESC_PTR" address="0xffc00d40" />
+    <symbol name="DMA5_START_ADDR" address="0xffc00d44" />
+    <symbol name="DMA5_CONFIG" address="0xffc00d48" />
+    <symbol name="DMA5_X_COUNT" address="0xffc00d50" />
+    <symbol name="DMA5_X_MODIFY" address="0xffc00d54" />
+    <symbol name="DMA5_Y_COUNT" address="0xffc00d58" />
+    <symbol name="DMA5_Y_MODIFY" address="0xffc00d5c" />
+    <symbol name="DMA5_CURR_DESC_PTR" address="0xffc00d60" />
+
+    <symbol name="DMA5_CURR_ADDR" address="0xffc00d64" />
+    <symbol name="DMA5_IRQ_STATUS" address="0xffc00d68" />
+    <symbol name="DMA5_PERIPHERAL_MAP" address="0xffc00d6c" />
+    <symbol name="DMA5_CURR_X_COUNT" address="0xffc00d70" />
+    <symbol name="DMA5_CURR_Y_COUNT" address="0xffc00d78" />
+
+    <!-- DMA Channel 6 Registers -->
+    <symbol name="DMA6_NEXT_DESC_PTR" address="0xffc00d80" />
+    <symbol name="DMA6_START_ADDR" address="0xffc00d84" />
+    <symbol name="DMA6_CONFIG" address="0xffc00d88" />
+    <symbol name="DMA6_X_COUNT" address="0xffc00d90" />
+    <symbol name="DMA6_X_MODIFY" address="0xffc00d94" />
+    <symbol name="DMA6_Y_COUNT" address="0xffc00d98" />
+    <symbol name="DMA6_Y_MODIFY" address="0xffc00d9c" />
+    <symbol name="DMA6_CURR_DESC_PTR" address="0xffc00da0" />
+
+    <symbol name="DMA6_CURR_ADDR" address="0xffc00da4" />
+    <symbol name="DMA6_IRQ_STATUS" address="0xffc00da8" />
+    <symbol name="DMA6_PERIPHERAL_MAP" address="0xffc00dac" />
+    <symbol name="DMA6_CURR_X_COUNT" address="0xffc00db0" />
+    <symbol name="DMA6_CURR_Y_COUNT" address="0xffc00db8" />
+
+    <!-- DMA Channel 7 Registers -->
+    <symbol name="DMA7_NEXT_DESC_PTR" address="0xffc00dc0" />
+    <symbol name="DMA7_START_ADDR" address="0xffc00dc4" />
+    <symbol name="DMA7_CONFIG" address="0xffc00dc8" />
+    <symbol name="DMA7_X_COUNT" address="0xffc00dd0" />
+    <symbol name="DMA7_X_MODIFY" address="0xffc00dd4" />
+    <symbol name="DMA7_Y_COUNT" address="0xffc00dd8" />
+    <symbol name="DMA7_Y_MODIFY" address="0xffc00ddc" />
+    <symbol name="DMA7_CURR_DESC_PTR" address="0xffc00de0" />
+
+    <symbol name="DMA7_CURR_ADDR" address="0xffc00de4" />
+    <symbol name="DMA7_IRQ_STATUS" address="0xffc00de8" />
+    <symbol name="DMA7_PERIPHERAL_MAP" address="0xffc00dec" />
+    <symbol name="DMA7_CURR_X_COUNT" address="0xffc00df0" />
+    <symbol name="DMA7_CURR_Y_COUNT" address="0xffc00df8" />
+
+    <!-- DMA Channel 8 Registers -->
+
+    <symbol name="DMA8_NEXT_DESC_PTR" address="0xffc00e00" />
+    <symbol name="DMA8_START_ADDR" address="0xffc00e04" />
+    <symbol name="DMA8_CONFIG" address="0xffc00e08" />
+    <symbol name="DMA8_X_COUNT" address="0xffc00e10" />
+    <symbol name="DMA8_X_MODIFY" address="0xffc00e14" />
+    <symbol name="DMA8_Y_COUNT" address="0xffc00e18" />
+    <symbol name="DMA8_Y_MODIFY" address="0xffc00e1c" />
+    <symbol name="DMA8_CURR_DESC_PTR" address="0xffc00e20" />
+
+    <symbol name="DMA8_CURR_ADDR" address="0xffc00e24" />
+    <symbol name="DMA8_IRQ_STATUS" address="0xffc00e28" />
+    <symbol name="DMA8_PERIPHERAL_MAP" address="0xffc00e2c" />
+    <symbol name="DMA8_CURR_X_COUNT" address="0xffc00e30" />
+    <symbol name="DMA8_CURR_Y_COUNT" address="0xffc00e38" />
+
+    <!-- DMA Channel 9 Registers -->
+    <symbol name="DMA9_NEXT_DESC_PTR" address="0xffc00e40" />
+    <symbol name="DMA9_START_ADDR" address="0xffc00e44" />
+    <symbol name="DMA9_CONFIG" address="0xffc00e48" />
+    <symbol name="DMA9_X_COUNT" address="0xffc00e50" />
+    <symbol name="DMA9_X_MODIFY" address="0xffc00e54" />
+    <symbol name="DMA9_Y_COUNT" address="0xffc00e58" />
+    <symbol name="DMA9_Y_MODIFY" address="0xffc00e5c" />
+    <symbol name="DMA9_CURR_DESC_PTR" address="0xffc00e60" />
+
+    <symbol name="DMA9_CURR_ADDR" address="0xffc00e64" />
+    <symbol name="DMA9_IRQ_STATUS" address="0xffc00e68" />
+    <symbol name="DMA9_PERIPHERAL_MAP" address="0xffc00e6c" />
+    <symbol name="DMA9_CURR_X_COUNT" address="0xffc00e70" />
+    <symbol name="DMA9_CURR_Y_COUNT" address="0xffc00e78" />
+
+    <!-- DMA Channel 10 Registers -->
+    <symbol name="DMA10_NEXT_DESC_PTR" address="0xffc00e80" />
+    <symbol name="DMA10_START_ADDR" address="0xffc00e84" />
+    <symbol name="DMA10_CONFIG" address="0xffc00e88" />
+    <symbol name="DMA10_X_COUNT" address="0xffc00e90" />
+    <symbol name="DMA10_X_MODIFY" address="0xffc00e94" />
+    <symbol name="DMA10_Y_COUNT" address="0xffc00e98" />
+    <symbol name="DMA10_Y_MODIFY" address="0xffc00e9c" />
+    <symbol name="DMA10_CURR_DESC_PTR" address="0xffc00ea0" />
+
+    <symbol name="DMA10_CURR_ADDR" address="0xffc00ea4" />
+    <symbol name="DMA10_IRQ_STATUS" address="0xffc00ea8" />
+    <symbol name="DMA10_PERIPHERAL_MAP" address="0xffc00eac" />
+    <symbol name="DMA10_CURR_X_COUNT" address="0xffc00eb0" />
+    <symbol name="DMA10_CURR_Y_COUNT" address="0xffc00eb8" />
+
+    <!-- DMA Channel 11 Registers -->
+    <symbol name="DMA11_NEXT_DESC_PTR" address="0xffc00ec0" />
+    <symbol name="DMA11_START_ADDR" address="0xffc00ec4" />
+    <symbol name="DMA11_CONFIG" address="0xffc00ec8" />
+    <symbol name="DMA11_X_COUNT" address="0xffc00ed0" />
+    <symbol name="DMA11_X_MODIFY" address="0xffc00ed4" />
+    <symbol name="DMA11_Y_COUNT" address="0xffc00ed8" />
+    <symbol name="DMA11_Y_MODIFY" address="0xffc00edc" />
+    <symbol name="DMA11_CURR_DESC_PTR" address="0xffc00ee0" />
+
+    <symbol name="DMA11_CURR_ADDR" address="0xffc00ee4" />
+    <symbol name="DMA11_IRQ_STATUS" address="0xffc00ee8" />
+    <symbol name="DMA11_PERIPHERAL_MAP" address="0xffc00eec" />
+    <symbol name="DMA11_CURR_X_COUNT" address="0xffc00ef0" />
+    <symbol name="DMA11_CURR_Y_COUNT" address="0xffc00ef8" />
+
+    <!-- MDMA Stream 0 Registers -->
+    <symbol name="MDMA_D0_NEXT_DESC_PTR" address="0xffc00f00" />
+    <symbol name="MDMA_D0_START_ADDR" address="0xffc00f04" />
+    <symbol name="MDMA_D0_CONFIG" address="0xffc00f08" />
+    <symbol name="MDMA_D0_X_COUNT" address="0xffc00f10" />
+    <symbol name="MDMA_D0_X_MODIFY" address="0xffc00f14" />
+    <symbol name="MDMA_D0_Y_COUNT" address="0xffc00f18" />
+    <symbol name="MDMA_D0_Y_MODIFY" address="0xffc00f1c" />
+    <symbol name="MDMA_D0_CURR_DESC_PTR" address="0xffc00f20" />
+    <symbol name="MDMA_D0_CURR_ADDR" address="0xffc00f24" />
+    <symbol name="MDMA_D0_IRQ_STATUS" address="0xffc00f28" />
+    <symbol name="MDMA_D0_PERIPHERAL_MAP" address="0xffc00f2c" />
+    <symbol name="MDMA_D0_CURR_X_COUNT" address="0xffc00f30" />
+    <symbol name="MDMA_D0_CURR_Y_COUNT" address="0xffc00f38" />
+    <symbol name="MDMA_S0_NEXT_DESC_PTR" address="0xffc00f40" />
+    <symbol name="MDMA_S0_START_ADDR" address="0xffc00f44" />
+    <symbol name="MDMA_S0_CONFIG" address="0xffc00f48" />
+    <symbol name="MDMA_S0_X_COUNT" address="0xffc00f50" />
+    <symbol name="MDMA_S0_X_MODIFY" address="0xffc00f54" />
+    <symbol name="MDMA_S0_Y_COUNT" address="0xffc00f58" />
+    <symbol name="MDMA_S0_Y_MODIFY" address="0xffc00f5c" />
+    <symbol name="MDMA_S0_CURR_DESC_PTR" address="0xffc00f60" />
+    <symbol name="MDMA_S0_CURR_ADDR" address="0xffc00f64" />
+    <symbol name="MDMA_S0_IRQ_STATUS" address="0xffc00f68" />
+    <symbol name="MDMA_S0_PERIPHERAL_MAP" address="0xffc00f6c" />
+    <symbol name="MDMA_S0_CURR_X_COUNT" address="0xffc00f70" />
+    <symbol name="MDMA_S0_CURR_Y_COUNT" address="0xffc00f78" />
+
+    <!-- MDMA Stream 1 Registers -->
+    <symbol name="MDMA_D1_NEXT_DESC_PTR" address="0xffc00f80" />
+    <symbol name="MDMA_D1_START_ADDR" address="0xffc00f84" />
+    <symbol name="MDMA_D1_CONFIG" address="0xffc00f88" />
+    <symbol name="MDMA_D1_X_COUNT" address="0xffc00f90" />
+    <symbol name="MDMA_D1_X_MODIFY" address="0xffc00f94" />
+    <symbol name="MDMA_D1_Y_COUNT" address="0xffc00f98" />
+    <symbol name="MDMA_D1_Y_MODIFY" address="0xffc00f9c" />
+    <symbol name="MDMA_D1_CURR_DESC_PTR" address="0xffc00fa0" />
+    <symbol name="MDMA_D1_CURR_ADDR" address="0xffc00fa4" />
+    <symbol name="MDMA_D1_IRQ_STATUS" address="0xffc00fa8" />
+    <symbol name="MDMA_D1_PERIPHERAL_MAP" address="0xffc00fac" />
+    <symbol name="MDMA_D1_CURR_X_COUNT" address="0xffc00fb0" />
+    <symbol name="MDMA_D1_CURR_Y_COUNT" address="0xffc00fb8" />
+    <symbol name="MDMA_S1_NEXT_DESC_PTR" address="0xffc00fc0" />
+    <symbol name="MDMA_S1_START_ADDR" address="0xffc00fc4" />
+    <symbol name="MDMA_S1_CONFIG" address="0xffc00fc8" />
+    <symbol name="MDMA_S1_X_COUNT" address="0xffc00fd0" />
+    <symbol name="MDMA_S1_X_MODIFY" address="0xffc00fd4" />
+    <symbol name="MDMA_S1_Y_COUNT" address="0xffc00fd8" />
+    <symbol name="MDMA_S1_Y_MODIFY" address="0xffc00fdc" />
+    <symbol name="MDMA_S1_CURR_DESC_PTR" address="0xffc00fe0" />
+    <symbol name="MDMA_S1_CURR_ADDR" address="0xffc00fe4" />
+    <symbol name="MDMA_S1_IRQ_STATUS" address="0xffc00fe8" />
+    <symbol name="MDMA_S1_PERIPHERAL_MAP" address="0xffc00fec" />
+    <symbol name="MDMA_S1_CURR_X_COUNT" address="0xffc00ff0" />
+    <symbol name="MDMA_S1_CURR_Y_COUNT" address="0xffc00ff8" />
+
+    <!-- UART3 Registers -->
+    <symbol name="UART3_DLL" address="0xffc03100" />
+    <symbol name="UART3_DLH" address="0xffc03104" />
+    <symbol name="UART3_GCTL" address="0xffc03108" />
+    <symbol name="UART3_LCR" address="0xffc0310c" />
+    <symbol name="UART3_MCR" address="0xffc03110" />
+    <symbol name="UART3_LSR" address="0xffc03114" />
+    <symbol name="UART3_MSR" address="0xffc03118" />
+    <symbol name="UART3_SCR" address="0xffc0311c" />
+    <symbol name="UART3_IER_SET" address="0xffc03120" />
+    <symbol name="UART3_IER_CLEAR" address="0xffc03124" />
+    <symbol name="UART3_THR" address="0xffc03128" />
+    <symbol name="UART3_RBR" address="0xffc0312c" />
+
+    <!-- EPPI1 Registers -->
+    <symbol name="EPPI1_STATUS" address="0xffc01300" />
+    <symbol name="EPPI1_HCOUNT" address="0xffc01304" />
+    <symbol name="EPPI1_HDELAY" address="0xffc01308" />
+    <symbol name="EPPI1_VCOUNT" address="0xffc0130c" />
+    <symbol name="EPPI1_VDELAY" address="0xffc01310" />
+    <symbol name="EPPI1_FRAME" address="0xffc01314" />
+    <symbol name="EPPI1_LINE" address="0xffc01318" />
+    <symbol name="EPPI1_CLKDIV" address="0xffc0131c" />
+    <symbol name="EPPI1_CONTROL" address="0xffc01320" />
+    <symbol name="EPPI1_FS1W_HBL" address="0xffc01324" />
+    <symbol name="EPPI1_FS1P_AVPL" address="0xffc01328" />
+    <symbol name="EPPI1_FS2W_LVB" address="0xffc0132c" />
+    <symbol name="EPPI1_FS2P_LAVF" address="0xffc01330" />
+    <symbol name="EPPI1_CLIP" address="0xffc01334" />
+
+    <!-- Port Interrupt 0 Registers (32-bit) -->
+    <symbol name="PINT0_MASK_SET" address="0xffc01400" />
+    <symbol name="PINT0_MASK_CLEAR" address="0xffc01404" />
+    <symbol name="PINT0_REQUEST" address="0xffc01408" />
+    <symbol name="PINT0_ASSIGN" address="0xffc0140c" />
+    <symbol name="PINT0_EDGE_SET" address="0xffc01410" />
+    <symbol name="PINT0_EDGE_CLEAR" address="0xffc01414" />
+    <symbol name="PINT0_INVERT_SET" address="0xffc01418" />
+    <symbol name="PINT0_INVERT_CLEAR" address="0xffc0141c" />
+    <symbol name="PINT0_PINSTATE" address="0xffc01420" />
+    <symbol name="PINT0_LATCH" address="0xffc01424" />
+
+    <!-- Port Interrupt 1 Registers (32-bit) -->
+    <symbol name="PINT1_MASK_SET" address="0xffc01430" />
+    <symbol name="PINT1_MASK_CLEAR" address="0xffc01434" />
+    <symbol name="PINT1_REQUEST" address="0xffc01438" />
+    <symbol name="PINT1_ASSIGN" address="0xffc0143c" />
+    <symbol name="PINT1_EDGE_SET" address="0xffc01440" />
+    <symbol name="PINT1_EDGE_CLEAR" address="0xffc01444" />
+    <symbol name="PINT1_INVERT_SET" address="0xffc01448" />
+    <symbol name="PINT1_INVERT_CLEAR" address="0xffc0144c" />
+    <symbol name="PINT1_PINSTATE" address="0xffc01450" />
+    <symbol name="PINT1_LATCH" address="0xffc01454" />
+
+    <!-- Port Interrupt 2 Registers (32-bit) -->
+    <symbol name="PINT2_MASK_SET" address="0xffc01460" />
+    <symbol name="PINT2_MASK_CLEAR" address="0xffc01464" />
+    <symbol name="PINT2_REQUEST" address="0xffc01468" />
+    <symbol name="PINT2_ASSIGN" address="0xffc0146c" />
+    <symbol name="PINT2_EDGE_SET" address="0xffc01470" />
+    <symbol name="PINT2_EDGE_CLEAR" address="0xffc01474" />
+    <symbol name="PINT2_INVERT_SET" address="0xffc01478" />
+    <symbol name="PINT2_INVERT_CLEAR" address="0xffc0147c" />
+    <symbol name="PINT2_PINSTATE" address="0xffc01480" />
+    <symbol name="PINT2_LATCH" address="0xffc01484" />
+
+    <!-- Port Interrupt 3 Registers (32-bit) -->
+    <symbol name="PINT3_MASK_SET" address="0xffc01490" />
+    <symbol name="PINT3_MASK_CLEAR" address="0xffc01494" />
+    <symbol name="PINT3_REQUEST" address="0xffc01498" />
+    <symbol name="PINT3_ASSIGN" address="0xffc0149c" />
+    <symbol name="PINT3_EDGE_SET" address="0xffc014a0" />
+    <symbol name="PINT3_EDGE_CLEAR" address="0xffc014a4" />
+    <symbol name="PINT3_INVERT_SET" address="0xffc014a8" />
+    <symbol name="PINT3_INVERT_CLEAR" address="0xffc014ac" />
+    <symbol name="PINT3_PINSTATE" address="0xffc014b0" />
+    <symbol name="PINT3_LATCH" address="0xffc014b4" />
+
+    <!-- Port A Registers -->
+    <symbol name="PORTA_FER" address="0xffc014c0" />
+    <symbol name="PORTA" address="0xffc014c4" />
+    <symbol name="PORTA_SET" address="0xffc014c8" />
+    <symbol name="PORTA_CLEAR" address="0xffc014cc" />
+    <symbol name="PORTA_DIR_SET" address="0xffc014d0" />
+    <symbol name="PORTA_DIR_CLEAR" address="0xffc014d4" />
+    <symbol name="PORTA_INEN" address="0xffc014d8" />
+    <symbol name="PORTA_MUX" address="0xffc014dc" />
+
+    <!-- Port B Registers -->
+    <symbol name="PORTB_FER" address="0xffc014e0" />
+    <symbol name="PORTB" address="0xffc014e4" />
+    <symbol name="PORTB_SET" address="0xffc014e8" />
+    <symbol name="PORTB_CLEAR" address="0xffc014ec" />
+    <symbol name="PORTB_DIR_SET" address="0xffc014f0" />
+    <symbol name="PORTB_DIR_CLEAR" address="0xffc014f4" />
+    <symbol name="PORTB_INEN" address="0xffc014f8" />
+    <symbol name="PORTB_MUX" address="0xffc014fc" />
+
+    <!-- Port C Registers -->
+    <symbol name="PORTC_FER" address="0xffc01500" />
+    <symbol name="PORTC" address="0xffc01504" />
+    <symbol name="PORTC_SET" address="0xffc01508" />
+    <symbol name="PORTC_CLEAR" address="0xffc0150c" />
+    <symbol name="PORTC_DIR_SET" address="0xffc01510" />
+    <symbol name="PORTC_DIR_CLEAR" address="0xffc01514" />
+    <symbol name="PORTC_INEN" address="0xffc01518" />
+    <symbol name="PORTC_MUX" address="0xffc0151c" />
+
+    <!-- Port D Registers -->
+    <symbol name="PORTD_FER" address="0xffc01520" />
+    <symbol name="PORTD" address="0xffc01524" />
+    <symbol name="PORTD_SET" address="0xffc01528" />
+    <symbol name="PORTD_CLEAR" address="0xffc0152c" />
+    <symbol name="PORTD_DIR_SET" address="0xffc01530" />
+    <symbol name="PORTD_DIR_CLEAR" address="0xffc01534" />
+    <symbol name="PORTD_INEN" address="0xffc01538" />
+    <symbol name="PORTD_MUX" address="0xffc0153c" />
+
+    <!-- Port E Registers -->
+    <symbol name="PORTE_FER" address="0xffc01540" />
+    <symbol name="PORTE" address="0xffc01544" />
+    <symbol name="PORTE_SET" address="0xffc01548" />
+    <symbol name="PORTE_CLEAR" address="0xffc0154c" />
+    <symbol name="PORTE_DIR_SET" address="0xffc01550" />
+    <symbol name="PORTE_DIR_CLEAR" address="0xffc01554" />
+    <symbol name="PORTE_INEN" address="0xffc01558" />
+    <symbol name="PORTE_MUX" address="0xffc0155c" />
+
+    <!-- Port F Registers -->
+    <symbol name="PORTF_FER" address="0xffc01560" />
+    <symbol name="PORTF" address="0xffc01564" />
+    <symbol name="PORTF_SET" address="0xffc01568" />
+    <symbol name="PORTF_CLEAR" address="0xffc0156c" />
+    <symbol name="PORTF_DIR_SET" address="0xffc01570" />
+    <symbol name="PORTF_DIR_CLEAR" address="0xffc01574" />
+    <symbol name="PORTF_INEN" address="0xffc01578" />
+    <symbol name="PORTF_MUX" address="0xffc0157c" />
+
+    <!-- Port G Registers -->
+    <symbol name="PORTG_FER" address="0xffc01580" />
+    <symbol name="PORTG" address="0xffc01584" />
+    <symbol name="PORTG_SET" address="0xffc01588" />
+    <symbol name="PORTG_CLEAR" address="0xffc0158c" />
+    <symbol name="PORTG_DIR_SET" address="0xffc01590" />
+    <symbol name="PORTG_DIR_CLEAR" address="0xffc01594" />
+    <symbol name="PORTG_INEN" address="0xffc01598" />
+    <symbol name="PORTG_MUX" address="0xffc0159c" />
+
+    <!-- Port H Registers -->
+    <symbol name="PORTH_FER" address="0xffc015a0" />
+    <symbol name="PORTH" address="0xffc015a4" />
+    <symbol name="PORTH_SET" address="0xffc015a8" />
+    <symbol name="PORTH_CLEAR" address="0xffc015ac" />
+    <symbol name="PORTH_DIR_SET" address="0xffc015b0" />
+    <symbol name="PORTH_DIR_CLEAR" address="0xffc015b4" />
+    <symbol name="PORTH_INEN" address="0xffc015b8" />
+    <symbol name="PORTH_MUX" address="0xffc015bc" />
+
+    <!-- Port I Registers -->
+    <symbol name="PORTI_FER" address="0xffc015c0" />
+    <symbol name="PORTI" address="0xffc015c4" />
+    <symbol name="PORTI_SET" address="0xffc015c8" />
+    <symbol name="PORTI_CLEAR" address="0xffc015cc" />
+    <symbol name="PORTI_DIR_SET" address="0xffc015d0" />
+    <symbol name="PORTI_DIR_CLEAR" address="0xffc015d4" />
+    <symbol name="PORTI_INEN" address="0xffc015d8" />
+    <symbol name="PORTI_MUX" address="0xffc015dc" />
+
+    <!-- Port J Registers -->
+    <symbol name="PORTJ_FER" address="0xffc015e0" />
+    <symbol name="PORTJ" address="0xffc015e4" />
+    <symbol name="PORTJ_SET" address="0xffc015e8" />
+    <symbol name="PORTJ_CLEAR" address="0xffc015ec" />
+    <symbol name="PORTJ_DIR_SET" address="0xffc015f0" />
+    <symbol name="PORTJ_DIR_CLEAR" address="0xffc015f4" />
+    <symbol name="PORTJ_INEN" address="0xffc015f8" />
+    <symbol name="PORTJ_MUX" address="0xffc015fc" />
+
+    <!-- PWM Timer Registers -->
+    <symbol name="TIMER0_CONFIG" address="0xffc01600" />
+    <symbol name="TIMER0_COUNTER" address="0xffc01604" />
+    <symbol name="TIMER0_PERIOD" address="0xffc01608" />
+    <symbol name="TIMER0_WIDTH" address="0xffc0160c" />
+    <symbol name="TIMER1_CONFIG" address="0xffc01610" />
+    <symbol name="TIMER1_COUNTER" address="0xffc01614" />
+    <symbol name="TIMER1_PERIOD" address="0xffc01618" />
+    <symbol name="TIMER1_WIDTH" address="0xffc0161c" />
+    <symbol name="TIMER2_CONFIG" address="0xffc01620" />
+    <symbol name="TIMER2_COUNTER" address="0xffc01624" />
+    <symbol name="TIMER2_PERIOD" address="0xffc01628" />
+    <symbol name="TIMER2_WIDTH" address="0xffc0162c" />
+    <symbol name="TIMER3_CONFIG" address="0xffc01630" />
+    <symbol name="TIMER3_COUNTER" address="0xffc01634" />
+    <symbol name="TIMER3_PERIOD" address="0xffc01638" />
+    <symbol name="TIMER3_WIDTH" address="0xffc0163c" />
+    <symbol name="TIMER4_CONFIG" address="0xffc01640" />
+    <symbol name="TIMER4_COUNTER" address="0xffc01644" />
+    <symbol name="TIMER4_PERIOD" address="0xffc01648" />
+    <symbol name="TIMER4_WIDTH" address="0xffc0164c" />
+    <symbol name="TIMER5_CONFIG" address="0xffc01650" />
+    <symbol name="TIMER5_COUNTER" address="0xffc01654" />
+    <symbol name="TIMER5_PERIOD" address="0xffc01658" />
+    <symbol name="TIMER5_WIDTH" address="0xffc0165c" />
+    <symbol name="TIMER6_CONFIG" address="0xffc01660" />
+    <symbol name="TIMER6_COUNTER" address="0xffc01664" />
+    <symbol name="TIMER6_PERIOD" address="0xffc01668" />
+    <symbol name="TIMER6_WIDTH" address="0xffc0166c" />
+    <symbol name="TIMER7_CONFIG" address="0xffc01670" />
+    <symbol name="TIMER7_COUNTER" address="0xffc01674" />
+    <symbol name="TIMER7_PERIOD" address="0xffc01678" />
+    <symbol name="TIMER7_WIDTH" address="0xffc0167c" />
+
+    <!-- Timer Group of 8 -->
+    <symbol name="TIMER_ENABLE0" address="0xffc01680" />
+    <symbol name="TIMER_DISABLE0" address="0xffc01684" />
+    <symbol name="TIMER_STATUS0" address="0xffc01688" />
+
+    <!-- DMAC1 Registers -->
+    <symbol name="DMAC1_TCPER" address="0xffc01b0c" />
+    <symbol name="DMAC1_TCCNT" address="0xffc01b10" />
+
+    <!-- DMA Channel 12 Registers -->
+    <symbol name="DMA12_NEXT_DESC_PTR" address="0xffc01c00" />
+    <symbol name="DMA12_START_ADDR" address="0xffc01c04" />
+    <symbol name="DMA12_CONFIG" address="0xffc01c08" />
+    <symbol name="DMA12_X_COUNT" address="0xffc01c10" />
+    <symbol name="DMA12_X_MODIFY" address="0xffc01c14" />
+    <symbol name="DMA12_Y_COUNT" address="0xffc01c18" />
+    <symbol name="DMA12_Y_MODIFY" address="0xffc01c1c" />
+    <symbol name="DMA12_CURR_DESC_PTR" address="0xffc01c20" />
+    <symbol name="DMA12_CURR_ADDR" address="0xffc01c24" />
+    <symbol name="DMA12_IRQ_STATUS" address="0xffc01c28" />
+    <symbol name="DMA12_PERIPHERAL_MAP" address="0xffc01c2c" />
+    <symbol name="DMA12_CURR_X_COUNT" address="0xffc01c30" />
+    <symbol name="DMA12_CURR_Y_COUNT" address="0xffc01c38" />
+
+    <!-- DMA Channel 13 Registers -->
+    <symbol name="DMA13_NEXT_DESC_PTR" address="0xffc01c40" />
+    <symbol name="DMA13_START_ADDR" address="0xffc01c44" />
+    <symbol name="DMA13_CONFIG" address="0xffc01c48" />
+    <symbol name="DMA13_X_COUNT" address="0xffc01c50" />
+    <symbol name="DMA13_X_MODIFY" address="0xffc01c54" />
+    <symbol name="DMA13_Y_COUNT" address="0xffc01c58" />
+    <symbol name="DMA13_Y_MODIFY" address="0xffc01c5c" />
+    <symbol name="DMA13_CURR_DESC_PTR" address="0xffc01c60" />
+    <symbol name="DMA13_CURR_ADDR" address="0xffc01c64" />
+    <symbol name="DMA13_IRQ_STATUS" address="0xffc01c68" />
+    <symbol name="DMA13_PERIPHERAL_MAP" address="0xffc01c6c" />
+    <symbol name="DMA13_CURR_X_COUNT" address="0xffc01c70" />
+    <symbol name="DMA13_CURR_Y_COUNT" address="0xffc01c78" />
+
+    <!-- DMA Channel 14 Registers -->
+    <symbol name="DMA14_NEXT_DESC_PTR" address="0xffc01c80" />
+    <symbol name="DMA14_START_ADDR" address="0xffc01c84" />
+    <symbol name="DMA14_CONFIG" address="0xffc01c88" />
+    <symbol name="DMA14_X_COUNT" address="0xffc01c90" />
+    <symbol name="DMA14_X_MODIFY" address="0xffc01c94" />
+    <symbol name="DMA14_Y_COUNT" address="0xffc01c98" />
+    <symbol name="DMA14_Y_MODIFY" address="0xffc01c9c" />
+    <symbol name="DMA14_CURR_DESC_PTR" address="0xffc01ca0" />
+    <symbol name="DMA14_CURR_ADDR" address="0xffc01ca4" />
+    <symbol name="DMA14_IRQ_STATUS" address="0xffc01ca8" />
+    <symbol name="DMA14_PERIPHERAL_MAP" address="0xffc01cac" />
+    <symbol name="DMA14_CURR_X_COUNT" address="0xffc01cb0" />
+    <symbol name="DMA14_CURR_Y_COUNT" address="0xffc01cb8" />
+
+    <!-- DMA Channel 15 Registers -->
+    <symbol name="DMA15_NEXT_DESC_PTR" address="0xffc01cc0" />
+    <symbol name="DMA15_START_ADDR" address="0xffc01cc4" />
+    <symbol name="DMA15_CONFIG" address="0xffc01cc8" />
+    <symbol name="DMA15_X_COUNT" address="0xffc01cd0" />
+    <symbol name="DMA15_X_MODIFY" address="0xffc01cd4" />
+    <symbol name="DMA15_Y_COUNT" address="0xffc01cd8" />
+    <symbol name="DMA15_Y_MODIFY" address="0xffc01cdc" />
+    <symbol name="DMA15_CURR_DESC_PTR" address="0xffc01ce0" />
+    <symbol name="DMA15_CURR_ADDR" address="0xffc01ce4" />
+    <symbol name="DMA15_IRQ_STATUS" address="0xffc01ce8" />
+    <symbol name="DMA15_PERIPHERAL_MAP" address="0xffc01cec" />
+    <symbol name="DMA15_CURR_X_COUNT" address="0xffc01cf0" />
+    <symbol name="DMA15_CURR_Y_COUNT" address="0xffc01cf8" />
+
+    <!-- DMA Channel 16 Registers -->
+    <symbol name="DMA16_NEXT_DESC_PTR" address="0xffc01d00" />
+    <symbol name="DMA16_START_ADDR" address="0xffc01d04" />
+    <symbol name="DMA16_CONFIG" address="0xffc01d08" />
+    <symbol name="DMA16_X_COUNT" address="0xffc01d10" />
+    <symbol name="DMA16_X_MODIFY" address="0xffc01d14" />
+    <symbol name="DMA16_Y_COUNT" address="0xffc01d18" />
+    <symbol name="DMA16_Y_MODIFY" address="0xffc01d1c" />
+    <symbol name="DMA16_CURR_DESC_PTR" address="0xffc01d20" />
+    <symbol name="DMA16_CURR_ADDR" address="0xffc01d24" />
+    <symbol name="DMA16_IRQ_STATUS" address="0xffc01d28" />
+    <symbol name="DMA16_PERIPHERAL_MAP" address="0xffc01d2c" />
+    <symbol name="DMA16_CURR_X_COUNT" address="0xffc01d30" />
+    <symbol name="DMA16_CURR_Y_COUNT" address="0xffc01d38" />
+
+    <!-- DMA Channel 17 Registers -->
+    <symbol name="DMA17_NEXT_DESC_PTR" address="0xffc01d40" />
+    <symbol name="DMA17_START_ADDR" address="0xffc01d44" />
+    <symbol name="DMA17_CONFIG" address="0xffc01d48" />
+    <symbol name="DMA17_X_COUNT" address="0xffc01d50" />
+    <symbol name="DMA17_X_MODIFY" address="0xffc01d54" />
+    <symbol name="DMA17_Y_COUNT" address="0xffc01d58" />
+    <symbol name="DMA17_Y_MODIFY" address="0xffc01d5c" />
+    <symbol name="DMA17_CURR_DESC_PTR" address="0xffc01d60" />
+    <symbol name="DMA17_CURR_ADDR" address="0xffc01d64" />
+    <symbol name="DMA17_IRQ_STATUS" address="0xffc01d68" />
+    <symbol name="DMA17_PERIPHERAL_MAP" address="0xffc01d6c" />
+    <symbol name="DMA17_CURR_X_COUNT" address="0xffc01d70" />
+    <symbol name="DMA17_CURR_Y_COUNT" address="0xffc01d78" />
+
+    <!-- DMA Channel 18 Registers -->
+    <symbol name="DMA18_NEXT_DESC_PTR" address="0xffc01d80" />
+    <symbol name="DMA18_START_ADDR" address="0xffc01d84" />
+    <symbol name="DMA18_CONFIG" address="0xffc01d88" />
+    <symbol name="DMA18_X_COUNT" address="0xffc01d90" />
+    <symbol name="DMA18_X_MODIFY" address="0xffc01d94" />
+    <symbol name="DMA18_Y_COUNT" address="0xffc01d98" />
+    <symbol name="DMA18_Y_MODIFY" address="0xffc01d9c" />
+    <symbol name="DMA18_CURR_DESC_PTR" address="0xffc01da0" />
+    <symbol name="DMA18_CURR_ADDR" address="0xffc01da4" />
+    <symbol name="DMA18_IRQ_STATUS" address="0xffc01da4" />
+    <symbol name="DMA18_PERIPHERAL_MAP" address="0xffc01dac" />
+    <symbol name="DMA18_CURR_X_COUNT" address="0xffc01db0" />
+    <symbol name="DMA18_CURR_Y_COUNT" address="0xffc01db8" />
+
+    <!-- DMA Channel 19 Registers -->
+    <symbol name="DMA19_NEXT_DESC_PTR" address="0xffc01dc0" />
+    <symbol name="DMA19_START_ADDR" address="0xffc01dc4" />
+    <symbol name="DMA19_CONFIG" address="0xffc01dc8" />
+    <symbol name="DMA19_X_COUNT" address="0xffc01dd0" />
+    <symbol name="DMA19_X_MODIFY" address="0xffc01dd4" />
+    <symbol name="DMA19_Y_COUNT" address="0xffc01dd8" />
+    <symbol name="DMA19_Y_MODIFY" address="0xffc01ddc" />
+    <symbol name="DMA19_CURR_DESC_PTR" address="0xffc01de0" />
+    <symbol name="DMA19_CURR_ADDR" address="0xffc01de4" />
+    <symbol name="DMA19_IRQ_STATUS" address="0xffc01de8" />
+    <symbol name="DMA19_PERIPHERAL_MAP" address="0xffc01dec" />
+    <symbol name="DMA19_CURR_X_COUNT" address="0xffc01df0" />
+    <symbol name="DMA19_CURR_Y_COUNT" address="0xffc01df8" />
+
+    <!-- DMA Channel 20 Registers -->
+    <symbol name="DMA20_NEXT_DESC_PTR" address="0xffc01e00" />
+    <symbol name="DMA20_START_ADDR" address="0xffc01e04" />
+    <symbol name="DMA20_CONFIG" address="0xffc01e08" />
+    <symbol name="DMA20_X_COUNT" address="0xffc01e10" />
+    <symbol name="DMA20_X_MODIFY" address="0xffc01e14" />
+    <symbol name="DMA20_Y_COUNT" address="0xffc01e18" />
+    <symbol name="DMA20_Y_MODIFY" address="0xffc01e1c" />
+    <symbol name="DMA20_CURR_DESC_PTR" address="0xffc01e20" />
+    <symbol name="DMA20_CURR_ADDR" address="0xffc01e24" />
+    <symbol name="DMA20_IRQ_STATUS" address="0xffc01e28" />
+    <symbol name="DMA20_PERIPHERAL_MAP" address="0xffc01e2c" />
+    <symbol name="DMA20_CURR_X_COUNT" address="0xffc01e30" />
+    <symbol name="DMA20_CURR_Y_COUNT" address="0xffc01e38" />
+
+    <!-- DMA Channel 21 Registers -->
+    <symbol name="DMA21_NEXT_DESC_PTR" address="0xffc01e40" />
+    <symbol name="DMA21_START_ADDR" address="0xffc01e44" />
+    <symbol name="DMA21_CONFIG" address="0xffc01e48" />
+    <symbol name="DMA21_X_COUNT" address="0xffc01e50" />
+    <symbol name="DMA21_X_MODIFY" address="0xffc01e54" />
+    <symbol name="DMA21_Y_COUNT" address="0xffc01e58" />
+    <symbol name="DMA21_Y_MODIFY" address="0xffc01e5c" />
+    <symbol name="DMA21_CURR_DESC_PTR" address="0xffc01e60" />
+    <symbol name="DMA21_CURR_ADDR" address="0xffc01e64" />
+    <symbol name="DMA21_IRQ_STATUS" address="0xffc01e68" />
+    <symbol name="DMA21_PERIPHERAL_MAP" address="0xffc01e6c" />
+    <symbol name="DMA21_CURR_X_COUNT" address="0xffc01e70" />
+    <symbol name="DMA21_CURR_Y_COUNT" address="0xffc01e78" />
+
+    <!-- DMA Channel 22 Registers -->
+    <symbol name="DMA22_NEXT_DESC_PTR" address="0xffc01e80" />
+    <symbol name="DMA22_START_ADDR" address="0xffc01e84" />
+    <symbol name="DMA22_CONFIG" address="0xffc01e88" />
+    <symbol name="DMA22_X_COUNT" address="0xffc01e90" />
+    <symbol name="DMA22_X_MODIFY" address="0xffc01e94" />
+    <symbol name="DMA22_Y_COUNT" address="0xffc01e98" />
+    <symbol name="DMA22_Y_MODIFY" address="0xffc01e9c" />
+    <symbol name="DMA22_CURR_DESC_PTR" address="0xffc01ea0" />
+    <symbol name="DMA22_CURR_ADDR" address="0xffc01ea4" />
+    <symbol name="DMA22_IRQ_STATUS" address="0xffc01ea8" />
+    <symbol name="DMA22_PERIPHERAL_MAP" address="0xffc01eac" />
+    <symbol name="DMA22_CURR_X_COUNT" address="0xffc01eb0" />
+    <symbol name="DMA22_CURR_Y_COUNT" address="0xffc01eb8" />
+
+    <!-- DMA Channel 23 Registers -->
+    <symbol name="DMA23_NEXT_DESC_PTR" address="0xffc01ec0" />
+    <symbol name="DMA23_START_ADDR" address="0xffc01ec4" />
+    <symbol name="DMA23_CONFIG" address="0xffc01ec8" />
+    <symbol name="DMA23_X_COUNT" address="0xffc01ed0" />
+    <symbol name="DMA23_X_MODIFY" address="0xffc01ed4" />
+    <symbol name="DMA23_Y_COUNT" address="0xffc01ed8" />
+    <symbol name="DMA23_Y_MODIFY" address="0xffc01edc" />
+    <symbol name="DMA23_CURR_DESC_PTR" address="0xffc01ee0" />
+    <symbol name="DMA23_CURR_ADDR" address="0xffc01ee4" />
+    <symbol name="DMA23_IRQ_STATUS" address="0xffc01ee8" />
+    <symbol name="DMA23_PERIPHERAL_MAP" address="0xffc01eec" />
+    <symbol name="DMA23_CURR_X_COUNT" address="0xffc01ef0" />
+    <symbol name="DMA23_CURR_Y_COUNT" address="0xffc01ef8" />
+
+    <!-- MDMA Stream 2 Registers -->
+    <symbol name="MDMA_D2_NEXT_DESC_PTR" address="0xffc01f00" />
+    <symbol name="MDMA_D2_START_ADDR" address="0xffc01f04" />
+    <symbol name="MDMA_D2_CONFIG" address="0xffc01f08" />
+    <symbol name="MDMA_D2_X_COUNT" address="0xffc01f10" />
+    <symbol name="MDMA_D2_X_MODIFY" address="0xffc01f14" />
+    <symbol name="MDMA_D2_Y_COUNT" address="0xffc01f18" />
+    <symbol name="MDMA_D2_Y_MODIFY" address="0xffc01f1c" />
+    <symbol name="MDMA_D2_CURR_DESC_PTR" address="0xffc01f20" />
+    <symbol name="MDMA_D2_CURR_ADDR" address="0xffc01f24" />
+    <symbol name="MDMA_D2_IRQ_STATUS" address="0xffc01f28" />
+    <symbol name="MDMA_D2_PERIPHERAL_MAP" address="0xffc01f2c" />
+    <symbol name="MDMA_D2_CURR_X_COUNT" address="0xffc01f30" />
+    <symbol name="MDMA_D2_CURR_Y_COUNT" address="0xffc01f38" />
+    <symbol name="MDMA_S2_NEXT_DESC_PTR" address="0xffc01f40" />
+    <symbol name="MDMA_S2_START_ADDR" address="0xffc01f44" />
+    <symbol name="MDMA_S2_CONFIG" address="0xffc01f48" />
+    <symbol name="MDMA_S2_X_COUNT" address="0xffc01f50" />
+    <symbol name="MDMA_S2_X_MODIFY" address="0xffc01f54" />
+    <symbol name="MDMA_S2_Y_COUNT" address="0xffc01f58" />
+    <symbol name="MDMA_S2_Y_MODIFY" address="0xffc01f5c" />
+    <symbol name="MDMA_S2_CURR_DESC_PTR" address="0xffc01f60" />
+    <symbol name="MDMA_S2_CURR_ADDR" address="0xffc01f64" />
+    <symbol name="MDMA_S2_IRQ_STATUS" address="0xffc01f68" />
+    <symbol name="MDMA_S2_PERIPHERAL_MAP" address="0xffc01f6c" />
+    <symbol name="MDMA_S2_CURR_X_COUNT" address="0xffc01f70" />
+    <symbol name="MDMA_S2_CURR_Y_COUNT" address="0xffc01f78" />
+
+    <!-- MDMA Stream 3 Registers -->
+    <symbol name="MDMA_D3_NEXT_DESC_PTR" address="0xffc01f80" />
+    <symbol name="MDMA_D3_START_ADDR" address="0xffc01f84" />
+    <symbol name="MDMA_D3_CONFIG" address="0xffc01f88" />
+    <symbol name="MDMA_D3_X_COUNT" address="0xffc01f90" />
+    <symbol name="MDMA_D3_X_MODIFY" address="0xffc01f94" />
+    <symbol name="MDMA_D3_Y_COUNT" address="0xffc01f98" />
+    <symbol name="MDMA_D3_Y_MODIFY" address="0xffc01f9c" />
+    <symbol name="MDMA_D3_CURR_DESC_PTR" address="0xffc01fa0" />
+    <symbol name="MDMA_D3_CURR_ADDR" address="0xffc01fa4" />
+    <symbol name="MDMA_D3_IRQ_STATUS" address="0xffc01fa8" />
+    <symbol name="MDMA_D3_PERIPHERAL_MAP" address="0xffc01fac" />
+    <symbol name="MDMA_D3_CURR_X_COUNT" address="0xffc01fb0" />
+    <symbol name="MDMA_D3_CURR_Y_COUNT" address="0xffc01fb8" />
+    <symbol name="MDMA_S3_NEXT_DESC_PTR" address="0xffc01fc0" />
+    <symbol name="MDMA_S3_START_ADDR" address="0xffc01fc4" />
+    <symbol name="MDMA_S3_CONFIG" address="0xffc01fc8" />
+    <symbol name="MDMA_S3_X_COUNT" address="0xffc01fd0" />
+    <symbol name="MDMA_S3_X_MODIFY" address="0xffc01fd4" />
+    <symbol name="MDMA_S3_Y_COUNT" address="0xffc01fd8" />
+    <symbol name="MDMA_S3_Y_MODIFY" address="0xffc01fdc" />
+    <symbol name="MDMA_S3_CURR_DESC_PTR" address="0xffc01fe0" />
+    <symbol name="MDMA_S3_CURR_ADDR" address="0xffc01fe4" />
+    <symbol name="MDMA_S3_IRQ_STATUS" address="0xffc01fe8" />
+    <symbol name="MDMA_S3_PERIPHERAL_MAP" address="0xffc01fec" />
+    <symbol name="MDMA_S3_CURR_X_COUNT" address="0xffc01ff0" />
+    <symbol name="MDMA_S3_CURR_Y_COUNT" address="0xffc01ff8" />
+
+    <!-- UART1 Registers -->
+    <symbol name="UART1_DLL" address="0xffc02000" />
+    <symbol name="UART1_DLH" address="0xffc02004" />
+    <symbol name="UART1_GCTL" address="0xffc02008" />
+    <symbol name="UART1_LCR" address="0xffc0200c" />
+    <symbol name="UART1_MCR" address="0xffc02010" />
+    <symbol name="UART1_LSR" address="0xffc02014" />
+    <symbol name="UART1_MSR" address="0xffc02018" />
+    <symbol name="UART1_SCR" address="0xffc0201c" />
+    <symbol name="UART1_IER_SET" address="0xffc02020" />
+    <symbol name="UART1_IER_CLEAR" address="0xffc02024" />
+    <symbol name="UART1_THR" address="0xffc02028" />
+    <symbol name="UART1_RBR" address="0xffc0202c" />
+
+    <!-- SPI1 Registers -->
+    <symbol name="SPI1_CTL" address="0xffc02300" />
+    <symbol name="SPI1_FLG" address="0xffc02304" />
+    <symbol name="SPI1_STAT" address="0xffc02308" />
+    <symbol name="SPI1_TDBR" address="0xffc0230c" />
+    <symbol name="SPI1_RDBR" address="0xffc02310" />
+    <symbol name="SPI1_BAUD" address="0xffc02314" />
+    <symbol name="SPI1_SHADOW" address="0xffc02318" />
+
+    <!-- SPORT2 Registers -->
+    <symbol name="SPORT2_TCR1" address="0xffc02500" />
+    <symbol name="SPORT2_TCR2" address="0xffc02504" />
+    <symbol name="SPORT2_TCLKDIV" address="0xffc02508" />
+    <symbol name="SPORT2_TFSDIV" address="0xffc0250c" />
+    <symbol name="SPORT2_TX" address="0xffc02510" />
+    <symbol name="SPORT2_RX" address="0xffc02518" />
+    <symbol name="SPORT2_RCR1" address="0xffc02520" />
+    <symbol name="SPORT2_RCR2" address="0xffc02524" />
+    <symbol name="SPORT2_RCLKDIV" address="0xffc02528" />
+    <symbol name="SPORT2_RFSDIV" address="0xffc0252c" />
+    <symbol name="SPORT2_STAT" address="0xffc02530" />
+    <symbol name="SPORT2_CHNL" address="0xffc02534" />
+    <symbol name="SPORT2_MCMC1" address="0xffc02538" />
+    <symbol name="SPORT2_MCMC2" address="0xffc0253c" />
+    <symbol name="SPORT2_MTCS0" address="0xffc02540" />
+    <symbol name="SPORT2_MTCS1" address="0xffc02544" />
+    <symbol name="SPORT2_MTCS2" address="0xffc02548" />
+    <symbol name="SPORT2_MTCS3" address="0xffc0254c" />
+    <symbol name="SPORT2_MRCS0" address="0xffc02550" />
+    <symbol name="SPORT2_MRCS1" address="0xffc02554" />
+    <symbol name="SPORT2_MRCS2" address="0xffc02558" />
+    <symbol name="SPORT2_MRCS3" address="0xffc0255c" />
+
+    <!-- SPORT3 Registers -->
+    <symbol name="SPORT3_TCR1" address="0xffc02600" />
+    <symbol name="SPORT3_TCR2" address="0xffc02604" />
+    <symbol name="SPORT3_TCLKDIV" address="0xffc02608" />
+    <symbol name="SPORT3_TFSDIV" address="0xffc0260c" />
+    <symbol name="SPORT3_TX" address="0xffc02610" />
+    <symbol name="SPORT3_RX" address="0xffc02618" />
+    <symbol name="SPORT3_RCR1" address="0xffc02620" />
+    <symbol name="SPORT3_RCR2" address="0xffc02624" />
+    <symbol name="SPORT3_RCLKDIV" address="0xffc02628" />
+    <symbol name="SPORT3_RFSDIV" address="0xffc0262c" />
+    <symbol name="SPORT3_STAT" address="0xffc02630" />
+    <symbol name="SPORT3_CHNL" address="0xffc02634" />
+    <symbol name="SPORT3_MCMC1" address="0xffc02638" />
+    <symbol name="SPORT3_MCMC2" address="0xffc0263c" />
+    <symbol name="SPORT3_MTCS0" address="0xffc02640" />
+    <symbol name="SPORT3_MTCS1" address="0xffc02644" />
+    <symbol name="SPORT3_MTCS2" address="0xffc02648" />
+    <symbol name="SPORT3_MTCS3" address="0xffc0264c" />
+    <symbol name="SPORT3_MRCS0" address="0xffc02650" />
+    <symbol name="SPORT3_MRCS1" address="0xffc02654" />
+    <symbol name="SPORT3_MRCS2" address="0xffc02658" />
+    <symbol name="SPORT3_MRCS3" address="0xffc0265c" />
+
+    <!-- EPPI2 Registers -->
+    <symbol name="EPPI2_STATUS" address="0xffc02900" />
+    <symbol name="EPPI2_HCOUNT" address="0xffc02904" />
+    <symbol name="EPPI2_HDELAY" address="0xffc02908" />
+    <symbol name="EPPI2_VCOUNT" address="0xffc0290c" />
+    <symbol name="EPPI2_VDELAY" address="0xffc02910" />
+    <symbol name="EPPI2_FRAME" address="0xffc02914" />
+    <symbol name="EPPI2_LINE" address="0xffc02918" />
+    <symbol name="EPPI2_CLKDIV" address="0xffc0291c" />
+    <symbol name="EPPI2_CONTROL" address="0xffc02920" />
+    <symbol name="EPPI2_FS1W_HBL" address="0xffc02924" />
+    <symbol name="EPPI2_FS1P_AVPL" address="0xffc02928" />
+    <symbol name="EPPI2_FS2W_LVB" address="0xffc0292c" />
+    <symbol name="EPPI2_FS2P_LAVF" address="0xffc02930" />
+    <symbol name="EPPI2_CLIP" address="0xffc02934" />
+
+    <!-- CAN Controller 0 Config 1 Registers -->
+    <symbol name="CAN0_MC1" address="0xffc02a00" />
+    <symbol name="CAN0_MD1" address="0xffc02a04" />
+    <symbol name="CAN0_TRS1" address="0xffc02a08" />
+    <symbol name="CAN0_TRR1" address="0xffc02a0c" />
+    <symbol name="CAN0_TA1" address="0xffc02a10" />
+    <symbol name="CAN0_AA1" address="0xffc02a14" />
+    <symbol name="CAN0_RMP1" address="0xffc02a18" />
+    <symbol name="CAN0_RML1" address="0xffc02a1c" />
+    <symbol name="CAN0_MBTIF1" address="0xffc02a20" />
+    <symbol name="CAN0_MBRIF1" address="0xffc02a28" />
+    <symbol name="CAN0_MBIM1" address="0xffc02a28" />
+    <symbol name="CAN0_RFH1" address="0xffc02a2c" />
+    <symbol name="CAN0_OPSS1" address="0xffc02a30" />
+
+    <!-- CAN Controller 0 Config 2 Registers -->
+    <symbol name="CAN0_MC2" address="0xffc02a40" />
+    <symbol name="CAN0_MD2" address="0xffc02a44" />
+    <symbol name="CAN0_TRS2" address="0xffc02a48" />
+    <symbol name="CAN0_TRR2" address="0xffc02a4c" />
+    <symbol name="CAN0_TA2" address="0xffc02a50" />
+    <symbol name="CAN0_AA2" address="0xffc02a54" />
+    <symbol name="CAN0_RMP2" address="0xffc02a58" />
+    <symbol name="CAN0_RML2" address="0xffc02a5c" />
+    <symbol name="CAN0_MBTIF2" address="0xffc02a60" />
+    <symbol name="CAN0_MBRIF2" address="0xffc02a64" />
+    <symbol name="CAN0_MBIM2" address="0xffc02a68" />
+    <symbol name="CAN0_RFH2" address="0xffc02a6c" />
+    <symbol name="CAN0_OPSS2" address="0xffc02a70" />
+
+    <!-- CAN Controller 0 Clock/Interrupt/Counter Registers -->
+    <symbol name="CAN0_CLOCK" address="0xffc02a80" />
+    <symbol name="CAN0_TIMING" address="0xffc02a84" />
+    <symbol name="CAN0_DEBUG" address="0xffc02a88" />
+    <symbol name="CAN0_STATUS" address="0xffc02a8c" />
+    <symbol name="CAN0_CEC" address="0xffc02a90" />
+    <symbol name="CAN0_GIS" address="0xffc02a94" />
+    <symbol name="CAN0_GIM" address="0xffc02a98" />
+    <symbol name="CAN0_GIF" address="0xffc02a9c" />
+    <symbol name="CAN0_CONTROL" address="0xffc02aa0" />
+    <symbol name="CAN0_INTR" address="0xffc02aa4" />
+    <symbol name="CAN0_MBTD" address="0xffc02aac" />
+    <symbol name="CAN0_EWR" address="0xffc02ab0" />
+    <symbol name="CAN0_ESR" address="0xffc02ab4" />
+    <symbol name="CAN0_UCCNT" address="0xffc02ac4" />
+    <symbol name="CAN0_UCRC" address="0xffc02ac8" />
+    <symbol name="CAN0_UCCNF" address="0xffc02acc" />
+
+    <!-- CAN Controller 0 Acceptance Registers -->
+    <symbol name="CAN0_AM00L" address="0xffc02b00" />
+    <symbol name="CAN0_AM00H" address="0xffc02b04" />
+    <symbol name="CAN0_AM01L" address="0xffc02b08" />
+    <symbol name="CAN0_AM01H" address="0xffc02b0c" />
+    <symbol name="CAN0_AM02L" address="0xffc02b10" />
+    <symbol name="CAN0_AM02H" address="0xffc02b14" />
+    <symbol name="CAN0_AM03L" address="0xffc02b18" />
+    <symbol name="CAN0_AM03H" address="0xffc02b1c" />
+    <symbol name="CAN0_AM04L" address="0xffc02b20" />
+    <symbol name="CAN0_AM04H" address="0xffc02b24" />
+    <symbol name="CAN0_AM05L" address="0xffc02b28" />
+    <symbol name="CAN0_AM05H" address="0xffc02b2c" />
+    <symbol name="CAN0_AM06L" address="0xffc02b30" />
+    <symbol name="CAN0_AM06H" address="0xffc02b34" />
+    <symbol name="CAN0_AM07L" address="0xffc02b38" />
+    <symbol name="CAN0_AM07H" address="0xffc02b3c" />
+    <symbol name="CAN0_AM08L" address="0xffc02b40" />
+    <symbol name="CAN0_AM08H" address="0xffc02b44" />
+    <symbol name="CAN0_AM09L" address="0xffc02b48" />
+    <symbol name="CAN0_AM09H" address="0xffc02b4c" />
+    <symbol name="CAN0_AM10L" address="0xffc02b50" />
+    <symbol name="CAN0_AM10H" address="0xffc02b54" />
+    <symbol name="CAN0_AM11L" address="0xffc02b58" />
+    <symbol name="CAN0_AM11H" address="0xffc02b5c" />
+    <symbol name="CAN0_AM12L" address="0xffc02b60" />
+    <symbol name="CAN0_AM12H" address="0xffc02b64" />
+    <symbol name="CAN0_AM13L" address="0xffc02b68" />
+    <symbol name="CAN0_AM13H" address="0xffc02b6c" />
+    <symbol name="CAN0_AM14L" address="0xffc02b70" />
+    <symbol name="CAN0_AM14H" address="0xffc02b74" />
+    <symbol name="CAN0_AM15L" address="0xffc02b78" />
+    <symbol name="CAN0_AM15H" address="0xffc02b7c" />
+
+    <!-- CAN Controller 0 Acceptance Registers -->
+    <symbol name="CAN0_AM16L" address="0xffc02b80" />
+    <symbol name="CAN0_AM16H" address="0xffc02b84" />
+    <symbol name="CAN0_AM17L" address="0xffc02b88" />
+    <symbol name="CAN0_AM17H" address="0xffc02b8c" />
+    <symbol name="CAN0_AM18L" address="0xffc02b90" />
+    <symbol name="CAN0_AM18H" address="0xffc02b94" />
+    <symbol name="CAN0_AM19L" address="0xffc02b98" />
+    <symbol name="CAN0_AM19H" address="0xffc02b9c" />
+    <symbol name="CAN0_AM20L" address="0xffc02ba0" />
+    <symbol name="CAN0_AM20H" address="0xffc02ba4" />
+    <symbol name="CAN0_AM21L" address="0xffc02ba8" />
+    <symbol name="CAN0_AM21H" address="0xffc02bac" />
+    <symbol name="CAN0_AM22L" address="0xffc02bb0" />
+    <symbol name="CAN0_AM22H" address="0xffc02bb4" />
+    <symbol name="CAN0_AM23L" address="0xffc02bb8" />
+    <symbol name="CAN0_AM23H" address="0xffc02bbc" />
+    <symbol name="CAN0_AM24L" address="0xffc02bc0" />
+    <symbol name="CAN0_AM24H" address="0xffc02bc4" />
+    <symbol name="CAN0_AM25L" address="0xffc02bc8" />
+    <symbol name="CAN0_AM25H" address="0xffc02bcc" />
+    <symbol name="CAN0_AM26L" address="0xffc02bd0" />
+    <symbol name="CAN0_AM26H" address="0xffc02bd4" />
+    <symbol name="CAN0_AM27L" address="0xffc02bd8" />
+    <symbol name="CAN0_AM27H" address="0xffc02bdc" />
+    <symbol name="CAN0_AM28L" address="0xffc02be0" />
+    <symbol name="CAN0_AM28H" address="0xffc02be4" />
+    <symbol name="CAN0_AM29L" address="0xffc02be8" />
+    <symbol name="CAN0_AM29H" address="0xffc02bec" />
+    <symbol name="CAN0_AM30L" address="0xffc02bf0" />
+    <symbol name="CAN0_AM30H" address="0xffc02bf4" />
+    <symbol name="CAN0_AM31L" address="0xffc02bf8" />
+    <symbol name="CAN0_AM31H" address="0xffc02bfc" />
+
+    <!-- CAN Controller 0 Mailbox Data Registers -->
+    <symbol name="CAN0_MB00_DATA0" address="0xffc02c00" />
+    <symbol name="CAN0_MB00_DATA1" address="0xffc02c04" />
+    <symbol name="CAN0_MB00_DATA2" address="0xffc02c08" />
+    <symbol name="CAN0_MB00_DATA3" address="0xffc02c0c" />
+    <symbol name="CAN0_MB00_LENGTH" address="0xffc02c10" />
+    <symbol name="CAN0_MB00_TIMESTAMP" address="0xffc02c14" />
+    <symbol name="CAN0_MB00_ID0" address="0xffc02c18" />
+    <symbol name="CAN0_MB00_ID1" address="0xffc02c1c" />
+    <symbol name="CAN0_MB01_DATA0" address="0xffc02c20" />
+    <symbol name="CAN0_MB01_DATA1" address="0xffc02c24" />
+    <symbol name="CAN0_MB01_DATA2" address="0xffc02c28" />
+    <symbol name="CAN0_MB01_DATA3" address="0xffc02c2c" />
+    <symbol name="CAN0_MB01_LENGTH" address="0xffc02c30" />
+    <symbol name="CAN0_MB01_TIMESTAMP" address="0xffc02c34" />
+    <symbol name="CAN0_MB01_ID0" address="0xffc02c38" />
+    <symbol name="CAN0_MB01_ID1" address="0xffc02c3c" />
+    <symbol name="CAN0_MB02_DATA0" address="0xffc02c40" />
+    <symbol name="CAN0_MB02_DATA1" address="0xffc02c44" />
+    <symbol name="CAN0_MB02_DATA2" address="0xffc02c48" />
+    <symbol name="CAN0_MB02_DATA3" address="0xffc02c4c" />
+    <symbol name="CAN0_MB02_LENGTH" address="0xffc02c50" />
+    <symbol name="CAN0_MB02_TIMESTAMP" address="0xffc02c54" />
+    <symbol name="CAN0_MB02_ID0" address="0xffc02c58" />
+    <symbol name="CAN0_MB02_ID1" address="0xffc02c5c" />
+    <symbol name="CAN0_MB03_DATA0" address="0xffc02c60" />
+    <symbol name="CAN0_MB03_DATA1" address="0xffc02c64" />
+    <symbol name="CAN0_MB03_DATA2" address="0xffc02c68" />
+    <symbol name="CAN0_MB03_DATA3" address="0xffc02c6c" />
+    <symbol name="CAN0_MB03_LENGTH" address="0xffc02c70" />
+    <symbol name="CAN0_MB03_TIMESTAMP" address="0xffc02c74" />
+    <symbol name="CAN0_MB03_ID0" address="0xffc02c78" />
+    <symbol name="CAN0_MB03_ID1" address="0xffc02c7c" />
+    <symbol name="CAN0_MB04_DATA0" address="0xffc02c80" />
+    <symbol name="CAN0_MB04_DATA1" address="0xffc02c84" />
+    <symbol name="CAN0_MB04_DATA2" address="0xffc02c88" />
+    <symbol name="CAN0_MB04_DATA3" address="0xffc02c8c" />
+    <symbol name="CAN0_MB04_LENGTH" address="0xffc02c90" />
+    <symbol name="CAN0_MB04_TIMESTAMP" address="0xffc02c94" />
+    <symbol name="CAN0_MB04_ID0" address="0xffc02c98" />
+    <symbol name="CAN0_MB04_ID1" address="0xffc02c9c" />
+    <symbol name="CAN0_MB05_DATA0" address="0xffc02ca0" />
+    <symbol name="CAN0_MB05_DATA1" address="0xffc02ca4" />
+    <symbol name="CAN0_MB05_DATA2" address="0xffc02ca8" />
+    <symbol name="CAN0_MB05_DATA3" address="0xffc02cac" />
+    <symbol name="CAN0_MB05_LENGTH" address="0xffc02cb0" />
+    <symbol name="CAN0_MB05_TIMESTAMP" address="0xffc02cb4" />
+    <symbol name="CAN0_MB05_ID0" address="0xffc02cb8" />
+    <symbol name="CAN0_MB05_ID1" address="0xffc02cbc" />
+    <symbol name="CAN0_MB06_DATA0" address="0xffc02cc0" />
+    <symbol name="CAN0_MB06_DATA1" address="0xffc02cc4" />
+    <symbol name="CAN0_MB06_DATA2" address="0xffc02cc8" />
+    <symbol name="CAN0_MB06_DATA3" address="0xffc02ccc" />
+    <symbol name="CAN0_MB06_LENGTH" address="0xffc02cd0" />
+    <symbol name="CAN0_MB06_TIMESTAMP" address="0xffc02cd4" />
+    <symbol name="CAN0_MB06_ID0" address="0xffc02cd8" />
+    <symbol name="CAN0_MB06_ID1" address="0xffc02cdc" />
+    <symbol name="CAN0_MB07_DATA0" address="0xffc02ce0" />
+    <symbol name="CAN0_MB07_DATA1" address="0xffc02ce4" />
+    <symbol name="CAN0_MB07_DATA2" address="0xffc02ce8" />
+    <symbol name="CAN0_MB07_DATA3" address="0xffc02cec" />
+    <symbol name="CAN0_MB07_LENGTH" address="0xffc02cf0" />
+    <symbol name="CAN0_MB07_TIMESTAMP" address="0xffc02cf4" />
+    <symbol name="CAN0_MB07_ID0" address="0xffc02cf8" />
+    <symbol name="CAN0_MB07_ID1" address="0xffc02cfc" />
+    <symbol name="CAN0_MB08_DATA0" address="0xffc02d00" />
+    <symbol name="CAN0_MB08_DATA1" address="0xffc02d04" />
+    <symbol name="CAN0_MB08_DATA2" address="0xffc02d08" />
+    <symbol name="CAN0_MB08_DATA3" address="0xffc02d0c" />
+    <symbol name="CAN0_MB08_LENGTH" address="0xffc02d10" />
+    <symbol name="CAN0_MB08_TIMESTAMP" address="0xffc02d14" />
+    <symbol name="CAN0_MB08_ID0" address="0xffc02d18" />
+    <symbol name="CAN0_MB08_ID1" address="0xffc02d1c" />
+    <symbol name="CAN0_MB09_DATA0" address="0xffc02d20" />
+    <symbol name="CAN0_MB09_DATA1" address="0xffc02d24" />
+    <symbol name="CAN0_MB09_DATA2" address="0xffc02d28" />
+    <symbol name="CAN0_MB09_DATA3" address="0xffc02d2c" />
+    <symbol name="CAN0_MB09_LENGTH" address="0xffc02d30" />
+    <symbol name="CAN0_MB09_TIMESTAMP" address="0xffc02d34" />
+    <symbol name="CAN0_MB09_ID0" address="0xffc02d38" />
+    <symbol name="CAN0_MB09_ID1" address="0xffc02d3c" />
+    <symbol name="CAN0_MB10_DATA0" address="0xffc02d40" />
+    <symbol name="CAN0_MB10_DATA1" address="0xffc02d44" />
+    <symbol name="CAN0_MB10_DATA2" address="0xffc02d48" />
+    <symbol name="CAN0_MB10_DATA3" address="0xffc02d4c" />
+    <symbol name="CAN0_MB10_LENGTH" address="0xffc02d50" />
+    <symbol name="CAN0_MB10_TIMESTAMP" address="0xffc02d54" />
+    <symbol name="CAN0_MB10_ID0" address="0xffc02d58" />
+    <symbol name="CAN0_MB10_ID1" address="0xffc02d5c" />
+    <symbol name="CAN0_MB11_DATA0" address="0xffc02d60" />
+    <symbol name="CAN0_MB11_DATA1" address="0xffc02d64" />
+    <symbol name="CAN0_MB11_DATA2" address="0xffc02d68" />
+    <symbol name="CAN0_MB11_DATA3" address="0xffc02d6c" />
+    <symbol name="CAN0_MB11_LENGTH" address="0xffc02d70" />
+    <symbol name="CAN0_MB11_TIMESTAMP" address="0xffc02d74" />
+    <symbol name="CAN0_MB11_ID0" address="0xffc02d78" />
+    <symbol name="CAN0_MB11_ID1" address="0xffc02d7c" />
+    <symbol name="CAN0_MB12_DATA0" address="0xffc02d80" />
+    <symbol name="CAN0_MB12_DATA1" address="0xffc02d84" />
+    <symbol name="CAN0_MB12_DATA2" address="0xffc02d88" />
+    <symbol name="CAN0_MB12_DATA3" address="0xffc02d8c" />
+    <symbol name="CAN0_MB12_LENGTH" address="0xffc02d90" />
+    <symbol name="CAN0_MB12_TIMESTAMP" address="0xffc02d94" />
+    <symbol name="CAN0_MB12_ID0" address="0xffc02d98" />
+    <symbol name="CAN0_MB12_ID1" address="0xffc02d9c" />
+    <symbol name="CAN0_MB13_DATA0" address="0xffc02da0" />
+    <symbol name="CAN0_MB13_DATA1" address="0xffc02da4" />
+    <symbol name="CAN0_MB13_DATA2" address="0xffc02da8" />
+    <symbol name="CAN0_MB13_DATA3" address="0xffc02dac" />
+    <symbol name="CAN0_MB13_LENGTH" address="0xffc02db0" />
+    <symbol name="CAN0_MB13_TIMESTAMP" address="0xffc02db4" />
+    <symbol name="CAN0_MB13_ID0" address="0xffc02db8" />
+    <symbol name="CAN0_MB13_ID1" address="0xffc02dbc" />
+    <symbol name="CAN0_MB14_DATA0" address="0xffc02dc0" />
+    <symbol name="CAN0_MB14_DATA1" address="0xffc02dc4" />
+    <symbol name="CAN0_MB14_DATA2" address="0xffc02dc8" />
+    <symbol name="CAN0_MB14_DATA3" address="0xffc02dcc" />
+    <symbol name="CAN0_MB14_LENGTH" address="0xffc02dd0" />
+    <symbol name="CAN0_MB14_TIMESTAMP" address="0xffc02dd4" />
+    <symbol name="CAN0_MB14_ID0" address="0xffc02dd8" />
+    <symbol name="CAN0_MB14_ID1" address="0xffc02ddc" />
+    <symbol name="CAN0_MB15_DATA0" address="0xffc02de0" />
+    <symbol name="CAN0_MB15_DATA1" address="0xffc02de4" />
+    <symbol name="CAN0_MB15_DATA2" address="0xffc02de8" />
+    <symbol name="CAN0_MB15_DATA3" address="0xffc02dec" />
+    <symbol name="CAN0_MB15_LENGTH" address="0xffc02df0" />
+    <symbol name="CAN0_MB15_TIMESTAMP" address="0xffc02df4" />
+    <symbol name="CAN0_MB15_ID0" address="0xffc02df8" />
+    <symbol name="CAN0_MB15_ID1" address="0xffc02dfc" />
+
+    <!-- CAN Controller 0 Mailbox Data Registers -->
+    <symbol name="CAN0_MB16_DATA0" address="0xffc02e00" />
+    <symbol name="CAN0_MB16_DATA1" address="0xffc02e04" />
+    <symbol name="CAN0_MB16_DATA2" address="0xffc02e08" />
+    <symbol name="CAN0_MB16_DATA3" address="0xffc02e0c" />
+    <symbol name="CAN0_MB16_LENGTH" address="0xffc02e10" />
+    <symbol name="CAN0_MB16_TIMESTAMP" address="0xffc02e14" />
+    <symbol name="CAN0_MB16_ID0" address="0xffc02e18" />
+    <symbol name="CAN0_MB16_ID1" address="0xffc02e1c" />
+    <symbol name="CAN0_MB17_DATA0" address="0xffc02e20" />
+    <symbol name="CAN0_MB17_DATA1" address="0xffc02e24" />
+    <symbol name="CAN0_MB17_DATA2" address="0xffc02e28" />
+    <symbol name="CAN0_MB17_DATA3" address="0xffc02e2c" />
+    <symbol name="CAN0_MB17_LENGTH" address="0xffc02e30" />
+    <symbol name="CAN0_MB17_TIMESTAMP" address="0xffc02e34" />
+    <symbol name="CAN0_MB17_ID0" address="0xffc02e38" />
+    <symbol name="CAN0_MB17_ID1" address="0xffc02e3c" />
+    <symbol name="CAN0_MB18_DATA0" address="0xffc02e40" />
+    <symbol name="CAN0_MB18_DATA1" address="0xffc02e44" />
+    <symbol name="CAN0_MB18_DATA2" address="0xffc02e48" />
+    <symbol name="CAN0_MB18_DATA3" address="0xffc02e4c" />
+    <symbol name="CAN0_MB18_LENGTH" address="0xffc02e50" />
+    <symbol name="CAN0_MB18_TIMESTAMP" address="0xffc02e54" />
+    <symbol name="CAN0_MB18_ID0" address="0xffc02e58" />
+    <symbol name="CAN0_MB18_ID1" address="0xffc02e5c" />
+    <symbol name="CAN0_MB19_DATA0" address="0xffc02e60" />
+    <symbol name="CAN0_MB19_DATA1" address="0xffc02e64" />
+    <symbol name="CAN0_MB19_DATA2" address="0xffc02e68" />
+    <symbol name="CAN0_MB19_DATA3" address="0xffc02e6c" />
+    <symbol name="CAN0_MB19_LENGTH" address="0xffc02e70" />
+    <symbol name="CAN0_MB19_TIMESTAMP" address="0xffc02e74" />
+    <symbol name="CAN0_MB19_ID0" address="0xffc02e78" />
+    <symbol name="CAN0_MB19_ID1" address="0xffc02e7c" />
+    <symbol name="CAN0_MB20_DATA0" address="0xffc02e80" />
+    <symbol name="CAN0_MB20_DATA1" address="0xffc02e84" />
+    <symbol name="CAN0_MB20_DATA2" address="0xffc02e88" />
+    <symbol name="CAN0_MB20_DATA3" address="0xffc02e8c" />
+    <symbol name="CAN0_MB20_LENGTH" address="0xffc02e90" />
+    <symbol name="CAN0_MB20_TIMESTAMP" address="0xffc02e94" />
+    <symbol name="CAN0_MB20_ID0" address="0xffc02e98" />
+    <symbol name="CAN0_MB20_ID1" address="0xffc02e9c" />
+    <symbol name="CAN0_MB21_DATA0" address="0xffc02ea0" />
+    <symbol name="CAN0_MB21_DATA1" address="0xffc02ea4" />
+    <symbol name="CAN0_MB21_DATA2" address="0xffc02ea8" />
+    <symbol name="CAN0_MB21_DATA3" address="0xffc02eac" />
+    <symbol name="CAN0_MB21_LENGTH" address="0xffc02eb0" />
+    <symbol name="CAN0_MB21_TIMESTAMP" address="0xffc02eb4" />
+    <symbol name="CAN0_MB21_ID0" address="0xffc02eb8" />
+    <symbol name="CAN0_MB21_ID1" address="0xffc02ebc" />
+    <symbol name="CAN0_MB22_DATA0" address="0xffc02ec0" />
+    <symbol name="CAN0_MB22_DATA1" address="0xffc02ec4" />
+    <symbol name="CAN0_MB22_DATA2" address="0xffc02ec8" />
+    <symbol name="CAN0_MB22_DATA3" address="0xffc02ecc" />
+    <symbol name="CAN0_MB22_LENGTH" address="0xffc02ed0" />
+    <symbol name="CAN0_MB22_TIMESTAMP" address="0xffc02ed4" />
+    <symbol name="CAN0_MB22_ID0" address="0xffc02ed8" />
+    <symbol name="CAN0_MB22_ID1" address="0xffc02edc" />
+    <symbol name="CAN0_MB23_DATA0" address="0xffc02ee0" />
+    <symbol name="CAN0_MB23_DATA1" address="0xffc02ee4" />
+    <symbol name="CAN0_MB23_DATA2" address="0xffc02ee8" />
+    <symbol name="CAN0_MB23_DATA3" address="0xffc02eec" />
+    <symbol name="CAN0_MB23_LENGTH" address="0xffc02ef0" />
+    <symbol name="CAN0_MB23_TIMESTAMP" address="0xffc02ef4" />
+    <symbol name="CAN0_MB23_ID0" address="0xffc02ef8" />
+    <symbol name="CAN0_MB23_ID1" address="0xffc02efc" />
+    <symbol name="CAN0_MB24_DATA0" address="0xffc02f00" />
+    <symbol name="CAN0_MB24_DATA1" address="0xffc02f04" />
+    <symbol name="CAN0_MB24_DATA2" address="0xffc02f08" />
+    <symbol name="CAN0_MB24_DATA3" address="0xffc02f0c" />
+    <symbol name="CAN0_MB24_LENGTH" address="0xffc02f10" />
+    <symbol name="CAN0_MB24_TIMESTAMP" address="0xffc02f14" />
+    <symbol name="CAN0_MB24_ID0" address="0xffc02f18" />
+    <symbol name="CAN0_MB24_ID1" address="0xffc02f1c" />
+    <symbol name="CAN0_MB25_DATA0" address="0xffc02f20" />
+    <symbol name="CAN0_MB25_DATA1" address="0xffc02f24" />
+    <symbol name="CAN0_MB25_DATA2" address="0xffc02f28" />
+    <symbol name="CAN0_MB25_DATA3" address="0xffc02f2c" />
+    <symbol name="CAN0_MB25_LENGTH" address="0xffc02f30" />
+    <symbol name="CAN0_MB25_TIMESTAMP" address="0xffc02f34" />
+    <symbol name="CAN0_MB25_ID0" address="0xffc02f38" />
+    <symbol name="CAN0_MB25_ID1" address="0xffc02f3c" />
+    <symbol name="CAN0_MB26_DATA0" address="0xffc02f40" />
+    <symbol name="CAN0_MB26_DATA1" address="0xffc02f44" />
+    <symbol name="CAN0_MB26_DATA2" address="0xffc02f48" />
+    <symbol name="CAN0_MB26_DATA3" address="0xffc02f4c" />
+    <symbol name="CAN0_MB26_LENGTH" address="0xffc02f50" />
+    <symbol name="CAN0_MB26_TIMESTAMP" address="0xffc02f54" />
+    <symbol name="CAN0_MB26_ID0" address="0xffc02f58" />
+    <symbol name="CAN0_MB26_ID1" address="0xffc02f5c" />
+    <symbol name="CAN0_MB27_DATA0" address="0xffc02f60" />
+    <symbol name="CAN0_MB27_DATA1" address="0xffc02f64" />
+    <symbol name="CAN0_MB27_DATA2" address="0xffc02f68" />
+    <symbol name="CAN0_MB27_DATA3" address="0xffc02f6c" />
+    <symbol name="CAN0_MB27_LENGTH" address="0xffc02f70" />
+    <symbol name="CAN0_MB27_TIMESTAMP" address="0xffc02f74" />
+    <symbol name="CAN0_MB27_ID0" address="0xffc02f78" />
+    <symbol name="CAN0_MB27_ID1" address="0xffc02f7c" />
+    <symbol name="CAN0_MB28_DATA0" address="0xffc02f80" />
+    <symbol name="CAN0_MB28_DATA1" address="0xffc02f84" />
+    <symbol name="CAN0_MB28_DATA2" address="0xffc02f88" />
+    <symbol name="CAN0_MB28_DATA3" address="0xffc02f8c" />
+    <symbol name="CAN0_MB28_LENGTH" address="0xffc02f90" />
+    <symbol name="CAN0_MB28_TIMESTAMP" address="0xffc02f94" />
+    <symbol name="CAN0_MB28_ID0" address="0xffc02f98" />
+    <symbol name="CAN0_MB28_ID1" address="0xffc02f9c" />
+    <symbol name="CAN0_MB29_DATA0" address="0xffc02fa0" />
+    <symbol name="CAN0_MB29_DATA1" address="0xffc02fa4" />
+    <symbol name="CAN0_MB29_DATA2" address="0xffc02fa8" />
+    <symbol name="CAN0_MB29_DATA3" address="0xffc02fac" />
+    <symbol name="CAN0_MB29_LENGTH" address="0xffc02fb0" />
+    <symbol name="CAN0_MB29_TIMESTAMP" address="0xffc02fb4" />
+    <symbol name="CAN0_MB29_ID0" address="0xffc02fb8" />
+    <symbol name="CAN0_MB29_ID1" address="0xffc02fbc" />
+    <symbol name="CAN0_MB30_DATA0" address="0xffc02fe0" />
+    <symbol name="CAN0_MB30_DATA1" address="0xffc02fe4" />
+    <symbol name="CAN0_MB30_DATA2" address="0xffc02fc8" />
+    <symbol name="CAN0_MB30_DATA3" address="0xffc02fcc" />
+    <symbol name="CAN0_MB30_LENGTH" address="0xffc02fd0" />
+    <symbol name="CAN0_MB30_TIMESTAMP" address="0xffc02fd4" />
+    <symbol name="CAN0_MB30_ID0" address="0xffc02fd8" />
+    <symbol name="CAN0_MB30_ID1" address="0xffc02fdc" />
+    <symbol name="CAN0_MB31_DATA0" address="0xffc02fe0" />
+    <symbol name="CAN0_MB31_DATA1" address="0xffc02fe4" />
+    <symbol name="CAN0_MB31_DATA2" address="0xffc02fe8" />
+    <symbol name="CAN0_MB31_DATA3" address="0xffc02fec" />
+    <symbol name="CAN0_MB31_LENGTH" address="0xffc02ff0" />
+    <symbol name="CAN0_MB31_TIMESTAMP" address="0xffc02ff4" />
+    <symbol name="CAN0_MB31_ID0" address="0xffc02ff8" />
+    <symbol name="CAN0_MB31_ID1" address="0xffc02ffc" />
+
+    <!-- UART3 Registers -->
+    <symbol name="UART3_DLL" address="0xffc03100" />
+    <symbol name="UART3_DLH" address="0xffc03104" />
+    <symbol name="UART3_GCTL" address="0xffc03108" />
+    <symbol name="UART3_LCR" address="0xffc0310c" />
+    <symbol name="UART3_MCR" address="0xffc03110" />
+    <symbol name="UART3_LSR" address="0xffc03114" />
+    <symbol name="UART3_MSR" address="0xffc03118" />
+    <symbol name="UART3_SCR" address="0xffc0311c" />
+    <symbol name="UART3_IER_SET" address="0xffc03120" />
+    <symbol name="UART3_IER_CLEAR" address="0xffc03124" />
+    <symbol name="UART3_THR" address="0xffc03128" />
+    <symbol name="UART3_RBR" address="0xffc0312c" />
+
+    <!-- NFC Registers -->
+    <symbol name="NFC_CTL" address="0xffc03b00" />
+    <symbol name="NFC_STAT" address="0xffc03b04" />
+    <symbol name="NFC_IRQSTAT" address="0xffc03b08" />
+    <symbol name="NFC_IRQMASK" address="0xffc03b0c" />
+    <symbol name="NFC_ECC0" address="0xffc03b10" />
+    <symbol name="NFC_ECC1" address="0xffc03b14" />
+    <symbol name="NFC_ECC2" address="0xffc03b18" />
+    <symbol name="NFC_ECC3" address="0xffc03b1c" />
+    <symbol name="NFC_COUNT" address="0xffc03b20" />
+    <symbol name="NFC_RST" address="0xffc03b24" />
+    <symbol name="NFC_PGCTL" address="0xffc03b28" />
+    <symbol name="NFC_READ" address="0xffc03b2c" />
+    <symbol name="NFC_ADDR" address="0xffc03b40" />
+    <symbol name="NFC_CMD" address="0xffc03b44" />
+    <symbol name="NFC_DATA_WR" address="0xffc03b48" />
+    <symbol name="NFC_DATA_RD" address="0xffc03b4c" />
+
+    <!-- Counter Registers -->
+    <symbol name="CNT_CONFIG" address="0xffc04200" />
+    <symbol name="CNT_IMASK" address="0xffc04204" />
+    <symbol name="CNT_STATUS" address="0xffc04208" />
+    <symbol name="CNT_COMMAND" address="0xffc0420c" />
+    <symbol name="CNT_DEBOUNCE" address="0xffc04210" />
+    <symbol name="CNT_COUNTER" address="0xffc04214" />
+    <symbol name="CNT_MAX" address="0xffc04218" />
+    <symbol name="CNT_MIN" address="0xffc0421c" />
+
+    <!-- OTP/FUSE Registers -->
+    <symbol name="OTP_CONTROL" address="0xffc04300" />
+    <symbol name="OTP_BEN" address="0xffc04304" />
+    <symbol name="OTP_STATUS" address="0xffc04308" />
+    <symbol name="OTP_TIMING" address="0xffc0430c" />
+
+    <!-- Security Registers -->
+    <symbol name="SECURE_SYSSWT" address="0xffc04320" />
+    <symbol name="SECURE_CONTROL" address="0xffc04324" />
+    <symbol name="SECURE_STATUS" address="0xffc04328" />
+
+    <!-- DMA Peripheral Mux Register -->
+    <symbol name="DMAC1_PERIMUX" address="0xffc04340" />
+
+    <!-- OTP Read/Write Data Buffer Registers -->
+    <symbol name="OTP_DATA0" address="0xffc04380" />
+    <symbol name="OTP_DATA1" address="0xffc04384" />
+    <symbol name="OTP_DATA2" address="0xffc04388" />
+    <symbol name="OTP_DATA3" address="0xffc0438c" />
+
+    <!-- Pixel Compositor (PIXC) Registers -->
+    <symbol name="PIXC_CTL" address="0xffc04400" />
+    <symbol name="PIXC_PPL" address="0xffc04404" />
+    <symbol name="PIXC_LPF" address="0xffc04408" />
+    <symbol name="PIXC_AHSTART" address="0xffc0440c" />
+    <symbol name="PIXC_AHEND" address="0xffc04410" />
+    <symbol name="PIXC_AVSTART" address="0xffc04414" />
+    <symbol name="PIXC_AVEND" address="0xffc04418" />
+    <symbol name="PIXC_ATRANSP" address="0xffc0441c" />
+    <symbol name="PIXC_BHSTART" address="0xffc04420" />
+    <symbol name="PIXC_BHEND" address="0xffc04424" />
+    <symbol name="PIXC_BVSTART" address="0xffc04428" />
+    <symbol name="PIXC_BVEND" address="0xffc0442c" />
+    <symbol name="PIXC_BTRANSP" address="0xffc04430" />
+    <symbol name="PIXC_INTRSTAT" address="0xffc0443c" />
+    <symbol name="PIXC_RYCON" address="0xffc04440" />
+    <symbol name="PIXC_GUCON" address="0xffc04444" />
+    <symbol name="PIXC_BVCON" address="0xffc04448" />
+    <symbol name="PIXC_CCBIAS" address="0xffc0444c" />
+    <symbol name="PIXC_TC" address="0xffc04450" />
+
+    <!-- Handshake MDMA 0 Registers -->
+    <symbol name="HMDMA0_CONTROL" address="0xffc04500" />
+    <symbol name="HMDMA0_ECINIT" address="0xffc04504" />
+    <symbol name="HMDMA0_BCINIT" address="0xffc04508" />
+    <symbol name="HMDMA0_ECURGENT" address="0xffc0450c" />
+    <symbol name="HMDMA0_ECOVERFLOW" address="0xffc04510" />
+    <symbol name="HMDMA0_ECOUNT" address="0xffc04514" />
+    <symbol name="HMDMA0_BCOUNT" address="0xffc04518" />
+
+    <!-- Handshake MDMA 1 Registers -->
+    <symbol name="HMDMA1_CONTROL" address="0xffc04540" />
+    <symbol name="HMDMA1_ECINIT" address="0xffc04544" />
+    <symbol name="HMDMA1_BCINIT" address="0xffc04548" />
+    <symbol name="HMDMA1_ECURGENT" address="0xffc0454c" />
+    <symbol name="HMDMA1_ECOVERFLOW" address="0xffc04550" />
+    <symbol name="HMDMA1_ECOUNT" address="0xffc04554" />
+    <symbol name="HMDMA1_BCOUNT" address="0xffc04558" />
+
+
+
+    <!-- defBF548.h -->
+    <!-- Timer Registers -->
+    <symbol name="TIMER8_CONFIG" address="0xffc00600" />
+    <symbol name="TIMER8_COUNTER" address="0xffc00604" />
+    <symbol name="TIMER8_PERIOD" address="0xffc00608" />
+    <symbol name="TIMER8_WIDTH" address="0xffc0060c" />
+    <symbol name="TIMER9_CONFIG" address="0xffc00610" />
+    <symbol name="TIMER9_COUNTER" address="0xffc00614" />
+    <symbol name="TIMER9_PERIOD" address="0xffc00618" />
+    <symbol name="TIMER9_WIDTH" address="0xffc0061c" />
+    <symbol name="TIMER10_CONFIG" address="0xffc00620" />
+    <symbol name="TIMER10_COUNTER" address="0xffc00624" />
+    <symbol name="TIMER10_PERIOD" address="0xffc00628" />
+    <symbol name="TIMER10_WIDTH" address="0xffc0062c" />
+
+    <!-- Timer Group of 3 Registers -->
+    <symbol name="TIMER_ENABLE1" address="0xffc00640" />
+    <symbol name="TIMER_DISABLE1" address="0xffc00644" />
+    <symbol name="TIMER_STATUS1" address="0xffc00648" />
+
+    <!-- SPORT0 Registers -->
+    <symbol name="SPORT0_TCR1" address="0xffc00800" />
+    <symbol name="SPORT0_TCR2" address="0xffc00804" />
+    <symbol name="SPORT0_TCLKDIV" address="0xffc00808" />
+    <symbol name="SPORT0_TFSDIV" address="0xffc0080c" />
+    <symbol name="SPORT0_TX" address="0xffc00810" />
+    <symbol name="SPORT0_RX" address="0xffc00818" />
+    <symbol name="SPORT0_RCR1" address="0xffc00820" />
+    <symbol name="SPORT0_RCR2" address="0xffc00824" />
+    <symbol name="SPORT0_RCLKDIV" address="0xffc00828" />
+    <symbol name="SPORT0_RFSDIV" address="0xffc0082c" />
+    <symbol name="SPORT0_STAT" address="0xffc00830" />
+    <symbol name="SPORT0_CHNL" address="0xffc00834" />
+    <symbol name="SPORT0_MCMC1" address="0xffc00838" />
+    <symbol name="SPORT0_MCMC2" address="0xffc0083c" />
+    <symbol name="SPORT0_MTCS0" address="0xffc00840" />
+    <symbol name="SPORT0_MTCS1" address="0xffc00844" />
+    <symbol name="SPORT0_MTCS2" address="0xffc00848" />
+    <symbol name="SPORT0_MTCS3" address="0xffc0084c" />
+    <symbol name="SPORT0_MRCS0" address="0xffc00850" />
+    <symbol name="SPORT0_MRCS1" address="0xffc00854" />
+    <symbol name="SPORT0_MRCS2" address="0xffc00858" />
+    <symbol name="SPORT0_MRCS3" address="0xffc0085c" />
+
+    <!-- EPPI0 Registers -->
+    <symbol name="EPPI0_STATUS" address="0xffc01000" />
+    <symbol name="EPPI0_HCOUNT" address="0xffc01004" />
+    <symbol name="EPPI0_HDELAY" address="0xffc01008" />
+    <symbol name="EPPI0_VCOUNT" address="0xffc0100c" />
+    <symbol name="EPPI0_VDELAY" address="0xffc01010" />
+    <symbol name="EPPI0_FRAME" address="0xffc01014" />
+    <symbol name="EPPI0_LINE" address="0xffc01018" />
+    <symbol name="EPPI0_CLKDIV" address="0xffc0101c" />
+    <symbol name="EPPI0_CONTROL" address="0xffc01020" />
+    <symbol name="EPPI0_FS1W_HBL" address="0xffc01024" />
+    <symbol name="EPPI0_FS1P_AVPL" address="0xffc01028" />
+    <symbol name="EPPI0_FS1P_AVPL" address="0xffc0102c" />
+    <symbol name="EPPI0_FS2P_LAVF" address="0xffc01030" />
+    <symbol name="EPPI0_CLIP" address="0xffc01034" />
+
+    <!-- UART2 Registers -->
+    <symbol name="UART2_DLL" address="0xffc02100" />
+    <symbol name="UART2_DLH" address="0xffc02104" />
+    <symbol name="UART2_GCTL" address="0xffc0210c" />
+    <symbol name="UART2_LCR" address="0xffc0210c" />
+    <symbol name="UART2_MCR" address="0xffc02110" />
+    <symbol name="UART2_LSR" address="0xffc02114" />
+    <symbol name="UART2_MSR" address="0xffc02118" />
+    <symbol name="UART2_SCR" address="0xffc0211c" />
+    <symbol name="UART2_IER_SET" address="0xffc02120" />
+    <symbol name="UART2_IER_CLEAR" address="0xffc02124" />
+    <symbol name="UART2_THR" address="0xffc02128" />
+    <symbol name="UART2_RBR" address="0xffc0212c" />
+
+    <!-- Two Wire Interface Registers (TWI1) -->
+    <symbol name="TWI1_CLKDIV" address="0xffc02200" />
+    <symbol name="TWI1_CONTROL" address="0xffc02204" />
+    <symbol name="TWI1_SLAVE_CTL" address="0xffc02208" />
+    <symbol name="TWI1_SLAVE_STAT" address="0xffc0220c" />
+    <symbol name="TWI1_SLAVE_ADDR" address="0xffc02210" />
+    <symbol name="TWI1_MASTER_CTL" address="0xffc02214" />
+    <symbol name="TWI1_MASTER_STAT" address="0xffc02218" />
+    <symbol name="TWI1_MASTER_ADDR" address="0xffc0221c" />
+    <symbol name="TWI1_INT_STAT" address="0xffc02220" />
+    <symbol name="TWI1_INT_MASK" address="0xffc02224" />
+    <symbol name="TWI1_FIFO_CTL" address="0xffc02228" />
+    <symbol name="TWI1_FIFO_STAT" address="0xffc0222c" />
+    <symbol name="TWI1_XMT_DATA8" address="0xffc02280" />
+    <symbol name="TWI1_XMT_DATA16" address="0xffc02284" />
+    <symbol name="TWI1_RCV_DATA8" address="0xffc02288" />
+    <symbol name="TWI1_RCV_DATA16" address="0xffc0228c" />
+
+    <!-- SPI2  Registers -->
+    <symbol name="SPI2_CTL" address="0xffc02400" />
+    <symbol name="SPI2_FLG" address="0xffc02404" />
+    <symbol name="SPI2_STAT" address="0xffc02408" />
+    <symbol name="SPI2_TDBR" address="0xffc0240c" />
+    <symbol name="SPI2_RDBR" address="0xffc02410" />
+    <symbol name="SPI2_BAUD" address="0xffc02414" />
+    <symbol name="SPI2_SHADOW" address="0xffc02418" />
+
+    <!-- CAN Controller 1 Config 1 Registers -->
+    <symbol name="CAN1_MC1" address="0xffc03200" />
+    <symbol name="CAN1_MD1" address="0xffc03204" />
+    <symbol name="CAN1_TRS1" address="0xffc03208" />
+    <symbol name="CAN1_TRR1" address="0xffc0320c" />
+    <symbol name="CAN1_TA1" address="0xffc03210" />
+    <symbol name="CAN1_AA1" address="0xffc03214" />
+    <symbol name="CAN1_RMP1" address="0xffc03218" />
+    <symbol name="CAN1_RML1" address="0xffc0321c" />
+    <symbol name="CAN1_MBTIF1" address="0xffc03220" />
+    <symbol name="CAN1_MBRIF1" address="0xffc03224" />
+    <symbol name="CAN1_MBIM1" address="0xffc03228" />
+    <symbol name="CAN1_RFH1" address="0xffc0322c" />
+    <symbol name="CAN1_OPSS1" address="0xffc03230" />
+
+    <!-- CAN Controller 1 Config 2 Registers -->
+    <symbol name="CAN1_MC2" address="0xffc03240" />
+    <symbol name="CAN1_MD2" address="0xffc03244" />
+    <symbol name="CAN1_TRS2" address="0xffc03248" />
+    <symbol name="CAN1_TRR2" address="0xffc0324c" />
+    <symbol name="CAN1_TA2" address="0xffc03250" />
+    <symbol name="CAN1_AA2" address="0xffc03254" />
+    <symbol name="CAN1_RMP2" address="0xffc03258" />
+    <symbol name="CAN1_RML2" address="0xffc0325c" />
+    <symbol name="CAN1_MBTIF2" address="0xffc03260" />
+    <symbol name="CAN1_MBRIF2" address="0xffc03264" />
+    <symbol name="CAN1_MBIM2" address="0xffc03268" />
+    <symbol name="CAN1_RFH2" address="0xffc0326c" />
+    <symbol name="CAN1_OPSS2" address="0xffc03270" />
+
+    <!-- CAN Controller 1 Clock/Interrupt/Counter Registers -->
+    <symbol name="CAN1_CLOCK" address="0xffc03280" />
+    <symbol name="CAN1_TIMING" address="0xffc03284" />
+    <symbol name="CAN1_DEBUG" address="0xffc03288" />
+    <symbol name="CAN1_STATUS" address="0xffc0328c" />
+    <symbol name="CAN1_CEC" address="0xffc03290" />
+    <symbol name="CAN1_GIS" address="0xffc03294" />
+    <symbol name="CAN1_GIM" address="0xffc03298" />
+    <symbol name="CAN1_GIF" address="0xffc0329c" />
+    <symbol name="CAN1_CONTROL" address="0xffc032a0" />
+    <symbol name="CAN1_INTR" address="0xffc032a4" />
+    <symbol name="CAN1_MBTD" address="0xffc032ac" />
+    <symbol name="CAN1_EWR" address="0xffc032b0" />
+    <symbol name="CAN1_ESR" address="0xffc032b4" />
+    <symbol name="CAN1_UCCNT" address="0xffc032c4" />
+    <symbol name="CAN1_UCRC" address="0xffc032c8" />
+    <symbol name="CAN1_UCCNF" address="0xffc032cc" />
+
+    <!-- CAN Controller 1 Mailbox Acceptance Registers -->
+    <symbol name="CAN1_AM00L" address="0xffc03300" />
+    <symbol name="CAN1_AM00H" address="0xffc03304" />
+    <symbol name="CAN1_AM01L" address="0xffc03308" />
+    <symbol name="CAN1_AM01H" address="0xffc0330c" />
+    <symbol name="CAN1_AM02L" address="0xffc03310" />
+    <symbol name="CAN1_AM02H" address="0xffc03314" />
+    <symbol name="CAN1_AM03L" address="0xffc03318" />
+    <symbol name="CAN1_AM03H" address="0xffc0331c" />
+    <symbol name="CAN1_AM04L" address="0xffc03320" />
+    <symbol name="CAN1_AM04H" address="0xffc03324" />
+    <symbol name="CAN1_AM05L" address="0xffc03328" />
+    <symbol name="CAN1_AM05H" address="0xffc0332c" />
+    <symbol name="CAN1_AM06L" address="0xffc03330" />
+    <symbol name="CAN1_AM06H" address="0xffc03334" />
+    <symbol name="CAN1_AM07L" address="0xffc03338" />
+    <symbol name="CAN1_AM07H" address="0xffc0333c" />
+    <symbol name="CAN1_AM08L" address="0xffc03340" />
+    <symbol name="CAN1_AM08H" address="0xffc03344" />
+    <symbol name="CAN1_AM09L" address="0xffc03348" />
+    <symbol name="CAN1_AM09H" address="0xffc0334c" />
+    <symbol name="CAN1_AM10L" address="0xffc03350" />
+    <symbol name="CAN1_AM10H" address="0xffc03354" />
+    <symbol name="CAN1_AM11L" address="0xffc03358" />
+    <symbol name="CAN1_AM11H" address="0xffc0335c" />
+    <symbol name="CAN1_AM12L" address="0xffc03360" />
+    <symbol name="CAN1_AM12H" address="0xffc03364" />
+    <symbol name="CAN1_AM13L" address="0xffc03368" />
+    <symbol name="CAN1_AM13H" address="0xffc0336c" />
+    <symbol name="CAN1_AM14L" address="0xffc03370" />
+    <symbol name="CAN1_AM14H" address="0xffc03374" />
+    <symbol name="CAN1_AM15L" address="0xffc03378" />
+    <symbol name="CAN1_AM15H" address="0xffc0337c" />
+
+    <!-- CAN Controller 1 Mailbox Acceptance Registers -->
+    <symbol name="CAN1_AM16L" address="0xffc03380" />
+    <symbol name="CAN1_AM16H" address="0xffc03384" />
+    <symbol name="CAN1_AM17L" address="0xffc03388" />
+    <symbol name="CAN1_AM17H" address="0xffc0338c" />
+    <symbol name="CAN1_AM18L" address="0xffc03390" />
+    <symbol name="CAN1_AM18H" address="0xffc03394" />
+    <symbol name="CAN1_AM19L" address="0xffc03398" />
+    <symbol name="CAN1_AM19H" address="0xffc0339c" />
+    <symbol name="CAN1_AM20L" address="0xffc033a0" />
+    <symbol name="CAN1_AM20H" address="0xffc033a4" />
+    <symbol name="CAN1_AM21L" address="0xffc033a8" />
+    <symbol name="CAN1_AM21H" address="0xffc033ac" />
+    <symbol name="CAN1_AM22L" address="0xffc033b0" />
+    <symbol name="CAN1_AM22H" address="0xffc033b4" />
+    <symbol name="CAN1_AM23L" address="0xffc033b8" />
+    <symbol name="CAN1_AM23L" address="0xffc033bc" />
+    <symbol name="CAN1_AM24L" address="0xffc033c0" />
+    <symbol name="CAN1_AM24H" address="0xffc033c4" />
+    <symbol name="CAN1_AM25L" address="0xffc033c8" />
+    <symbol name="CAN1_AM25H" address="0xffc033cc" />
+    <symbol name="CAN1_AM26L" address="0xffc033d0" />
+    <symbol name="CAN1_AM26H" address="0xffc033d4" />
+    <symbol name="CAN1_AM27L" address="0xffc033d8" />
+    <symbol name="CAN1_AM27H" address="0xffc033dc" />
+    <symbol name="CAN1_AM29L" address="0xffc033e8" />
+    <symbol name="CAN1_AM29H" address="0xffc033ec" />
+    <symbol name="CAN1_AM30L" address="0xffc033f0" />
+    <symbol name="CAN1_AM30H" address="0xffc033f4" />
+    <symbol name="CAN1_AM31L" address="0xffc033f8" />
+    <symbol name="CAN1_AM31H" address="0xffc033fc" />
+
+    <!-- CAN Controller 1 Mailbox Data Registers -->
+    <symbol name="CAN1_MB00_DATA0" address="0xffc03400" />
+    <symbol name="CAN1_MB00_DATA1" address="0xffc03404" />
+    <symbol name="CAN1_MB00_DATA2" address="0xffc03408" />
+    <symbol name="CAN1_MB00_DATA3" address="0xffc0340c" />
+    <symbol name="CAN1_MB00_LENGTH"  address="0xffc03410" />
+    <symbol name="CAN1_MB00_TIMESTAMP" address="0xffc03414" />
+    <symbol name="CAN1_MB00_ID0"  address="0xffc03418" />
+    <symbol name="CAN1_MB00_ID1"  address="0xffc0341c" />
+    <symbol name="CAN1_MB01_DATA0" address="0xffc03420" />
+    <symbol name="CAN1_MB01_DATA1"  address="0xffc03424" />
+    <symbol name="CAN1_MB01_DATA2"  address="0xffc03428" />
+    <symbol name="CAN1_MB01_DATA3"  address="0xffc0342c" />
+    <symbol name="CAN1_MB01_LENGTH"  address="0xffc03430" />
+    <symbol name="CAN1_MB01_TIMESTAMP"  address="0xffc03434" />
+    <symbol name="CAN1_MB01_ID0"  address="0xffc03438" />
+    <symbol name="CAN1_MB01_ID1"  address="0xffc0343c" />
+    <symbol name="CAN1_MB02_DATA0"  address="0xffc03440" />
+    <symbol name="CAN1_MB02_DATA1"  address="0xffc03444" />
+    <symbol name="CAN1_MB02_DATA2"  address="0xffc03448" />
+    <symbol name="CAN1_MB02_DATA3"  address="0xffc0344c" />
+    <symbol name="CAN1_MB02_LENGTH"  address="0xffc03450"  />
+    <symbol name="CAN1_MB02_TIMESTAMP"  address="0xffc03454" />
+    <symbol name="CAN1_MB02_ID0"  address="0xffc03458"  />
+    <symbol name="CAN1_MB02_ID1"  address="0xffc0345c"  />
+    <symbol name="CAN1_MB03_DATA0"  address="0xffc03460"  />
+    <symbol name="CAN1_MB03_DATA1"  address="0xffc03464" />
+    <symbol name="CAN1_MB03_DATA2"  address="0xffc03468" />
+    <symbol name="CAN1_MB03_DATA3"  address="0xffc0346c" />
+    <symbol name="CAN1_MB03_LENGTH"  address="0xffc03470" />
+    <symbol name="CAN1_MB03_TIMESTAMP"  address="0xffc03474" />
+    <symbol name="CAN1_MB03_ID0"  address="0xffc03478"   />
+    <symbol name="CAN1_MB03_ID1"  address="0xffc0347c"  />
+    <symbol name="CAN1_MB04_DATA0"  address="0xffc03480"  />
+    <symbol name="CAN1_MB04_DATA1"  address="0xffc03484" />
+    <symbol name="CAN1_MB04_DATA2"  address="0xffc03488" />
+    <symbol name="CAN1_MB04_DATA3"  address="0xffc0348c" />
+    <symbol name="AN1_MB04_LENGTH"  address="0xffc03490" />
+    <symbol name="CAN1_MB04_TIMESTAMP"  address="0xffc03494"  />
+    <symbol name="CAN1_MB04_ID0"  address="0xffc03498"  />
+    <symbol name="CAN1_MB04_ID1"  address="0xffc0349c"  />
+    <symbol name="CAN1_MB05_DATA0"  address="0xffc034a0"  />
+    <symbol name="CAN1_MB05_DATA1"  address="0xffc034a4"  />
+    <symbol name="CAN1_MB05_DATA2"  address="0xffc034a8"  />
+    <symbol name="CAN1_MB05_DATA3"  address="0xffc034ac"  />
+    <symbol name="CAN1_MB05_LENGTH"  address="0xffc034b0" />
+    <symbol name="CAN1_MB05_TIMESTAMP"  address="0xffc034b4" />
+    <symbol name="CAN1_MB05_ID0"  address="0xffc034b8"   />
+    <symbol name="CAN1_MB05_ID1"  address="0xffc034bc"  />
+    <symbol name="CAN1_MB06_DATA0"  address="0xffc034c0"  />
+    <symbol name="CAN1_MB06_DATA1"  address="0xffc034c4" />
+    <symbol name="CAN1_MB06_DATA2"  address="0xffc034c8"  />
+    <symbol name="CAN1_MB06_DATA3"  address="0xffc034cc" />
+    <symbol name="CAN1_MB06_LENGTH"  address="0xffc034d0" />
+    <symbol name="CAN1_MB06_TIMESTAMP"  address="0xffc034d4" />
+    <symbol name="CAN1_MB06_ID0"  address="0xffc034d8"  />
+    <symbol name="CAN1_MB06_ID1"  address="0xffc034dc" />
+    <symbol name="CAN1_MB07_DATA0"  address="0xffc034e0" />
+    <symbol name="CAN1_MB07_DATA1"  address="0xffc034e4" />
+    <symbol name="CAN1_MB07_DATA2"  address="0xffc034e8" />
+    <symbol name="CAN1_MB07_DATA3"  address="0xffc034ec" />
+    <symbol name="CAN1_MB07_LENGTH"  address="0xffc034f0" />
+    <symbol name="CAN1_MB07_TIMESTAMP"  address="0xffc034f4" />
+    <symbol name="CAN1_MB07_ID0"  address="0xffc034f8"  />
+    <symbol name="CAN1_MB07_ID1"  address="0xffc034fc" />
+    <symbol name="CAN1_MB08_DATA0"  address="0xffc03500" />
+    <symbol name="CAN1_MB08_DATA1"  address="0xffc03504" />
+    <symbol name="CAN1_MB08_DATA2"  address="0xffc03508" />
+    <symbol name="CAN1_MB08_DATA3"  address="0xffc0350c" />
+    <symbol name="CAN1_MB08_LENGTH"  address="0xffc03510" />
+    <symbol name="CAN1_MB08_TIMESTAMP"  address="0xffc03514" />
+    <symbol name="CAN1_MB08_ID0"  address="0xffc03518" />
+    <symbol name="CAN1_MB08_ID1"  address="0xffc0351c" />
+    <symbol name="CAN1_MB09_DATA0"  address="0xffc03520" />
+    <symbol name="CAN1_MB09_DATA1"  address="0xffc03524"  />
+    <symbol name="CAN1_MB09_DATA2"  address="0xffc03528" />
+    <symbol name="CAN1_MB09_DATA3"  address="0xffc0352c" />
+    <symbol name="CAN1_MB09_LENGTH"  address="0xffc03530" />
+    <symbol name="CAN1_MB09_TIMESTAMP"  address="0xffc03534" />
+    <symbol name="CAN1_MB09_ID0"  address="0xffc03538" />
+    <symbol name="CAN1_MB09_ID1"  address="0xffc0353c" />
+    <symbol name="CAN1_MB10_DATA0"  address="0xffc03540" />
+    <symbol name="CAN1_MB10_DATA1"  address="0xffc03544" />
+    <symbol name="CAN1_MB10_DATA2"  address="0xffc03548" />
+    <symbol name="CAN1_MB10_DATA3"  address="0xffc0354c" />
+    <symbol name="CAN1_MB10_LENGTH"  address="0xffc03550" />
+    <symbol name="CAN1_MB10_TIMESTAMP"  address="0xffc03554" />
+    <symbol name="CAN1_MB10_ID0"  address="0xffc03558"  />
+    <symbol name="CAN1_MB10_ID1"  address="0xffc0355c" />
+    <symbol name="CAN1_MB11_DATA0"  address="0xffc03560" />
+    <symbol name="CAN1_MB11_DATA1"  address="0xffc03564" />
+    <symbol name="CAN1_MB11_DATA2"  address="0xffc03568" />
+    <symbol name="CAN1_MB11_DATA3"  address="0xffc0356c" />
+    <symbol name="CAN1_MB11_LENGTH"  address="0xffc03570" />
+    <symbol name="CAN1_MB11_TIMESTAMP"  address="0xffc03574" />
+    <symbol name="CAN1_MB11_ID0"  address="0xffc03578"   />
+    <symbol name="CAN1_MB11_ID1"  address="0xffc0357c" />
+    <symbol name="CAN1_MB12_DATA0"  address="0xffc03580" />
+    <symbol name="CAN1_MB12_DATA1"  address="0xffc03584" />
+    <symbol name="CAN1_MB12_DATA2"  address="0xffc03588" />
+    <symbol name="CAN1_MB12_DATA3"  address="0xffc0358c" />
+    <symbol name="CAN1_MB12_LENGTH"  address="0xffc03590" />
+    <symbol name="CAN1_MB12_TIMESTAMP"  address="0xffc03594" />
+    <symbol name="CAN1_MB12_ID0"  address="0xffc03598"  />
+    <symbol name="CAN1_MB12_ID1"  address="0xffc0359c" />
+    <symbol name="CAN1_MB13_DATA0"  address="0xffc035a0" />
+    <symbol name="CAN1_MB13_DATA1"  address="0xffc035a4" />
+    <symbol name="CAN1_MB13_DATA2"  address="0xffc035a8" />
+    <symbol name="CAN1_MB13_DATA3"  address="0xffc035ac"  />
+    <symbol name="CAN1_MB13_LENGTH"  address="0xffc035b0" />
+    <symbol name="CAN1_MB13_TIMESTAMP"  address="0xffc035b4" />
+    <symbol name="CAN1_MB13_ID0"  address="0xffc035b8"  />
+    <symbol name="CAN1_MB13_ID1"  address="0xffc035bc" />
+    <symbol name="CAN1_MB14_DATA0"  address="0xffc035c0" />
+    <symbol name="CAN1_MB14_DATA1"  address="0xffc035c4" />
+    <symbol name="CAN1_MB14_DATA2"  address="0xffc035c8" />
+    <symbol name="CAN1_MB14_DATA3"  address="0xffc035cc" />
+    <symbol name="CAN1_MB14_LENGTH"  address="0xffc035d0" />
+    <symbol name="CAN1_MB14_TIMESTAMP"  address="0xffc035d4" />
+    <symbol name="CAN1_MB14_ID0"  address="0xffc035d8"  />
+    <symbol name="CAN1_MB14_ID1"  address="0xffc035dc" />
+    <symbol name="CAN1_MB15_DATA0"  address="0xffc035e0"  />
+    <symbol name="CAN1_MB15_DATA1"  address="0xffc035e4"  />
+    <symbol name="CAN1_MB15_DATA2"  address="0xffc035e8" />
+    <symbol name="CAN1_MB15_DATA3"  address="0xffc035ec" />
+    <symbol name="CAN1_MB15_LENGTH"  address="0xffc035f0" />
+    <symbol name="CAN1_MB15_TIMESTAMP"  address="0xffc035f4" />
+    <symbol name="CAN1_MB15_ID0" address="0xffc035f8"  />
+    <symbol name="CAN1_MB15_ID1" address="0xffc035fc" />
+
+    <!-- CAN Controller 1 Mailbox Data Registers -->
+
+    <symbol      name="CAN1_MB16_DATA0" address="0xffc03600" />
+    <symbol      name="CAN1_MB16_DATA1" address="0xffc03604" />
+    <symbol      name="CAN1_MB16_DATA2" address="0xffc03608" />
+    <symbol      name="CAN1_MB16_DATA3" address="0xffc0360c" />
+    <symbol     name="CAN1_MB16_LENGTH" address="0xffc03610" />
+    <symbol  name="CAN1_MB16_TIMESTAMP" address="0xffc03614" />
+    <symbol        name="CAN1_MB16_ID0" address="0xffc03618" />
+    <symbol        name="CAN1_MB16_ID1" address="0xffc0361c" />
+    <symbol      name="CAN1_MB17_DATA0" address="0xffc03620" />
+    <symbol      name="CAN1_MB17_DATA1" address="0xffc03624" />
+    <symbol      name="CAN1_MB17_DATA2" address="0xffc03628" />
+    <symbol      name="CAN1_MB17_DATA3" address="0xffc0362c" />
+    <symbol     name="CAN1_MB17_LENGTH" address="0xffc03630" />
+    <symbol  name="CAN1_MB17_TIMESTAMP" address="0xffc03634" />
+    <symbol        name="CAN1_MB17_ID0" address="0xffc03638" />
+    <symbol        name="CAN1_MB17_ID1" address="0xffc0363c" />
+    <symbol      name="CAN1_MB18_DATA0" address="0xffc03640" />
+    <symbol      name="CAN1_MB18_DATA1" address="0xffc03644" />
+    <symbol      name="CAN1_MB18_DATA2" address="0xffc03648" />
+    <symbol      name="CAN1_MB18_DATA3" address="0xffc0364c" />
+    <symbol     name="CAN1_MB18_LENGTH" address="0xffc03650" />
+    <symbol  name="CAN1_MB18_TIMESTAMP" address="0xffc03654" />
+    <symbol        name="CAN1_MB18_ID0" address="0xffc03658" />
+    <symbol        name="CAN1_MB18_ID1" address="0xffc0365c" />
+    <symbol      name="CAN1_MB19_DATA0" address="0xffc03660" />
+    <symbol      name="CAN1_MB19_DATA1" address="0xffc03664" />
+    <symbol      name="CAN1_MB19_DATA2" address="0xffc03668" />
+    <symbol      name="CAN1_MB19_DATA3" address="0xffc0366c" />
+    <symbol     name="CAN1_MB19_LENGTH" address="0xffc03670" />
+    <symbol  name="CAN1_MB19_TIMESTAMP" address="0xffc03674" />
+    <symbol        name="CAN1_MB19_ID0" address="0xffc03678" />
+    <symbol        name="CAN1_MB19_ID1" address="0xffc0367c" />
+    <symbol      name="CAN1_MB20_DATA0" address="0xffc03680" />
+    <symbol      name="CAN1_MB20_DATA1" address="0xffc03684" />
+    <symbol      name="CAN1_MB20_DATA2" address="0xffc03688" />
+    <symbol      name="CAN1_MB20_DATA3" address="0xffc0368c" />
+    <symbol     name="CAN1_MB20_LENGTH" address="0xffc03690" />
+    <symbol  name="CAN1_MB20_TIMESTAMP" address="0xffc03694" />
+    <symbol        name="CAN1_MB20_ID0" address="0xffc03698" />
+    <symbol        name="CAN1_MB20_ID1" address="0xffc0369c" />
+    <symbol      name="CAN1_MB21_DATA0" address="0xffc036a0" />
+    <symbol      name="CAN1_MB21_DATA1" address="0xffc036a4" />
+    <symbol      name="CAN1_MB21_DATA2" address="0xffc036a8" />
+    <symbol      name="CAN1_MB21_DATA3" address="0xffc036ac" />
+    <symbol     name="CAN1_MB21_LENGTH" address="0xffc036b0" />
+    <symbol  name="CAN1_MB21_TIMESTAMP" address="0xffc036b4" />
+    <symbol        name="CAN1_MB21_ID0" address="0xffc036b8" />
+    <symbol        name="CAN1_MB21_ID1" address="0xffc036bc" />
+    <symbol      name="CAN1_MB22_DATA0" address="0xffc036c0" />
+    <symbol      name="CAN1_MB22_DATA1" address="0xffc036c4" />
+    <symbol      name="CAN1_MB22_DATA2" address="0xffc036c8" />
+    <symbol      name="CAN1_MB22_DATA3" address="0xffc036cc" />
+    <symbol     name="CAN1_MB22_LENGTH" address="0xffc036d0" />
+    <symbol  name="CAN1_MB22_TIMESTAMP" address="0xffc036d4" />
+    <symbol        name="CAN1_MB22_ID0" address="0xffc036d8" />
+    <symbol        name="CAN1_MB22_ID1" address="0xffc036dc" />
+    <symbol      name="CAN1_MB23_DATA0" address="0xffc036e0" />
+    <symbol      name="CAN1_MB23_DATA1" address="0xffc036e4" />
+    <symbol      name="CAN1_MB23_DATA2" address="0xffc036e8" />
+    <symbol      name="CAN1_MB23_DATA3" address="0xffc036ec" />
+    <symbol     name="CAN1_MB23_LENGTH" address="0xffc036f0" />
+    <symbol  name="CAN1_MB23_TIMESTAMP" address="0xffc036f4" />
+    <symbol        name="CAN1_MB23_ID0" address="0xffc036f8" />
+    <symbol        name="CAN1_MB23_ID1" address="0xffc036fc" />
+    <symbol      name="CAN1_MB24_DATA0" address="0xffc03700" />
+    <symbol      name="CAN1_MB24_DATA1" address="0xffc03704" />
+    <symbol      name="CAN1_MB24_DATA2" address="0xffc03708" />
+    <symbol      name="CAN1_MB24_DATA3" address="0xffc0370c" />
+    <symbol     name="CAN1_MB24_LENGTH" address="0xffc03710" />
+    <symbol  name="CAN1_MB24_TIMESTAMP" address="0xffc03714" />
+    <symbol        name="CAN1_MB24_ID0" address="0xffc03718" />
+    <symbol        name="CAN1_MB24_ID1" address="0xffc0371c" />
+    <symbol      name="CAN1_MB25_DATA0" address="0xffc03720" />
+    <symbol      name="CAN1_MB25_DATA1" address="0xffc03724" />
+    <symbol      name="CAN1_MB25_DATA2" address="0xffc03728" />
+    <symbol      name="CAN1_MB25_DATA3" address="0xffc0372c" />
+    <symbol     name="CAN1_MB25_LENGTH" address="0xffc03730" />
+    <symbol  name="CAN1_MB25_TIMESTAMP" address="0xffc03734" />
+    <symbol        name="CAN1_MB25_ID0" address="0xffc03738" />
+    <symbol        name="CAN1_MB25_ID1" address="0xffc0373c" />
+    <symbol      name="CAN1_MB26_DATA0" address="0xffc03740" />
+    <symbol      name="CAN1_MB26_DATA1" address="0xffc03744" />
+    <symbol      name="CAN1_MB26_DATA2" address="0xffc03748" />
+    <symbol      name="CAN1_MB26_DATA3" address="0xffc0374c" />
+    <symbol     name="CAN1_MB26_LENGTH" address="0xffc03750" />
+    <symbol  name="CAN1_MB26_TIMESTAMP" address="0xffc03754" />
+    <symbol        name="CAN1_MB26_ID0" address="0xffc03758" />
+    <symbol        name="CAN1_MB26_ID1" address="0xffc0375c" />
+    <symbol      name="CAN1_MB27_DATA0" address="0xffc03760" />
+    <symbol      name="CAN1_MB27_DATA1" address="0xffc03764" />
+    <symbol      name="CAN1_MB27_DATA2" address="0xffc03768" />
+    <symbol      name="CAN1_MB27_DATA3" address="0xffc0376c" />
+    <symbol     name="CAN1_MB27_LENGTH" address="0xffc03770" />
+    <symbol  name="CAN1_MB27_TIMESTAMP" address="0xffc03774" />
+    <symbol        name="CAN1_MB27_ID0" address="0xffc03778" />
+    <symbol        name="CAN1_MB27_ID1" address="0xffc0377c" />
+    <symbol      name="CAN1_MB28_DATA0" address="0xffc03780" />
+    <symbol      name="CAN1_MB28_DATA1" address="0xffc03784" />
+    <symbol      name="CAN1_MB28_DATA2" address="0xffc03788" />
+    <symbol      name="CAN1_MB28_DATA3" address="0xffc0378c" />
+    <symbol     name="CAN1_MB28_LENGTH" address="0xffc03790" />
+    <symbol  name="CAN1_MB28_TIMESTAMP" address="0xffc03794" />
+    <symbol        name="CAN1_MB28_ID0" address="0xffc03798" />
+    <symbol        name="CAN1_MB28_ID1" address="0xffc0379c" />
+    <symbol      name="CAN1_MB29_DATA0" address="0xffc037a0" />
+    <symbol      name="CAN1_MB29_DATA1" address="0xffc037a4" />
+    <symbol      name="CAN1_MB29_DATA2" address="0xffc037a8" />
+    <symbol      name="CAN1_MB29_DATA3" address="0xffc037ac" />
+    <symbol     name="CAN1_MB29_LENGTH" address="0xffc037b0" />
+    <symbol  name="CAN1_MB29_TIMESTAMP" address="0xffc037b4" />
+    <symbol        name="CAN1_MB29_ID0" address="0xffc037b8" />
+    <symbol        name="CAN1_MB29_ID1" address="0xffc037bc" />
+    <symbol      name="CAN1_MB30_DATA0" address="0xffc037c0" />
+    <symbol      name="CAN1_MB30_DATA1" address="0xffc037c4" />
+    <symbol      name="CAN1_MB30_DATA2" address="0xffc037c8" />
+    <symbol      name="CAN1_MB30_DATA3" address="0xffc037cc" />
+    <symbol     name="CAN1_MB30_LENGTH" address="0xffc037d0" />
+    <symbol  name="CAN1_MB30_TIMESTAMP" address="0xffc037d4" />
+    <symbol        name="CAN1_MB30_ID0" address="0xffc037d8" />
+    <symbol        name="CAN1_MB30_ID1" address="0xffc037dc" />
+    <symbol      name="CAN1_MB31_DATA0" address="0xffc037e0" />
+    <symbol      name="CAN1_MB31_DATA1" address="0xffc037e4" />
+    <symbol      name="CAN1_MB31_DATA2" address="0xffc037e8" />
+    <symbol      name="CAN1_MB31_DATA3" address="0xffc037ec" />
+    <symbol     name="CAN1_MB31_LENGTH" address="0xffc037f0" />
+    <symbol  name="CAN1_MB31_TIMESTAMP" address="0xffc037f4" />
+    <symbol        name="CAN1_MB31_ID0" address="0xffc037f8" />
+    <symbol        name="CAN1_MB31_ID1" address="0xffc037fc" />
+
+    <!-- CAN Controller 1 Mailbox Data Registers -->
+    <symbol     name="CAN1_MB16_DATA0" address="0xffc03600" />
+    <symbol     name="CAN1_MB16_DATA1" address="0xffc03604" />
+    <symbol     name="CAN1_MB16_DATA2" address="0xffc03608" />
+    <symbol     name="CAN1_MB16_DATA3" address="0xffc0360c" />
+    <symbol    name="CAN1_MB16_LENGTH" address="0xffc03610" />
+    <symbol name="CAN1_MB16_TIMESTAMP" address="0xffc03614" />
+    <symbol       name="CAN1_MB16_ID0" address="0xffc03618" />
+    <symbol       name="CAN1_MB16_ID1" address="0xffc0361c" />
+    <symbol     name="CAN1_MB17_DATA0" address="0xffc03620" />
+    <symbol     name="CAN1_MB17_DATA1" address="0xffc03624" />
+    <symbol     name="CAN1_MB17_DATA2" address="0xffc03628" />
+    <symbol     name="CAN1_MB17_DATA3" address="0xffc0362c" />
+    <symbol    name="CAN1_MB17_LENGTH" address="0xffc03630" />
+    <symbol name="CAN1_MB17_TIMESTAMP" address="0xffc03634" />
+    <symbol       name="CAN1_MB17_ID0" address="0xffc03638" />
+    <symbol       name="CAN1_MB17_ID1" address="0xffc0363c" />
+    <symbol     name="CAN1_MB18_DATA0" address="0xffc03640" />
+    <symbol     name="CAN1_MB18_DATA1" address="0xffc03644" />
+    <symbol     name="CAN1_MB18_DATA2" address="0xffc03648" />
+    <symbol     name="CAN1_MB18_DATA3" address="0xffc0364c" />
+    <symbol    name="CAN1_MB18_LENGTH" address="0xffc03650" />
+    <symbol name="CAN1_MB18_TIMESTAMP" address="0xffc03654" />
+    <symbol       name="CAN1_MB18_ID0" address="0xffc03658" />
+    <symbol       name="CAN1_MB18_ID1" address="0xffc0365c" />
+    <symbol     name="CAN1_MB19_DATA0" address="0xffc03660" />
+    <symbol     name="CAN1_MB19_DATA1" address="0xffc03664" />
+    <symbol     name="CAN1_MB19_DATA2" address="0xffc03668" />
+    <symbol     name="CAN1_MB19_DATA3" address="0xffc0366c" />
+    <symbol    name="CAN1_MB19_LENGTH" address="0xffc03670" />
+    <symbol name="CAN1_MB19_TIMESTAMP" address="0xffc03674" />
+    <symbol       name="CAN1_MB19_ID0" address="0xffc03678" />
+    <symbol       name="CAN1_MB19_ID1" address="0xffc0367c" />
+    <symbol     name="CAN1_MB20_DATA0" address="0xffc03680" />
+    <symbol     name="CAN1_MB20_DATA1" address="0xffc03684" />
+    <symbol     name="CAN1_MB20_DATA2" address="0xffc03688" />
+    <symbol     name="CAN1_MB20_DATA3" address="0xffc0368c" />
+    <symbol    name="CAN1_MB20_LENGTH" address="0xffc03690" />
+    <symbol name="CAN1_MB20_TIMESTAMP" address="0xffc03694" />
+    <symbol       name="CAN1_MB20_ID0" address="0xffc03698" />
+    <symbol       name="CAN1_MB20_ID1" address="0xffc0369c" />
+    <symbol     name="CAN1_MB21_DATA0" address="0xffc036a0" />
+    <symbol     name="CAN1_MB21_DATA1" address="0xffc036a4" />
+    <symbol     name="CAN1_MB21_DATA2" address="0xffc036a8" />
+    <symbol     name="CAN1_MB21_DATA3" address="0xffc036ac" />
+    <symbol    name="CAN1_MB21_LENGTH" address="0xffc036b0" />
+    <symbol name="CAN1_MB21_TIMESTAMP" address="0xffc036b4" />
+    <symbol       name="CAN1_MB21_ID0" address="0xffc036b8" />
+    <symbol       name="CAN1_MB21_ID1" address="0xffc036bc" />
+    <symbol     name="CAN1_MB22_DATA0" address="0xffc036c0" />
+    <symbol     name="CAN1_MB22_DATA1" address="0xffc036c4" />
+    <symbol     name="CAN1_MB22_DATA2" address="0xffc036c8" />
+    <symbol     name="CAN1_MB22_DATA3" address="0xffc036cc" />
+    <symbol    name="CAN1_MB22_LENGTH" address="0xffc036d0" />
+    <symbol name="CAN1_MB22_TIMESTAMP" address="0xffc036d4" />
+    <symbol       name="CAN1_MB22_ID0" address="0xffc036d8" />
+    <symbol       name="CAN1_MB22_ID1" address="0xffc036dc" />
+    <symbol     name="CAN1_MB23_DATA0" address="0xffc036e0" />
+    <symbol     name="CAN1_MB23_DATA1" address="0xffc036e4" />
+    <symbol     name="CAN1_MB23_DATA2" address="0xffc036e8" />
+    <symbol     name="CAN1_MB23_DATA3" address="0xffc036ec" />
+    <symbol    name="CAN1_MB23_LENGTH" address="0xffc036f0" />
+    <symbol name="CAN1_MB23_TIMESTAMP" address="0xffc036f4" />
+    <symbol       name="CAN1_MB23_ID0" address="0xffc036f8" />
+    <symbol       name="CAN1_MB23_ID1" address="0xffc036fc" />
+    <symbol     name="CAN1_MB24_DATA0" address="0xffc03700" />
+    <symbol     name="CAN1_MB24_DATA1" address="0xffc03704" />
+    <symbol     name="CAN1_MB24_DATA2" address="0xffc03708" />
+    <symbol     name="CAN1_MB24_DATA3" address="0xffc0370c" />
+    <symbol    name="CAN1_MB24_LENGTH" address="0xffc03710" />
+    <symbol name="CAN1_MB24_TIMESTAMP" address="0xffc03714" />
+    <symbol       name="CAN1_MB24_ID0" address="0xffc03718" />
+    <symbol       name="CAN1_MB24_ID1" address="0xffc0371c" />
+    <symbol     name="CAN1_MB25_DATA0" address="0xffc03720" />
+    <symbol     name="CAN1_MB25_DATA1" address="0xffc03724" />
+    <symbol     name="CAN1_MB25_DATA2" address="0xffc03728" />
+    <symbol     name="CAN1_MB25_DATA3" address="0xffc0372c" />
+    <symbol    name="CAN1_MB25_LENGTH" address="0xffc03730" />
+    <symbol name="CAN1_MB25_TIMESTAMP" address="0xffc03734" />
+    <symbol       name="CAN1_MB25_ID0" address="0xffc03738" />
+    <symbol       name="CAN1_MB25_ID1" address="0xffc0373c" />
+    <symbol     name="CAN1_MB26_DATA0" address="0xffc03740" />
+    <symbol     name="CAN1_MB26_DATA1" address="0xffc03744" />
+    <symbol     name="CAN1_MB26_DATA2" address="0xffc03748" />
+    <symbol     name="CAN1_MB26_DATA3" address="0xffc0374c" />
+    <symbol    name="CAN1_MB26_LENGTH" address="0xffc03750" />
+    <symbol name="CAN1_MB26_TIMESTAMP" address="0xffc03754" />
+    <symbol       name="CAN1_MB26_ID0" address="0xffc03758" />
+    <symbol       name="CAN1_MB26_ID1" address="0xffc0375c" />
+    <symbol     name="CAN1_MB27_DATA0" address="0xffc03760" />
+    <symbol     name="CAN1_MB27_DATA1" address="0xffc03764" />
+    <symbol     name="CAN1_MB27_DATA2" address="0xffc03768" />
+    <symbol     name="CAN1_MB27_DATA3" address="0xffc0376c" />
+    <symbol    name="CAN1_MB27_LENGTH" address="0xffc03770" />
+    <symbol name="CAN1_MB27_TIMESTAMP" address="0xffc03774" />
+    <symbol       name="CAN1_MB27_ID0" address="0xffc03778" />
+    <symbol       name="CAN1_MB27_ID1" address="0xffc0377c" />
+    <symbol     name="CAN1_MB28_DATA0" address="0xffc03780" />
+    <symbol     name="CAN1_MB28_DATA1" address="0xffc03784" />
+    <symbol     name="CAN1_MB28_DATA2" address="0xffc03788" />
+    <symbol     name="CAN1_MB28_DATA3" address="0xffc0378c" />
+    <symbol    name="CAN1_MB28_LENGTH" address="0xffc03790" />
+    <symbol name="CAN1_MB28_TIMESTAMP" address="0xffc03794" />
+    <symbol       name="CAN1_MB28_ID0" address="0xffc03798" />
+    <symbol       name="CAN1_MB28_ID1" address="0xffc0379c" />
+    <symbol     name="CAN1_MB29_DATA0" address="0xffc037a0" />
+    <symbol     name="CAN1_MB29_DATA1" address="0xffc037a4" />
+    <symbol     name="CAN1_MB29_DATA2" address="0xffc037a8" />
+    <symbol     name="CAN1_MB29_DATA3" address="0xffc037ac" />
+    <symbol    name="CAN1_MB29_LENGTH" address="0xffc037b0" />
+    <symbol name="CAN1_MB29_TIMESTAMP" address="0xffc037b4" />
+    <symbol       name="CAN1_MB29_ID0" address="0xffc037b8" />
+    <symbol       name="CAN1_MB29_ID1" address="0xffc037bc" />
+    <symbol     name="CAN1_MB30_DATA0" address="0xffc037c0" />
+    <symbol     name="CAN1_MB30_DATA1" address="0xffc037c4" />
+    <symbol     name="CAN1_MB30_DATA2" address="0xffc037c8" />
+    <symbol     name="CAN1_MB30_DATA3" address="0xffc037cc" />
+    <symbol    name="CAN1_MB30_LENGTH" address="0xffc037d0" />
+    <symbol name="CAN1_MB30_TIMESTAMP" address="0xffc037d4" />
+    <symbol       name="CAN1_MB30_ID0" address="0xffc037d8" />
+    <symbol       name="CAN1_MB30_ID1" address="0xffc037dc" />
+    <symbol     name="CAN1_MB31_DATA0" address="0xffc037e0" />
+    <symbol     name="CAN1_MB31_DATA1" address="0xffc037e4" />
+    <symbol     name="CAN1_MB31_DATA2" address="0xffc037e8" />
+    <symbol     name="CAN1_MB31_DATA3" address="0xffc037ec" />
+    <symbol    name="CAN1_MB31_LENGTH" address="0xffc037f0" />
+    <symbol name="CAN1_MB31_TIMESTAMP" address="0xffc037f4" />
+    <symbol       name="CAN1_MB31_ID0" address="0xffc037f8" />
+    <symbol       name="CAN1_MB31_ID1" address="0xffc037fc" />
+
+
+    <!-- ATAPI Registers */ -->
+
+    <symbol        name="ATAPI_CONTROL" address="0xffc03800" />
+    <symbol         name="ATAPI_STATUS" address="0xffc03804" />
+    <symbol       name="ATAPI_DEV_ADDR" address="0xffc03808" />
+    <symbol      name="ATAPI_DEV_TXBUF" address="0xffc0380c" />
+    <symbol      name="ATAPI_DEV_RXBUF" address="0xffc03810" />
+    <symbol       name="ATAPI_INT_MASK" address="0xffc03814" />
+    <symbol     name="ATAPI_INT_STATUS" address="0xffc03818" />
+    <symbol       name="ATAPI_XFER_LEN" address="0xffc0381c" />
+    <symbol    name="ATAPI_LINE_STATUS" address="0xffc03820" />
+    <symbol       name="ATAPI_SM_STATE" address="0xffc03824" />
+    <symbol      name="ATAPI_TERMINATE" address="0xffc03828" />
+    <symbol     name="ATAPI_PIO_TFRCNT" address="0xffc0382c" />
+    <symbol     name="ATAPI_DMA_TFRCNT" address="0xffc03830" />
+    <symbol   name="ATAPI_UMAIN_TFRCNT" address="0xffc03834" />
+    <symbol name="ATAPI_UDMAOUT_TFRCNT" address="0xffc03838" />
+    <symbol      name="ATAPI_REG_TIM_0" address="0xffc03840" />
+    <symbol      name="ATAPI_PIO_TIM_0" address="0xffc03844" />
+    <symbol      name="ATAPI_PIO_TIM_1" address="0xffc03848" />
+    <symbol    name="ATAPI_MULTI_TIM_0" address="0xffc03850" />
+    <symbol    name="ATAPI_MULTI_TIM_1" address="0xffc03854" />
+    <symbol    name="ATAPI_MULTI_TIM_2" address="0xffc03858" />
+    <symbol    name="ATAPI_ULTRA_TIM_0" address="0xffc03860" />
+    <symbol    name="ATAPI_ULTRA_TIM_1" address="0xffc03864" />
+    <symbol    name="ATAPI_ULTRA_TIM_2" address="0xffc03868" />
+    <symbol    name="ATAPI_ULTRA_TIM_3" address="0xffc0386c" />
+
+    <!-- SDH Registers -->
+
+    <symbol    name="SDH_PWR_CTL" address="0xffc03900" />
+    <symbol    name="SDH_CLK_CTL" address="0xffc03904" />
+    <symbol   name="SDH_ARGUMENT" address="0xffc03908" />
+    <symbol    name="SDH_COMMAND" address="0xffc0390c" />
+    <symbol   name="SDH_RESP_CMD" address="0xffc03910" />
+    <symbol  name="SDH_RESPONSE0" address="0xffc03914" />
+    <symbol  name="SDH_RESPONSE1" address="0xffc03918" />
+    <symbol  name="SDH_RESPONSE2" address="0xffc0391c" />
+    <symbol  name="SDH_RESPONSE3" address="0xffc03920" />
+    <symbol name="SDH_DATA_TIMER" address="0xffc03924" />
+    <symbol  name="SDH_DATA_LGTH" address="0xffc03928" />
+    <symbol   name="SDH_DATA_CTL" address="0xffc0392c" />
+    <symbol   name="SDH_DATA_CNT" address="0xffc03930" />
+    <symbol     name="SDH_STATUS" address="0xffc03934" />
+    <symbol name="SDH_STATUS_CLR" address="0xffc03938" />
+    <symbol      name="SDH_MASK0" address="0xffc0393c" />
+    <symbol      name="SDH_MASK1" address="0xffc03940" />
+    <symbol   name="SDH_FIFO_CNT" address="0xffc03948" />
+    <symbol       name="SDH_FIFO" address="0xffc03980" />
+    <symbol   name="SDH_E_STATUS" address="0xffc039c0" />
+    <symbol     name="SDH_E_MASK" address="0xffc039c4" />
+    <symbol        name="SDH_CFG" address="0xffc039c8" />
+    <symbol name="SDH_RD_WAIT_EN" address="0xffc039cc" />
+    <symbol       name="SDH_PID0" address="0xffc039d0" />
+    <symbol       name="SDH_PID1" address="0xffc039d4" />
+    <symbol       name="SDH_PID2" address="0xffc039d8" />
+    <symbol       name="SDH_PID3" address="0xffc039dc" />
+    <symbol       name="SDH_PID4" address="0xffc039e0" />
+    <symbol       name="SDH_PID5" address="0xffc039e4" />
+    <symbol       name="SDH_PID6" address="0xffc039e8" />
+    <symbol       name="SDH_PID7" address="0xffc039ec" />
+
+    <!-- HOST Port Registers -->
+    <symbol name="HOST_CONTROL"  address="0xffc03a00" />
+    <symbol  name="HOST_STATUS"  address="0xffc03a04" />
+    <symbol name="HOST_TIMEOUT"  address="0xffc03a08" />
+
+
+    <!-- USB Control Registers -->
+    <symbol      name="USB_FADDR"  address="0xffc03c00" />
+    <symbol      name="USB_POWER"  address="0xffc03c04" />
+    <symbol     name="USB_INTRTX"  address="0xffc03c08" />
+    <symbol     name="USB_INTRRX"  address="0xffc03c0c" />
+    <symbol    name="USB_INTRTXE"  address="0xffc03c10" />
+    <symbol    name="USB_INTRRXE"  address="0xffc03c14" />
+    <symbol    name="USB_INTRUSB"  address="0xffc03c18" />
+    <symbol   name="USB_INTRUSBE"  address="0xffc03c1c" />
+    <symbol      name="USB_FRAME"  address="0xffc03c20" />
+    <symbol      name="USB_INDEX"  address="0xffc03c24" />
+    <symbol   name="USB_TESTMODE"  address="0xffc03c28" />
+    <symbol   name="USB_GLOBINTR"  address="0xffc03c2c" />
+    <symbol name="USB_GLOBAL_CTL"  address="0xffc03c30" />
+
+    <!-- USB Packet Control Registers -->
+    <symbol name="USB_TX_MAX_PACKET"  address="0xffc03c40" />
+    <symbol          name="USB_CSR0"  address="0xffc03c44" />
+    <symbol         name="USB_TXCSR"  address="0xffc03c44" />
+    <symbol name="USB_RX_MAX_PACKET"  address="0xffc03c48" />
+    <symbol         name="USB_RXCSR"  address="0xffc03c4c" />
+    <symbol        name="USB_COUNT0"  address="0xffc03c50" />
+    <symbol       name="USB_RXCOUNT"  address="0xffc03c50" />
+    <symbol        name="USB_TXTYPE"  address="0xffc03c54" />
+    <symbol     name="USB_NAKLIMIT0"  address="0xffc03c58" />
+    <symbol    name="USB_TXINTERVAL"  address="0xffc03c58" />
+    <symbol        name="USB_RXTYPE"  address="0xffc03c5c" />
+    <symbol    name="USB_RXINTERVAL"  address="0xffc03c60" />
+    <symbol       name="USB_TXCOUNT"  address="0xffc03c68" />
+
+    <!-- USB Endpoint FIFO Registers -->
+    <symbol name="USB_EP0_FIFO"  address="0xffc03c80" />
+    <symbol name="USB_EP1_FIFO"  address="0xffc03c88" />
+    <symbol name="USB_EP2_FIFO"  address="0xffc03c90" />
+    <symbol name="USB_EP3_FIFO"  address="0xffc03c98" />
+    <symbol name="USB_EP4_FIFO"  address="0xffc03ca0" />
+    <symbol name="USB_EP5_FIFO"  address="0xffc03ca8" />
+    <symbol name="USB_EP6_FIFO"  address="0xffc03cb0" />
+    <symbol name="USB_EP7_FIFO"  address="0xffc03cb8" />
+
+
+
+    <!-- USB OTG Control Registers -->
+    <symbol   name="USB_OTG_DEV_CTL"  address="0xffc03d00" />
+    <symbol  name="USB_OTG_VBUS_IRQ"  address="0xffc03d04" />
+    <symbol name="USB_OTG_VBUS_MASK"  address="0xffc03d08" />
+
+    <!-- USB Phy Control Registers -->
+    <symbol name="USB_LINKINFO" address="0xffc03d48" />
+    <symbol    name="USB_VPLEN" address="0xffc03d4c" />
+    <symbol  name="USB_HS_EOF1" address="0xffc03d50" />
+    <symbol  name="USB_FS_EOF1" address="0xffc03d54" />
+    <symbol  name="USB_LS_EOF1" address="0xffc03d58" />
+
+    <!-- (APHY_CNTRL is for ADI usage only) -->
+    <symbol name="USB_APHY_CNTRL"  address="0xffc03de0" />
+
+    <!-- (APHY_CALIB is for ADI usage only) -->
+    <symbol  name="USB_APHY_CALIB"  address="0xffc03de4" />
+    <symbol name="USB_APHY_CNTRL2"  address="0xffc03de8" />
+
+    <!-- (PHY_TEST is for ADI usage only) -->
+    <symbol    name="USB_PHY_TEST"  address="0xffc03dec" />
+    <symbol name="USB_PLLOSC_CTRL"  address="0xffc03df0" />
+    <symbol  name="USB_SRP_CLKDIV"  address="0xffc03df4" />
+
+    <!-- USB Endpoint 0 Control Registers -->
+    <symbol     name="USB_EP_NI0_TXMAXP"  address="0xffc03e00" />
+    <symbol      name="USB_EP_NI0_TXCSR"  address="0xffc03e04" />
+    <symbol     name="USB_EP_NI0_RXMAXP"  address="0xffc03e08" />
+    <symbol      name="USB_EP_NI0_RXCSR"  address="0xffc03e0c" />
+    <symbol    name="USB_EP_NI0_RXCOUNT"  address="0xffc03e10" />
+    <symbol     name="USB_EP_NI0_TXTYPE"  address="0xffc03e14" />
+    <symbol name="USB_EP_NI0_TXINTERVAL"  address="0xffc03e18" />
+    <symbol     name="USB_EP_NI0_RXTYPE"  address="0xffc03e1c" />
+    <symbol name="USB_EP_NI0_RXINTERVAL"  address="0xffc03e20" />
+
+    <!-- USB Endpoint 1 Control Registers -->
+    <symbol    name="USB_EP_NI0_TXCOUNT"  address="0xffc03e28" />
+    <symbol     name="USB_EP_NI1_TXMAXP"  address="0xffc03e40" />
+    <symbol      name="USB_EP_NI1_TXCSR"  address="0xffc03e44" />
+    <symbol     name="USB_EP_NI1_RXMAXP"  address="0xffc03e48" />
+    <symbol      name="USB_EP_NI1_RXCSR"  address="0xffc03e4c" />
+    <symbol    name="USB_EP_NI1_RXCOUNT"  address="0xffc03e50" />
+    <symbol     name="USB_EP_NI1_TXTYPE"  address="0xffc03e54" />
+    <symbol name="USB_EP_NI1_TXINTERVAL"  address="0xffc03e58" />
+    <symbol     name="USB_EP_NI1_RXTYPE"  address="0xffc03e5c" />
+    <symbol name="USB_EP_NI1_RXINTERVAL"  address="0xffc03e60" />
+
+    <!-- USB Endpoint 2 Control Registers -->
+    <symbol     name="USB_EP_NI1_TXCOUNT"  address="0xffc03e68" />
+    <symbol      name="USB_EP_NI2_TXMAXP"  address="0xffc03e80" />
+    <symbol       name="USB_EP_NI2_TXCSR"  address="0xffc03e84" />
+    <symbol      name="USB_EP_NI2_RXMAXP"  address="0xffc03e88" />
+    <symbol       name="USB_EP_NI2_RXCSR"  address="0xffc03e8c" />
+    <symbol     name="USB_EP_NI2_RXCOUNT"  address="0xffc03e90" />
+    <symbol      name="USB_EP_NI2_TXTYPE"  address="0xffc03e94" />
+    <symbol  name="USB_EP_NI2_TXINTERVAL"  address="0xffc03e98" />
+    <symbol      name="USB_EP_NI2_RXTYPE"  address="0xffc03e9c" />
+    <symbol  name="USB_EP_NI2_RXINTERVAL"  address="0xffc03ea0" />
+
+    <!-- USB Endpoint 3 Control Registers -->
+    <symbol    name="USB_EP_NI2_TXCOUNT"  address="0xffc03ea8" />
+    <symbol     name="USB_EP_NI3_TXMAXP"  address="0xffc03ec0" />
+    <symbol      name="USB_EP_NI3_TXCSR"  address="0xffc03ec4" />
+    <symbol     name="USB_EP_NI3_RXMAXP"  address="0xffc03ec8" />
+    <symbol      name="USB_EP_NI3_RXCSR"  address="0xffc03ecc" />
+    <symbol    name="USB_EP_NI3_RXCOUNT"  address="0xffc03ed0" />
+    <symbol     name="USB_EP_NI3_TXTYPE"  address="0xffc03ed4" />
+    <symbol name="USB_EP_NI3_TXINTERVAL"  address="0xffc03ed8" />
+    <symbol     name="USB_EP_NI3_RXTYPE"  address="0xffc03edc" />
+    <symbol name="USB_EP_NI3_RXINTERVAL"  address="0xffc03ee0" />
+
+    <!-- USB Endpoint 4 Control Registers -->
+    <symbol    name="USB_EP_NI3_TXCOUNT"  address="0xffc03ee8" />
+    <symbol     name="USB_EP_NI4_TXMAXP"  address="0xffc03f00" />
+    <symbol      name="USB_EP_NI4_TXCSR"  address="0xffc03f04" />
+    <symbol     name="USB_EP_NI4_RXMAXP"  address="0xffc03f08" />
+    <symbol      name="USB_EP_NI4_RXCSR"  address="0xffc03f0c" />
+    <symbol    name="USB_EP_NI4_RXCOUNT"  address="0xffc03f10" />
+    <symbol     name="USB_EP_NI4_TXTYPE"  address="0xffc03f14" />
+    <symbol name="USB_EP_NI4_TXINTERVAL"  address="0xffc03f18" />
+    <symbol     name="USB_EP_NI4_RXTYPE"  address="0xffc03f1c" />
+    <symbol name="USB_EP_NI4_RXINTERVAL"  address="0xffc03f20" />
+
+    <!-- USB Endpoint 5 Control Registers -->
+    <symbol    name="USB_EP_NI4_TXCOUNT"  address="0xffc03f28" />
+    <symbol     name="USB_EP_NI5_TXMAXP"  address="0xffc03f40" />
+    <symbol      name="USB_EP_NI5_TXCSR"  address="0xffc03f44" />
+    <symbol     name="USB_EP_NI5_RXMAXP"  address="0xffc03f48" />
+    <symbol      name="USB_EP_NI5_RXCSR"  address="0xffc03f4c" />
+    <symbol    name="USB_EP_NI5_RXCOUNT"  address="0xffc03f50" />
+    <symbol     name="USB_EP_NI5_TXTYPE"  address="0xffc03f54" />
+    <symbol name="USB_EP_NI5_TXINTERVAL"  address="0xffc03f58" />
+    <symbol     name="USB_EP_NI5_RXTYPE"  address="0xffc03f5c" />
+    <symbol name="USB_EP_NI5_RXINTERVAL"  address="0xffc03f60" />
+
+    <!-- USB Endpoint 6 Control Registers -->
+    <symbol    name="USB_EP_NI5_TXCOUNT"  address="0xffc03f68" />
+    <symbol     name="USB_EP_NI6_TXMAXP"  address="0xffc03f80" />
+    <symbol      name="USB_EP_NI6_TXCSR"  address="0xffc03f84" />
+    <symbol     name="USB_EP_NI6_RXMAXP"  address="0xffc03f88" />
+    <symbol      name="USB_EP_NI6_RXCSR"  address="0xffc03f8c" />
+    <symbol    name="USB_EP_NI6_RXCOUNT"  address="0xffc03f90" />
+    <symbol     name="USB_EP_NI6_TXTYPE"  address="0xffc03f94" />
+    <symbol name="USB_EP_NI6_TXINTERVAL"  address="0xffc03f98" />
+    <symbol     name="USB_EP_NI6_RXTYPE"  address="0xffc03f9c" />
+    <symbol name="USB_EP_NI6_RXINTERVAL"  address="0xffc03fa0" />
+
+    <!-- USB Endpoint 7 Control Registers -->
+    <symbol    name="USB_EP_NI6_TXCOUNT"  address="0xffc03fa8" />
+    <symbol     name="USB_EP_NI7_TXMAXP"  address="0xffc03fc0" />
+    <symbol      name="USB_EP_NI7_TXCSR"  address="0xffc03fc4" />
+    <symbol     name="USB_EP_NI7_RXMAXP"  address="0xffc03fc8" />
+    <symbol      name="USB_EP_NI7_RXCSR"  address="0xffc03fcc" />
+    <symbol    name="USB_EP_NI7_RXCOUNT"  address="0xffc03fd0" />
+    <symbol     name="USB_EP_NI7_TXTYPE"  address="0xffc03fd4" />
+    <symbol name="USB_EP_NI7_TXINTERVAL"  address="0xffc03fd8" />
+    <symbol     name="USB_EP_NI7_RXTYPE"  address="0xffc03fdc" />
+    <symbol name="USB_EP_NI7_RXINTERVAL"  address="0xffc03fe0" />
+    <symbol    name="USB_EP_NI7_TXCOUNT"  address="0xffc03fe8" />
+    <symbol     name="USB_DMA_INTERRUPT"  address="0xffc04000" />
+
+    <!-- USB Channel 0 Config Registers -->
+    <symbol   name="USB_DMA0CONTROL"  address="0xffc04004" />
+    <symbol   name="USB_DMA0ADDRLOW"  address="0xffc04008" />
+    <symbol  name="USB_DMA0ADDRHIGH"  address="0xffc0400c" />
+    <symbol  name="USB_DMA0COUNTLOW"  address="0xffc04010" />
+    <symbol name="USB_DMA0COUNTHIGH"  address="0xffc04014" />
+
+    <!-- USB Channel 1 Config Registers -->
+    <symbol   name="USB_DMA1CONTROL"  address="0xffc04024" />
+    <symbol   name="USB_DMA1ADDRLOW"  address="0xffc04028" />
+    <symbol  name="USB_DMA1ADDRHIGH"  address="0xffc0402c" />
+    <symbol  name="USB_DMA1COUNTLOW"  address="0xffc04030" />
+    <symbol name="USB_DMA1COUNTHIGH"  address="0xffc04034" />
+
+    <!-- USB Channel 2 Config Registers -->
+    <symbol   name="USB_DMA2CONTROL"  address="0xffc04044" />
+    <symbol   name="USB_DMA2ADDRLOW"  address="0xffc04048" />
+    <symbol  name="USB_DMA2ADDRHIGH"  address="0xffc0404c" />
+    <symbol  name="USB_DMA2COUNTLOW"  address="0xffc04050" />
+    <symbol name="USB_DMA2COUNTHIGH"  address="0xffc04054" />
+
+    <!-- USB Channel 3 Config Registers -->
+    <symbol   name="USB_DMA3CONTROL"  address="0xffc04064" />
+    <symbol   name="USB_DMA3ADDRLOW"  address="0xffc04068" />
+    <symbol  name="USB_DMA3ADDRHIGH"  address="0xffc0406c" />
+    <symbol  name="USB_DMA3COUNTLOW"  address="0xffc04070" />
+    <symbol name="USB_DMA3COUNTHIGH"  address="0xffc04074" />
+
+    <!-- USB Channel 4 Config Registers -->
+    <symbol   name="USB_DMA4CONTROL"  address="0xffc04084" />
+    <symbol   name="USB_DMA4ADDRLOW"  address="0xffc04088" />
+    <symbol  name="USB_DMA4ADDRHIGH"  address="0xffc0408c" />
+    <symbol  name="USB_DMA4COUNTLOW"  address="0xffc04090" />
+    <symbol name="USB_DMA4COUNTHIGH"  address="0xffc04094" />
+
+    <!-- USB Channel 5 Config Registers -->
+    <symbol   name="USB_DMA5CONTROL"  address="0xffc040a4" />
+    <symbol   name="USB_DMA5ADDRLOW"  address="0xffc040a8" />
+    <symbol  name="USB_DMA5ADDRHIGH"  address="0xffc040ac" />
+    <symbol  name="USB_DMA5COUNTLOW"  address="0xffc040b0" />
+    <symbol name="USB_DMA5COUNTHIGH"  address="0xffc040b4" />
+
+    <!-- USB Channel 6 Config Registers -->
+    <symbol   name="USB_DMA6CONTROL"  address="0xffc040c4" />
+    <symbol   name="USB_DMA6ADDRLOW"  address="0xffc040c8" />
+    <symbol  name="USB_DMA6ADDRHIGH"  address="0xffc040cc" />
+    <symbol  name="USB_DMA6COUNTLOW"  address="0xffc040d0" />
+    <symbol name="USB_DMA6COUNTHIGH"  address="0xffc040d4" />
+
+    <!-- USB Channel 7 Config Registers -->
+    <symbol   name="USB_DMA7CONTROL"  address="0xffc040e4" />
+    <symbol   name="USB_DMA7ADDRLOW"  address="0xffc040e8" />
+    <symbol  name="USB_DMA7ADDRHIGH"  address="0xffc040ec" />
+    <symbol  name="USB_DMA7COUNTLOW"  address="0xffc040f0" />
+    <symbol name="USB_DMA7COUNTHIGH"  address="0xffc040f4" />
+
+    <!-- Keypad Registers -->
+    <symbol      name="KPAD_CTL"  address="0xffc04100" />
+    <symbol name="KPAD_PRESCALE"  address="0xffc04104" />
+    <symbol     name="KPAD_MSEL"  address="0xffc04108" />
+    <symbol   name="KPAD_ROWCOL"  address="0xffc0410c" />
+    <symbol     name="KPAD_STAT"  address="0xffc04110" />
+    <symbol name="KPAD_SOFTEVAL"  address="0xffc04114" />
+
+    <!-- Core MMRs-->
+    <!-- defblackfin.h -->
+    <!-- Cache & SRAM Memory -->
+    <symbol name="SRAM_BASE_ADDRESS" address="0xFFE00000" />
+    <symbol name="DMEM_CONTROL"      address="0xFFE00004" />
+    <symbol name="DCPLB_STATUS"      address="0xFFE00008" />
+    <symbol name="DCPLB_FAULT_ADDR"  address="0xFFE0000C" />
+    <symbol name="MMR_TIMEOUT"       address="0xFFE00010" />
+    <symbol name="DCPLB_ADDR0"       address="0xFFE00100" />
+    <symbol name="DCPLB_ADDR1"       address="0xFFE00104" />
+    <symbol name="DCPLB_ADDR2"       address="0xFFE00108" />
+    <symbol name="DCPLB_ADDR3"       address="0xFFE0010C" />
+    <symbol name="DCPLB_ADDR4"       address="0xFFE00110" />
+    <symbol name="DCPLB_ADDR5"       address="0xFFE00114" />
+    <symbol name="DCPLB_ADDR6"       address="0xFFE00118" />
+    <symbol name="DCPLB_ADDR7"       address="0xFFE0011C" />
+    <symbol name="DCPLB_ADDR8"       address="0xFFE00120" />
+    <symbol name="DCPLB_ADDR9"       address="0xFFE00124" />
+    <symbol name="DCPLB_ADDR10"      address="0xFFE00128" />
+    <symbol name="DCPLB_ADDR11"      address="0xFFE0012C" />
+    <symbol name="DCPLB_ADDR12"      address="0xFFE00130" />
+    <symbol name="DCPLB_ADDR13"      address="0xFFE00134" />
+    <symbol name="DCPLB_ADDR14"      address="0xFFE00138" />
+    <symbol name="DCPLB_ADDR15"      address="0xFFE0013C" />
+    <symbol name="DCPLB_DATA0"       address="0xFFE00200" />
+    <symbol name="DCPLB_DATA1"       address="0xFFE00204" />
+    <symbol name="DCPLB_DATA2"       address="0xFFE00208" />
+    <symbol name="DCPLB_DATA3"       address="0xFFE0020C" />
+    <symbol name="DCPLB_DATA4"       address="0xFFE00210" />
+    <symbol name="DCPLB_DATA5"       address="0xFFE00214" />
+    <symbol name="DCPLB_DATA6"       address="0xFFE00218" />
+    <symbol name="DCPLB_DATA7"       address="0xFFE0021C" />
+    <symbol name="DCPLB_DATA8"       address="0xFFE00220" />
+    <symbol name="DCPLB_DATA9"       address="0xFFE00224" />
+    <symbol name="DCPLB_DATA10"      address="0xFFE00228" />
+    <symbol name="DCPLB_DATA11"      address="0xFFE0022C" />
+    <symbol name="DCPLB_DATA12"      address="0xFFE00230" />
+    <symbol name="DCPLB_DATA13"      address="0xFFE00234" />
+    <symbol name="DCPLB_DATA14"      address="0xFFE00238" />
+    <symbol name="DCPLB_DATA15"      address="0xFFE0023C" />
+    <symbol name="DTEST_COMMAND"     address="0xFFE00300" />
+    <symbol name="DTEST_INDEX"       address="0xFFE00304" />
+    <symbol name="DTEST_DATA0"       address="0xFFE00400" />
+    <symbol name="DTEST_DATA1"       address="0xFFE00404" />
+    <symbol name="DTEST_DATA2"       address="0xFFE00408" />
+    <symbol name="DTEST_DATA3"       address="0xFFE0040C" />
+    <symbol name="IMEM_CONTROL"      address="0xFFE01004" />
+    <symbol name="ICPLB_STATUS"      address="0xFFE01008" />
+    <symbol name="ICPLB_FAULT_ADDR"  address="0xFFE0100C" />
+    <symbol name="ICPLB_ADDR0"       address="0xFFE01100" />
+    <symbol name="ICPLB_ADDR1"       address="0xFFE01104" />
+    <symbol name="ICPLB_ADDR2"       address="0xFFE01108" />
+    <symbol name="ICPLB_ADDR3"       address="0xFFE0110C" />
+    <symbol name="ICPLB_ADDR4"       address="0xFFE01110" />
+    <symbol name="ICPLB_ADDR5"       address="0xFFE01114" />
+    <symbol name="ICPLB_ADDR6"       address="0xFFE01118" />
+    <symbol name="ICPLB_ADDR7"       address="0xFFE0111C" />
+    <symbol name="ICPLB_ADDR8"       address="0xFFE01120" />
+    <symbol name="ICPLB_ADDR9"       address="0xFFE01124" />
+    <symbol name="ICPLB_ADDR10"      address="0xFFE01128" />
+    <symbol name="ICPLB_ADDR11"      address="0xFFE0112C" />
+    <symbol name="ICPLB_ADDR12"      address="0xFFE01130" />
+    <symbol name="ICPLB_ADDR13"      address="0xFFE01134" />
+    <symbol name="ICPLB_ADDR14"      address="0xFFE01138" />
+    <symbol name="ICPLB_ADDR15"      address="0xFFE0113C" />
+    <symbol name="ICPLB_DATA0"       address="0xFFE01200" />
+    <symbol name="ICPLB_DATA1"       address="0xFFE01204" />
+    <symbol name="ICPLB_DATA2"       address="0xFFE01208" />
+    <symbol name="ICPLB_DATA3"       address="0xFFE0120C" />
+    <symbol name="ICPLB_DATA4"       address="0xFFE01210" />
+    <symbol name="ICPLB_DATA5"       address="0xFFE01214" />
+    <symbol name="ICPLB_DATA6"       address="0xFFE01218" />
+    <symbol name="ICPLB_DATA7"       address="0xFFE0121C" />
+    <symbol name="ICPLB_DATA8"       address="0xFFE01220" />
+    <symbol name="ICPLB_DATA9"       address="0xFFE01224" />
+    <symbol name="ICPLB_DATA10"      address="0xFFE01228" />
+    <symbol name="ICPLB_DATA11"      address="0xFFE0122C" />
+    <symbol name="ICPLB_DATA12"      address="0xFFE01230" />
+    <symbol name="ICPLB_DATA13"      address="0xFFE01234" />
+    <symbol name="ICPLB_DATA14"      address="0xFFE01238" />
+    <symbol name="ICPLB_DATA15"      address="0xFFE0123C" />
+    <symbol name="ITEST_COMMAND"     address="0xFFE01300" />
+    <symbol name="ITEST_INDEX"       address="0xFFE01304" />
+    <symbol name="ITEST_DATA0"       address="0xFFE01400" />
+    <symbol name="ITEST_DATA1"       address="0xFFE01404" />
+
+    <!-- Event/Interrupt Registers -->
+    <symbol name="EVT0"  address="0xFFE02000" />
+    <symbol name="EVT1"  address="0xFFE02004" />
+    <symbol name="EVT2"  address="0xFFE02008" />
+    <symbol name="EVT3"  address="0xFFE0200C" />
+    <symbol name="EVT4"  address="0xFFE02010" />
+    <symbol name="EVT5"  address="0xFFE02014" />
+    <symbol name="EVT6"  address="0xFFE02018" />
+    <symbol name="EVT7"  address="0xFFE0201C" />
+    <symbol name="EVT8"  address="0xFFE02020" />
+    <symbol name="EVT9"  address="0xFFE02024" />
+    <symbol name="EVT10" address="0xFFE02028" />
+    <symbol name="EVT11" address="0xFFE0202C" />
+    <symbol name="EVT12" address="0xFFE02030" />
+    <symbol name="EVT13" address="0xFFE02034" />
+    <symbol name="EVT14" address="0xFFE02038" />
+    <symbol name="EVT15" address="0xFFE0203C" />
+    <symbol name="IMASK" address="0xFFE02104" />
+    <symbol name="IPEND" address="0xFFE02108" />
+    <symbol name="ILAT"  address="0xFFE0210C" />
+
+    <!-- Core Timer Registers -->
+    <symbol name="TCNTL"   address="0xFFE03000" />
+    <symbol name="TPERIOD" address="0xFFE03004" />
+    <symbol name="TSCALE"  address="0xFFE03008" />
+    <symbol name="TCOUNT"  address="0xFFE0300C" />
+
+    <!-- Debug/MP/Emulation Registers -->
+    <symbol name="DSPID"   address="0xFFE05000" />
+    <symbol name="DBGCTL"  address="0xFFE05004" />
+    <symbol name="DBGSTAT" address="0xFFE05008" />
+    <symbol name="EMUDAT"  address="0xFFE0500C" />
+
+    <!-- Trace Buffer Registers -->
+    <symbol name="TBUFCTL"  address="0xFFE06001" />
+    <symbol name="TBUFSTAT" address="0xFFE06005" />
+    <symbol name="TBUF"     address="0xFFE06101" />
+
+    <!-- Watch Point Control Registers -->
+    <symbol name="WPIACTL"  address="0xFFE07000" />
+    <symbol name="WPIA0"    address="0xFFE07040" />
+    <symbol name="WPIA1"    address="0xFFE07044" />
+    <symbol name="WPIA2"    address="0xFFE07048" />
+    <symbol name="WPIA3"    address="0xFFE0704C" />
+    <symbol name="WPIA4"    address="0xFFE07050" />
+    <symbol name="WPIA5"    address="0xFFE07054" />
+    <symbol name="WPIACNT0" address="0xFFE07080" />
+    <symbol name="WPIACNT1" address="0xFFE07084" />
+    <symbol name="WPIACNT2" address="0xFFE07088" />
+    <symbol name="WPIACNT3" address="0xFFE0708C" />
+    <symbol name="WPIACNT4" address="0xFFE07090" />
+    <symbol name="WPIACNT5" address="0xFFE07094" />
+    <symbol name="WPDACTL"  address="0xFFE07100" />
+    <symbol name="WPDA0"    address="0xFFE07140" />
+    <symbol name="WPDA1"    address="0xFFE07144" />
+    <symbol name="WPDACNT0" address="0xFFE07180" />
+    <symbol name="WPDACNT1" address="0xFFE07184" />
+    <symbol name="WPSTAT"   address="0xFFE07200" />
+
+    <!-- Performance Monitor Registers -->
+    <symbol name="PFCTL"   address="0xFFE08000" />
+    <symbol name="PFCNTR0" address="0xFFE08100" />
+    <symbol name="PFCNTR1" address="0xFFE08104" />
+
+  </default_symbols>
+
+  <default_memory_blocks>
+    <memory_block name="sdram"                   start_address="ram:0"          length="0x8000000" mode="rwx" initialized="false" />
+    <memory_block name="async_bank_0"            start_address="ram:0x20000000" length="0x100000"  mode="rwx" initialized="false" />
+    <memory_block name="async_bank_1"            start_address="ram:0x20100000" length="0x100000"  mode="rwx" initialized="false" />
+    <memory_block name="async_bank_2"            start_address="ram:0x20200000" length="0x100000"  mode="rwx" initialized="false" />
+    <memory_block name="async_bank_3"            start_address="ram:0x20300000" length="0x100000"  mode="rwx" initialized="false" />
+    <memory_block name="bootrom"                 start_address="ram:0xef000000" length="0x8000"    mode="rx"  initialized="false" />
+    <memory_block name="data_bank_a_sram"        start_address="ram:0xff800000" length="0x4000"    mode="rw"  initialized="false" />
+    <memory_block name="data_bank_a_sram_cache"  start_address="ram:0xff804000" length="0x4000"    mode="rw"  initialized="false" />
+    <memory_block name="data_bank_b_sram"        start_address="ram:0xff900000" length="0x4000"    mode="rw"  initialized="false" />
+    <memory_block name="data_bank_b_sram_cache"  start_address="ram:0xff904000" length="0x4000"    mode="rw"  initialized="false" />
+    <memory_block name="instruction_bank_a_sram" start_address="ram:0xffa00000" length="0x8000"    mode="rwx" initialized="false" />
+    <memory_block name="instruction_bank_b_sram" start_address="ram:0xffa08000" length="0x8000"    mode="rwx" initialized="false" />
+    <memory_block name="instruction_bank_c_sram" start_address="ram:0xffa10000" length="0x8000"    mode="rwx" initialized="false" />
+    <memory_block name="scratchpad_sram"         start_address="ram:0xffb00000" length="0x1000"    mode="rw"  initialized="false" />
+
+
+    <memory_block name="sys_mmr_pll"   start_address="ram:0xffc00000" length="0x14" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_debug" start_address="ram:0xffc00014" length="0x4" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_system_reset_and_interrupt_controller" start_address="ram:0xffc00100" length="0x8" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_sic" start_address="ram:0xffc0010c" length="0x54" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_watchdog_timer" start_address="ram:0xffc00200" length="0xc" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_rtc" start_address="ram:0xffc00300" length="0x18" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_uart0" start_address="ram:0xffc00400" length="0x30" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_spi0" start_address="ram:0xffc00500" length="0x1c" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_twi0" start_address="ram:0xffc00700" length="0x90" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_sport1" start_address="ram:0xffc00900" length="0x60" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_async_mem_control" start_address="ram:0xffc00a00" length="0x1c" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_ddr_mem_control" start_address="ram:0xffc00a20" length="0x20" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_ddr_bank_rw_count" start_address="ram:0xffc00a60" length="0x68" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_dmac0" start_address="ram:0xffc00b0c" length="0x8" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_dma_chan0" start_address="ram:0xffc00c00" length="0x3c" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_dma_chan1" start_address="ram:0xffc00c40" length="0x3c" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_dma_chan2" start_address="ram:0xffc00c80" length="0x3c" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_dma_chan3" start_address="ram:0xffc00cc0" length="0x3c" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_dma_chan4" start_address="ram:0xffc00d00" length="0x3c" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_dma_chan5" start_address="ram:0xffc00d40" length="0x3c" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_dma_chan6" start_address="ram:0xffc00d80" length="0x3c" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_dma_chan7" start_address="ram:0xffc00dc0" length="0x3c" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_dma_chan8" start_address="ram:0xffc00e00" length="0x3c" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_dma_chan9" start_address="ram:0xffc00e40" length="0x3c" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_dma_chan10" start_address="ram:0xffc00e80" length="0x3c" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_dma_chan11" start_address="ram:0xffc00ec0" length="0x3c" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_mdma_stream0" start_address="ram:0xffc00f00" length="0x7c" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_mdma_stream1" start_address="ram:0xffc00f80" length="0x7c" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_uart3" start_address="ram:0xffc03100" length="0x30" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_eppi1" start_address="ram:0xffc01300" length="0x38" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_port_interrupt_0" start_address="ram:0xffc01400" length="0x28" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_port_interrupt_1" start_address="ram:0xffc01430" length="0x28" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_port_interrupt_2" start_address="ram:0xffc01460" length="0x28" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_port_interrupt_3" start_address="ram:0xffc01490" length="0x28" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_port_a" start_address="ram:0xffc014c0" length="0x20" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_port_b" start_address="ram:0xffc014e0" length="0x20" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_port_c" start_address="ram:0xffc01500" length="0x20" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_port_d" start_address="ram:0xffc01520" length="0x20" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_port_e" start_address="ram:0xffc01540" length="0x20" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_port_f" start_address="ram:0xffc01560" length="0x20" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_port_g" start_address="ram:0xffc01580" length="0x20" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_port_h" start_address="ram:0xffc015a0" length="0x20" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_port_i" start_address="ram:0xffc015c0" length="0x20" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_port_j" start_address="ram:0xffc015e0" length="0x20" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_pwm_timer" start_address="ram:0xffc01600" length="0x80" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_timer_group_of_8" start_address="ram:0xffc01680" length="0xc" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_dmac1" start_address="ram:0xffc01b0c" length="0x8" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_dma_chan12" start_address="ram:0xffc01c00" length="0x3c" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_dma_chan13" start_address="ram:0xffc01c40" length="0x3c" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_dma_chan14" start_address="ram:0xffc01c80" length="0x3c" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_dma_chan15" start_address="ram:0xffc01cc0" length="0x3c" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_dma_chan16" start_address="ram:0xffc01d00" length="0x3c" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_dma_chan17" start_address="ram:0xffc01d40" length="0x3c" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_dma_chan18" start_address="ram:0xffc01d80" length="0x3c" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_dma_chan19" start_address="ram:0xffc01dc0" length="0x3c" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_dma_chan20" start_address="ram:0xffc01e00" length="0x3c" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_dma_chan21" start_address="ram:0xffc01e40" length="0x3c" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_dma_chan22" start_address="ram:0xffc01e80" length="0x3c" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_dma_chan23" start_address="ram:0xffc01ec0" length="0x3c" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_mdma_stream2" start_address="ram:0xffc01f00" length="0x7c" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_mdma_stream3" start_address="ram:0xffc01f80" length="0x7c" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_uart1" start_address="ram:0xffc02000" length="0x30" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_spi1" start_address="ram:0xffc02300" length="0x1c" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_sport2" start_address="ram:0xffc02500" length="0x60" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_sport3" start_address="ram:0xffc02600" length="0x60" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_eppi2" start_address="ram:0xffc02900" length="0x38" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_can_controller0_config1" start_address="ram:0xffc02a00" length="0x34" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_can_controller0_config2" start_address="ram:0xffc02a40" length="0x34" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_can_controller0_clk_int_cnt" start_address="ram:0xffc02a80" length="0x50" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_can_controller0_acceptance" start_address="ram:0xffc02b00" length="0x100" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_can_controller0_mailbox_data" start_address="ram:0xffc02c00" length="0x400" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_uart3" start_address="ram:0xffc03100" length="0x30" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_nfc" start_address="ram:0xffc03b00" length="0x50" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_counter" start_address="ram:0xffc04200" length="0x20" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_otp_fuse" start_address="ram:0xffc04300" length="0x10" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_security" start_address="ram:0xffc04320" length="0xc" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_dma_peripheral_mux" start_address="ram:0xffc04340" length="0x4" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_otp_rw_data_buf" start_address="ram:0xffc04380" length="0x10" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_pixel_compositor" start_address="ram:0xffc04400" length="0x54" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_handshake_mdma0" start_address="ram:0xffc04500" length="0x1c" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_handshake_mdma1" start_address="ram:0xffc04540" length="0x1c" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_timer" start_address="ram:0xffc00600" length="0x30" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_timer_group_of_3" start_address="ram:0xffc00640" length="0xc" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_sport0" start_address="ram:0xffc00800" length="0xc" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_eppi0" start_address="ram:0xffc01000" length="0x38" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_uart2" start_address="ram:0xffc02100" length="0x30" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_twi1" start_address="ram:0xffc02200" length="0x90" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_spi2" start_address="ram:0xffc02400" length="0x1c" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_can_controller1_config1" start_address="ram:0xffc03200" length="0x34" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_can_controller1_config2" start_address="ram:0xffc03240" length="0x34" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_can_controller1_clk_int_cnt" start_address="ram:0xffc03280" length="0x50" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_can_controller1_mailbox_acceptance" start_address="ram:0xffc03300" length="0x100" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_can_controller1_mailbox_data" start_address="ram:0xffc03400" length="0x400" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_atapi" start_address="ram:0xffc03800" length="0x70" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_sdh" start_address="ram:0xffc03900" length="0xf0" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_host_port" start_address="ram:0xffc03a00" length="0xc" mode="rwv" initialized="false" />
+    <memory_block name="sys_sys_mmr_usb_control" start_address="ram:0xffc03c00" length="0x34" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_usb_pkt_control" start_address="ram:0xffc03c40" length="0x2c" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_usb_endpoint_fifo" start_address="ram:0xffc03c80" length="0x3c" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_usb_otg_control" start_address="ram:0xffc03d00" length="0xc" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_usb_phy_control" start_address="ram:0xffc03d48" length="0x14" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_aphy_cntrl" start_address="ram:0xffc03de0" length="0x4" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_aphy_calib" start_address="ram:0xffc03de4" length="0x8" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_phy_test" start_address="ram:0xffc03dec" length="0xc" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_usb_endpoint0_control" start_address="ram:0xffc03e00" length="0x24" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_usb_endpoint1_control" start_address="ram:0xffc03e28" length="0x24" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_usb_endpoint2_control" start_address="ram:0xffc03e68" length="0x24" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_usb_endpoint3_control" start_address="ram:0xffc03ea8" length="0x24" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_usb_endpoint4_control" start_address="ram:0xffc03ee8" length="0x24" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_usb_endpoint5_control" start_address="ram:0xffc03f28" length="0x24" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_usb_endpoint6_control" start_address="ram:0xffc03f68" length="0x24" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_usb_endpoint7_control" start_address="ram:0xffc03fa8" length="0x24" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_usb_channel0_config" start_address="ram:0xffc04004" length="0x14" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_usb_channel1_config" start_address="ram:0xffc04024" length="0x14" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_usb_channel2_config" start_address="ram:0xffc04044" length="0x14" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_usb_channel3_config" start_address="ram:0xffc04064" length="0x14" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_usb_channel4_config" start_address="ram:0xffc04084" length="0x14" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_usb_channel5_config" start_address="ram:0xffc040a4" length="0x14" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_usb_channel6_config" start_address="ram:0xffc040c4" length="0x14" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_usb_channel7_config" start_address="ram:0xffc040c4" length="0x14" mode="rwv" initialized="false" />
+    <memory_block name="sys_mmr_keypad" start_address="ram:0xffc04100" length="0x18" mode="rwv" initialized="false" />
+
+
+
+    <memory_block name="mmr_l1_data_memory_controller" start_address="ram:0xffe00000" length="0x0408" mode="rwv" initialized="false" />
+    <memory_block name="mmr_l1_inst_memory_controller" start_address="ram:0xffe01000" length="0x0408" mode="rwv" initialized="false" />
+    <memory_block name="mmr_l1_interrupt_controller"   start_address="ram:0xffe02000" length="0x0114" mode="rwv" initialized="false" />
+    <memory_block name="mmr_core_timer"                start_address="ram:0xffe03000" length="0x0010" mode="rwv" initialized="false" />
+    <memory_block name="mmr_debug"                     start_address="ram:0xffe05000" length="0x0004" mode="rwv" initialized="false" />
+    <memory_block name="mmr_trace_unit"                start_address="ram:0xffe06000" length="0x0104" mode="rwv" initialized="false" />
+    <memory_block name="mmr_watchpoint"                start_address="ram:0xffe07000" length="0x0204" mode="rwv" initialized="false" />
+    <memory_block name="mmr_performance_monitor"       start_address="ram:0xffe08000" length="0x0108" mode="rwv" initialized="false" />
+
+
+
+  </default_memory_blocks>
+</processor_spec>

@@ -1,0 +1,284 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<metadata>
+  <components>
+    <component name="middleware.mbedtls" requires="middleware.mbedtls.support middleware.mbedtls.unused_files" component_bundle="bundles.mbedtls" version="2.6.0" type="middleware" change_log="./ChangeLogKSDK.txt" description="mbedTLS library" ui_name="mbedtls" ui_description="mbedTLS SSL/TLS library" ui_category="Middleware" ui_control="True" ui_release_specific="True" user_visible="true" manifest_name="mbedtls">
+      <source path="./include/mbedtls/" target_path="mbedTLS/include/mbedtls">
+        <files mask="aes.h"/>
+        <files mask="aesni.h"/>
+        <files mask="arc4.h"/>
+        <files mask="asn1.h"/>
+        <files mask="asn1write.h"/>
+        <files mask="base64.h"/>
+        <files mask="bignum.h"/>
+        <files mask="blowfish.h"/>
+        <files mask="bn_mul.h"/>
+        <files mask="camellia.h"/>
+        <files mask="ccm.h"/>
+        <files mask="certs.h"/>
+        <files mask="check_config.h"/>
+        <files mask="cipher.h"/>
+        <files mask="cipher_internal.h"/>
+        <files mask="cmac.h"/>
+        <files mask="compat-1.3.h"/>
+        <files mask="config.h"/>
+        <files mask="ctr_drbg.h"/>
+        <files mask="debug.h"/>
+        <files mask="des.h"/>
+        <files mask="dhm.h"/>
+        <files mask="ecdh.h"/>
+        <files mask="ecdsa.h"/>
+        <files mask="ecjpake.h"/>
+        <files mask="ecp.h"/>
+        <files mask="ecp_internal.h"/>
+        <files mask="entropy.h"/>
+        <files mask="entropy_poll.h"/>
+        <files mask="error.h"/>
+        <files mask="gcm.h"/>
+        <files mask="havege.h"/>
+        <files mask="hmac_drbg.h"/>
+        <files mask="md.h"/>
+        <files mask="md2.h"/>
+        <files mask="md4.h"/>
+        <files mask="md5.h"/>
+        <files mask="md_internal.h"/>
+        <files mask="memory_buffer_alloc.h"/>
+        <files mask="net.h"/>
+        <files mask="net_sockets.h"/>
+        <files mask="oid.h"/>
+        <files mask="padlock.h"/>
+        <files mask="pem.h"/>
+        <files mask="pk.h"/>
+        <files mask="pk_internal.h"/>
+        <files mask="pkcs11.h"/>
+        <files mask="pkcs12.h"/>
+        <files mask="pkcs5.h"/>
+        <files mask="platform.h"/>
+        <files mask="platform_time.h"/>
+        <files mask="ripemd160.h"/>
+        <files mask="rsa.h"/>
+        <files mask="sha1.h"/>
+        <files mask="sha256.h"/>
+        <files mask="sha512.h"/>
+        <files mask="ssl.h"/>
+        <files mask="ssl_cache.h"/>
+        <files mask="ssl_ciphersuites.h"/>
+        <files mask="ssl_cookie.h"/>
+        <files mask="ssl_internal.h"/>
+        <files mask="ssl_ticket.h"/>
+        <files mask="threading.h"/>
+        <files mask="timing.h"/>
+        <files mask="version.h"/>
+        <files mask="x509.h"/>
+        <files mask="x509_crl.h"/>
+        <files mask="x509_crt.h"/>
+        <files mask="x509_csr.h"/>
+        <files mask="xtea.h"/>
+      </source>
+      <source path="./library/" target_path="mbedTLS/library">
+        <files mask="aes.c"/>
+        <files mask="aesni.c"/>
+        <files mask="arc4.c"/>
+        <files mask="asn1parse.c"/>
+        <files mask="asn1write.c"/>
+        <files mask="base64.c"/>
+        <files mask="bignum.c"/>
+        <files mask="blowfish.c"/>
+        <files mask="camellia.c"/>
+        <files mask="ccm.c"/>
+        <files mask="certs.c"/>
+        <files mask="cipher.c"/>
+        <files mask="cipher_wrap.c"/>
+        <files mask="cmac.c"/>
+        <files mask="ctr_drbg.c"/>
+        <files mask="debug.c"/>
+        <files mask="des.c"/>
+        <files mask="dhm.c"/>
+        <files mask="ecdh.c"/>
+        <files mask="ecdsa.c"/>
+        <files mask="ecjpake.c"/>
+        <files mask="ecp.c"/>
+        <files mask="ecp_curves.c"/>
+        <files mask="entropy.c"/>
+        <files mask="entropy_poll.c"/>
+        <files mask="error.c"/>
+        <files mask="gcm.c"/>
+        <files mask="havege.c"/>
+        <files mask="hmac_drbg.c"/>
+        <files mask="md.c"/>
+        <files mask="md2.c"/>
+        <files mask="md4.c"/>
+        <files mask="md5.c"/>
+        <files mask="md_wrap.c"/>
+        <files mask="memory_buffer_alloc.c"/>
+        <files mask="net_sockets.c"/>
+        <files mask="oid.c"/>
+        <files mask="padlock.c"/>
+        <files mask="pem.c"/>
+        <files mask="pk.c"/>
+        <files mask="pk_wrap.c"/>
+        <files mask="pkcs11.c"/>
+        <files mask="pkcs12.c"/>
+        <files mask="pkcs5.c"/>
+        <files mask="pkparse.c"/>
+        <files mask="pkwrite.c"/>
+        <files mask="platform.c"/>
+        <files mask="ripemd160.c"/>
+        <files mask="rsa.c"/>
+        <files mask="sha1.c"/>
+        <files mask="sha256.c"/>
+        <files mask="sha512.c"/>
+        <files mask="ssl_cache.c"/>
+        <files mask="ssl_ciphersuites.c"/>
+        <files mask="ssl_cli.c"/>
+        <files mask="ssl_cookie.c"/>
+        <files mask="ssl_srv.c"/>
+        <files mask="ssl_ticket.c"/>
+        <files mask="ssl_tls.c"/>
+        <files mask="threading.c"/>
+        <files mask="timing.c"/>
+        <files mask="version.c"/>
+        <files mask="version_features.c"/>
+        <files mask="x509.c"/>
+        <files mask="x509_create.c"/>
+        <files mask="x509_crl.c"/>
+        <files mask="x509_crt.c"/>
+        <files mask="x509_csr.c"/>
+        <files mask="x509write_crt.c"/>
+        <files mask="x509write_csr.c"/>
+        <files mask="xtea.c"/>
+      </source>
+      <source path="./port/ksdk/" target_path="mbedTLS/port/ksdk">
+        <files mask="des_alt.c"/>
+        <files mask="des_alt.h"/>
+        <files mask="ksdk_mbedtls.c"/>
+        <files mask="ksdk_mbedtls.h"/>
+        <files mask="ksdk_mbedtls_config.h"/>
+        <files mask="sha1_alt.h"/>
+        <files mask="sha256_alt.h"/>
+      </source>
+      <include_paths>
+        <include path="mbedTLS/include"/>
+      </include_paths>
+    </component>
+    <component name="middleware.mbedtls.support" requires="platform.drivers.aes"/>
+    <component name="middleware.mbedtls.support" requires="platform.drivers.ltc"/>
+    <component name="middleware.mbedtls.support" requires="platform.drivers.cau3"/>
+    <component name="middleware.mbedtls.support" requires="platform.drivers.sha"/>
+    <component name="middleware.mbedtls.support" requires="platform.drivers.dcp"/>
+    <component name="middleware.mbedtls.support" requires="platform.drivers.trng"/>
+    <component name="middleware.mbedtls.support" requires="platform.drivers.rnga"/>
+    <component name="middleware.mbedtls.support" requires="platform.drivers.rng"/>
+    <component name="middleware.mbedtls.unused_files" version="2.6.0" type="other" change_log="./ChangeLogKSDK.txt" description="mbedTLS files unused by projects" user_visible="false" ignore_dependency="true" manifest_name="unused_files">
+      <source path="./configs/" target_path="mbedTLS/configs" exclude="true">
+        <files mask="*.*"/>
+      </source>
+      <source path="./doxygen/input/" target_path="mbedTLS/doxygen/input" exclude="true">
+        <files mask="*.*"/>
+      </source>
+      <source path="./doxygen/" target_path="mbedTLS/doxygen" exclude="true">
+        <files mask="*.*"/>
+      </source>
+      <source path="./include/" target_path="mbedTLS/include" exclude="true">
+        <files mask="*.txt"/>
+      </source>
+      <source path="./library/" target_path="mbedTLS/library" exclude="true">
+        <files mask="*.txt"/>
+        <files mask="Makefile"/>
+      </source>
+      <source path="./programs/aes/" target_path="mbedTLS/programs/aes" exclude="true">
+        <files mask="*.*"/>
+      </source>
+      <source path="./programs/hash/" target_path="mbedTLS/programs/hash" exclude="true">
+        <files mask="*.*"/>
+      </source>
+      <source path="./programs/pkey/" target_path="mbedTLS/programs/pkey" exclude="true">
+        <files mask="*.*"/>
+      </source>
+      <source path="./programs/random/" target_path="mbedTLS/programs/random" exclude="true">
+        <files mask="*.*"/>
+      </source>
+      <source path="./programs/ssl/" target_path="mbedTLS/programs/ssl" exclude="true">
+        <files mask="*.*"/>
+      </source>
+      <source path="./programs/test/" target_path="mbedTLS/programs/test" exclude="true">
+        <files mask="*.*"/>
+      </source>
+      <source path="./programs/util/" target_path="mbedTLS/programs/util" exclude="true">
+        <files mask="*.*"/>
+      </source>
+      <source path="./programs/x509/" target_path="mbedTLS/programs/x509" exclude="true">
+        <files mask="*.*"/>
+      </source>
+      <source path="./programs/" target_path="mbedTLS/programs" exclude="true">
+        <files mask="*.*"/>
+        <files mask="Makefile"/>
+      </source>
+      <source path="./scripts/data_files/" target_path="mbedTLS/scripts/data_files" exclude="true">
+        <files mask="*.*"/>
+      </source>
+      <source path="./scripts/" target_path="mbedTLS/scripts" exclude="true">
+        <files mask="*.*"/>
+      </source>
+      <source path="./tests/data_files/dir-maxpath/" target_path="mbedTLS/tests/data_files/dir-maxpath" exclude="true">
+        <files mask="*.*"/>
+      </source>
+      <source path="./tests/data_files/dir1/" target_path="mbedTLS/tests/data_files/dir1" exclude="true">
+        <files mask="*.*"/>
+      </source>
+      <source path="./tests/data_files/dir2/" target_path="mbedTLS/tests/data_files/dir2" exclude="true">
+        <files mask="*.*"/>
+      </source>
+      <source path="./tests/data_files/dir3/" target_path="mbedTLS/tests/data_files/dir3" exclude="true">
+        <files mask="*.*"/>
+      </source>
+      <source path="./tests/data_files/dir4/" target_path="mbedTLS/tests/data_files/dir4" exclude="true">
+        <files mask="*.*"/>
+      </source>
+      <source path="./tests/data_files/" target_path="mbedTLS/tests/data_files" exclude="true">
+        <files mask="*.*"/>
+      </source>
+      <source path="./tests/git-scripts/" target_path="mbedTLS/tests/git-scripts" exclude="true">
+        <files mask="*.*"/>
+      </source>
+      <source path="./tests/scripts/" target_path="mbedTLS/tests/scripts" exclude="true">
+        <files mask="*.*"/>
+      </source>
+      <source path="./tests/suites/" target_path="mbedTLS/tests/suites" exclude="true">
+        <files mask="*.*"/>
+      </source>
+      <source path="./tests/" target_path="mbedTLS/tests" exclude="true">
+        <files mask="*.*"/>
+      </source>
+      <source path="./visualc/VS2010/" target_path="mbedTLS/visualc/VS2010" exclude="true">
+        <files mask="*.*"/>
+      </source>
+      <source path="./yotta/data/example-authcrypt/" target_path="mbedTLS/yotta/data/example-authcrypt" exclude="true">
+        <files mask="*.*"/>
+      </source>
+      <source path="./yotta/data/example-benchmark/" target_path="mbedTLS/yotta/data/example-benchmark" exclude="true">
+        <files mask="*.*"/>
+      </source>
+      <source path="./yotta/data/example-hashing/" target_path="mbedTLS/yotta/data/example-hashing" exclude="true">
+        <files mask="*.*"/>
+      </source>
+      <source path="./yotta/data/example-tls-client/" target_path="mbedTLS/yotta/data/example-tls-client" exclude="true">
+        <files mask="*.*"/>
+      </source>
+      <source path="./yotta/data/" target_path="mbedTLS/yotta/data" exclude="true">
+        <files mask="*.*"/>
+      </source>
+      <source path="./yotta/" target_path="mbedTLS/yotta" exclude="true">
+        <files mask="*.*"/>
+      </source>
+      <source path="./" target_path="mbedTLS" exclude="true">
+        <files mask="*.*"/>
+        <files mask="ChangeLog"/>
+        <files mask="LICENSE"/>
+        <files mask="Makefile"/>
+      </source>
+    </component>
+  </components>
+  <component_bundles>
+    <component_bundle name="bundles.mbedtls" full_name="mbedTLS library" version="2.6.0" class="Security" description="mbedTLS SSL/TLS library" manifest_name="mbedtls"/>
+  </component_bundles>
+</metadata>

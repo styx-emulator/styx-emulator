@@ -1,0 +1,29 @@
+[package]
+name = "workspace-service"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "workspace-svc"
+path = "./src/workspace-svc-main.rs"
+
+[dependencies]
+styx-workspace-hack = { version = "0.1", path = "../../workspace-hack" }
+styx-migration = { path = "../../db/migration" }
+styx-dbmodel = { path = "../../db/dbmodel" }
+typhunix-proto = { path = "../../../extensions/typhunix/rust/typhunix-proto" }
+styx-core = { workspace = true }
+
+serde = { workspace = true }
+tokio = { workspace = true }
+tonic = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+tokio-stream = { workspace = true }
+
+[lib]
+path = "./src/lib.rs"

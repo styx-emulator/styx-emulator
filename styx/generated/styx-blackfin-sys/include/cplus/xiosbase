@@ -1,0 +1,483 @@
+// xiosbase internal header (from <ios>)
+#if defined (_ADI_COMPILER)
+/************************************************************************
+ *
+ * xiosbase
+ *
+ * (c) Copyright 2001-2009 Analog Devices, Inc.  All rights reserved.
+ * (c) Copyright 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * $Revision: 1.8 $
+ ************************************************************************/
+
+#pragma once
+#ifndef __NO_BUILTIN
+#pragma system_header /* xiosbase */
+#endif
+#endif /* _ADI_COMPILER */
+
+#ifndef _XIOSBASE_
+#define _XIOSBASE_
+#include <cctype>
+#include <stdexcept>
+#include <xdebug>
+_STD_BEGIN
+
+ #if _HAS_TRADITIONAL_IOSTREAMS
+ #define stdio		_Stdio
+ #define hardfail	_Hardfail
+ #define nocreate	_Nocreate
+ #define noreplace	_Noreplace
+ #define openprot	_Openprot
+
+ #define _IOSskipws		0x0001
+ #define _IOSunitbuf	0x2000
+ #define _IOSuppercase	0x0200
+ #define _IOSshowbase	0x0080
+ #define _IOSshowpoint	0x0100
+ #define _IOSshowpos	0x0400
+ #define _IOSleft		0x0002
+ #define _IOSright		0x0004
+ #define _IOSinternal	0x0008
+ #define _IOSdec		0x0010
+ #define _IOSoct		0x0020
+ #define _IOShex		0x0040
+ #define _IOSscientific	0x0800
+ #define _IOSfixed		0x1000
+
+ #define _IOShexfloat	0x1800	// added with TR1
+
+ #define _IOSboolalpha	0x8000
+ #define _IOS_Stdio		0x4000
+
+ #define _IOS_Nocreate	0x20
+ #define _IOS_Noreplace	0x40
+ #define _IOSbinary		0x80
+
+ #else /* _HAS_TRADITIONAL_IOSTREAMS */
+ #define _IOSskipws		0x0001
+ #define _IOSunitbuf	0x0002
+ #define _IOSuppercase	0x0004
+ #define _IOSshowbase	0x0008
+ #define _IOSshowpoint	0x0010
+ #define _IOSshowpos	0x0020
+ #define _IOSleft		0x0040
+ #define _IOSright		0x0080
+ #define _IOSinternal	0x0100
+ #define _IOSdec		0x0200
+ #define _IOSoct		0x0400
+ #define _IOShex		0x0800
+ #define _IOSscientific	0x1000
+ #define _IOSfixed		0x2000
+
+ #define _IOShexfloat	0x3000	// added with TR1/
+
+ #define _IOSboolalpha	0x4000
+ #define _IOS_Stdio		0x8000
+
+ #define _IOS_Nocreate	0x40
+ #define _IOS_Noreplace	0x80
+ #define _IOSbinary		0x20
+ #endif /* _HAS_TRADITIONAL_IOSTREAMS */
+
+ #define _USE(loc, fac)	(loc, fac())	/* get facet reference from locale */
+
+		// CLASS locale
+class locale
+	{	// nonmutable collection of facets that describe a locale
+public:
+	locale()
+		{	// construct default locale
+		}
+
+	locale(_Uninitialized)
+		{	// construct uninitialized locale
+		}
+
+	locale(const char *)
+		{	// construct locale from locale name (do nothing)
+		}
+
+	bool operator==(const locale&)
+		{	// test for locale equality (always true)
+		return (true);
+		}
+
+	bool operator!=(const locale&)
+		{	// test for locale inequality (always false)
+		return (false);
+		}
+	};
+
+		// CLASS ctype
+class ctype
+	{	// simple ctype facet
+public:
+	enum mask
+		{	// define code for space character only
+		space};
+
+	static bool is(mask, char _Ch)
+		{	// test for space character
+		return (_Isspace(_Ch) != 0);
+		}
+
+	static char widen(char _Byte)
+		{	// convert byte to character
+		return (_Byte);
+		}
+
+	static char narrow(char _Ch, char = '\0')
+		{	// convert character to byte
+		return (_Ch);
+		}
+	};
+
+		// CLASS ios_base
+class ios_base
+	{	// base class for ios
+public:
+	enum _Fmtflags
+		{	// constants for formatting options
+		skipws = _IOSskipws, unitbuf = _IOSunitbuf,
+		uppercase = _IOSuppercase, showbase = _IOSshowbase,
+		showpoint = _IOSshowpoint, showpos = _IOSshowpos,
+		left = _IOSleft, right = _IOSright, internal = _IOSinternal,
+		dec = _IOSdec, oct = _IOSoct, hex = _IOShex,
+		scientific = _IOSscientific, fixed = _IOSfixed,
+		boolalpha = _IOSboolalpha, _Stdio = _IOS_Stdio,
+		adjustfield = left | right | internal,
+		basefield = dec | oct | hex,
+		floatfield = scientific | fixed,
+
+		hexfloat = _IOShexfloat,	// added with TR1
+
+		_Fmtmask = 0xffff, _Fmtzero = 0};
+	_BITMASK(_Fmtflags, fmtflags);
+
+	enum _Iostate
+		{	// constants for stream states
+		goodbit = 0x0, eofbit = 0x1,
+		failbit = 0x2, badbit = 0x4,
+		_Hardfail = 0x10, _Statmask = 0x17};
+	_BITMASK(_Iostate, iostate);
+
+	enum _Openmode
+		{	// constants for file opening options
+		in = 0x01, out = 0x02, ate = 0x04,
+		app = 0x08, trunc = 0x10,
+		_Nocreate = _IOS_Nocreate, _Noreplace = _IOS_Noreplace,
+		binary = _IOSbinary};
+	_BITMASK(_Openmode, openmode);
+
+	enum _Seekdir
+		{	// constants for file positioning options
+		beg = 0, cur = 1, end = 2};
+	_BITMASK(_Seekdir, seekdir);
+
+	enum
+		{	// constant for default file opening protection
+		_Openprot = 0666};
+
+	typedef _STD streamoff streamoff;
+	typedef _STD streampos streampos;
+
+	enum event
+		{	// constants for ios events
+		erase_event, imbue_event, copyfmt_event};
+
+	typedef void (*event_callback)(event, ios_base&, int);
+	typedef unsigned int io_state, open_mode, seek_dir;
+
+			// CLASS failure
+	class failure
+		: public runtime_error
+		{	// base of all iostreams exceptions
+	public:
+		explicit failure(const string &_Message)
+			: runtime_error(_Message)
+			{	// construct with message
+			}
+
+		virtual ~failure() _THROW0()
+			{	// destroy the object
+			}
+
+ #if _HAS_EXCEPTIONS
+
+ #else /* _HAS_EXCEPTIONS */
+
+	protected:
+		virtual void _Doraise() const
+			{	// report the exception
+			_RAISE(*this);
+			}
+ #endif /* _HAS_EXCEPTIONS */
+
+		};
+
+			// CLASS Init
+	class Init
+		{	// controller for standard-stream initialization
+	public:
+		Init();	// initialize standard streams on first construction
+
+		~Init();	// flush standard streams on last destruction
+
+	private:
+		static int _Init_cnt;	// net constructions - destructions
+		};
+
+	ios_base& operator=(const ios_base& _Right)
+		{	// assign state and format stuff from _Right
+		if (this != &_Right)
+			{	// worth doing
+			_Mystate = _Right._Mystate;
+			copyfmt(_Right);
+			}
+		return (*this);
+		}
+
+	operator void *() const
+		{	// test if any stream operation has failed
+		return (fail() ? 0 : (void *)this);
+		}
+
+	bool operator!() const
+		{	// test if no stream operation has failed
+		return (fail());
+		}
+
+	void clear(iostate, bool);	// set state, possibly reraise exception
+
+	void clear(iostate _State = goodbit)
+		{	// set state to argument
+		clear(_State, false);
+		}
+
+	void clear(io_state _State)
+		{	// set state to argument, old-style
+		clear((iostate)_State);
+		}
+
+	iostate rdstate() const
+		{	// return stream state
+		return (_Mystate);
+		}
+
+	void setstate(iostate _State, bool _Exreraise)
+		{	// merge in state argument, possibly reraise exception
+		if (_State != goodbit)
+			clear((iostate)((int)rdstate() | (int)_State), _Exreraise);
+		}
+
+	void setstate(iostate _State)
+		{	// merge in state argument
+		if (_State != goodbit)
+			clear((iostate)((int)rdstate() | (int)_State), false);
+		}
+
+	void setstate(io_state _State)
+		{	// merge in state argument, old style
+		setstate((iostate)_State);
+		}
+
+	bool good() const
+		{	// test if no state bits are set
+		return (rdstate() == goodbit);
+		}
+
+	bool eof() const
+		{	// test if eofbit is set in stream state
+		return ((int)rdstate() & (int)eofbit);
+		}
+
+	bool fail() const
+		{	// test if badbit or failbit is set in stream state
+		return (((int)rdstate()
+			& ((int)badbit | (int)failbit)) != 0);
+		}
+
+	bool bad() const
+		{	// test if badbit is set in stream state
+		return (((int)rdstate() & (int)badbit) != 0);
+		}
+
+	iostate exceptions() const
+		{	// return exception mask
+		return (_Except);
+		}
+
+	void exceptions(iostate _Newexcept)
+		{	// set exception mask to argument
+		_Except = (iostate)((int)_Newexcept & (int)_Statmask);
+		clear(_Mystate);
+		}
+
+	void exceptions(io_state _State)
+		{	// set exception mask to argument, old style
+		exceptions((iostate)_State);
+		}
+
+	fmtflags flags() const
+		{	// return format flags
+		return (_Fmtfl);
+		}
+
+	fmtflags flags(fmtflags _Newfmtflags)
+		{	// set format flags to argument
+		fmtflags _Oldfmtflags = _Fmtfl;
+		_Fmtfl = (fmtflags)((int)_Newfmtflags & (int)_Fmtmask);
+		return (_Oldfmtflags);
+		}
+
+	fmtflags setf(fmtflags _Newfmtflags)
+		{	// merge in format flags argument
+		ios_base::fmtflags _Oldfmtflags = _Fmtfl;
+		_Fmtfl = (fmtflags)((int)_Fmtfl
+			| (int)_Newfmtflags & (int)_Fmtmask);
+		return (_Oldfmtflags);
+		}
+
+	fmtflags setf(fmtflags _Newfmtflags, fmtflags _Mask)
+		{	// merge in format flags argument under mask argument
+		ios_base::fmtflags _Oldfmtflags = _Fmtfl;
+		_Fmtfl = (fmtflags)(((int)_Fmtfl & (int)~_Mask)
+			| ((int)_Newfmtflags & (int)_Mask & (int)_Fmtmask));
+		return (_Oldfmtflags);
+		}
+
+	void unsetf(fmtflags _Mask)
+		{	// clear format flags under mask argument
+		_Fmtfl = (fmtflags)((int)_Fmtfl & (int)~_Mask);
+		}
+
+	streamsize precision() const
+		{	// return precision
+		return (_Prec);
+		}
+
+	streamsize precision(streamsize _Newprecision)
+		{	// set precision to argument
+		streamsize _Oldprecision = _Prec;
+		_Prec = _Newprecision;
+		return (_Oldprecision);
+		}
+
+	streamsize width() const
+		{	// return width
+		return (_Wide);
+		}
+
+	streamsize width(streamsize _Newwidth)
+		{	// set width to argument
+		streamsize _Oldwidth = _Wide;
+		_Wide = _Newwidth;
+		return (_Oldwidth);
+		}
+
+	locale getloc() const
+		{	// get locale
+		return (*_Ploc);
+		}
+
+	locale imbue(const locale&);	// set locale to argument
+
+	static int xalloc()
+		{	// allocate new iword/pword index
+		_Lockit _Lock(_LOCK_STREAM);	// lock thread to ensure atomicity
+		return (_Index++);
+		}
+
+	long& iword(int _Idx)
+		{	// return reference to long element
+		return (_Findarr(_Idx)._Lo);
+		}
+
+	void *& pword(int _Idx)
+		{	// return reference to pointer element
+		return (_Findarr(_Idx)._Vp);
+		}
+
+	void register_callback(event_callback, int);	// register event handler
+
+	ios_base& copyfmt(const ios_base&);	// copy format stuff
+
+	virtual ~ios_base();	// destroy the object
+
+	static bool sync_with_stdio(bool _Newsync = true)
+		{	// set C/C++ synchronization flag from argument
+		_Lockit _Lock(_LOCK_STREAM);	// lock thread to ensure atomicity
+		const bool _Oldsync = _Sync;
+		_Sync = _Newsync;
+		return (_Oldsync);
+		}
+
+	void _Addstd();	// add this to list of standard streams
+	size_t _Stdstr;	// if > 0 index of standard stream to suppress destruction
+
+protected:
+	ios_base()
+		{	// default constructor
+		}
+
+	void _Init();	// initialize to standard values
+
+private:
+			// STRUCT _Iosarray
+	struct _Iosarray
+		{	// list element for open-ended sparse array of longs/pointers
+	public:
+		_Iosarray(int _Idx, _Iosarray *_Link)
+			: _Next(_Link), _Index(_Idx), _Lo(0), _Vp(0)
+			{	// construct node for index _Idx and link it in
+			}
+
+		_Iosarray *_Next;	// pointer to next node
+		int _Index;	// index of this node
+		long _Lo;	// stored long value
+		void *_Vp;	// stored pointer value
+		};
+
+			// STRUCT _Fnarray
+	struct _Fnarray
+		{	// list element for open-ended sparse array of event handlers
+		_Fnarray(int _Idx, event_callback _Pnew, _Fnarray *_Link)
+			: _Next(_Link), _Index(_Idx), _Pfn(_Pnew)
+			{	// construct node for index _Idx and link it in
+			}
+
+		_Fnarray *_Next;	// pointer to next node
+		int _Index;	// index of this node
+		event_callback _Pfn;	// pointer to event handler
+		};
+
+	void _Callfns(event);	// call all event handlers, reporting event
+
+	_Iosarray& _Findarr(int);	// find an array element
+
+	void _Tidy();	// free allocated storage
+
+	iostate _Mystate;	// stream state
+	iostate _Except;	// exception mask
+	fmtflags _Fmtfl;	// format flags
+	streamsize _Prec;	// field precision
+	streamsize _Wide;	// field width
+	_Iosarray *_Arr;	// pointer to first node of long/pointer array
+	_Fnarray *_Calls;	// pointer to first node of call list
+	locale *_Ploc;	// pointer to locale
+
+	static int _Index;	// source of unique indexes for long/pointer array
+	static bool _Sync;	// C/C++ synchronization flag (ignored)
+	};
+
+_BITMASK_OPS(ios_base::_Fmtflags)
+_BITMASK_OPS(ios_base::_Iostate)
+_BITMASK_OPS(ios_base::_Openmode)
+_BITMASK_OPS(ios_base::_Seekdir)
+_STD_END
+#endif /* _XIOSBASE_ */
+
+/*
+ * Copyright (c) 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * Consult your license regarding permissions and restrictions.
+V5.03:1134 */

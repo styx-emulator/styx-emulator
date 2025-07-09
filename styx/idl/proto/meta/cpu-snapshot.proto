@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package styx.meta.cpu_snapshot;
+
+message NotStopped {}
+message EmptyContent {}
+message StyxCpuSnapshotError {
+    oneof error {
+        NotStopped not_stopped = 1;
+        EmptyContent empty_content = 2;
+    }
+}

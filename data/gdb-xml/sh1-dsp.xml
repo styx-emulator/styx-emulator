@@ -1,0 +1,48 @@
+<feature name="org.gnu.gdb.sh.core">
+    <!-- General Purpose Registers -->
+  <reg name="r0" bitsize="32" type="int32"/>
+  <reg name="r1" bitsize="32" type="int32"/>
+  <reg name="r2" bitsize="32" type="int32"/>
+  <reg name="r3" bitsize="32" type="int32"/>
+  <reg name="r4" bitsize="32" type="int32"/>
+  <reg name="r5" bitsize="32" type="int32"/>
+  <reg name="r6" bitsize="32" type="int32"/>
+  <reg name="r7" bitsize="32" type="int32"/>
+  <reg name="r8" bitsize="32" type="int32"/>
+  <reg name="r9" bitsize="32" type="int32"/>
+  <reg name="r10" bitsize="32" type="int32"/>
+  <reg name="r11" bitsize="32" type="int32"/>
+  <reg name="r12" bitsize="32" type="int32"/>
+  <reg name="r13" bitsize="32" type="int32"/>
+  <reg name="r14" bitsize="32" type="int32"/>
+  <reg name="r15" bitsize="32" type="data_ptr"/>
+
+  <!-- Control Registers -->
+  <reg name="pc" bitsize="32" type="code_ptr"/>
+  <reg name="pr" bitsize="32" type="int32"/>
+  <reg name="gbr" bitsize="32" type="int32"/>
+  <reg name="vbr" bitsize="32" type="int32"/>
+  <reg name="mach" bitsize="32" type="int32"/>
+  <reg name="macl" bitsize="32" type="int32"/>
+  <reg name="sr" bitsize="32" type="int32"/>
+
+  <!-- DSP Control Register -->
+  <reg name="dsr" bitsize="32" type="int32"/>
+
+  <!-- DSP Registers -->
+  <reg name="a0g" bitsize="32" type="int32"/>
+  <reg name="a0" bitsize="32" type="int32"/>
+  <reg name="a1g" bitsize="32" type="int32"/>
+  <reg name="a1" bitsize="32" type="int32"/>
+  <reg name="m0" bitsize="32" type="int32"/>
+  <reg name="m1" bitsize="32" type="int32"/>
+  <reg name="x0" bitsize="32" type="int32"/>
+  <reg name="x1" bitsize="32" type="int32"/>
+  <reg name="y0" bitsize="32" type="int32"/>
+  <reg name="y1" bitsize="32" type="int32"/>
+  <reg name="mod" bitsize="32" type="int32" regnum="40"/>
+
+  <!-- System Registers -->
+  <reg name="rs" bitsize="32" type="int32" regnum="43"/>
+  <reg name="re" bitsize="32" type="int32"/>
+</feature>

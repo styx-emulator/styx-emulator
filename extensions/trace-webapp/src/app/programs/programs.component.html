@@ -1,0 +1,54 @@
+<style>
+  .table-row {
+    height: 16px !important;
+  }
+  .table-header-row {
+    height: 24px !important;
+    font: bolder;
+    font-weight: bold;
+  }
+</style>
+
+<table mat-table matSort>
+  <!-- Selection Column -->
+  <ng-container [matColumnDef]="ProgramColumns.Select">
+    <th mat-header-cell *matHeaderCellDef></th>
+
+    <td mat-cell class="mat-column-select" *matCellDef="let row">
+      <mat-radio-button [value]="row" (change)="radioSelected($event)" matSel>
+      </mat-radio-button>
+    </td>
+  </ng-container>
+
+  <div *ngFor="let col of ngColumnContainers">
+    <ng-container [matColumnDef]="col.name">
+      <th mat-header-cell *matHeaderCellDef mat-sort-header>{{ col.title }}</th>
+      <td mat-cell *matCellDef="let row">
+        {{ row[col.name] }}
+      </td>
+    </ng-container>
+  </div>
+
+  <tr
+    class="table-header-row"
+    mat-header-row
+    *matHeaderRowDef="displayedColumns"
+  ></tr>
+
+  <tr
+    mat-row
+    [matTooltip]="tooltip(row)"
+    class="table-row"
+    *matRowDef="let row; columns: displayedColumns"
+  ></tr>
+</table>
+
+<mat-paginator
+  #paginator
+  [length]="dataSource.data.length"
+  [pageIndex]="0"
+  [pageSize]="10"
+  [pageSizeOptions]="[5, 10, 20]"
+  aria-label="Select page"
+>
+</mat-paginator>

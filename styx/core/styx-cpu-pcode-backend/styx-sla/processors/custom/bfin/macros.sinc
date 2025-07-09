@@ -1,0 +1,20 @@
+macro ternary(res, cond, avar, bvar) {
+	res = (avar * zext(cond != 0)) + (bvar * zext(cond == 0));
+}
+
+macro push(reg) {
+    SP = SP - 4;
+    *SP = reg;
+}
+
+macro pop(reg) {
+    reg = *SP;
+    SP = SP + 4;
+}
+
+macro int_abs(src, dst) {
+    if (src s>= 0) goto <non_neg>;
+        dest = -src;
+    <non_neg>
+    dest = src;
+}

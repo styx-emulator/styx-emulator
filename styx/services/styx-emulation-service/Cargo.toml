@@ -1,0 +1,45 @@
+[package]
+name = "emulation-service"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "emusvc-cli"
+path = "src/emusvc-cli-main.rs"
+
+[[bin]]
+name = "emusvc-svc"
+path = "src/emusvc-svc-main.rs"
+
+[[bin]]
+name = "styx-runner"
+path = "src/styx_runner.rs"
+
+[features]
+default = []
+tracy = ["styx-plugins/tracy"]
+
+[dependencies]
+styx-workspace-hack = { version = "0.1", path = "../../workspace-hack" }
+styx-core = { workspace = true }
+styx-plugins = { path = "../../plugins" }
+styx-processors = { path = "../../processors" }
+styx-macros-args = { path = "../../../incubation/styx-macros-args" }
+styx-blackfin-sys = { path = "../../generated/styx-blackfin-sys" }
+
+tonic = { workspace = true }
+tracing = { workspace = true }
+clap = { workspace = true }
+async-trait = { workspace = true }
+tokio = { workspace = true }
+tokio-stream = { workspace = true }
+serde_yaml = "0.9.34"
+serde_json = { workspace = true }
+serde = { workspace = true }

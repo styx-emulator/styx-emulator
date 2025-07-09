@@ -1,0 +1,9 @@
+lint:
+    ruff check examples
+lint-ci:
+    ruff check --output-format=github examples
+
+test:
+    pytest examples/uart-integration-test/main.py
+    python3 examples/uart-kinetis21/main.py
+    python3 examples/simple-stm32f107/main.py

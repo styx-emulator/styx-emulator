@@ -1,0 +1,302 @@
+// string standard header
+#if defined (_ADI_COMPILER)
+/************************************************************************
+ *
+ * string
+ *
+ * (c) Copyright 2001-2009 Analog Devices, Inc.  All rights reserved.
+ * (c) Copyright 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * $Revision: 1.4 $
+ ************************************************************************/
+
+#pragma once
+#ifndef __NO_BUILTIN
+#pragma system_header /* string */
+#endif
+#endif /* _ADI_COMPILER */
+
+#ifndef _STRING_
+#define _STRING_
+#include <istream>
+_STD_BEGIN
+
+		// string OPERATORS
+inline string operator+(const string& _Left, const string& _Right)
+	{	// return string + string
+	return (string(_Left) += _Right);
+	}
+
+inline string operator+(const char *_Left, const string& _Right)
+	{	// return NTBS + string
+	return (string(_Left) += _Right);
+	}
+
+inline string operator+(const char _Left, const string& _Right)
+	{	// return char + string
+#if defined (_ADI_COMPILER)
+/* Don't use get_allocator; indeed I'm not sure if this should _ever_
+** be used in this instance.
+*/
+        return (string(1, _Left) += _Right);
+#else
+	return (string(1, _Left, get_allocator()) += _Right);
+#endif
+	}
+
+inline string operator+(const string& _Left, const char *_Right)
+	{	// return string + NTBS
+	return (string(_Left) += _Right);
+	}
+
+inline string operator+(const string& _Left, const char _Right)
+	{	// return string + char
+	return (string(_Left) += _Right);
+	}
+
+inline bool operator==(const string& _Left, const string& _Right)
+	{	// test for string equality
+	return (_Left.compare(_Right) == 0);
+	}
+
+inline bool operator==(const char * _Left, const string& _Right)
+	{	// test for NTBS vs. string equality
+	return (_Right.compare(_Left) == 0);
+	}
+
+inline bool operator==(const string& _Left, const char *_Right)
+	{	// test for string vs. NTBS equality
+	return (_Left.compare(_Right) == 0);
+	}
+
+inline bool operator!=(const string& _Left, const string& _Right)
+	{	// test for string inequality
+	return (!(_Left == _Right));
+	}
+
+inline bool operator!=(const char *_Left, const string& _Right)
+	{	// test for NTBS vs. string inequality
+	return (!(_Left == _Right));
+	}
+
+inline bool operator!=(const string& _Left, const char *_Right)
+	{	// test for string vs. NTBS inequality
+	return (!(_Left == _Right));
+	}
+
+inline bool operator<(const string& _Left, const string& _Right)
+	{	// test if string < string
+	return (_Left.compare(_Right) < 0);
+	}
+
+inline bool operator<(const char * _Left, const string& _Right)
+	{	// test if NTBS < string
+	return (_Right.compare(_Left) > 0);
+	}
+
+inline bool operator<(const string& _Left, const char *_Right)
+	{	// test if string < NTBS
+	return (_Left.compare(_Right) < 0);
+	}
+
+inline bool operator>(const string& _Left, const string& _Right)
+	{	// test if string > string
+	return (_Right < _Left);
+	}
+
+inline bool operator>(const char * _Left, const string& _Right)
+	{	// test if NTBS > string
+	return (_Right < _Left);
+	}
+
+inline bool operator>(const string& _Left, const char *_Right)
+	{	// test if string > NTBS
+	return (_Right < _Left);
+	}
+
+inline bool operator<=(const string& _Left, const string& _Right)
+	{	// test if string <= string
+	return (!(_Right < _Left));
+	}
+
+inline bool operator<=(const char * _Left, const string& _Right)
+	{	// test if NTBS <= string
+	return (!(_Right < _Left));
+	}
+
+inline bool operator<=(const string& _Left, const char *_Right)
+	{	// test if string <= NTBS
+	return (!(_Right < _Left));
+	}
+
+inline bool operator>=(const string& _Left, const string& _Right)
+	{	// test if string >= string
+	return (!(_Left < _Right));
+	}
+
+inline bool operator>=(const char * _Left, const string& _Right)
+	{	// test if NTBS >= string
+	return (!(_Left < _Right));
+	}
+
+inline bool operator>=(const string& _Left, const char *_Right)
+	{	// test if string >= NTBS
+	return (!(_Left < _Right));
+	}
+
+		// string INSERTERS AND EXTRACTORS
+inline istream& operator>>(istream& _Istr, string& _Str)
+	{	// extract a string
+	typedef char_traits _Traits;
+	typedef char_allocator _Alloc;
+	typedef ctype _Ctype;
+	typedef istream _Myis;
+	typedef string _Mystr;
+	typedef size_t _Mysizt;
+
+	ios_base::iostate _State = ios_base::goodbit;
+	bool _Changed = false;
+	const _Myis::sentry _Ok(_Istr);
+
+	if (_Ok)
+		{	// state okay, extract characters
+		const _Ctype& _Ctype_fac = _USE(_Istr.getloc(), _Ctype);
+		_Str.erase();
+
+		_TRY_IO_BEGIN
+		_Mysizt _Size = 0 < _Istr.width()
+			&& (_Mysizt)_Istr.width() < _Str.max_size()
+				? (_Mysizt)_Istr.width() : _Str.max_size();
+		_Traits::int_type _Meta = _Istr.rdbuf()->sgetc();
+
+		for (; 0 < _Size; --_Size, _Meta = _Istr.rdbuf()->snextc())
+			if(_Traits::eq_int_type(_Traits::eof(), _Meta))
+				{	// end of file, quit
+				_State |= ios_base::eofbit;
+				break;
+				}
+			else if (_Ctype_fac.is(_Ctype::space,
+				_Traits::to_char_type(_Meta)))
+				break;	// whitespace, quit
+			else
+				{	// add character to string
+				_Str.append(1, _Traits::to_char_type(_Meta));
+				_Changed = true;
+				}
+		_CATCH_IO_(_Istr)
+		}
+
+	_Istr.width(0);
+	if (!_Changed)
+		_State |= ios_base::failbit;
+	_Istr.setstate(_State);
+	return (_Istr);
+	}
+
+inline istream& getline(istream& _Istr, string& _Str,
+	const char _Delim = '\n')
+	{	// get characters into string, discard delimiter
+	typedef char_traits _Traits;
+	typedef istream _Myis;
+	ios_base::iostate _State = ios_base::goodbit;
+	bool _Changed = false;
+	const _Myis::sentry _Ok(_Istr, true);
+
+	if (_Ok)
+		{	// state okay, extract characters
+		_TRY_IO_BEGIN
+		_Str.erase();
+		const _Traits::int_type _Metadelim =
+			_Traits::to_int_type(_Delim);
+		_Traits::int_type _Meta = _Istr.rdbuf()->sgetc();
+
+		for (; ; _Meta = _Istr.rdbuf()->snextc())
+			if (_Traits::eq_int_type(_Traits::eof(), _Meta))
+				{	// end of file, quit
+				_State |= ios_base::eofbit;
+				break;
+				}
+			else if (_Traits::eq_int_type(_Meta, _Metadelim))
+				{	// got a delimiter, discard it and quit
+				_Changed = true;
+				_Istr.rdbuf()->sbumpc();
+				break;
+				}
+			else if (_Str.max_size() <= _Str.size())
+				{	// string too large, quit
+				_State |= ios_base::failbit;
+				break;
+				}
+			else
+				{	// got a character, add it to string
+				_Str += _Traits::to_char_type(_Meta);
+				_Changed = true;
+				}
+		_CATCH_IO_(_Istr)
+		}
+
+	if (!_Changed)
+		_State |= ios_base::failbit;
+	_Istr.setstate(_State);
+	return (_Istr);
+	}
+
+
+inline ostream& operator<<(ostream& _Ostr, const string& _Str)
+	{	// insert a string
+	typedef char_traits _Traits;
+	typedef char_allocator _Alloc;
+	typedef ostream _Myos;
+	typedef string _Mystr;
+	typedef size_t _Mysizt;
+
+	ios_base::iostate _State = ios_base::goodbit;
+	_Mysizt _Size = _Str.size();
+	_Mysizt _Pad = _Ostr.width() <= 0 || (_Mysizt)_Ostr.width() <= _Size
+			? 0 : (_Mysizt)_Ostr.width() - _Size;
+	const _Myos::sentry _Ok(_Ostr);
+
+	if (!_Ok)
+		_State |= ios_base::badbit;
+	else
+		{	// state okay, insert characters
+	_TRY_IO_BEGIN
+		if ((_Ostr.flags() & ios_base::adjustfield) != ios_base::left)
+			for (; 0 < _Pad; --_Pad)	// pad on left
+				if (_Traits::eq_int_type(_Traits::eof(),
+					_Ostr.rdbuf()->sputc(_Ostr.fill())))
+					{	// insertion failed, quit
+					_State |= ios_base::badbit;
+					break;
+					}
+
+		if (_State == ios_base::goodbit)
+			for (_Mysizt _Count = 0; _Count < _Size; ++_Count)
+				if (_Traits::eq_int_type(_Traits::eof(),
+					_Ostr.rdbuf()->sputc(_Str[_Count])))
+					{	// insertion failed, quit
+					_State |= ios_base::badbit;
+					break;
+					}
+
+		if (_State == ios_base::goodbit)
+			for (; 0 < _Pad; --_Pad)	// pad on right
+				if (_Traits::eq_int_type(_Traits::eof(),
+					_Ostr.rdbuf()->sputc(_Ostr.fill())))
+					{	// insertion failed, quit
+					_State |= ios_base::badbit;
+					break;
+					}
+		_Ostr.width(0);
+		_CATCH_IO_(_Ostr)
+		}
+
+	_Ostr.setstate(_State);
+	return (_Ostr);
+	}
+_STD_END
+#endif /* _STRING */
+
+/*
+ * Copyright (c) 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * Consult your license regarding permissions and restrictions.
+V5.03:1134 */

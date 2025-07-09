@@ -1,0 +1,36 @@
+// SPDX-License-Identifier: BSD-2-Clause
+#[doc = "Register `gmacgrp_rxipv4_nopay_frms` reader"]
+pub type R = crate::R<GmacgrpRxipv4NopayFrmsSpec>;
+#[doc = "Register `gmacgrp_rxipv4_nopay_frms` writer"]
+pub type W = crate::W<GmacgrpRxipv4NopayFrmsSpec>;
+#[doc = "Field `cnt` reader - Number of IPv4 datagram frames received that did not have a TCP, UDP, or ICMP payload processed by the Checksum engine"]
+pub type CntR = crate::FieldReader<u32>;
+#[doc = "Field `cnt` writer - Number of IPv4 datagram frames received that did not have a TCP, UDP, or ICMP payload processed by the Checksum engine"]
+pub type CntW<'a, REG> = crate::FieldWriter<'a, REG, 32, u32>;
+impl R {
+    #[doc = "Bits 0:31 - Number of IPv4 datagram frames received that did not have a TCP, UDP, or ICMP payload processed by the Checksum engine"]
+    #[inline(always)]
+    pub fn cnt(&self) -> CntR {
+        CntR::new(self.bits)
+    }
+}
+impl W {
+    #[doc = "Bits 0:31 - Number of IPv4 datagram frames received that did not have a TCP, UDP, or ICMP payload processed by the Checksum engine"]
+    #[inline(always)]
+    #[must_use]
+    pub fn cnt(&mut self) -> CntW<GmacgrpRxipv4NopayFrmsSpec> {
+        CntW::new(self, 0)
+    }
+}
+#[doc = "Number of IPv4 datagram frames received that did not have a TCP, UDP, or ICMP payload processed by the Checksum engine\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`gmacgrp_rxipv4_nopay_frms::R`](R).  See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
+pub struct GmacgrpRxipv4NopayFrmsSpec;
+impl crate::RegisterSpec for GmacgrpRxipv4NopayFrmsSpec {
+    type Ux = u32;
+    const OFFSET: u64 = 536u64;
+}
+#[doc = "`read()` method returns [`gmacgrp_rxipv4_nopay_frms::R`](R) reader structure"]
+impl crate::Readable for GmacgrpRxipv4NopayFrmsSpec {}
+#[doc = "`reset()` method sets gmacgrp_rxipv4_nopay_frms to value 0"]
+impl crate::Resettable for GmacgrpRxipv4NopayFrmsSpec {
+    const RESET_VALUE: u32 = 0;
+}

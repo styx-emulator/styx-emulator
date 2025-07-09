@@ -1,0 +1,16 @@
+OCRAM 0xFFE04000 0x3FFC0
+{
+    VECTORS +0
+    {
+        *(VECTORS, +FIRST)
+    }
+
+    APP_CODE +0
+    {
+        *(+RO, +RW, +ZI)
+    }
+
+    ARM_LIB_STACKHEAP +0 EMPTY (0xFFE40000 - ImageLimit(APP_CODE))
+    {}
+
+}

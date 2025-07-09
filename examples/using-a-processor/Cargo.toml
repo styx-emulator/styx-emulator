@@ -1,0 +1,27 @@
+[package]
+name = "using-a-processor"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+styx-emulator = { workspace = true }
+
+async-trait = { workspace = true }
+binary-heap-plus = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+styx-workspace-hack = { version = "0.1", path = "../../styx/workspace-hack" }
+
+[features]
+default = []
+trace = []
+# build in the tracy instrumentation for the tracy profiler.
+# all you need to do to use it is enable the feature like we are here,
+# and then add the `TracyPlugin` to a `Processor`
+tracy = ["styx-emulator/tracy"]
