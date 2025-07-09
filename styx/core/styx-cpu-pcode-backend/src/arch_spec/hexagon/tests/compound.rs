@@ -30,7 +30,7 @@ fn test_compound() {
         .unwrap();
 
     let exit = cpu.execute(&mut mmu, &mut ev, 3).unwrap();
-    assert_eq!(exit_reason, TargetExitReason::InstructionCountComplete);
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
     let r2 = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
     let r7 = cpu.read_register::<u32>(HexagonRegister::R7).unwrap();

@@ -57,7 +57,7 @@ use super::hexagon;
 ///
 /// Each architecture should implement the [ArchPcManager] trait and supply it to the pcode machine.
 #[enum_dispatch(ArchPcManager)]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum PcManager {
     #[cfg(feature = "arch_aarch64")]
     Aarch64(aarch64::StandardPcManager),
