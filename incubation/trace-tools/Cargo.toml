@@ -1,0 +1,67 @@
+[package]
+name = "styx-trace-tools"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "fsink"
+path = "src/fsink.rs"
+
+[[bin]]
+name = "strace"
+path = "src/strace.rs"
+
+[dependencies]
+styx-core = { workspace = true }
+styx-macros-args = { path = "../styx-macros-args" }
+typhunix-proto = { path = "../../extensions/typhunix/rust/typhunix-proto" }
+
+enum_dispatch = { workspace = true }
+clap = { workspace = true }
+pretty_env_logger = { workspace = true }
+tracing = { workspace = true }
+bitflags = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+ipmpsc = { workspace = true }
+bitflags_serde_shim = { workspace = true }
+uuid = { workspace = true }
+glob = { workspace = true }
+
+
+async-trait = { workspace = true }
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+tokio-stream = { workspace = true }
+futures = { workspace = true }
+futures-core = { workspace = true }
+futures-util = { workspace = true }
+
+# grpc
+prost = { workspace = true }
+tonic = { workspace = true }
+
+
+signal-hook = { workspace = true }
+bytes = { workspace = true }
+log = { workspace = true }
+tracing-subscriber = { workspace = true }
+async-stream = { workspace = true }
+chrono = { workspace = true }
+regex = "1.11.1"
+serde_yaml = { workspace = true }
+typhunix-client-bin = { path = "../../extensions/typhunix/rust/typhunix-client" }
+workspace-service = { path = "../../styx/services/styx-workspace-service" }
+signal-hook-tokio = { workspace = true }
+styx-dbmodel = { path = "../../styx/db/dbmodel" }
+styx-workspace-hack = { version = "0.1", path = "../../styx/workspace-hack" }
+
+[dev-dependencies]
+log = { workspace = true }
+pretty_env_logger = { workspace = true }
+test-case = { workspace = true }

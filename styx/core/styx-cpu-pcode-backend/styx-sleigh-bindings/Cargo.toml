@@ -1,0 +1,17 @@
+[package]
+name = "styx-sleigh-bindings"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+cxx = { workspace = true }                                                  # For parallel build
+styx-workspace-hack = { version = "0.1", path = "../../../workspace-hack" }
+
+[build-dependencies]
+glob = { workspace = true }
+cxx-build = { workspace = true }
+cc = { workspace = true }

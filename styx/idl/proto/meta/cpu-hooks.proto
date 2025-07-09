@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+package styx.meta.cpu_hooks;
+
+import "memory.proto";
+
+option java_multiple_files = true;
+
+
+/**
+ * Token retrieved when setting a hook
+ */
+message HookToken { uint64 inner_token = 1; }
+
+message CodeHook {
+    uint64 address = 1;
+}
+
+message MemReadHook {
+    uint64 address = 1;
+    uint32 size = 2;
+    bytes data = 3;
+}
+
+message MemWriteHook {
+    uint64 address = 1;
+    uint32 size = 2;
+    bytes data = 3;
+}
+
+message InterruptHook {
+    int32 interrupt = 1;
+}
+
+message BlockHook {
+    uint64 address = 1;
+    uint32 size = 2;
+}
+
+message InvalidInsnHook {
+    uint64 address = 1;
+    bytes data = 2;
+    bool continue_execution = 3;
+}
+
+message MemoryFaultData {
+    oneof fault_data {
+        bool read = 1;
+        bytes write_data = 2;
+    }
+}
+
+message ProtectionFaultHook {
+    uint64 address = 1;
+    uint32 size = 2;
+    styx.meta.memory.MemoryPermissions permissions = 3;
+    MemoryFaultData fault_data = 4;
+    bool continue_execution = 5;
+}
+
+message UnmappedFaultHook {
+    uint64 address = 1;
+    uint32 size = 2;
+    MemoryFaultData fault_data = 4;
+    bool continue_execution = 3;
+}
+
+message HookRemoveError {}
+message HookAddError {}
+message NullTokenError {}
+message StyxHookError {
+    oneof error {
+        HookRemoveError remove_error = 1;
+        HookAddError add_error = 2;
+        NullTokenError null_token_error = 3;
+    }
+}

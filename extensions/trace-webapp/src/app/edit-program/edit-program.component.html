@@ -1,0 +1,655 @@
+<!-- Title -->
+<h1>
+  <p *ngIf="this.operation === 'new'">Create Workspace Program</p>
+  <p *ngIf="this.operation !== 'new'">Edit Workspace Program</p>
+  <span *ngIf="isEdit() && isDirty()">Modified</span>
+</h1>
+@for (alert of alerts; track alert) {
+  <ngb-alert [type]="alert.type" (closed)="close(alert)">{{
+    alert.message
+  }}</ngb-alert>
+}
+
+<style>
+  .toolbar-icon-spacer {
+    flex: 1 1 auto;
+  }
+  .mat-icon {
+    color: white;
+  }
+  .tb-icon {
+    display: block;
+  }
+  .toolbar {
+    margin: 0px;
+    background-color: black;
+    color: white;
+  }
+  .dark {
+    display: block;
+    color: black;
+  }
+</style>
+
+<!-- --------------------------------------------------------------------------
+--
+-- Form (programForm for EditProgramComponent)
+--  Note: to auto-submit when the form is valid, add:
+--    (ngSubmit)="onSubmit()" to the <form> directive
+--
+------------------------------------------------------------------------------>
+<form [formGroup]="programForm">
+  <!-- --------------------------------------------------------------------- -->
+  <!-- Enter Name of WsProgram -->
+  <!-- --------------------------------------------------------------------- -->
+  <section>
+    <mat-label style="font-weight: bold; padding-right: 10px">Name</mat-label>
+    <input
+      [formControlName]="FormControls.WsProgramName"
+      type="text"
+      size="30"
+    />
+    <div>
+      <small>
+        The name does not have to be unique, but use it to disambiguate your
+        workspace programs.
+      </small>
+    </div>
+    <hr />
+  </section>
+
+  <!-- Architecture / Variant / Endian -->
+  <section>
+    <mat-label style="font-weight: bold; padding-right: 10px"
+      >Architecture / Variant / Endian</mat-label
+    >
+    <div>
+      <small>
+        Choose Variant first by typing and the Architecture will be
+        auto-selected. Or, choose Architecture first, then select variant by
+        typing.
+      </small>
+    </div>
+
+    <!-- Choose Architecture/Varia-->
+    <div style="margin-left: 10px">
+      <!-- Variant typeahead box-->
+      <label class="pr1em">Variant</label>
+      <input
+        style="min-width: fit-content"
+        id="typeahead-basic"
+        type="text"
+        [formControlName]="FormControls.VariantSelectionModel"
+        [ngbTypeahead]="architectureSearch"
+        [inputFormatter]="formatter"
+        [resultFormatter]="formatter"
+        [showHint]="false"
+        [editable]="false"
+        #instance="ngbTypeahead"
+        #input
+        (selectItem)="onSelect($event)"
+      />
+      <div>
+        <!-- Architecture -->
+        <label>Architecture</label>
+        <mat-radio-group
+          id="archradio"
+          after
+          [formControlName]="FormControls.ArchIdentity"
+        >
+          <mat-radio-button
+            *ngFor="let arch of this.identityRepo.archIdens.uniq"
+            enabled
+            [value]="arch"
+            class="xsmall-font"
+            (change)="onArchtectureSelected($event)"
+          >
+            {{ arch.getName() | trimEnum }}
+          </mat-radio-button>
+        </mat-radio-group>
+      </div>
+      <div>
+        <!-- Endian -->
+        <label>Endian</label>
+        <mat-radio-group
+          id="endianradio"
+          after
+          [formControlName]="FormControls.Endian"
+        >
+          <mat-radio-button
+            *ngFor="let endianIdent of this.identityRepo.endianIdens.uniq"
+            enabled
+            [value]="endianIdent"
+            class="xsmall-font"
+          >
+            {{ endianIdent.getName() | trimEnum }}
+          </mat-radio-button>
+        </mat-radio-group>
+      </div>
+    </div>
+    <hr />
+
+    <!-- ---------------------- -->
+    <mat-label style="font-weight: bold; padding-right: 10px"
+      >Backend</mat-label
+    >
+    <div>
+      <small>
+        Styx supports multiple emulation backends. Choose the backend.
+      </small>
+    </div>
+    <div style="margin-left: 10px">
+      <div>
+        <mat-radio-group
+          id="endianradio"
+          after
+          [formControlName]="FormControls.Backend"
+        >
+          <mat-radio-button
+            *ngFor="let backendIden of this.identityRepo.backendIdens.uniq"
+            enabled
+            [value]="backendIden"
+            class="xsmall-font"
+          >
+            {{ backendIden.getName() | trimEnum }}
+          </mat-radio-button>
+        </mat-radio-group>
+      </div>
+    </div>
+    <hr />
+  </section>
+
+  <!-- Loader and Target binary program -->
+  <section>
+    <mat-label style="font-weight: bold; padding-right: 10px"
+      >Program Target and Loader</mat-label
+    >
+    <div>
+      <small>
+        Upload the binary target program and select the loader that should be
+        used to load the program.
+      </small>
+    </div>
+    <div style="margin-left: 10px">
+      <div>
+        <mat-radio-group after [formControlName]="FormControls.Loader">
+          <mat-radio-button
+            *ngFor="let loaderIden of this.identityRepo.loaderIdens.uniq"
+            enabled
+            [value]="loaderIden"
+            class="xsmall-font"
+          >
+            {{ loaderIden.getName() | trimEnum }}
+          </mat-radio-button>
+        </mat-radio-group>
+      </div>
+      <!-- Select or selected binary (file) -->
+      <div>
+        <div class="flex-item content">
+          <div *ngIf="this.fileInfo">
+            <button
+              mat-icon-button
+              matTooltip="Re-select binary"
+              (click)="
+                this.programForm.get(FormControls.File)?.setValue(undefined)
+              "
+            >
+              <mat-icon class="dark">delete_sweep</mat-icon>
+            </button>
+
+            {{ fileInfo }}
+          </div>
+          <div *ngIf="!this.fileInfo">
+            <!-- Attach File button -->
+            <input
+              type="file"
+              class="file-input"
+              (change)="onFileSelected($event)"
+              #fileUpload
+            />
+            <div class="file-upload">
+              <button
+                matTooltip="Click top browse for file..."
+                mat-mini-fab
+                class="upload-btn"
+                (click)="fileUpload.click()"
+              >
+                <mat-icon class="dark">attach_file</mat-icon>
+              </button>
+
+              <mat-label
+                matToolTip="Click to choose a file from the file system"
+                style="margin-bottom: 20px"
+              >
+                {{ this.fileInfo || "Choose a file ..." }}
+              </mat-label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <hr />
+  </section>
+
+  <!-- Symbols and data types -->
+  <section>
+    <mat-label style="font-weight: bold; padding-right: 10px"
+      >Symbols and Data Types</mat-label
+    >
+    <div>
+      <small>
+        Styx emulation can use program analysis information such as symbols,
+        data types, function calls, etc.
+      </small>
+    </div>
+    <div style="margin-left: 10px">
+      <div *ngIf="selectedProgram" class="flex-item content">
+        <button
+          mat-icon-button
+          matTooltip="Re-select program"
+          (click)="
+            this.programForm
+              .get(FormControls.ProgramWithSymbols)
+              ?.setValue(undefined)
+          "
+        >
+          <mat-icon class="dark">delete_sweep</mat-icon>
+        </button>
+        {{ selectedProgram.pidName }}
+      </div>
+
+      <div *ngIf="!selectedProgram" class="flex-item content-tall">
+        <app-programs
+          class="app-programs"
+          (onProgramSelectedEvent)="this.onProgramSelected($event)"
+          [columns]="[
+            ProgramColumns.Name,
+            ProgramColumns.Source,
+            ProgramColumns.Arch,
+            ProgramColumns.SymbolCount,
+            ProgramColumns.DataTypeCount
+          ]"
+          [selectable]="true"
+        >
+        </app-programs>
+      </div>
+    </div>
+    <hr />
+  </section>
+
+  <!-- --------------------------------------------------------------------- -->
+  <!-- Raw Event Limits -->
+  <!-- --------------------------------------------------------------------- -->
+  <section>
+    <span>
+      <mat-toolbar class="toolbar">
+        <button
+          (click)="this.rawEventLimitsVisible = !this.rawEventLimitsVisible"
+          mat-icon-button
+          class="tb-icon-black"
+        >
+          <mat-icon *ngIf="!rawEventLimitsVisible">expand_more</mat-icon>
+          <mat-icon *ngIf="rawEventLimitsVisible">expand_less</mat-icon>
+        </button>
+
+        <span>Raw Event Limits</span>
+        <span class="toolbar-icon-spacer"></span>
+        <mat-icon-button
+          class="tb-icon"
+          matTooltip="Set to default"
+          (click)="
+            this.rawEventLimitsModelObj = DEFAULT_RawEventLimits.toObject()
+          "
+        >
+          <mat-icon>restore</mat-icon>
+        </mat-icon-button>
+      </mat-toolbar>
+      <div>
+        <small>
+          Options to allow generic down-selection of the events that get emitted
+          by the emulation observer module.
+        </small>
+      </div>
+    </span>
+    <div *ngIf="rawEventLimitsVisible" class="request-params-container pad20">
+      <div style="margin-left: 10px">
+        <mat-label style="width: 200px; display: inline-block">
+          Max Instruction Events</mat-label
+        >
+        <input
+          matInput
+          class="number-input"
+          [ngModelOptions]="{ standalone: true }"
+          [(ngModel)]="this.rawEventLimitsModelObj.maxInsn"
+          [value]="this.rawEventLimitsModelObj.maxInsn"
+          type="number"
+          inputmode="numeric"
+        />
+
+        <div>
+          <mat-label style="width: 200px; display: inline-block">
+            Max Memory Read Events</mat-label
+          >
+          <input
+            class="number-input"
+            matInput
+            [ngModelOptions]="{ standalone: true }"
+            [(ngModel)]="this.rawEventLimitsModelObj.maxMemReadEvents"
+            [value]="this.rawEventLimitsModelObj.maxMemReadEvents"
+            type="number"
+            inputmode="numeric"
+          />
+        </div>
+
+        <mat-label style="width: 200px; display: inline-block">
+          Max Memory Write Events</mat-label
+        >
+        <input
+          class="number-input"
+          matInput
+          [ngModelOptions]="{ standalone: true }"
+          [(ngModel)]="this.rawEventLimitsModelObj.maxMemWriteEvents"
+          [value]="this.rawEventLimitsModelObj.maxMemWriteEvents"
+          type="number"
+          inputmode="numeric"
+        />
+      </div>
+    </div>
+  </section>
+
+  <!-- --------------------------------------------------------------------- -->
+  <!-- Emulation Runtime Limits -->
+  <!-- --------------------------------------------------------------------- -->
+  <section>
+    <span>
+      <mat-toolbar class="toolbar">
+        <button
+          (click)="this.emuRunLimitsVisible = !this.emuRunLimitsVisible"
+          mat-icon-button
+          class="tb-icon"
+        >
+          <mat-icon *ngIf="!emuRunLimitsVisible">expand_more</mat-icon>
+          <mat-icon *ngIf="emuRunLimitsVisible">expand_less</mat-icon>
+        </button>
+
+        <span>Emulation Run Limits</span>
+        <span class="toolbar-icon-spacer"></span>
+        <mat-icon-button
+          class="tb-icon"
+          matTooltip="Set to default"
+          (click)="this.emuRunLimitsModelObj = DEFAULT_EmuRunLimits.toObject()"
+        >
+          <mat-icon>restore</mat-icon>
+        </mat-icon-button>
+      </mat-toolbar>
+      <div>
+        <small> Options to limit the runtime of the Styx emulation. </small>
+      </div>
+    </span>
+    <div *ngIf="emuRunLimitsVisible" style="margin-left: 10px">
+      <mat-label> Max Instructions</mat-label>
+      <input
+        class="number-input"
+        matInput
+        [ngModelOptions]="{ standalone: true }"
+        [(ngModel)]="this.emuRunLimitsModelObj.emuMaxInsn"
+        [value]="this.emuRunLimitsModelObj.emuMaxInsn"
+        type="number"
+        inputmode="numeric"
+      />
+
+      <mat-label> Max Duration (seconds)</mat-label>
+      <input
+        class="number-input"
+        matInput
+        [ngModelOptions]="{ standalone: true }"
+        [(ngModel)]="this.emuRunLimitsModelObj.emuSeconds"
+        [value]="this.emuRunLimitsModelObj.emuSeconds"
+        type="number"
+        inputmode="numeric"
+      />
+    </div>
+  </section>
+
+  <!-- --------------------------------------------------------------------- -->
+  <!-- Symbol Search Options -->
+  <!-- --------------------------------------------------------------------- -->
+  <section>
+    <span>
+      <mat-toolbar class="toolbar">
+        <button
+          (click)="
+            this.symbolSearchOptionsVisible = !this.symbolSearchOptionsVisible
+          "
+          mat-icon-button
+          class="tb-icon"
+        >
+          <mat-icon *ngIf="!symbolSearchOptionsVisible">expand_more</mat-icon>
+          <mat-icon *ngIf="symbolSearchOptionsVisible">expand_less</mat-icon>
+        </button>
+
+        <span>Symbol Search Options</span>
+        <span class="toolbar-icon-spacer"></span>
+        <mat-icon-button
+          class="tb-icon"
+          matTooltip="Set to default"
+          (click)="
+            this.symbolSearchOptionsModelObj =
+              DEFAULT_SymbolSearchOptions.toObject()
+          "
+        >
+          <mat-icon>restore</mat-icon>
+        </mat-icon-button>
+      </mat-toolbar>
+      <div>
+        <small>
+          Options to allow generic down-selection of the events that get emitted
+          by the emulation observer module.
+        </small>
+      </div>
+    </span>
+    <div
+      *ngIf="symbolSearchOptionsVisible"
+      class="request-params-container pad20"
+    >
+      <div style="margin-left: 10px">
+        <div>
+          <mat-label class="pr1em"
+            >Enter a regular expression to down-select event
+            generation</mat-label
+          >
+          <input
+            matInput
+            [ngModelOptions]="{ standalone: true }"
+            [(ngModel)]="this.symbolSearchOptionsModelObj.regexInclude"
+            [value]="this.symbolSearchOptionsModelObj.regexInclude"
+            placeholder="regex to match symbol names"
+          />
+        </div>
+
+        <div style="display: block">
+          <mat-checkbox
+            [ngModelOptions]="{ standalone: true }"
+            [(ngModel)]="this.symbolSearchOptionsModelObj.memWrites"
+            checked="this.symbolSearchOptionsModelObj.memWrites"
+            [checked]="this.symbolSearchOptionsModelObj.memWrites"
+          >
+            Memory Change Events
+          </mat-checkbox>
+        </div>
+        <div style="display: block">
+          <mat-checkbox
+            [ngModelOptions]="{ standalone: true }"
+            [(ngModel)]="this.symbolSearchOptionsModelObj.anonWrites"
+            checked="this.symbolSearchOptionsModelObj.anonWrites"
+            [checked]="this.symbolSearchOptionsModelObj.anonWrites"
+          >
+            Anonymous Memory Change Events
+          </mat-checkbox>
+        </div>
+        <div style="display: block">
+          <mat-checkbox
+            [ngModelOptions]="{ standalone: true }"
+            [(ngModel)]="this.symbolSearchOptionsModelObj.memReads"
+            checked="this.symbolSearchOptionsModelObj.memReads"
+            [checked]="this.symbolSearchOptionsModelObj.memReads"
+          >
+            Memory Read Events (slow!)
+          </mat-checkbox>
+        </div>
+        <div style="display: block">
+          <mat-checkbox
+            [ngModelOptions]="{ standalone: true }"
+            [(ngModel)]="this.symbolSearchOptionsModelObj.anonReads"
+            checked="this.symbolSearchOptionsModelObj.anonReads"
+            [checked]="this.symbolSearchOptionsModelObj.anonReads"
+          >
+            Anonymous Memory Read Events (slow!)
+          </mat-checkbox>
+        </div>
+      </div>
+      <hr />
+    </div>
+  </section>
+
+  <!-- --------------------------------------------------------------------- -->
+  <!-- Trace Plugin Args -->
+  <!-- --------------------------------------------------------------------- -->
+  <section>
+    <span>
+      <mat-toolbar class="toolbar">
+        <button
+          (click)="this.tracePluginArgsVisible = !this.tracePluginArgsVisible"
+          mat-icon-button
+          class="tb-icon"
+        >
+          <mat-icon *ngIf="!tracePluginArgsVisible">expand_more</mat-icon>
+          <mat-icon *ngIf="tracePluginArgsVisible">expand_less</mat-icon>
+        </button>
+
+        <span>Trace Plugin Events</span>
+        <span class="toolbar-icon-spacer"></span>
+        <mat-icon-button
+          class="tb-icon"
+          matTooltip="Set to default"
+          (click)="
+            this.tracePluginArgsModelObj = DEFAULT_TracePluginArgs.toObject()
+          "
+        >
+          <mat-icon>restore</mat-icon>
+        </mat-icon-button>
+      </mat-toolbar>
+      <div>
+        <small> Enable and disable emulation raw event emmissions ... </small>
+      </div>
+    </span>
+    <div *ngIf="tracePluginArgsVisible" class="request-params-container pad20">
+      <mat-checkbox
+        class="pad20"
+        [ngModelOptions]="{ standalone: true }"
+        [(ngModel)]="this.tracePluginArgsModelObj.insnEvent"
+        checked="this.tracePluginArgsModelObj.insnEvent"
+        [checked]="this.tracePluginArgsModelObj.insnEvent"
+      >
+        Instruction Events
+      </mat-checkbox>
+
+      <mat-checkbox
+        class="pad20"
+        [ngModelOptions]="{ standalone: true }"
+        [(ngModel)]="this.tracePluginArgsModelObj.interruptEvent"
+        checked="this.tracePluginArgsModelObj.interruptEvent"
+        enabled
+        [checked]="this.tracePluginArgsModelObj.interruptEvent"
+      >
+        ISR Events
+      </mat-checkbox>
+
+      <mat-checkbox
+        class="pad20"
+        [ngModelOptions]="{ standalone: true }"
+        [(ngModel)]="this.tracePluginArgsModelObj.writeMemoryEvent"
+        checked="this.tracePluginArgsModelObj.writeMemoryEvent"
+        enabled
+        [checked]="this.tracePluginArgsModelObj.writeMemoryEvent"
+      >
+        Memory Write Events
+      </mat-checkbox>
+
+      <mat-checkbox
+        class="pad20"
+        [ngModelOptions]="{ standalone: true }"
+        [(ngModel)]="this.tracePluginArgsModelObj.readMemoryEvent"
+        checked="this.tracePluginArgsModelObj.readMemoryEvent"
+        disabled="true"
+        [checked]="this.tracePluginArgsModelObj.readMemoryEvent"
+      >
+        Memory Read Events (too slow atm)
+      </mat-checkbox>
+
+      <mat-checkbox
+        class="pad20"
+        [ngModelOptions]="{ standalone: true }"
+        [(ngModel)]="this.tracePluginArgsModelObj.blockEvent"
+        checked="this.tracePluginArgsModelObj.blockEvent"
+        disabled="true"
+        [checked]="this.tracePluginArgsModelObj.blockEvent"
+      >
+        Block Events Read Events (todo()!)
+      </mat-checkbox>
+    </div>
+  </section>
+
+  <!-- -------------------------------------------------------- -->
+  <div *ngIf="this.busy" style="padding: 20px">
+    <div class="progress" style="position: relative">
+      <div class="progress-bar progress-bar-striped indeterminate"></div>
+    </div>
+  </div>
+
+  <button
+    type="submit"
+    (click)="onSubmit()"
+    [disabled]="!programForm.valid"
+    color="primary"
+  >
+    Submit
+  </button>
+</form>
+
+<!-- DEBUG ------------------------------------------------------------------- -->
+<div *ngIf="false">
+  <hr />
+  <p style="color: red; font-style: oblique; font-weight: bold">DEBUG</p>
+  <div>
+    <label>ProgramWithSymbols: </label>
+    {{ this.programForm.get(FormControls.ProgramWithSymbols)?.value?.name }}
+  </div>
+
+  <div>
+    <label>ArchIdentity: </label>
+    {{ this.programForm.get(FormControls.ArchIdentity)?.value?.getName() }}
+  </div>
+  <div>
+    <label>Endian:</label>
+    {{ this.programForm.get(FormControls.Endian)?.value?.getName() }}
+  </div>
+  <div>
+    File Info:
+    {{ this.fileInfo }}
+  </div>
+  <div>
+    Model(arch):
+    {{
+      this.programForm
+        .get(FormControls.VariantSelectionModel)
+        ?.value?.arch.getName()
+    }}
+  </div>
+
+  <hr />
+  <label>Model:</label>
+  <pre>
+    {{ this.programForm.get(FormControls.VariantSelectionModel)?.value | json }}
+  </pre>
+</div>

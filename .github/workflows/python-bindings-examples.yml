@@ -1,0 +1,78 @@
+name: python-examples-ci
+on:
+  pull_request:
+    # dont run if only docs change
+    paths-ignore:
+      - "./**.md"
+      - "docs/**"
+
+  push:
+    branches:
+      - main
+
+concurrency:
+  # Cancels pending runs when a PR gets updated.
+  group: ${{ github.head_ref || github.run_id }}-${{ github.actor }}-${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: build python bindings
+    runs-on: self-hosted
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Install prerequisites
+        run: |
+          sudo apt-get -y update
+          sudo apt-get install -y \
+             clang \
+             g++ \
+             pkg-config \
+             cmake \
+             curl \
+             git \
+             python3-dev \
+             python3-virtualenv \
+             python3-pip \
+             gdb-multiarch \
+             libclang-dev \
+             protobuf-compiler \
+             wget
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: stable
+          components: ""
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Enter Virtual Environment
+        run: |
+          python3 -m virtualenv venv
+          . venv/bin/activate
+
+      - name: Lint Examples
+        run: |
+          . venv/bin/activate
+          cd styx/bindings/styx-py-api
+          pip install ruff
+          just lint-ci
+
+      - name: Test
+        run: |
+          . venv/bin/activate
+          cd styx/bindings/styx-py-api
+          pip install . pytest
+          just test
+
+      - name: Clean
+        run: |
+          cd styx/bindings
+          cargo clean

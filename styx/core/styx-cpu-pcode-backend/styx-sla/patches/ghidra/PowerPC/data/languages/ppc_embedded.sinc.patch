@@ -1,0 +1,22 @@
+--- ppc_embedded.sinc	2024-12-31 09:55:43.369984326 -0500
++++ "ppc_embedded copy.sinc"	2025-01-31 11:58:07.225563786 -0500
+@@ -116,18 +116,7 @@
+ :mtmsr S,0		is OP=31 & S & BITS_17_20=0 & MSR_L=0 & BITS_11_15=0 & XOP_1_10=146 & BIT_0=0
+ {
+ 
+-	bit59:$(REGISTER_SIZE) = (S >> 4)  & 1;	#bit 59
+-	bit58:$(REGISTER_SIZE) = (S >> 5)  & 1;	#bit 58
+-	bit49:$(REGISTER_SIZE) = (S >> 14) & 1;	#bit 49
+-	bit48:$(REGISTER_SIZE) = (S >> 15) & 1;	#bit 48
+-
+-	local mask:$(REGISTER_SIZE) = 0xffff6fcf; # preserves bits 32:47 49:50 52:57 60:62
+-	local tmp:$(REGISTER_SIZE) = S & mask;    # 1111 1111 1111 1111 0110 1111 1100 1111
+-
+-	tmp = tmp | ((bit48 | bit49) << 15); # MSR 48 <- (RS) 48 | (RS) 49
+-	tmp = tmp | ((bit58 | bit49) << 5);  # MSR 58 <- (RS) 58 | (RS) 49
+-	tmp = tmp | ((bit59 | bit49) << 4);  # MSR 59 <- (RS) 59 | (RS) 49
+-	MSR = (MSR & ~mask) | tmp;
++	MSR = S;
+ }
+ 
+ #mtmsr r0,1		0x7c 01 01 24

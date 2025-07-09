@@ -1,0 +1,429 @@
+#pragma once
+#ifndef __NO_BUILTIN
+#pragma system_header /* shortfract */
+#endif
+
+/************************************************************************
+ *
+ * shortfract : $Revision: 1.5 $
+ *    Support for fract (fractional fixed point) operations using a 16 bit
+ *    base type.
+ *
+ * (c) Copyright 1998 - 2005 Analog Devices, Inc.  All rights reserved.
+ *
+ ************************************************************************/
+
+#ifndef __SHORTFRACT_DEFINED
+#define __SHORTFRACT_DEFINED
+#if !__cplusplus
+#  error <shortfract> only available with -c++
+#endif
+#ifndef ETSI_SOURCE
+#define ETSI_SOURCE
+#endif
+
+#  include <flt2fr.h>
+#  include <fract.h>
+#  include <fract_math.h>
+#  include <libetsi.h>
+#  include <fract2float_conv.h>
+
+#pragma define_fract
+class fract;
+
+class shortfract {
+  public:
+    fract16 v;
+
+//----------------------------------------------------------------
+// Create an uninitialized shortfract.
+//----------------------------------------------------------------
+shortfract (): v(0) { }
+
+//----------------------------------------------------------------
+// Construct a shortfract from various types.
+//----------------------------------------------------------------
+shortfract (fract16 val)
+{
+	v = val;
+}
+
+shortfract (fract32 val)
+{
+	v = extract_h(val);
+}
+
+shortfract (int val)
+{
+	v = (short)val;
+}
+
+shortfract (double val)
+{
+	v = float_to_fr16(val);
+}
+
+shortfract (float val)
+{
+	v = float_to_fr16(val);
+}
+
+shortfract (fract val);
+
+//--------------------------------------------------------------
+// Copy Operators
+//--------------------------------------------------------------
+
+shortfract &operator = (const fract16 val )
+{
+	v = val;
+	return *this;
+}
+
+shortfract &operator = (const fract32 val )
+{
+	v = extract_h(val);
+	return *this;
+}
+
+shortfract &operator = (const double val )
+{
+	v = float_to_fr16(val);
+	return *this;
+}
+
+shortfract &operator = (const float val )
+{
+	v = float_to_fr16(val);
+	return *this;
+}
+
+shortfract &operator = (const fract val );
+
+shortfract &operator = (const int val )
+{
+	v = val;
+	return *this;
+}
+
+shortfract &operator = (const shortfract val )
+{
+	v = val.v;
+	return *this;
+}
+
+// Volatile Routines
+
+volatile shortfract &operator = (const fract16 val ) volatile
+{
+	v = val;
+	return *this;
+}
+
+volatile shortfract &operator = (const fract32 val ) volatile
+{
+	v = extract_h(val);
+	return *this;
+}
+
+volatile shortfract &operator = (const double val ) volatile
+{
+	v = float_to_fr16(val);
+	return *this;
+}
+
+volatile shortfract &operator = (const float val ) volatile
+{
+	v = float_to_fr16(val);
+	return *this;
+}
+
+volatile shortfract &operator = (const fract val ) volatile;
+
+volatile shortfract &operator = (const int val ) volatile
+{
+	v = val;
+	return *this;
+}
+
+shortfract (const shortfract& rcl) : v(rcl.v) { }
+shortfract (const volatile shortfract& rcl) : v(rcl.v) { }
+
+volatile shortfract &operator = (volatile shortfract val ) volatile
+{
+	v = val.v;
+	return *this;
+}
+
+//----------------------------------------------------------
+// Logic and Math Operators
+//----------------------------------------------------------
+
+shortfract operator- () const
+{
+#ifndef RENAME_ETSI_NEGATE
+	return shortfract(negate(v));
+#else
+	/* negate conflicts with the C++ Standard negate template */
+	return shortfract(etsi_negate(v));
+#endif
+
+}
+
+shortfract operator- () const volatile
+{
+#ifndef RENAME_ETSI_NEGATE
+	return shortfract(negate(v));
+#else
+	/* negate conflicts with the C++ Standard negate template */
+	return shortfract(etsi_negate(v));
+#endif
+}
+
+shortfract operator >> ( short sval) const volatile
+{
+	return shortfract(shr(v,sval));
+}
+
+shortfract operator >> ( const short sval) const
+{
+	return shortfract(shr(v,sval));
+}
+
+volatile shortfract& operator >>= (const short sval) volatile
+{
+	v = shr(v,sval);
+	return *this;
+}
+
+shortfract& operator >>= (const short sval)
+{
+	v = shr(v,sval);
+	return *this;
+}
+
+shortfract operator << ( const short sval ) const volatile
+{
+	return shortfract(shl(v,sval));
+}
+
+shortfract operator << ( const short sval ) const
+{
+	return shortfract(shl(v,sval));
+}
+
+volatile shortfract& operator <<= (const short sval ) volatile
+{
+	v = shl(v,sval);
+	return *this;
+}
+
+shortfract& operator <<= (const short sval )
+{
+	v = shl(v,sval);
+	return *this;
+}
+
+shortfract operator + (const shortfract s) const volatile
+{
+	return shortfract(add(v,s.v));
+}
+
+shortfract operator + (const shortfract s) const
+{
+	return shortfract(add(v,s.v));
+}
+
+volatile shortfract& operator += (const shortfract s) volatile
+{
+	v = add(v,s.v);
+	return *this;
+}
+
+shortfract& operator += (const shortfract s)
+{
+	v = add(v,s.v);
+	return *this;
+}
+
+shortfract operator - (const shortfract s) const volatile
+{
+	return shortfract(sub(v,s.v));
+}
+
+shortfract operator - (const shortfract s) const
+{
+	return shortfract(sub(v,s.v));
+}
+
+volatile shortfract& operator -= (const shortfract s) volatile
+{
+	v = sub(v,s.v);
+	return *this;
+}
+
+shortfract& operator -= (const shortfract s)
+{
+	v = sub(v,s.v);
+	return *this;
+}
+
+shortfract operator *(const shortfract s) const volatile
+{
+	return shortfract(mult(v,s.v));
+}
+
+shortfract operator *(const shortfract s) const
+{
+	return shortfract(mult(v,s.v));
+}
+
+volatile shortfract& operator *=(const shortfract s) volatile
+{
+	v = mult(v,s.v);
+	return *this;
+}
+
+shortfract& operator *=(const shortfract s)
+{
+	v = mult(v,s.v);
+	return *this;
+}
+
+shortfract operator / (const shortfract s) const volatile
+{
+	return shortfract(div_s(v,s.v));
+}
+
+shortfract operator / (const shortfract s) const
+{
+	return shortfract(div_s(v,s.v));
+}
+
+volatile shortfract& operator /= (const shortfract s) volatile
+{
+	v = div_s(v,s.v);
+	return *this;
+}
+
+shortfract& operator /= (const shortfract s)
+{
+	v = div_s(v,s.v);
+	return *this;
+}
+
+bool operator <  (const shortfract s) const
+{
+  return ( v <  s.v );
+}
+
+bool operator <  (const shortfract s) const volatile
+{
+  return ( v <  s.v );
+}
+
+bool operator >  (const shortfract s) const
+{
+  return ( v >  s.v );
+}
+
+bool operator >  (const shortfract s) const volatile
+{
+  return ( v >  s.v );
+}
+
+bool operator <= (const shortfract s) const
+{
+   return ( v <= s.v );
+}
+
+bool operator <= (const shortfract s) const volatile
+{
+   return ( v <= s.v );
+}
+
+bool operator >= (const shortfract s) const
+{
+   return ( v >= s.v );
+}
+
+bool operator >= (const shortfract s) const volatile
+{
+   return ( v >= s.v );
+}
+
+bool operator == (const shortfract s) const
+{
+   return ( v == s.v );
+}
+
+bool operator == (const shortfract s) const volatile
+{
+   return ( v == s.v );
+}
+
+bool operator != (const shortfract s) const
+{
+  return ( v != s.v );
+}
+
+bool operator != (const shortfract s) const volatile
+{
+  return ( v != s.v );
+}
+
+bool operator !  () const
+{
+   return !v ;
+}
+
+bool operator !  () const volatile
+{
+   return !v ;
+}
+
+operator float () const
+{
+	return fr16_to_float(v);
+}
+
+operator double () const
+{
+	return fr16_to_float(v);
+}
+
+operator fract16 () const
+{
+	return v;
+}
+
+operator fract32 () const
+{
+	fract32 x = 0;
+	x = L_deposit_h(v);
+	return x;
+}
+
+};
+
+#include <fract>
+
+inline shortfract::shortfract (fract val)
+{
+	// Uses the fract operator fract16 ()
+	v = val;
+}
+
+inline shortfract &shortfract::operator = (const fract val )
+{
+	v = val;
+	return *this;
+}
+
+inline volatile shortfract &shortfract::operator = (const fract val ) volatile
+{
+	v = val;
+	return *this;
+}
+
+#endif /* __SHORTFRACT_DEFINED */

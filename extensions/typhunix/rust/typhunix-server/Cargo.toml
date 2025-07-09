@@ -1,0 +1,36 @@
+[package]
+name = "typhunix-server-bin"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[[bin]]
+name = "typhunix-server"
+path = "src/typhunix-server.rs"
+
+[dependencies]
+typhunix-proto = { path = "../typhunix-proto", features = [] }
+typhunix-config = { workspace = true }
+styx-emulator = { workspace = true }
+async-trait = { workspace = true }
+log = { workspace = true }
+tonic = { workspace = true }
+prost = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+tokio-stream = { workspace = true }
+rand = { workspace = true }
+url = { workspace = true }
+uuid = { workspace = true }
+clap = { workspace = true }
+glob = { workspace = true }
+tracing = { workspace = true, features = ["async-await", "log"] }
+tracing-subscriber = { workspace = true }
+thiserror = { workspace = true }
+styx-workspace-hack = { version = "0.1", path = "../../../../styx/workspace-hack" }

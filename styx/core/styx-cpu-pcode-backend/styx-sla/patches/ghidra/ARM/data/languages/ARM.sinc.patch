@@ -1,0 +1,11 @@
+--- original	2024-11-20 15:51:46.379579164 -0500
++++ modified	2024-11-20 15:52:23.711793909 -0500
+@@ -189,6 +189,8 @@
+ define pcodeop SendEvent;
+ define pcodeop setEndianState;
+
++define pcodeop TestPatch;
++
+ macro affectflags() {
+   CY = tmpCY; ZR = tmpZR; NG = tmpNG; OV = tmpOV;
+ }

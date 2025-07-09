@@ -1,0 +1,18 @@
+table,
+th,
+td {
+    padding-left: 1em;
+    text-align: left;
+}
+
+th {
+    font: bolder,
+}
+
+
+
+.td-icon {
+    margin: 0px;
+    padding: 0px;
+    height: 10px;
+}

@@ -1,0 +1,174 @@
+// cwchar standard header
+#if defined (_ADI_COMPILER)
+/************************************************************************
+ *
+ * cwchar
+ *
+ * (c) Copyright 2001-2009 Analog Devices, Inc.  All rights reserved.
+ * (c) Copyright 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * $Revision: 1.7 $
+ ************************************************************************/
+
+#pragma once
+#ifndef __NO_BUILTIN
+#pragma system_header /* cwchar */
+#endif
+#endif /* _ADI_COMPILER */
+
+#ifndef _CWCHAR_
+#define _CWCHAR_
+#include <yvals.h>
+
+
+#ifdef _STD_USING
+ #undef _STD_USING
+  #include <wchar.h>
+ #define _STD_USING
+
+#else /* _STD_USING */
+ #include <wchar.h>
+#endif /* _STD_USING */
+
+typedef mbstate_t _Mbstatet;
+
+ #ifndef WCHAR_MAX
+  #define WCHAR_MAX	0x7fff
+ #endif /* WCHAR_MAX */
+
+ #ifndef WCHAR_MIN
+  #define WCHAR_MIN	0
+ #endif /* WCHAR_MIN */
+
+ #if defined(_SUNPRO_CC)	/* compiler test */
+using _STD wcstoul;
+ #endif /* defined(_SUNPRO_CC) */
+
+ #if defined(__BORLANDC__)	/* compiler test */
+_STD_BEGIN
+struct tm;
+_STD_END
+
+_C_STD_BEGIN
+_C_LIB_DECL
+using _STD tm;
+
+typedef int _Mbstatet;
+typedef int mbstate_t;
+
+//size_t wcslen(const wchar_t *);
+//const wchar_t *wmemchr(const wchar_t *, wchar_t, size_t);
+int wmemcmp(const wchar_t *, const wchar_t *, size_t);
+//wchar_t *wmemcpy(wchar_t *, const wchar_t *, size_t);
+wchar_t *wmemmove(wchar_t *, const wchar_t *, size_t);
+//wchar_t *wmemset(wchar_t *, wchar_t, size_t);
+
+wint_t btowc(int);
+size_t mbrtowc(wchar_t *, const char *, size_t, mbstate_t *);
+int wctob(wint_t);
+size_t wcrtomb(char *, wchar_t, mbstate_t *);
+_END_C_LIB_DECL
+_C_STD_END
+
+ #else /* defined(__BORLANDC__) */
+typedef mbstate_t _Mbstatet;
+ #endif /* defined(__BORLANDC__) */
+
+ #ifdef _GLOBAL_USING
+_STD_BEGIN
+using _CSTD _Mbstatet;
+
+using _CSTD mbstate_t; using _CSTD size_t;
+using _CSTD tm; using _CSTD wint_t;
+
+ #if defined(__GLIBC__) && !defined(__APPLE__)	/* compiler test */
+
+ #if __GLIBC__ < 2 || __GLIBC__ == 2 && __GLIBC_MINOR__ < 2
+// using _CSTD fgetwc; using _CSTD fgetws; using _CSTD fputwc;
+// using _CSTD fputws; using _CSTD getwc; using _CSTD getwchar;
+// using _CSTD putwc; using _CSTD putwchar; using _CSTD ungetwc;
+
+ #else /* __GLIBC__ < 2 || __GLIBC__ == 2 && __GLIBC_MINOR__ < 2 */
+using _CSTD fgetwc; using _CSTD fgetws; using _CSTD fputwc;
+using _CSTD fputws; using _CSTD getwc; using _CSTD getwchar;
+using _CSTD putwc; using _CSTD putwchar; using _CSTD ungetwc;
+ #endif /* __GLIBC__ < 2 || __GLIBC__ == 2 && __GLIBC_MINOR__ < 2 */
+
+using _CSTD btowc;
+// using _CSTD fwide; using _CSTD fwprintf;
+// using _CSTD fwscanf;
+using _CSTD mbrlen; using _CSTD mbrtowc; using _CSTD mbsrtowcs;
+using _CSTD mbsinit;
+// using _CSTD swprintf; using _CSTD swscanf;
+// using _CSTD vfwprintf; using _CSTD vswprintf; using _CSTD vwprintf;
+using _CSTD wcrtomb;
+// using _CSTD wprintf; using _CSTD wscanf;
+using _CSTD wcsrtombs; using _CSTD wcstol; using _CSTD wcscat;
+using _CSTD wcschr; using _CSTD wcscmp; using _CSTD wcscoll;
+using _CSTD wcscpy; using _CSTD wcscspn; using _CSTD wcslen;
+using _CSTD wcsncat; using _CSTD wcsncmp; using _CSTD wcsncpy;
+using _CSTD wcspbrk; using _CSTD wcsrchr; using _CSTD wcsspn;
+using _CSTD wcstod; using _CSTD wcstoul; using _CSTD wcsstr;
+using _CSTD wcstok; using _CSTD wcsxfrm; using _CSTD wctob;
+using _CSTD wmemchr; using _CSTD wmemcmp; using _CSTD wmemcpy;
+using _CSTD wmemmove; using _CSTD wmemset;
+// using _CSTD wcsftime;
+ #endif /* defined(__GLIBC__) etc. */
+
+ #if defined(__GLIBC__) || defined(__BORLANDC__)	/* compiler test */ \
+	|| defined(__APPLE__) || defined(__MINGW32__)
+
+ #else /* defined(__GLIBC__) etc. */
+
+#if !(defined(_ADI_COMPILER) && defined(_ADI_LIBIO))
+using _CSTD btowc;
+using _CSTD wctob;
+#endif
+using _CSTD fgetwc; using _CSTD fgetws; using _CSTD fputwc;
+using _CSTD fputws; using _CSTD fwide; using _CSTD fwprintf;
+using _CSTD fwscanf; using _CSTD getwc; using _CSTD getwchar;
+using _CSTD mbrlen; using _CSTD mbrtowc; using _CSTD mbsrtowcs;
+using _CSTD mbsinit; using _CSTD putwc; using _CSTD putwchar;
+using _CSTD swprintf; using _CSTD swscanf; using _CSTD ungetwc;
+using _CSTD vfwprintf; using _CSTD vswprintf; using _CSTD vwprintf;
+using _CSTD wcrtomb; using _CSTD wprintf; using _CSTD wscanf;
+using _CSTD wcsrtombs; using _CSTD wcstol; using _CSTD wcscat;
+using _CSTD wcschr; using _CSTD wcscmp; using _CSTD wcscoll;
+using _CSTD wcscpy; using _CSTD wcscspn; using _CSTD wcslen;
+using _CSTD wcsncat; using _CSTD wcsncmp; using _CSTD wcsncpy;
+using _CSTD wcspbrk; using _CSTD wcsrchr; using _CSTD wcsspn;
+
+ #if defined(__sun)	/* compiler test */
+using _CSTD wcstod; using _CSTD wcsstr;
+
+ #else /* defined(__sun) */
+#if !(defined(_ADI_COMPILER) && defined(_ADI_LIBIO))
+using _CSTD wcstod; using _CSTD wcstoul;
+#endif
+using _CSTD wcsstr;
+ #endif /* defined(__sun) */
+
+using _CSTD wcstok; using _CSTD wcsxfrm;
+using _CSTD wmemchr; using _CSTD wmemcmp; using _CSTD wmemcpy;
+using _CSTD wmemmove; using _CSTD wmemset;
+#if !(defined(_ADI_COMPILER) && defined(_ADI_LIBIO))
+#if defined(_ADI_SUPPORT_WCHAR_WCSFTIME)
+using _CSTD wcsftime;
+#endif
+#endif
+ #endif /* defined(__GLIBC__) etc. */
+
+ #if _HAS_C9X
+using _CSTD vfwscanf; using _CSTD vswscanf; using _CSTD vwscanf;
+using _CSTD wcstof; using _CSTD wcstold;
+using _CSTD wcstoll; using _CSTD wcstoull;
+ #endif /* _HAS_C9X */
+
+_STD_END
+ #endif /* _GLOBAL_USING */
+
+#endif /* _CWCHAR_ */
+
+/*
+ * Copyright (c) 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * Consult your license regarding permissions and restrictions.
+V5.03:1134 */

@@ -1,0 +1,75 @@
+<style>
+  .layout {
+    margin: 0;
+    display: grid;
+    grid-template-rows: 1fr auto;
+    grid-template-columns: 48px 1fr;
+    height: 100vh;
+    grid-template-areas:
+      "nav main"
+      "footer footer";
+  }
+
+  .header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background-color: #333;
+    color: white;
+    text-align: center;
+    z-index: 1000; /* Ensure the header stays on top */
+  }
+
+  .nav {
+    grid-area: nav;
+    background-color: #444;
+    color: white;
+    padding: 0em;
+    margin-top: var(--header-height); /* Use CSS variable for header height */
+    height: calc(
+      100vh - var(--header-height) - var(--footer-height)
+    ); /* Adjust according to header and footer height */
+    overflow-y: auto; /* Enable scrolling if content overflows */
+  }
+
+  .main {
+    grid-area: main;
+    padding: 1em;
+    background-color: #f4f4f4;
+    margin-top: var(--header-height); /* Use CSS variable for header height */
+    height: calc(
+      100vh - var(--header-height) - var(--footer-height)
+    ); /* Adjust according to header and footer height */
+    overflow-y: auto; /* Enable scrolling if content overflows */
+  }
+
+  .footer {
+    grid-area: footer;
+    background-color: #333;
+    color: white;
+    text-align: left;
+    padding: 1em;
+  }
+
+  .ww {
+    color: white;
+  }
+  .mat-icon {
+    color: #fff; /* Light color for the icon */
+  }
+</style>
+
+<div class="header" id="header">
+  <app-app-toolbar></app-app-toolbar>
+</div>
+<div class="layout">
+  <div class="nav">
+    <app-side-nav></app-side-nav>
+  </div>
+
+  <main class="main">
+    <router-outlet></router-outlet>
+  </main>
+  <div class="footer" id="footer">Styx Trace</div>
+</div>

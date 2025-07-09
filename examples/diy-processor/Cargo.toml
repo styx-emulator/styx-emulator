@@ -1,0 +1,23 @@
+[package]
+name = "diy-processor"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+styx-emulator = { workspace = true }
+async-trait = { workspace = true }
+binary-heap-plus = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+styx-workspace-hack = { version = "0.1", path = "../../styx/workspace-hack" }
+
+[features]
+default = []
+trace = []
+tracy = ["styx-emulator/tracy"]

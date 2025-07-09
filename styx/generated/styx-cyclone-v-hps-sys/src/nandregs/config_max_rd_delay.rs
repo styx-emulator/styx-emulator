@@ -1,0 +1,42 @@
+// SPDX-License-Identifier: BSD-2-Clause
+#[doc = "Register `config_max_rd_delay` reader"]
+pub type R = crate::R<ConfigMaxRdDelaySpec>;
+#[doc = "Register `config_max_rd_delay` writer"]
+pub type W = crate::W<ConfigMaxRdDelaySpec>;
+#[doc = "Field `value` reader - Number of nand_mp_clk cycles after generation of feedback nand_mp_clk pulse when it is safe to synchronize received data to nand_mp_clk domain. Data should have been registered with nand_mp_clk and stable by the time max_rd_delay cycles has elapsed. A default value of zero will mean a value of nand_mp_clk multiple minus one."]
+pub type ValueR = crate::FieldReader;
+#[doc = "Field `value` writer - Number of nand_mp_clk cycles after generation of feedback nand_mp_clk pulse when it is safe to synchronize received data to nand_mp_clk domain. Data should have been registered with nand_mp_clk and stable by the time max_rd_delay cycles has elapsed. A default value of zero will mean a value of nand_mp_clk multiple minus one."]
+pub type ValueW<'a, REG> = crate::FieldWriter<'a, REG, 4>;
+impl R {
+    #[doc = "Bits 0:3 - Number of nand_mp_clk cycles after generation of feedback nand_mp_clk pulse when it is safe to synchronize received data to nand_mp_clk domain. Data should have been registered with nand_mp_clk and stable by the time max_rd_delay cycles has elapsed. A default value of zero will mean a value of nand_mp_clk multiple minus one."]
+    #[inline(always)]
+    pub fn value(&self) -> ValueR {
+        ValueR::new((self.bits & 0x0f) as u8)
+    }
+}
+impl W {
+    #[doc = "Bits 0:3 - Number of nand_mp_clk cycles after generation of feedback nand_mp_clk pulse when it is safe to synchronize received data to nand_mp_clk domain. Data should have been registered with nand_mp_clk and stable by the time max_rd_delay cycles has elapsed. A default value of zero will mean a value of nand_mp_clk multiple minus one."]
+    #[inline(always)]
+    #[must_use]
+    pub fn value(&mut self) -> ValueW<ConfigMaxRdDelaySpec> {
+        ValueW::new(self, 0)
+    }
+}
+#[doc = "Max round trip read data delay for data capture\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`config_max_rd_delay::R`](R).  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`config_max_rd_delay::W`](W). You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
+pub struct ConfigMaxRdDelaySpec;
+impl crate::RegisterSpec for ConfigMaxRdDelaySpec {
+    type Ux = u32;
+    const OFFSET: u64 = 528u64;
+}
+#[doc = "`read()` method returns [`config_max_rd_delay::R`](R) reader structure"]
+impl crate::Readable for ConfigMaxRdDelaySpec {}
+#[doc = "`write(|w| ..)` method takes [`config_max_rd_delay::W`](W) writer structure"]
+impl crate::Writable for ConfigMaxRdDelaySpec {
+    type Safety = crate::Unsafe;
+    const ZERO_TO_MODIFY_FIELDS_BITMAP: u32 = 0;
+    const ONE_TO_MODIFY_FIELDS_BITMAP: u32 = 0;
+}
+#[doc = "`reset()` method sets config_max_rd_delay to value 0"]
+impl crate::Resettable for ConfigMaxRdDelaySpec {
+    const RESET_VALUE: u32 = 0;
+}

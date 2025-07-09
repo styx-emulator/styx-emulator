@@ -1,0 +1,60 @@
+/************************************************************************
+ *
+ * typeinfo
+ *
+ * (c) Copyright 2001-2004 Analog Devices, Inc.  All rights reserved.
+ * $Revision: 1.2 $
+ ************************************************************************/
+
+/* C++ Run-time Type Information Support Library. */
+
+#pragma once
+#ifndef __NO_BUILTIN
+#pragma system_header /* typeinfo */
+#endif
+
+#ifndef _TYPEINFO
+#define _TYPEINFO
+
+#include <exception>
+
+namespace std
+{
+#pragma define_type_info
+    class type_info
+    {
+      public:
+        virtual ~type_info() {}
+        bool operator==(const type_info&) const;
+        bool operator!=(const type_info&) const;
+        bool before(const type_info&) const;
+        const char *name() const;
+      protected:
+        type_info(const type_info&) {}
+      private:
+        type_info& operator=(const type_info&);
+    };
+
+    class bad_cast: public exception
+    {
+      public:
+        bad_cast() throw() {}
+        bad_cast(const bad_cast&) throw() {}
+        bad_cast& operator=(const bad_cast&) throw();
+        virtual ~bad_cast() throw() {}
+        virtual const char *what() const throw();
+    };
+
+    class bad_typeid: public exception
+    {
+      public:
+        bad_typeid() throw() {}
+        bad_typeid(const bad_typeid&) throw() {}
+        bad_typeid& operator=(const bad_typeid&) throw();
+        virtual ~bad_typeid() throw() {}
+        virtual const char *what() const throw();
+    };
+}
+
+
+#endif /* _TYPEINFO */

@@ -1,0 +1,18 @@
+{
+	"recommendations": [
+		"timonwong.shellcheck",
+		"ms-vscode.makefile-tools",
+		"DavidAnson.vscode-markdownlint",
+		"rust-lang.rust-analyzer",
+		"vadimcn.vscode-lldb",
+		"zxh404.vscode-proto3",
+		"vscjava.vscode-java-pack",
+		"ms-python.python",
+		"njpwerner.autodocstring",
+		"mkhl.direnv",
+		"tamasfe.even-better-toml"
+	],
+	"unwantedRecommendations": [
+		"rust-lang.rust"
+	]
+}

@@ -1,0 +1,42 @@
+[package]
+name = "typhunix-proto"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+styx-emulator = { workspace = true }
+async-trait = { workspace = true }
+log = { workspace = true }
+tonic = { workspace = true }
+prost = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+rand = { workspace = true }
+tokio-stream = { workspace = true }
+uuid = { workspace = true }
+async-fs = { workspace = true }
+futures-lite = { workspace = true }
+futures-core = { workspace = true }
+pyo3 = { workspace = true, optional = true }
+tracing = { workspace = true, features = ["log", "async-await"] }
+styx-workspace-hack = { version = "0.1", path = "../../../../styx/workspace-hack" }
+
+[build-dependencies]
+tonic-build = { workspace = true }
+glob = { workspace = true }
+
+[dev-dependencies]
+test-case = { workspace = true }
+
+[features]
+default = []
+pyo3_bindings = ["pyo3"]

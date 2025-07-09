@@ -1,0 +1,37 @@
+repos:
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v3.1.0
+    hooks:
+    -   id: check-yaml
+    -   id: check-toml
+    -   id: end-of-file-fixer
+    -   id: mixed-line-ending
+    -   id: trailing-whitespace
+-   repo: local
+    hooks:
+    -   id: rust-fmt
+        name: rust-fmt
+        language: system
+        types: [rust]
+        description: Format rust files
+        entry: bash -c 'cd rust && cargo fmt'
+        files: ^rust/
+-   repo: local
+    hooks:
+    -   id: rust-error
+        name: rust-error
+        language: system
+        types: [rust]
+        description: Check rust files for errors
+        entry: bash -c 'cd rust && cargo check'
+        files: ^rust/
+-   repo: local
+    hooks:
+    -   id: rust-linter
+        name: rust-linter
+        language: system
+        types: [rust]
+        description: lint rust files
+        entry: bash -c 'cd rust && cargo clippy'
+        files: ^rust/
+        args: ["--", "-D", "warnings"]

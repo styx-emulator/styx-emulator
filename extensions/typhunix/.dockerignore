@@ -1,0 +1,16 @@
+.git
+.gradle*
+.cargo*
+test-artifacts
+TyphunixPlugin/.classpath
+TyphunixPlugin/.project
+TyphunixPlugin/.settings
+TyphunixPlugin/bin
+TyphunixPlugin/build
+TyphunixPlugin/dist
+TyphunixPlugin/lib
+TyphunixPlugin/src/main/grpc
+TyphunixPlugin/src/main/java/typhunix_interop/GhidraState.java
+build
+rust/typhunix-proto/src/typhunix_interop.rs
+ghidra-releases

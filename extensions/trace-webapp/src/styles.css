@@ -1,0 +1,111 @@
+.xsmall-font {
+  font-size: x-small;
+}
+
+.errors {
+  color: red;
+}
+
+.warnings {
+  color: yellow;
+  font-weight: bold;
+}
+
+.hinttext {
+  font-style: italic;
+  color: var(--mat-tab-header-label-text-font)
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: Roboto, "Helvetica Neue", sans-serif;
+}
+
+html {
+  --mat-table-row-item-label-text-font: Consolas, sans-serif;
+  --mat-table-row-item-label-text-line-height: 32px;
+  --mat-table-row-item-label-text-size: 18px;
+  --mat-table-row-item-label-text-tracking: 0.0178571429em;
+  --mdc-checkbox-state-layer-size: 30px;
+}
+
+.test-border {
+  border: white;
+  border: solid;
+  border: 1px;
+  border-collapse: collapse;
+  border-top-color: white;
+  border-top-style: solid;
+  border-top-width: 3px;
+}
+
+/* html {
+  margin: 0px;
+  background: black;
+  color: white;
+} */
+
+.instruction-text-medium {
+  /* color: cyan; */
+  font-size: 18px;
+}
+
+
+
+.file-input {
+  display: none;
+}
+
+.visually-hidden {
+  display: none;
+}
+
+.ngb-highlight {
+  background-color: rgb(198, 192, 192);
+  font: bolder;
+}
+
+tr:hover {
+  background-color: cyan;
+}
+
+mat-sidenav,
+mat-sidenav.mat-locked-open,
+mat-sidenav.mat-closed.mat-locked-open-add-active {
+  min-width: 200px !important;
+  /* width: 85vw !important; */
+  max-width: 200px !important;
+  /* min-height: 500px !important; */
+}
+
+
+.progress-bar.indeterminate {
+  position: relative;
+  animation: progress-indeterminate 3s linear infinite;
+}
+
+@keyframes progress-indeterminate {
+  from {
+    left: -25%;
+    width: 25%;
+  }
+
+  to {
+    left: 100%;
+    width: 25%;
+  }
+}
+
+h1 {
+  font-size: small;
+}
+
+
+.pad20 {
+  margin-left: 20px;
+}

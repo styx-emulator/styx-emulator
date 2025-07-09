@@ -1,0 +1,173 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<metadata>
+  <components>
+    <component name="middleware.template_application.wolfssl" requires="middleware.wolfssl" component_bundle="bundles.wolfssl" full_name="wolfSSL template application" type="middleware" provides="middleware" change_log="./ChangeLogKSDK.txt" description="wolfSSL template" user_visible="true" manifest_name="wolfssl">
+      <source path="./template_application/" target_path="wolfssl/template_application">
+        <files mask="user_settings.h"/>
+      </source>
+    </component>
+    <component name="middleware.wolfssl" requires="middleware.wolfssl.support middleware.wolfssl.unused_files" component_bundle="bundles.wolfssl" version="3.9.8_rev3" type="middleware" change_log="./ChangeLogKSDK.txt" description="wolfSSL library" ui_name="wolfssl" ui_description="wolfSSL SSL/TLS library" ui_category="Middleware" ui_control="True" ui_release_specific="True" user_visible="false" manifest_name="wolfssl">
+      <source path="./src/" target_path="wolfssl/src">
+        <files mask="crl.c"/>
+        <files mask="internal.c"/>
+        <files mask="io.c"/>
+        <files mask="keys.c"/>
+        <files mask="ocsp.c"/>
+        <files mask="sniffer.c"/>
+        <files mask="ssl.c"/>
+        <files mask="tls.c"/>
+      </source>
+      <source path="./wolfcrypt/src/port/nxp/" target_path="wolfssl/wolfcrypt/src/port/nxp">
+        <files mask="ksdk_port.c"/>
+      </source>
+      <source path="./wolfcrypt/src/" target_path="wolfssl/wolfcrypt/src">
+        <files mask="aes.c"/>
+        <files mask="arc4.c"/>
+        <files mask="asm.c"/>
+        <files mask="asn.c"/>
+        <files mask="blake2b.c"/>
+        <files mask="camellia.c"/>
+        <files mask="chacha.c"/>
+        <files mask="chacha20_poly1305.c"/>
+        <files mask="coding.c"/>
+        <files mask="compress.c"/>
+        <files mask="curve25519.c"/>
+        <files mask="des3.c"/>
+        <files mask="dh.c"/>
+        <files mask="dsa.c"/>
+        <files mask="ecc.c"/>
+        <files mask="ecc_fp.c"/>
+        <files mask="ed25519.c"/>
+        <files mask="error.c"/>
+        <files mask="fe_low_mem.c"/>
+        <files mask="fe_operations.c"/>
+        <files mask="ge_low_mem.c"/>
+        <files mask="ge_operations.c"/>
+        <files mask="hash.c"/>
+        <files mask="hc128.c"/>
+        <files mask="hmac.c"/>
+        <files mask="idea.c"/>
+        <files mask="integer.c"/>
+        <files mask="logging.c"/>
+        <files mask="md2.c"/>
+        <files mask="md4.c"/>
+        <files mask="md5.c"/>
+        <files mask="memory.c"/>
+        <files mask="misc.c"/>
+        <files mask="pkcs7.c"/>
+        <files mask="poly1305.c"/>
+        <files mask="pwdbased.c"/>
+        <files mask="rabbit.c"/>
+        <files mask="random.c"/>
+        <files mask="ripemd.c"/>
+        <files mask="rsa.c"/>
+        <files mask="sha.c"/>
+        <files mask="sha256.c"/>
+        <files mask="sha512.c"/>
+        <files mask="signature.c"/>
+        <files mask="srp.c"/>
+        <files mask="tfm.c"/>
+        <files mask="wc_encrypt.c"/>
+        <files mask="wc_port.c"/>
+      </source>
+      <source path="./wolfssl/openssl/" target_path="wolfssl/wolfssl/openssl">
+        <files mask="bn.h"/>
+        <files mask="ec.h"/>
+        <files mask="ssl.h"/>
+      </source>
+      <source path="./wolfssl/wolfcrypt/port/nxp/" target_path="wolfssl/wolfssl/wolfcrypt/port/nxp">
+        <files mask="ksdk_port.h"/>
+      </source>
+      <source path="./wolfssl/wolfcrypt/" target_path="wolfssl/wolfssl/wolfcrypt">
+        <files mask="aes.h"/>
+        <files mask="arc4.h"/>
+        <files mask="asn.h"/>
+        <files mask="asn_public.h"/>
+        <files mask="blake2-impl.h"/>
+        <files mask="blake2-int.h"/>
+        <files mask="blake2.h"/>
+        <files mask="camellia.h"/>
+        <files mask="chacha.h"/>
+        <files mask="chacha20_poly1305.h"/>
+        <files mask="cmac.h"/>
+        <files mask="coding.h"/>
+        <files mask="compress.h"/>
+        <files mask="curve25519.h"/>
+        <files mask="des3.h"/>
+        <files mask="dh.h"/>
+        <files mask="dsa.h"/>
+        <files mask="ecc.h"/>
+        <files mask="ed25519.h"/>
+        <files mask="error-crypt.h"/>
+        <files mask="fe_operations.h"/>
+        <files mask="fips_test.h"/>
+        <files mask="ge_operations.h"/>
+        <files mask="hash.h"/>
+        <files mask="hc128.h"/>
+        <files mask="hmac.h"/>
+        <files mask="idea.h"/>
+        <files mask="integer.h"/>
+        <files mask="logging.h"/>
+        <files mask="md2.h"/>
+        <files mask="md4.h"/>
+        <files mask="md5.h"/>
+        <files mask="mem_track.h"/>
+        <files mask="memory.h"/>
+        <files mask="misc.h"/>
+        <files mask="mpi_class.h"/>
+        <files mask="mpi_superclass.h"/>
+        <files mask="pkcs7.h"/>
+        <files mask="poly1305.h"/>
+        <files mask="pwdbased.h"/>
+        <files mask="rabbit.h"/>
+        <files mask="random.h"/>
+        <files mask="ripemd.h"/>
+        <files mask="rsa.h"/>
+        <files mask="settings.h"/>
+        <files mask="sha.h"/>
+        <files mask="sha256.h"/>
+        <files mask="sha512.h"/>
+        <files mask="signature.h"/>
+        <files mask="srp.h"/>
+        <files mask="tfm.h"/>
+        <files mask="types.h"/>
+        <files mask="visibility.h"/>
+        <files mask="wc_encrypt.h"/>
+        <files mask="wc_port.h"/>
+      </source>
+      <source path="./wolfssl/" target_path="wolfssl/wolfssl">
+        <files mask="callbacks.h"/>
+        <files mask="certs_test.h"/>
+        <files mask="crl.h"/>
+        <files mask="error-ssl.h"/>
+        <files mask="internal.h"/>
+        <files mask="ocsp.h"/>
+        <files mask="options.h"/>
+        <files mask="sniffer.h"/>
+        <files mask="sniffer_error.h"/>
+        <files mask="ssl.h"/>
+        <files mask="test.h"/>
+        <files mask="version.h"/>
+      </source>
+      <include_paths>
+        <include path="wolfssl"/>
+        <include path="wolfssl/wolfssl/wolfcrypt/port"/>
+      </include_paths>
+    </component>
+    <component name="middleware.wolfssl.support" requires="platform.drivers.aes"/>
+    <component name="middleware.wolfssl.support" requires="platform.drivers.ltc"/>
+    <component name="middleware.wolfssl.support" requires="platform.drivers.cau3"/>
+    <component name="middleware.wolfssl.support" requires="platform.drivers.sha"/>
+    <component name="middleware.wolfssl.support" requires="platform.drivers.dcp"/>
+    <component name="middleware.wolfssl.support" requires="platform.drivers.trng"/>
+    <component name="middleware.wolfssl.support" requires="platform.drivers.rnga"/>
+    <component name="middleware.wolfssl.unused_files" component_bundle="bundles.wolfssl" version="3.9.8_rev3" type="other" change_log="./ChangeLogKSDK.txt" description="wolfSSL files unused by projects" user_visible="false" ignore_dependency="true" manifest_name="unused_files">
+      <source path="./" target_path="wolfssl/wolfssl_files" exclude="true">
+        <files mask="*.*"/>
+      </source>
+    </component>
+  </components>
+  <component_bundles>
+    <component_bundle name="bundles.wolfssl" full_name="wolfSSL library" version="3.9.8" class="Security" description="wolfSSL SSL/TLS library" manifest_name="wolfssl"/>
+  </component_bundles>
+</metadata>

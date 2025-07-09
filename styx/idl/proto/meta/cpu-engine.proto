@@ -1,0 +1,171 @@
+syntax = "proto3";
+
+package styx.meta.cpu_engine;
+
+import "arch.proto";
+import "cpu-hooks.proto";
+import "memory.proto";
+import "cpu-snapshot.proto";
+
+enum Backend {
+    StyxBackend = 0;
+    UnicornBackend = 1;
+    PcodeInterpreterBackend = 2;
+}
+
+message SoftwarePowerOff {}
+message SoftwareReset {}
+message HardwarePowerOff {}
+message HardwareReset {}
+message InstructionCountComplete {}
+message ExecutionTimeoutComplete {}
+message HostStopRequest {}
+message UnalignedMemoryRead {}
+message UnmappedMemoryRead {}
+message ProtectedMemoryRead {}
+message UnalignedMemoryWrite {}
+message UnmappedMemoryWrite {}
+message ProtectedMemoryWrite {}
+message UnalignedMemoryFetch {}
+message UnmappedMemoryFetch {}
+message ProtectedMemoryFetch {}
+message IllegalInstruction {}
+message InstructionDecodeError {}
+message BusError {}
+message GeneralFault {
+    string message = 1;
+}
+message DoubleFault {
+    string message = 1;
+}
+message TripleFault {
+    string message = 1;
+}
+message InvalidStateFromHost {
+    string message = 1;
+}
+message InvalidStateFromTarget {
+    string message = 1;
+}
+
+message TargetExitReason {
+    oneof exit_reason {
+        SoftwarePowerOff software_power_off = 1;
+        SoftwareReset software_reset = 2;
+        HardwarePowerOff hardware_power_off = 3;
+        HardwareReset hardware_reset = 4;
+        InstructionCountComplete instruction_count_complete = 5;
+        ExecutionTimeoutComplete execution_timeout_complete = 6;
+        HostStopRequest host_stop_request = 7;
+        UnalignedMemoryRead unaligned_memory_read = 8;
+        UnmappedMemoryRead unmapped_memory_read = 9;
+        ProtectedMemoryRead protected_memory_read = 10;
+        UnalignedMemoryWrite unaligned_memory_write = 11;
+        UnmappedMemoryWrite unmapped_memory_write = 12;
+        ProtectedMemoryWrite protected_memory_write = 13;
+        UnalignedMemoryFetch unaligned_memory_fetch = 14;
+        UnmappedMemoryFetch unmapped_memory_fetch = 15;
+        ProtectedMemoryFetch protected_memory_fetch = 16;
+        IllegalInstruction illegal_instruction = 17;
+        InstructionDecodeError instruction_decode_error = 18;
+        BusError bus_error = 19;
+        GeneralFault general_fault = 20;
+        DoubleFault double_fault = 21;
+        TripleFault triple_fault = 22;
+        InvalidStateFromHost invalid_state_from_host = 23;
+        InvalidStateFromTarget invalid_state_from_target = 24;
+    }
+}
+
+
+message BadArchitecture {
+    styx.meta.arch.Arch arch = 1;
+}
+message UnableInstantiate {
+    string message = 1;
+}
+message MissingBackend {}
+message MissingArch {}
+message MissingArchVariant {}
+message StyxCpuBuilderError {
+    oneof error {
+        BadArchitecture bad_architecture = 1;
+        UnableInstantiate unable_instantiate = 2;
+        MissingBackend missing_backend = 3;
+        MissingArch missing_arch = 4;
+        MissingArchVariant missing_arch_variant = 5;
+    }
+}
+
+
+message InvalidForArchitecture {
+    styx.meta.arch.Arch arch = 1;
+}
+message HookError {
+    styx.meta.cpu_hooks.StyxHookError error = 1;
+}
+message SnapshotError {
+    styx.meta.cpu_snapshot.StyxCpuSnapshotError error = 1;
+}
+message DuplicateRegion {
+    uint64 address = 1;
+    uint64 size = 2;
+}
+message UnmappedAddress {
+    uint64 address = 1;
+}
+message InvalidMemoryRegionRange {
+    uint64 address = 1;
+    uint64 size = 2;
+}
+message UnalignedMemoryRegionBase {}
+message UnalignedMemoryRegionSize {}
+message TargetExitReasonError {
+    TargetExitReason exit_reason = 1;
+}
+message TargetNotRunning {}
+message InvalidPlatformRegister {
+    styx.meta.arch.ArchRegister register = 1;
+}
+message RegisterDoesNotFit {
+    styx.meta.arch.ArchRegister register = 1;
+    string size = 2;
+}
+message ErrorOkay {
+    string message = 1;
+}
+message FFIFailure {
+    string message = 1;
+}
+message GenericError {
+    string message = 1;
+}
+message BackendBuilder {
+    StyxCpuBuilderError error = 1;
+}
+message RegisterValueTypeCast {
+    bytes value = 1;
+    string from = 2;
+}
+message StyxCpuBackendError {
+    oneof error {
+        InvalidForArchitecture invalid_for_architecture = 1;
+        HookError hook_error = 2;
+        SnapshotError snapshot_error = 3;
+        DuplicateRegion duplicate_region = 4;
+        styx.meta.memory.OverlappingRegion overlapping_region = 5;
+        UnmappedAddress unmapped_address = 6;
+        InvalidMemoryRegionRange invalid_memory_region_range = 7;
+        UnalignedMemoryRegionBase unaligned_memory_region_base = 8;
+        UnalignedMemoryRegionSize unaligned_memory_region_size = 9;
+        TargetExitReasonError target_exit_reason = 10;
+        TargetNotRunning target_not_running = 11;
+        InvalidPlatformRegister invalid_platform_register = 12;
+        RegisterDoesNotFit register_does_not_fit = 13;
+        ErrorOkay error_okay = 14;
+        FFIFailure ffi_failure = 15;
+        GenericError generic_error = 16;
+        BackendBuilder backend_builder = 17;
+        RegisterValueTypeCast register_value_type_cast = 18;
+    }
+}

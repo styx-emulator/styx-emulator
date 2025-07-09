@@ -1,0 +1,42 @@
+// SPDX-License-Identifier: BSD-2-Clause
+#[doc = "Register `globgrp_guid` reader"]
+pub type R = crate::R<GlobgrpGuidSpec>;
+#[doc = "Register `globgrp_guid` writer"]
+pub type W = crate::W<GlobgrpGuidSpec>;
+#[doc = "Field `guid` reader - Application-programmable ID field."]
+pub type GuidR = crate::FieldReader<u32>;
+#[doc = "Field `guid` writer - Application-programmable ID field."]
+pub type GuidW<'a, REG> = crate::FieldWriter<'a, REG, 32, u32>;
+impl R {
+    #[doc = "Bits 0:31 - Application-programmable ID field."]
+    #[inline(always)]
+    pub fn guid(&self) -> GuidR {
+        GuidR::new(self.bits)
+    }
+}
+impl W {
+    #[doc = "Bits 0:31 - Application-programmable ID field."]
+    #[inline(always)]
+    #[must_use]
+    pub fn guid(&mut self) -> GuidW<GlobgrpGuidSpec> {
+        GuidW::new(self, 0)
+    }
+}
+#[doc = "This is a read/write register containing the User ID. This register can be used in the following ways: -To store the version or revision of your system -To store hardware configurations that are outside the otg core As a scratch register\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`globgrp_guid::R`](R).  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`globgrp_guid::W`](W). You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
+pub struct GlobgrpGuidSpec;
+impl crate::RegisterSpec for GlobgrpGuidSpec {
+    type Ux = u32;
+    const OFFSET: u64 = 60u64;
+}
+#[doc = "`read()` method returns [`globgrp_guid::R`](R) reader structure"]
+impl crate::Readable for GlobgrpGuidSpec {}
+#[doc = "`write(|w| ..)` method takes [`globgrp_guid::W`](W) writer structure"]
+impl crate::Writable for GlobgrpGuidSpec {
+    type Safety = crate::Unsafe;
+    const ZERO_TO_MODIFY_FIELDS_BITMAP: u32 = 0;
+    const ONE_TO_MODIFY_FIELDS_BITMAP: u32 = 0;
+}
+#[doc = "`reset()` method sets globgrp_guid to value 0x1234_5678"]
+impl crate::Resettable for GlobgrpGuidSpec {
+    const RESET_VALUE: u32 = 0x1234_5678;
+}

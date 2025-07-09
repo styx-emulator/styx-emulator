@@ -1,0 +1,32 @@
+[package]
+name = "emulation-registry-service"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[[bin]]
+name = "emuregsvc-cli"
+path = "src/emuregsvc-cli-main.rs"
+
+[[bin]]
+name = "emuregsvc-svc"
+path = "src/emuregsvc-svc-main.rs"
+
+
+[dependencies]
+styx-core = { workspace = true }
+styx-macros-args = { path = "../../../incubation/styx-macros-args" }
+emulation-service = { path = "../styx-emulation-service" }
+styx-trace-tools = { path = "../../../incubation/trace-tools" }
+tracing = { workspace = true }
+tonic = { workspace = true }
+tokio = { workspace = true, features = ["fs", "process", "mio"] }
+async-trait = { workspace = true }
+clap = { workspace = true }
+serde = { workspace = true }
+serde_yaml = { workspace = true }
+styx-workspace-hack = { version = "0.1", path = "../../workspace-hack" }
+serde_json = { workspace = true }

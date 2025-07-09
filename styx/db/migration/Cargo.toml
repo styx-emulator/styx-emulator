@@ -1,0 +1,22 @@
+[package]
+name = "styx-migration"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[lib]
+name = "styx_dbmigration"
+path = "src/lib.rs"
+
+[dependencies]
+styx-core = { workspace = true }
+styx-dbmodel = { path = "../dbmodel" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+sea-orm-migration = { workspace = true }
+styx-workspace-hack = { version = "0.1", path = "../../workspace-hack" }

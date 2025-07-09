@@ -1,0 +1,85 @@
+<div *ngIf="state == State.NotBusy && wsPrograms.length === 0">
+  No workspace programs.
+</div>
+
+<span *ngIf="state == State.NotBusy" style="float: right"
+  ><button
+    mat-mini-fab
+    class="tb-icon"
+    [routerLink]="[Rts.WspEdit, 'new', undefined]"
+    matTooltip="Create a new workspace program"
+  >
+    <mat-icon>add</mat-icon>
+  </button></span
+>
+
+<div *ngIf="state != State.NotBusy" style="padding: 20px">
+  <p>{{ state }}</p>
+  <div class="progress" style="position: relative">
+    <div class="progress-bar progress-bar-striped indeterminate"></div>
+  </div>
+</div>
+
+<div *ngIf="this.wsPrograms.length > 0">
+  <div style="display: inline; font-size: larger; font-weight: bolder">
+    Workspace Programs ({{ this.wsPrograms.length }})
+  </div>
+
+  <table>
+    <tr>
+      <th>ID</th>
+      <th>Processor</th>
+      <th>Variant</th>
+      <th>Endian</th>
+      <th>Binary</th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+    <tr *ngFor="let wsProgram of this.wsPrograms">
+      <td>{{ wsProgram.getId() }}</td>
+      <td>{{ wsProgram.getConfig()?.getArchIden()?.getName() }}</td>
+      <td>
+        {{
+          wsProgram.getConfig()?.getVariantIden()?.getName()?.split("::")?.at(1)
+        }}
+      </td>
+      <td>{{ wsProgram.getConfig()?.getEndianIden()?.getName() }}</td>
+      <td>{{ wsProgram.getSymProgram()?.getPid()?.getName() }}</td>
+
+      <td class="td-icon">
+        <button
+          mat-icon-button
+          matTooltip="Edit Program"
+          (click)="onEdit(wsProgram)"
+        >
+          <mat-icon>edit_circle</mat-icon>
+        </button>
+      </td>
+      <td class="td-icon">
+        <button
+          mat-icon-button
+          matTooltip="Run Emulation for Program"
+          (click)="onEmulate(wsProgram)"
+        >
+          <mat-icon>play_circle</mat-icon>
+        </button>
+      </td>
+      <td class="td-icon">
+        <button
+          mat-icon-button
+          matTooltip="Delete Program"
+          (click)="onDelete(wsProgram)"
+        >
+          <mat-icon>delete</mat-icon>
+        </button>
+      </td>
+    </tr>
+  </table>
+</div>
+
+<div>
+  @for (alert of alerts; track alert) {
+    <ngb-alert [type]="alert.type">{{ alert.message }}</ngb-alert>
+  }
+</div>

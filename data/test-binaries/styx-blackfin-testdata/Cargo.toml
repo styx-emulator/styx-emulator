@@ -1,0 +1,23 @@
+[package]
+name = "styx-blackfin-testdata"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[features]
+binutils-tests = []
+# This is a hack to disable the blackfin tests in the CI
+# when passing `--all-features` to cargo
+disable-blackfin-tests = []
+
+[dependencies]
+styx-workspace-hack = { version = "0.1", path = "../../../styx/workspace-hack" }
+
+[build-dependencies]
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+quote = { workspace = true }
+heck = { workspace = true }

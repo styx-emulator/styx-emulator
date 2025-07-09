@@ -1,0 +1,13 @@
+[package]
+name = "raw-processor"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[dependencies]
+styx-emulator = { workspace = true }
+tracing = { workspace = true }
+styx-workspace-hack = { version = "0.1", path = "../../styx/workspace-hack" }
+
+[lints]
+workspace = true

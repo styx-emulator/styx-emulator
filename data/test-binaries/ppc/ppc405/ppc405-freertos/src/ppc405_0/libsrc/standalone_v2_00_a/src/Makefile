@@ -1,0 +1,68 @@
+######################################################################
+# Copyright (c) 2004 Xilinx, Inc.  All rights reserved.
+#
+# Xilinx, Inc.
+# XILINX IS PROVIDING THIS DESIGN, CODE, OR INFORMATION "AS IS" AS A
+# COURTESY TO YOU.  BY PROVIDING THIS DESIGN, CODE, OR INFORMATION AS
+# ONE POSSIBLE   IMPLEMENTATION OF THIS FEATURE, APPLICATION OR
+# STANDARD, XILINX IS MAKING NO REPRESENTATION THAT THIS IMPLEMENTATION
+# IS FREE FROM ANY CLAIMS OF INFRINGEMENT, AND YOU ARE RESPONSIBLE
+# FOR OBTAINING ANY RIGHTS YOU MAY REQUIRE FOR YOUR IMPLEMENTATION.
+# XILINX EXPRESSLY DISCLAIMS ANY WARRANTY WHATSOEVER WITH RESPECT TO
+# THE ADEQUACY OF THE IMPLEMENTATION, INCLUDING BUT NOT LIMITED TO
+# ANY WARRANTIES OR REPRESENTATIONS THAT THIS IMPLEMENTATION IS FREE
+# FROM CLAIMS OF INFRINGEMENT, IMPLIED WARRANTIES OF MERCHANTABILITY
+# AND FITNESS FOR A PARTICULAR PURPOSE.
+#
+# $Id: Makefile,v 1.3.2.1 2006/01/17 19:56:31 vasanth Exp $
+######################################################################
+
+# The following are defined in config.make
+# LIBS - Do Build Profile Libraries
+include config.make
+
+CC=powerpc-eabi-gcc
+AR=powerpc-eabi-ar
+CP=cp
+MV=mv
+COMPILER_FLAGS=
+EXTRA_COMPILER_FLAGS=
+LIB=libxil.a
+
+CC_FLAGS = $(subst -pg, , $(COMPILER_FLAGS))
+ECC_FLAGS = $(subst -pg, , $(EXTRA_COMPILER_FLAGS))
+
+RELEASEDIR=../../../lib
+INCLUDEDIR=../../../include
+INCLUDES=-I./. -I${INCLUDEDIR}
+BOOTOBJ = boot.o
+
+OUTS = *.o
+
+LIB_CSOURCES=*.c
+LIB_SSOURCES=*.S
+INCLUDEFILES=*.h
+
+libs: $(LIBS) clean
+
+standalone_libs:
+	echo "Compiling bsp"
+	$(CC) $(CC_FLAGS) $(ECC_FLAGS) $(INCLUDES) $(LIB_CSOURCES)
+	$(CC) $(CC_FLAGS) $(ECC_FLAGS) $(INCLUDES) $(LIB_SSOURCES)
+	$(AR) -r ${RELEASEDIR}/${LIB} ${OUTS}
+	$(MV) ${BOOTOBJ} ${RELEASEDIR}
+
+profile_libs:
+	(cd profile; $(MAKE) COMPILER_FLAGS="$(COMPILER_FLAGS)" EXTRA_COMPILER_FLAGS="$(EXTRA_COMPILER_FLAGS)" COMPILER="$(CC)" ARCHIVER="$(AR)" AS="$(AS)" libs)
+
+include: standalone_includes profile_includes
+
+standalone_includes:
+	${CP} ${INCLUDEFILES} ${INCLUDEDIR}
+
+profile_includes:
+	(cd profile; $(MAKE) COMPILER_FLAGS="$(COMPILER_FLAGS)" EXTRA_COMPILER_FLAGS="$(EXTRA_COMPILER_FLAGS)" COMPILER="$(CC)" ARCHIVER="$(AR)" AS="$(AS)" include)
+
+clean:
+	rm -rf ${OUTS}
+	(cd profile; $(MAKE) COMPILER_FLAGS="$(COMPILER_FLAGS)" EXTRA_COMPILER_FLAGS="$(EXTRA_COMPILER_FLAGS)" COMPILER="$(CC)" ARCHIVER="$(AR)" AS="$(AS)" clean)

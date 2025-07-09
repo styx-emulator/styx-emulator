@@ -1,0 +1,63 @@
+// cfloat standard header
+#if defined (_ADI_COMPILER)
+/************************************************************************
+ *
+ * cfloat
+ *
+ * (c) Copyright 2001-2009 Analog Devices, Inc.  All rights reserved.
+ * (c) Copyright 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * $Revision: 1.4 $
+ ************************************************************************/
+
+#pragma once
+#ifndef __NO_BUILTIN
+#pragma system_header /* cfloat */
+#endif
+#endif /* _ADI_COMPILER */
+
+#ifndef _CFLOAT_
+#define _CFLOAT_
+#include <yvals.h>
+
+#include <float.h>
+
+ #if __EDG__ && defined(__LDBL_UNION__)	/* compiler test */
+_C_STD_BEGIN
+		/* TYPE DEFINITIONS */
+ #ifndef _DVALS
+  #define _DVALS
+typedef struct
+	{	/* parameters for a floating-point type */
+	int _Ddig, _Dmdig, _Dmax10e, _Dmaxe, _Dmin10e, _Dmine;
+	union
+		{	/* union of short array and all floats */
+		unsigned short _Us[8];
+		float _Float;
+		double _Double;
+		long double _Long_double;
+		} _Deps, _Dmax, _Dmin;
+	} _Dvals;
+ #endif /* _DVALS */
+
+		/* DECLARATIONS */
+_C_LIB_DECL
+extern const _Dvals _Ldbl;
+_END_C_LIB_DECL
+_C_STD_END
+
+ #undef LDBL_EPSILON	/* redefine macros that use gcc extension */
+ #undef LDBL_MAX
+ #undef LDBL_MIN
+
+ #define LDBL_EPSILON	_CSTD _Ldbl._Deps._Long_double
+ #define LDBL_MAX		_CSTD _Ldbl._Dmax._Long_double
+ #define LDBL_MIN		_CSTD _Ldbl._Dmin._Long_double
+ #endif /* __EDG__ && defined(__LDBL_UNION__) */
+
+#endif /* _CFLOAT_ */
+
+
+/*
+ * Copyright (c) 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * Consult your license regarding permissions and restrictions.
+V5.03:1134 */

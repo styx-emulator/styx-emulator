@@ -1,0 +1,14 @@
+[package]
+name = "styx-superh2a-processor"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+styx-core = { workspace = true }
+
+tokio = { workspace = true }
+styx-workspace-hack = { version = "0.1", path = "../../../workspace-hack" }

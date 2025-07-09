@@ -1,0 +1,14 @@
+[package]
+name = "talking-to-peripherals"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[dependencies]
+chrono = { workspace = true }
+styx-core = { workspace = true }
+clap = { workspace = true }
+styx-workspace-hack = { version = "0.1", path = "../../styx/workspace-hack" }
+
+[lints]
+workspace = true

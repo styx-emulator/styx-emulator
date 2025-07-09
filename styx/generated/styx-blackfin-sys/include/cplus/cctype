@@ -1,0 +1,76 @@
+// cctype standard header
+#if defined (_ADI_COMPILER)
+/************************************************************************
+ *
+ * cctype
+ *
+ * (c) Copyright 2001-2009 Analog Devices, Inc.  All rights reserved.
+ * (c) Copyright 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * $Revision: 1.5 $
+ ************************************************************************/
+
+#pragma once
+#ifndef __NO_BUILTIN
+#pragma system_header /* cctype */
+#endif
+#endif /* _ADI_COMPILER */
+
+#ifndef _CCTYPE_
+#define _CCTYPE_
+#include <yvals.h>
+
+
+ #if _IS_EMBEDDED
+  #define _Isspace	isspace
+ #endif /* _IS_EMBEDDED */
+
+#ifdef _STD_USING
+ #undef _STD_USING
+  #include <ctype.h>
+ #define _STD_USING
+
+#else /* _STD_USING */
+ #include <ctype.h>
+
+#if defined (_ADI_COMPILER)
+/* Removed Apple specific inline function definitions to simplify the header */
+#endif /* _ADI_COMPILER */
+
+#endif /* _STD_USING */
+
+ #ifdef _GLOBAL_USING
+_STD_BEGIN
+using _CSTD isalnum; using _CSTD isalpha; using _CSTD iscntrl;
+using _CSTD isdigit; using _CSTD isgraph; using _CSTD islower;
+using _CSTD isprint; using _CSTD ispunct; using _CSTD isspace;
+using _CSTD isupper; using _CSTD isxdigit; using _CSTD tolower;
+using _CSTD toupper;
+
+ #if _HAS_C9X
+using _CSTD isblank;
+ #endif /* _HAS_C9X */
+
+_STD_END
+ #endif /* _GLOBAL_USING */
+
+	/* remove any (improper) macro overrides */
+#undef isalnum
+#undef isalpha
+#undef isblank
+#undef iscntrl
+#undef isdigit
+#undef isgraph
+#undef islower
+#undef isprint
+#undef ispunct
+#undef isspace
+#undef isupper
+#undef isxdigit
+#undef tolower
+#undef toupper
+#endif /* _CCTYPE_ */
+
+/*
+ * Copyright (c) 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * Consult your license regarding permissions and restrictions.
+V5.03:1134 */

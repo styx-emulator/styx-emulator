@@ -1,0 +1,69 @@
+#!/bin/bash
+
+# local or docker
+export SERVE_ENV=${SERVE_ENV:-docker}
+
+# Envoy host:port (default 127.0.0.1:8080)
+export ENVOY_URL_HOST=${ENVOY_URL_HOST:-127.0.0.1}
+export ENVOY_URL_PORT=${ENVOY_URL_PORT:-8080}
+
+# default HOSTs based on where envoy is running (ENVOY_URL_HOST)
+export TYPHUNIX_URL_HOST=${ENVOY_URL_HOST}
+export WORKSPACE_URL_HOST=${ENVOY_URL_HOST}
+export TRACE_EXECUTION_URL_HOST=${ENVOY_URL_HOST}
+export WEBAPI_URL_HOST=${ENVOY_URL_HOST}
+export WEBAPP_URL_HOST=${ENVOY_URL_HOST}
+
+# except for DBHOST
+export DBHOST=${DBHOST:-127.0.0.1}
+
+# For docker, use docker compose service names
+if [[ ${SERVE_ENV} == "docker" ]]; then
+    export TYPHUNIX_URL_HOST=typhunix
+    export WORKSPACE_URL_HOST=workspace-svc
+    export TRACE_EXECUTION_URL_HOST=emulation-registry-service
+    export WEBAPI_URL_HOST=webapi
+    export DBHOST=styxdb
+fi
+
+
+
+### PORTS
+export WEBAPP_URL_PORT=${WEBAPP_URL_PORT:-4200}
+export TYPHUNIX_URL_PORT=${TYPHUNIX_URL_PORT:-50051}
+export WORKSPACE_URL_PORT=${WORKSPACE_URL_PORT:-55555}
+export TRACE_EXECUTION_URL_PORT=${TRACE_EXECUTION_URL_PORT:-10101}
+export WEBAPI_URL_PORT=${WEBAPI_URL_PORT:-54321}
+
+### URLs
+export ENVOY_URL=http://${ENVOY_URL_HOST}:${ENVOY_URL_PORT}
+export WEBAPP_URL=http://${WEBAPP_URL_HOST}:${WEBAPP_URL_PORT}
+export TYPHUNIX_URL=http://${TYPHUNIX_URL_HOST}:${TYPHUNIX_URL_PORT}
+export WORKSPACE_URL=http://${WORKSPACE_URL_HOST}:${WORKSPACE_URL_PORT}
+export TRACE_EXECUTION_URL=http://${TRACE_EXECUTION_URL_HOST}:${TRACE_EXECUTION_URL_PORT}
+export WEBAPI_URL=http://${WEBAPI_URL_HOST}:${WEBAPI_URL_PORT}
+
+## DATABASE
+export POSTGRES_PORT=5432
+export POSTGRES_ADMIN_PORT=54320
+export POSTGRES_PASSWORD=styx
+export PGUSER=postgres
+export DBNAME=styxdb
+export DBVENDOR=postgres
+export DATABASE_URL=${DBVENDOR}://${PGUSER}:${POSTGRES_PASSWORD}@${DBHOST}/${DBNAME}
+
+################################################################################
+# other configuration items needed by scripts and/or docker compose
+################################################################################
+# LOGDIR
+export TRACE_WEBAPP_LOGDIR=/tmp/trace-webapp-logs
+
+# Image that services are run in
+export PYTHON_IMAGE=python:3.10-bookworm
+
+# Typhunix cache
+export TYPHUNIX_HOME=~/.typhunix
+export TRACE_SRC_DIR=${CI_PROJECT_DIR}/extensions/trace-webapp
+export ENVOY_CONFIG_DIR=${CI_PROJECT_DIR}/extensions/trace-webapp/envoy
+export ENVOY_CONFIG_BASENAME=${SERVE_ENV}-envoy.yaml
+export ENVOY_CONFIG=${ENVOY_CONFIG_DIR}/${ENVOY_CONFIG_BASENAME}

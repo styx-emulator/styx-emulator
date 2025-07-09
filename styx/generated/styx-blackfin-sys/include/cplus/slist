@@ -1,0 +1,1344 @@
+// slist standard header
+#ifndef _SLIST_
+#define _SLIST_
+#include <functional>
+#include <memory>
+#include <stdexcept>
+
+_STD_BEGIN
+
+		// TEMPLATE CLASS _Slist_nod
+template<class _Ty,
+	class _Alloc>
+	class _Slist_nod
+		: public _Container_base
+	{	// base class for _Slist_ptr to hold allocator _Alnod
+protected:
+	struct _Node;
+	friend struct _Node;
+	typedef _Node *_Nodeptr;	// _Node allocator must have ordinary pointers
+
+	struct _Node
+		{	// slist node
+		_Nodeptr _Next;	// successor node
+		_Ty _Myval;	// the stored value
+		};
+
+	_Slist_nod(_Alloc _Al)
+		: _Alnod(_Al)
+		{	// construct allocator from _Al
+		}
+
+	typename _Alloc::template rebind<_Node>::other
+		_Alnod;	// allocator object for nodes
+	};
+
+		// TEMPLATE CLASS _Slist_ptr
+template<class _Ty,
+	class _Alloc>
+	class _Slist_ptr
+		: public _Slist_nod<_Ty, _Alloc>
+	{	// base class for _Slist_val to hold allocator _Alptr
+protected:
+	typedef _Slist_nod<_Ty, _Alloc> _Mybase;
+	typedef typename _Mybase::_Node _Node;
+	typedef typename _Mybase::_Nodeptr _Nodeptr;
+
+	_Slist_ptr(_Alloc _Al)
+		: _Slist_nod<_Ty, _Alloc>(_Al), _Alptr(_Al)
+		{	// construct base, and allocator from _Al
+		}
+
+	typename _Alloc::template rebind<_Nodeptr>::other
+		_Alptr;	// allocator object for pointers to nodes
+	};
+
+		// TEMPLATE CLASS _Slist_val
+template<class _Ty,
+	class _Alloc>
+	class _Slist_val
+		: public _Slist_ptr<_Ty, _Alloc>
+	{	// base class for slist to hold allocator _Alval
+public:
+	typedef typename _Alloc::template rebind<_Ty>::other _Alty;
+
+	_Slist_val(_Alloc _Al = _Alloc())
+		: _Slist_ptr<_Ty, _Alloc>(_Al), _Alval(_Al)
+		{	// construct base, and allocator from _Al
+		}
+
+	_Alty _Alval;	// allocator object for values stored in nodes
+	};
+
+		// TEMPLATE CLASS slist
+template<class _Ty,
+	class _Ax = allocator<_Ty> >
+	class slist
+		: public _Slist_val<_Ty, _Ax>
+	{	// singly linked list
+public:
+	typedef slist<_Ty, _Ax> _Myt;
+	typedef _Slist_val<_Ty, _Ax> _Mybase;
+	typedef typename _Mybase::_Alty _Alloc;
+
+protected:
+	typedef typename _Mybase::_Node _Node;
+	typedef typename _Mybase::_Nodeptr _Nodeptr;
+
+	typedef typename _Alloc::template rebind<_Nodeptr>::other
+		_Nodeptr_alloc;
+	typedef typename _Nodeptr_alloc::reference _Nodepref;
+
+
+	typedef typename _Alloc::reference _Vref;
+
+	static _Nodepref _Nextnode(_Nodeptr _Pnode)
+		{	// return reference to successor pointer in node
+		return ((_Nodepref)(*_Pnode)._Next);
+		}
+
+	static _Vref _Myval(_Nodeptr _Pnode)
+		{	// return reference to value in node
+		return ((_Vref)(*_Pnode)._Myval);
+		}
+
+public:
+	typedef _Alloc allocator_type;
+	typedef typename _Alloc::size_type size_type;
+	typedef typename _Alloc::difference_type _Dift;
+	typedef _Dift difference_type;
+	typedef typename _Alloc::pointer _Tptr;
+	typedef typename _Alloc::const_pointer _Ctptr;
+	typedef _Tptr pointer;
+	typedef _Ctptr const_pointer;
+	typedef typename _Alloc::reference _Reft;
+	typedef _Reft reference;
+	typedef typename _Alloc::const_reference const_reference;
+	typedef typename _Alloc::value_type value_type;
+
+		// CLASS const_iterator
+	class const_iterator;
+	friend class const_iterator;
+
+	class const_iterator
+		: public _STD iterator<forward_iterator_tag, _Ty, _Dift,
+			_Ctptr, const_reference>
+		{	// iterator for nonmutable slist
+	public:
+		typedef forward_iterator_tag iterator_category;
+		typedef _Ty value_type;
+		typedef _Dift difference_type;
+		typedef _Ctptr pointer;
+		typedef const_reference reference;
+
+		const_iterator()
+			: _Pptr(0)
+			{	// construct with null node pointer
+			}
+
+ #if _HAS_ITERATOR_DEBUGGING
+ #define _SLIST_CONST_ITERATOR(ppnode)	const_iterator(ppnode, this)
+
+		const_iterator(_Nodeptr *_Ppnode, const _Myt *_Plist)
+			: _Pptr(_Ppnode)
+			{	// construct with node pointer to pointer _Ppnode
+			this->_Adopt(_Plist);
+			}
+
+ #else /* _HAS_ITERATOR_DEBUGGING */
+ #define _SLIST_CONST_ITERATOR(ppnode)	const_iterator(ppnode)
+
+		const_iterator(_Nodeptr *_Ppnode)
+			: _Pptr(_Ppnode)
+			{	// construct with node pointer to pointer _Ppnode
+			}
+ #endif /* _HAS_ITERATOR_DEBUGGING */
+
+		const_reference operator*() const
+			{	// return designated value
+
+ #if _HAS_ITERATOR_DEBUGGING
+			if (this->_Mycont == 0 || _Pptr == 0 || *_Pptr == 0)
+				_DEBUG_ERROR("slist iterator not dereferencable");
+ #endif /* _HAS_ITERATOR_DEBUGGING */
+
+			return (_Myval(*_Pptr));
+			}
+
+		_Ctptr operator->() const
+			{	// return pointer to class object
+			return (&**this);
+			}
+
+		const_iterator& operator++()
+			{	// preincrement
+
+ #if _HAS_ITERATOR_DEBUGGING
+			if (this->_Mycont == 0 || _Pptr == 0 || *_Pptr == 0)
+				_DEBUG_ERROR("slist iterator not incrementable");
+			_Pptr = &_Nextnode(*_Pptr);
+
+ #else /* _HAS_ITERATOR_DEBUGGING */
+			if (_Pptr != 0 && *_Pptr != 0)
+				_Pptr = &_Nextnode(*_Pptr);
+ #endif /* _HAS_ITERATOR_DEBUGGING */
+
+			return (*this);
+			}
+
+		const_iterator operator++(int)
+			{	// postincrement
+			const_iterator _Tmp = *this;
+			++*this;
+			return (_Tmp);
+			}
+
+		bool operator==(const const_iterator& _Right) const
+			{	// test for iterator equality
+
+ #if _HAS_ITERATOR_DEBUGGING
+			if (this->_Mycont == 0 || this->_Mycont != _Right._Mycont)
+				_DEBUG_ERROR("slist iterators incompatible");
+ #endif /* _HAS_ITERATOR_DEBUGGING */
+
+			return (_Pptr == _Right._Pptr);
+			}
+
+		bool operator!=(const const_iterator& _Right) const
+			{	// test for iterator inequality
+			return (!(*this == _Right));
+			}
+
+		_Nodeptr *_Pptr;	// pointer to pointer to node
+		};
+
+		// CLASS iterator
+	class iterator;
+	friend class iterator;
+
+	class iterator
+		: public const_iterator
+		{	// iterator for mutable slist
+	public:
+		typedef forward_iterator_tag iterator_category;
+		typedef _Ty value_type;
+		typedef _Dift difference_type;
+		typedef _Tptr pointer;
+		typedef _Reft reference;
+
+		iterator()
+			{	// construct with null node
+			}
+
+ #if _HAS_ITERATOR_DEBUGGING
+ #define _SLIST_ITERATOR(ppnode)	iterator(ppnode, this)
+
+		iterator(_Nodeptr *_Ppnode, const _Myt *_Plist)
+			: const_iterator(_Ppnode, _Plist)
+			{	// construct with node pointer to pointer _Ppnode
+			}
+
+ #else /* _HAS_ITERATOR_DEBUGGING */
+ #define _SLIST_ITERATOR(ppnode)	iterator(ppnode)
+
+		iterator(_Nodeptr *_Ppnode)
+			: const_iterator(_Ppnode)
+			{	// construct with node pointer to pointer _Ppnode
+			}
+ #endif /* _HAS_ITERATOR_DEBUGGING */
+
+		reference operator*() const
+			{	// return designated value
+			return ((reference)**(const_iterator *)this);
+			}
+
+		_Tptr operator->() const
+			{	// return pointer to class object
+			return (&**this);
+			}
+
+		iterator& operator++()
+			{	// preincrement
+			++(*(const_iterator *)this);
+			return (*this);
+			}
+
+		iterator operator++(int)
+			{	// postincrement
+			iterator _Tmp = *this;
+			++*this;
+			return (_Tmp);
+			}
+		};
+
+	slist()
+		: _Mybase()
+		{_Init();	// construct empty slist
+		}
+
+	explicit slist(const _Alloc& _Al)
+		: _Mybase(_Al)
+		{_Init();	// construct empty slist, allocator
+		}
+
+	explicit slist(size_type _Count)
+		: _Mybase()
+		{	// construct list from _Count * _Ty()
+		_Init();
+		insert(begin(), _Count, _Ty());
+		}
+
+	slist(size_type _Count, const _Ty& _Val)
+		: _Mybase()
+		{	// construct list from _Count * _Val
+		_Init();
+		insert(begin(), _Count, _Val);
+		}
+
+	slist(size_type _Count, const _Ty& _Val, const _Alloc& _Al)
+		: _Mybase(_Al)
+		{	// construct list, allocator from _Count * _Val
+		_Init();
+		insert(begin(), _Count, _Val);
+		}
+
+	slist(const _Myt& _Right)
+		: _Mybase(_Right._Alval)
+		{	// construct list by copying _Right
+		_Init();
+		insert(begin(), _Right.begin(), _Right.end());
+		}
+
+	template<class _Iter>
+		slist(_Iter _First, _Iter _Last)
+		: _Mybase()
+		{	// construct list from [_First, _Last)
+		_Init();
+		_Construct(_First, _Last, _Iter_cat(_First));
+		}
+
+	template<class _Iter>
+		slist(_Iter _First, _Iter _Last, const _Alloc& _Al)
+		: _Mybase(_Al)
+		{	// construct list, allocator from [_First, _Last)
+		_Init();
+		_Construct(_First, _Last, _Iter_cat(_First));
+		}
+
+	template<class _Iter>
+		void _Construct(_Iter _Count, _Iter _Val, _Int_iterator_tag)
+		{	// construct list from _Count * _Val
+		insert(begin(), (size_type)_Count, (_Ty)_Val);
+		}
+
+	template<class _Iter>
+		void _Construct(_Iter _First, _Iter _Last, input_iterator_tag)
+		{	// construct list from [_First, _Last), input iterators
+		insert(begin(), _First, _Last);
+		}
+
+	~slist()
+		{	// destroy the object
+		clear();
+		}
+
+	_Myt& operator=(const _Myt& _Right)
+		{	// assign _Right
+		if (this != &_Right)
+			assign(_Right.begin(), _Right.end());
+		return (*this);
+		}
+
+	iterator begin()
+		{	// return iterator for beginning of mutable sequence
+		return (_SLIST_ITERATOR(&_Myhead));
+		}
+
+	const_iterator begin() const
+		{	// return iterator for beginning of nonmutable sequence
+		return (_SLIST_CONST_ITERATOR((_Nodeptr *)&_Myhead));
+		}
+
+	iterator end()
+		{	// return iterator for end of mutable sequence
+		return (_SLIST_ITERATOR(_Myhead == 0
+			? &_Myhead : &_Nextnode(_Gettail())));
+		}
+
+	const_iterator end() const
+		{	// return iterator for end of nonmutable sequence
+		return (_SLIST_CONST_ITERATOR(_Myhead == 0
+			? (_Nodeptr *)&_Myhead : &_Nextnode(_Gettail())));
+		}
+
+	iterator _Make_iter(const_iterator _Where) const
+		{	// make iterator from const_iterator
+		return (_SLIST_ITERATOR(_Where._Pptr));
+		}
+
+	void resize(size_type _Newsize)
+		{	// determine new length, padding with _Ty() elements as needed
+		resize(_Newsize, _Ty());
+		}
+
+	void resize(size_type _Newsize, _Ty _Val)
+		{	// determine new length, padding with _Val elements as needed
+		if (_Mysize < _Newsize)
+			insert(end(), _Newsize - _Mysize, _Val);
+		else
+			while (_Newsize < _Mysize)
+				pop_back();
+		}
+
+	size_type size() const
+		{	// return length of sequence
+		return (_Mysize);
+		}
+
+	size_type max_size() const
+		{	// return maximum possible length of sequence
+		return (this->_Alval.max_size());
+		}
+
+	bool empty() const
+		{	// test if sequence is empty
+		return (_Mysize == 0);
+		}
+
+	allocator_type get_allocator() const
+		{	// return allocator object for values
+		return (this->_Alval);
+		}
+
+	reference front()
+		{	// return first element of mutable sequence
+		return (_Myval(_Myhead));
+		}
+
+	const_reference front() const
+		{	// return first element of nonmutable sequence
+		return (_Myval(_Myhead));
+		}
+
+	reference back()
+		{	// return last element of mutable sequence
+		return (_Myval(_Gettail()));
+		}
+
+	const_reference back() const
+		{	// return last element of nonmutable sequence
+		return (_Myval(_Gettail()));
+		}
+
+	void push_front(const _Ty& _Val)
+		{	// insert element at beginning
+		_Insertp(&_Myhead, _Val);
+		}
+
+	void pop_front()
+		{	// erase element at beginning
+		_Erasep(&_Myhead);
+		}
+
+	void push_back(const _Ty& _Val)
+		{	// insert element at end
+		_Insertp(_Myhead == 0 ? &_Myhead : &_Nextnode(_Gettail()), _Val);
+		}
+
+	void pop_back()
+		{	// erase element at end
+		_Erasep(_Getptail());
+		}
+
+	template<class _Iter>
+		void assign(_Iter _First, _Iter _Last)
+		{	// assign [_First, _Last)
+		_Assign(_First, _Last, _Iter_cat(_First));
+		}
+
+	template<class _Iter>
+		void _Assign(_Iter _Count, _Iter _Val, _Int_iterator_tag)
+		{	// assign _Count * _Val
+		assign((size_type)_Count, (_Ty)_Val);
+		}
+
+	template<class _Iter>
+		void _Assign(_Iter _First, _Iter _Last, input_iterator_tag)
+		{	// assign [_First, _Last), input iterators
+		clear();
+		insert(begin(), _First, _Last);
+		}
+
+	void assign(size_type _Count, const _Ty& _Val)
+		{	// assign _Count * _Val
+		_Ty _Tmp = _Val;	// in case _Val is in sequence
+		clear();
+		insert(begin(), _Count, _Tmp);
+		}
+
+#if defined(_ADI_COMPILER)
+	iterator insert(iterator _Where, const _Ty& _Val)
+#else
+    /* const_iterator for C++0x */
+	iterator insert(const_iterator _Where, const _Ty& _Val)
+#endif /* defined(_ADI_COMPILER) */
+		{	// insert _Val at _Where
+		_Nodeptr *_Pptr = _Getpptr(_Where);
+		_Insertp(_Pptr, _Val);
+		return (_SLIST_ITERATOR(_Pptr));
+		}
+
+#if defined(_ADI_COMPILER)
+	void insert(iterator _Where,
+#else
+    /* const_iterator for C++0x */
+	void insert(const_iterator _Where,
+#endif /* defined(_ADI_COMPILER) */
+		size_type _Count, const _Ty& _Val)
+		{	// insert _Count * _Val at _Where
+		_Nodeptr *_Pptr = _Getpptr(_Where);
+		size_type _Countsave = _Count;
+
+		_TRY_BEGIN
+		for (; 0 < _Count; --_Count)
+			_Insertp(_Pptr, _Val);
+		_CATCH_ALL
+		for (; _Count < _Countsave; ++_Count)
+			_Erasep(_Pptr);	// undo inserts
+		_RERAISE;
+		_CATCH_END
+		}
+
+	template<class _Iter>
+#if defined(_ADI_COMPILER)
+		void insert(iterator _Where, _Iter _First, _Iter _Last)
+#else
+    /* const_iterator for C++0x */
+		void insert(const_iterator _Where, _Iter _First, _Iter _Last)
+#endif /* defined(_ADI_COMPILER) */
+		{	// insert [_First, _Last) at _Where
+		_Insert(_Where, _First, _Last, _Iter_cat(_First));
+		}
+
+	template<class _Iter>
+#if defined(_ADI_COMPILER)
+		void _Insert(iterator _Where, _Iter _Count, _Iter _Val,
+#else
+    /* const_iterator for C++0x */
+		void _Insert(const_iterator _Where, _Iter _Count, _Iter _Val,
+#endif /* defined(_ADI_COMPILER) */
+			_Int_iterator_tag)
+		{	// insert _Count * _Val at _Where
+		insert(_Where, (size_type)_Count, (_Ty)_Val);
+		}
+
+	template<class _Iter>
+#if defined(_ADI_COMPILER)
+		void _Insert(iterator _Where,
+#else
+    /* const_iterator for C++0x */
+		void _Insert(const_iterator _Where,
+#endif /* defined(_ADI_COMPILER) */
+			_Iter _First, _Iter _Last, input_iterator_tag)
+		{	// insert [_First, _Last) at _Where, input iterators
+		_Nodeptr *_Pptr = _Getpptr(_Where);
+		size_type _Num = 0;
+
+		_TRY_BEGIN
+		for (_Nodeptr *_Pptr2 = _Pptr; _First != _Last;
+			++_First, ++_Num, _Pptr2 = &_Nextnode(*_Pptr2))
+			_Insertp(_Pptr2, *_First);
+		_CATCH_ALL
+		for (; 0 < _Num; --_Num)
+			_Erasep(_Pptr);	// undo inserts
+		_RERAISE;
+		_CATCH_END
+		}
+
+	template<class _Iter>
+#if defined(_ADI_COMPILER)
+		void _Insert(iterator _Where,
+#else
+    /* const_iterator for C++0x */
+		void _Insert(const_iterator _Where,
+#endif /* defined(_ADI_COMPILER) */
+			_Iter _First, _Iter _Last, forward_iterator_tag)
+		{	// insert [_First, _Last) at _Where, forward iterators
+		_DEBUG_RANGE(_First, _Last);
+		_Nodeptr *_Pptr = _Getpptr(_Where);
+		_Iter _Next = _First;
+
+		_TRY_BEGIN
+		for (_Nodeptr *_Pptr2 = _Pptr; _First != _Last;
+			++_First, _Pptr2 = &_Nextnode(*_Pptr2))
+			_Insertp(_Pptr2, *_First);
+		_CATCH_ALL
+		for (; _Next != _First; ++_Next)
+			_Erasep(_Pptr);	// undo inserts
+		_RERAISE;
+		_CATCH_END
+		}
+
+#if defined(_ADI_COMPILER)
+	iterator erase(iterator _Where)
+#else
+    /* const_iterator for C++0x */
+	iterator erase(const_iterator _Where)
+#endif /* defined(_ADI_COMPILER) */
+		{	// erase element at _Where
+		_Nodeptr *_Pptr = _Getpptr(_Where);
+		_Erasep(_Pptr);
+		return (_SLIST_ITERATOR(_Pptr));
+		}
+
+#if defined(_ADI_COMPILER)
+	iterator erase(iterator _First, iterator _Last)
+#else
+    /* const_iterator for C++0x */
+	iterator erase(const_iterator _First, const_iterator _Last)
+#endif /* defined(_ADI_COMPILER) */
+		{	// erase [_First, _Last)
+		if (_First == begin() && _Last == end())
+			{	// erase all
+			clear();
+			return (end());
+			}
+		else
+			{	// erase subrange
+			_Nodeptr *_Pptr = _Getpptr(_First);
+			for (bool _Done = _First == _Last; !_Done; )
+				{	// erase _First, testing _Last before it dies
+				if (&_Nextnode(*_Pptr) == _Last._Pptr)
+					_Done = true;
+				_Erasep(_Pptr);	// _First points to next after erase
+				}
+			return (_SLIST_ITERATOR(_Pptr));
+			}
+		}
+
+
+	void clear()
+		{	// erase all
+
+ #if _HAS_ITERATOR_DEBUGGING
+		this->_Orphan_ptr(*this, 0);
+ #endif /* _HAS_ITERATOR_DEBUGGING */
+
+		_Nodeptr _Pnext;
+		_Nodeptr _Pnode = _Myhead;
+		_Myhead = 0;
+		_Mytail = 0;
+		_Mysize = 0;
+
+		for (; _Pnode != 0; _Pnode = _Pnext)
+			{	// delete an element
+			_Pnext = _Nextnode(_Pnode);
+			this->_Alval.destroy(&_Myval(_Pnode));
+			_Freenode(_Pnode);
+			}
+		}
+
+	void swap(_Myt& _Right)
+		{	// exchange contents with _Right
+		if (this == &_Right)
+			;	// same object, do nothing
+		else if (this->_Alval == _Right._Alval)
+			{	// same allocator, swap control information
+
+ #if _HAS_ITERATOR_DEBUGGING
+			this->_Swap_all(_Right);
+ #endif /* _HAS_ITERATOR_DEBUGGING */
+
+			_STD swap(_Myhead, _Right._Myhead);
+			_STD swap(_Mytail, _Right._Mytail);
+			_STD swap(_Mysize, _Right._Mysize);
+			}
+		else
+			{	// different allocator, do multiple assigns
+			_Myt _Ts = *this;
+
+			*this = _Right;
+			_Right = _Ts;
+			}
+		}
+
+#if defined(_ADI_COMPILER)
+	void splice(iterator _Where, _Myt& _Right)
+#else
+    /* const_iterator for C++0x */
+	void splice(const_iterator _Where, _Myt& _Right)
+#endif /* defined(_ADI_COMPILER) */
+		{	// splice all of _Right at _Where
+		if (this != &_Right && !_Right.empty())
+			{	// worth splicing, do it
+			_Splice(_Where, _Right, _Right.begin(), _Right.end(),
+				_Right._Mysize);
+			}
+		}
+
+#if defined(_ADI_COMPILER)
+	void splice(iterator _Where, _Myt& _Right, iterator _First)
+#else
+    /* const_iterator for C++0x */
+	void splice(const_iterator _Where, _Myt& _Right, const_iterator _First)
+#endif /* defined(_ADI_COMPILER) */
+		{	// splice _Right [_First, _First + 1) at _Where
+
+ #if _HAS_ITERATOR_DEBUGGING
+		if (_First == _Right.end())
+			_DEBUG_ERROR("slist splice iterator outside range");
+		else
+
+ #else /* _HAS_ITERATOR_DEBUGGING */
+		if (_First != _Right.end())
+ #endif /* _HAS_ITERATOR_DEBUGGING */
+
+			{	// element exists, try splice
+#if defined(_ADI_COMPILER)
+			iterator _Last = _First;
+#else
+    /* const_iterator for C++0x */
+			const_iterator _Last = _First;
+#endif /* defined(_ADI_COMPILER) */
+			++_Last;
+			if (this != &_Right
+				|| (_Where != _First && _Where != _Last))
+				_Splice(_Where, _Right, _First, _Last, 1);
+			}
+		}
+
+#if defined(_ADI_COMPILER)
+	void splice(iterator _Where,
+		_Myt& _Right, iterator _First, iterator _Last)
+#else
+    /* const_iterator for C++0x */
+	void splice(const_iterator _Where,
+		_Myt& _Right, const_iterator _First, const_iterator _Last)
+#endif /* defined(_ADI_COMPILER) */
+		{	// splice _Right [_First, _Last) at _Where
+		if (_First != _Last && (this != &_Right || _Where != _Last))
+			{	// worth splicing, do it
+			size_type _Count = 0;
+
+			if (this == &_Right)
+				;	// just rearrange this slist
+			else if (_First == _Right.begin() && _Last == _Right.end())
+				_Count = _Right._Mysize;	// splice in whole slist
+			else
+				{	// count nodes and check for knot
+#if defined(_ADI_COMPILER)
+				iterator _Next = _First;
+#else
+    /* const_iterator for C++0x */
+				const_iterator _Next = _First;
+#endif /* defined(_ADI_COMPILER) */
+
+				for (; _Next != _Last; ++_Next, ++_Count)
+					if (_Next == _Right.end())
+						_THROW(length_error, "slist<T> bad splice");
+				}
+			_Splice(_Where, _Right, _First, _Last, _Count);
+			}
+		}
+
+	void remove(const _Ty& _Val_arg)
+		{	// erase each element matching _Val
+		const _Ty _Val = _Val_arg;	// in case it's removed along the way
+
+		for (iterator _First = begin(); _First != end(); )
+			if (*_First == _Val)
+				_First = erase(_First);
+			else
+				++_First;
+		}
+
+	template<class _Pr1>
+		void remove_if(_Pr1 _Pred)
+		{	// erase each element satisfying _Pred
+		for (iterator _First = begin(); _First != end(); )
+			if (_Pred(*_First))
+				_First = erase(_First);
+			else
+				++_First;
+		}
+
+	void unique()
+		{	// erase each element matching previous
+		if (2 <= _Mysize)
+			{	// worth doing
+			iterator _First = begin();
+			iterator _After = _First;
+			for (++_After; _After != end(); )
+				if (*_First == *_After)
+					_After = erase(_After);
+				else
+					_First = _After++;
+			}
+		}
+
+	template<class _Pr2>
+		void unique(_Pr2 _Pred)
+		{	// erase each element matching previous
+		if (2 <= _Mysize)
+			{	// worth doing
+			iterator _First = begin();
+			iterator _After = _First;
+			for (++_After; _After != end(); )
+				if (_Pred(*_First, *_After))
+					_After = erase(_After);
+				else
+					_First = _After++;
+			}
+		}
+
+	void merge(_Myt& _Right)
+		{	// merge in elements from _Right, both ordered by operator<
+		if (&_Right != this)
+			{	// safe to merge, do it
+			_DEBUG_ORDER(begin(), end());
+			_DEBUG_ORDER(_Right.begin(), _Right.end());
+			for (iterator _First1 = begin();
+				_First1 != end() && 0 < _Right._Mysize; )
+				{	// merge in an element if in place
+				iterator _First2 = _Right.begin();
+				while (_First2 != _Right.end()
+					&& _DEBUG_LT(*_First2, *_First1))
+					++_First2;
+				if (_First2 != _Right.begin())
+					_Splice(_First1++, _Right, _Right.begin(), _First2, 1);
+				else
+					++_First1;
+				}
+
+			if (0 < _Right._Mysize)
+				_Splice(end(), _Right, _Right.begin(), _Right.end(),
+					_Right._Mysize);	// splice remainder of _Right
+			}
+		}
+
+	template<class _Pr3>
+		void merge(_Myt& _Right, _Pr3 _Pred)
+		{	// merge in elements from _Right, both ordered by _Pred
+		if (&_Right != this)
+			{	// safe to merge, do it
+			_DEBUG_ORDER_PRED(begin(), end(), _Pred);
+			_DEBUG_ORDER_PRED(_Right.begin(), _Right.end(), _Pred);
+			for (iterator _First1 = begin();
+				_First1 != end() && 0 < _Right._Mysize; )
+				{	// merge in an element if in place
+				iterator _First2 = _Right.begin();
+				while (_First2 != _Right.end()
+					&& _DEBUG_LT_PRED(_Pred, *_First2, *_First1))
+					++_First2;
+				if (_First2 != _Right.begin())
+					_Splice(_First1++, _Right, _Right.begin(), _First2, 1);
+				else
+					++_First1;
+				}
+
+			if (0 < _Right._Mysize)
+				_Splice(end(), _Right, _Right.begin(), _Right.end(),
+					_Right._Mysize);	// splice remainder of _Right
+			}
+		}
+
+	void sort()
+		{	// order sequence, using operator<
+		if (2 <= _Mysize)
+			{	// worth sorting, do it
+			const size_t _MAXBINS = 25;
+			_Myt _Tempslist(this->_Alval), _Binslist[_MAXBINS + 1];
+			size_t _Maxbin = 0;
+
+			while (!empty())
+				{	// sort another element, using bins
+				_Tempslist._Splice(_Tempslist.begin(), *this, begin(),
+					++begin(), 1, true);	// don't invalidate iterators
+
+				size_t _Bin;
+				for (_Bin = 0; _Bin < _Maxbin && !_Binslist[_Bin].empty();
+					++_Bin)
+					{	// merge into ever larger bins
+					_Binslist[_Bin].merge(_Tempslist);
+					_Binslist[_Bin].swap(_Tempslist);
+					}
+
+				if (_Bin == _MAXBINS)
+					_Binslist[_Bin - 1].merge(_Tempslist);
+				else
+					{	// spill to new bin, while they last
+					_Binslist[_Bin].swap(_Tempslist);
+					if (_Bin == _Maxbin)
+						++_Maxbin;
+					}
+				}
+
+			for (size_t _Bin = 1; _Bin < _Maxbin; ++_Bin)
+				_Binslist[_Bin].merge(_Binslist[_Bin - 1]);	// merge up
+			splice(begin(), _Binslist[_Maxbin - 1]);	// result in last bin
+			}
+		}
+
+	template<class _Pr3>
+		void sort(_Pr3 _Pred)
+		{	// order sequence, using _Pred
+		if (2 <= _Mysize)
+			{	// worth sorting, do it
+			const size_t _MAXBINS = 25;
+			_Myt _Tempslist(this->_Alval), _Binslist[_MAXBINS + 1];
+			size_t _Maxbin = 0;
+
+			while (!empty())
+				{	// sort another element, using bins
+				_Tempslist._Splice(_Tempslist.begin(), *this, begin(),
+					++begin(), 1, true);	// don't invalidate iterators
+
+				size_t _Bin;
+				for (_Bin = 0; _Bin < _Maxbin && !_Binslist[_Bin].empty();
+					++_Bin)
+					{	// merge into ever larger bins
+					_Binslist[_Bin].merge(_Tempslist, _Pred);
+					_Binslist[_Bin].swap(_Tempslist);
+					}
+
+				if (_Bin == _MAXBINS)
+					_Binslist[_Bin - 1].merge(_Tempslist, _Pred);
+				else
+					{	// spill to new bin, while they last
+					_Binslist[_Bin].swap(_Tempslist);
+					if (_Bin == _Maxbin)
+						++_Maxbin;
+					}
+				}
+
+			for (size_t _Bin = 1; _Bin < _Maxbin; ++_Bin)
+				_Binslist[_Bin].merge(_Binslist[_Bin - 1],
+					_Pred);	// merge up
+			splice(begin(), _Binslist[_Maxbin - 1]);	// result in last bin
+			}
+		}
+
+	void reverse()
+		{	// reverse sequence
+		if (2 <= _Mysize)
+			{	// worth doing
+			for (_Nodeptr *_Pptr = (++begin())._Pptr; _Pptr != end()._Pptr; )
+				{	// move next element to beginning
+				iterator _Next = _SLIST_ITERATOR(_Pptr);
+				iterator _After = _Next;
+				_Splice(begin(), *this, _Next, ++_After, 1);
+				}
+			}
+		}
+
+	iterator previous(const_iterator _Where)
+		{	// return predecessor to _Where
+		_Nodeptr *_Ppwhere = _Where._Pptr;
+
+		if (_Ppwhere != &_Myhead && _Myhead != 0)
+			for (_Nodeptr *_Ppnode = &_Myhead; *_Ppnode != 0;
+				_Ppnode = &_Nextnode(*_Ppnode))
+				if (&_Nextnode(*_Ppnode) == _Ppwhere)
+					return (_SLIST_ITERATOR(_Ppnode));	// success
+		return (end());	// failure
+		}
+
+	const_iterator previous(const_iterator _Where) const
+		{	// return predecessor to _Where
+		_Nodeptr *_Ppwhere = _Where._Pptr;
+
+		if (_Ppwhere != &_Myhead && _Myhead != 0)
+			for (_Nodeptr *_Ppnode = (_Nodeptr *)&_Myhead; *_Ppnode != 0;
+				_Ppnode = &_Nextnode(*_Ppnode))
+				if (&_Nextnode(*_Ppnode) == _Ppwhere)
+					return (_SLIST_CONST_ITERATOR(_Ppnode));	// success
+		return (end());	// failure
+		}
+
+protected:
+	_Nodeptr _Buynode(_Nodeptr _Narg = 0)
+		{	// allocate a node and set links
+		_Nodeptr _Pnode = this->_Alnod.allocate(1);
+		this->_Alptr.construct(&_Nextnode(_Pnode), _Narg);
+		return (_Pnode);
+		}
+
+	void _Freenode(_Nodeptr _Pnode)
+		{	// delete a node
+		this->_Alptr.destroy(&_Nextnode(_Pnode));
+		this->_Alnod.deallocate(_Pnode, 1);
+		}
+
+	void _Erasep(_Nodeptr *_Ppnode)
+		{	// erase element at _Pnode
+
+ #if _HAS_ITERATOR_DEBUGGING
+		if (*_Ppnode == 0)
+			_DEBUG_ERROR("slist erase iterator outside range");
+		else
+			{	// not off end, safe to erase
+			_Nodeptr _Pnode = _Nextnode(*_Ppnode);
+			_Orphan_ptr(*this, *_Ppnode);
+			_Orphan_ptr(*this, _Pnode);
+
+ #else /* _HAS_ITERATOR_DEBUGGING */
+		if (*_Ppnode != 0)
+			{	// not off end, safe to erase
+			_Nodeptr _Pnode = _Nextnode(*_Ppnode);
+ #endif /* _HAS_ITERATOR_DEBUGGING */
+
+			if (_Pnode == 0)
+				_Mytail = 0;	// erasing tail, new tail unknown
+
+			this->_Alval.destroy(&_Myval(*_Ppnode));
+			_Freenode(*_Ppnode);
+			*_Ppnode = _Pnode;
+			--_Mysize;
+			}
+			}
+
+#if defined(_ADI_COMPILER)
+	_Nodeptr *_Getpptr(iterator _Where) const
+#else
+    /* const_iterator for C++0x */
+	_Nodeptr *_Getpptr(const_iterator _Where) const
+#endif /* defined(_ADI_COMPILER) */
+		{	// get node pointer from _Where
+
+ #if _HAS_ITERATOR_DEBUGGING
+		if (_Where._Mycont != this)
+			_DEBUG_ERROR("slist iterator outside range");
+ #endif /* _HAS_ITERATOR_DEBUGGING */
+
+		return(_Where._Pptr);
+		}
+
+	void _Insertp(_Nodeptr *_Ppnode,
+		const _Ty& _Val)
+		{	// insert _Val at *_Ppnode
+
+ #if _HAS_ITERATOR_DEBUGGING
+		_Orphan_ptr(*this, *_Ppnode);
+ #endif /* _HAS_ITERATOR_DEBUGGING */
+
+		_Nodeptr _Newnode = 0;
+
+		_TRY_BEGIN
+		_Newnode = _Buynode(*_Ppnode);
+		_Incsize(1);
+		this->_Alval.construct(&_Myval(_Newnode), _Val);
+		_CATCH_ALL
+		if (_Newnode != 0)
+			{	// allocation succeeded, constructor failed
+			--_Mysize;
+			_Freenode(_Newnode);
+			}
+		_RERAISE;
+		_CATCH_END
+
+		if (_Nextnode(_Newnode) == 0)
+			_Mytail = _Newnode;	// new tail
+		*_Ppnode = _Newnode;
+		}
+
+	_Nodeptr *_Getptail() const
+		{	// return pointer to pointer to tail
+		_Nodeptr *_Ppnode = (_Nodeptr *)&_Myhead;
+		if (_Myhead != 0)
+			for (; _Nextnode(*_Ppnode) != 0; _Ppnode = &_Nextnode(*_Ppnode))
+				;
+		return (_Ppnode);
+		}
+
+	_Nodeptr _Gettail() const
+		{	// return pointer to tail
+		if (_Mytail == 0 && _Myhead != 0)
+			*(_Nodeptr *)&_Mytail = *_Getptail();	// _Mytail is mutable
+		return ((_Nodeptr)_Mytail);
+		}
+
+#if defined(_ADI_COMPILER)
+	void _Splice(iterator _Where,
+		_Myt& _Right, iterator _First, iterator _Last,
+#else
+    /* const_iterator for C++0x */
+	void _Splice(const_iterator _Where,
+		_Myt& _Right, const_iterator _First, const_iterator _Last,
+#endif /* defined(_ADI_COMPILER) */
+		size_type _Count, bool _Keep = false)
+		{	// splice _Right [_First, _Last) before _Where
+
+ #if _HAS_ITERATOR_DEBUGGING
+		if (_Where._Mycont != this)
+			_DEBUG_ERROR("list splice iterator outside range");
+		if (this->_Alval == _Right._Alval)
+			{	// same allocator, just relink
+			if (!_Keep && this != &_Right)
+				for (const_iterator _Next = _First; _Next != _Last; )
+					_Orphan_ptr(_Right, *(_Next++)._Pptr);
+			_Orphan_ptr(_Right, *_Last._Pptr);
+
+ #else /* _HAS_ITERATOR_DEBUGGING */
+		_Keep = _Keep;	// to quiet diagnostics
+		if (this->_Alval == _Right._Alval)
+			{	// same allocator, just relink
+ #endif /* _HAS_ITERATOR_DEBUGGING */
+
+			_Nodeptr *_Pptr = _Getpptr(_Where);
+			if (this != &_Right)
+				{	// splicing from another slist, adjust counts
+				_Incsize(_Count);
+				_Right._Mysize -= _Count;
+				}
+
+			_Nodeptr _Pnode = *_Pptr;
+			if (_Pnode == 0)
+				_Mytail = 0;
+			if (*_Last._Pptr == 0)
+				_Right._Mytail = 0;
+			*_Pptr = *_First._Pptr;
+			*_First._Pptr = *_Last._Pptr;
+			*_Last._Pptr = _Pnode;
+			}
+		else
+			{	// different allocator, copy nodes then erase source
+			insert(_Where, _First, _Last);
+			_Right.erase(_First, _Last);
+			}
+			}
+
+	void _Incsize(size_type _Count)
+		{	// alter element count, with checking
+		if (max_size() - _Mysize < _Count)
+			_THROW(length_error, "slist<T> too long");
+		_Mysize += _Count;
+		}
+
+ #if _HAS_ITERATOR_DEBUGGING
+	void _Orphan_ptr(_Myt& _Cont, _Nodeptr _Ptr) const
+		{	// orphan iterators with specified node pointer values
+		_Lockit _Lock(_LOCK_DEBUG);
+		const_iterator **_Pnext = (const_iterator **)&_Cont._Myfirstiter;
+		while (*_Pnext != 0)
+			if (*(*_Pnext)->_Pptr != _Ptr)
+				_Pnext = (const_iterator **)&(*_Pnext)->_Mynextiter;
+			else
+				{	// orphan the iterator
+				(*_Pnext)->_Mycont = 0;
+				*_Pnext = (const_iterator *)(*_Pnext)->_Mynextiter;
+				}
+		}
+ #endif /* _HAS_ITERATOR_DEBUGGING */
+
+	_Nodeptr _Myhead;	// pointer to head node, null if empty slist
+	_Nodeptr _Mytail;	// mutable pointer to tail node, null if unknown
+	size_type _Mysize;	// number of elements
+
+ #if _HAS_TRADITIONAL_STL
+	_Nodeptr _Prehead;	// pointer to pointer to head node
+
+	void _Init()
+		{	// initialize storage
+		_Prehead = (_Nodeptr)&_Myhead;	// KLUDGE, fails for fancy allocators
+		_Myhead = 0;
+		_Mytail = 0;
+		_Mysize = 0;
+		}
+
+public:
+	iterator before_begin()
+		{	// return iterator whose successor is begin()
+		return (iterator(&_Prehead));
+		}
+
+	const_iterator before_begin() const
+		{	// return const_iterator whose successor is begin()
+		return (const_iterator((_Nodeptr *)&_Prehead));
+		}
+
+#if defined(_ADI_COMPILER)
+	iterator insert(iterator _Where)
+#else
+    /* const_iterator for C++0x */
+	iterator insert(const_iterator _Where)
+#endif /* defined(_ADI_COMPILER) */
+		{	// insert _Ty() at _Where
+		return (insert(_Where, _Ty()));
+		}
+
+#if defined(_ADI_COMPILER)
+	iterator insert_after(iterator _Where)
+#else
+    /* const_iterator for C++0x */
+	iterator insert_after(const_iterator _Where)
+#endif /* defined(_ADI_COMPILER) */
+		{	// insert _Ty() after _Where
+		return (insert(++_Where, _Ty()));
+		}
+
+#if defined(_ADI_COMPILER)
+	iterator insert_after(iterator _Where, const _Ty& _Val)
+#else
+    /* const_iterator for C++0x */
+	iterator insert_after(const_iterator _Where, const _Ty& _Val)
+#endif /* defined(_ADI_COMPILER) */
+		{	// insert _Val after _Where
+		return (insert(++_Where, _Val));
+		}
+
+#if defined(_ADI_COMPILER)
+	void insert_after(iterator _Where,
+#else
+    /* const_iterator for C++0x */
+	void insert_after(const_iterator _Where,
+#endif /* defined(_ADI_COMPILER) */
+		size_type _Count, const _Ty& _Val)
+		{	// insert _Count * _Val after _Where
+		insert(++_Where, _Count, _Val);
+		}
+
+	template<class _Iter>
+#if defined(_ADI_COMPILER)
+		void insert_after(iterator _Where, _Iter _First, _Iter _Last)
+#else
+    /* const_iterator for C++0x */
+		void insert_after(const_iterator _Where, _Iter _First, _Iter _Last)
+#endif /* defined(_ADI_COMPILER) */
+		{	// insert [_First, _Last) after _Where
+		insert(++_Where, _First, _Last);
+		}
+
+#if defined(_ADI_COMPILER)
+	iterator erase_after(iterator _Where)
+#else
+    /* const_iterator for C++0x */
+	iterator erase_after(const_iterator _Where)
+#endif /* defined(_ADI_COMPILER) */
+		{	// erase element after _Where
+		return (erase(++_Where));
+		}
+
+#if defined(_ADI_COMPILER)
+	iterator erase_after(iterator _First, iterator _Last)
+#else
+    /* const_iterator for C++0x */
+	iterator erase_after(const_iterator _First, const_iterator _Last)
+#endif /* defined(_ADI_COMPILER) */
+		{	// erase [++_First, _Last)
+		return (erase(++_First, _Last));
+		}
+
+#if defined(_ADI_COMPILER)
+	void splice_after(iterator _Where, _Myt& _Right)
+#else
+    /* const_iterator for C++0x */
+	void splice_after(const_iterator _Where, _Myt& _Right)
+#endif /* defined(_ADI_COMPILER) */
+		{	// splice all of _Right after _Where
+		splice(++_Where, _Right);
+		}
+
+#if defined(_ADI_COMPILER)
+	void splice_after(iterator _Where, _Myt& _Right,
+		iterator _First)
+#else
+    /* const_iterator for C++0x */
+	void splice_after(const_iterator _Where, _Myt& _Right,
+		const_iterator _First)
+#endif /* defined(_ADI_COMPILER) */
+		{	// splice *this [_First+1, _First+2) after _Where
+		splice(++_Where, *this, ++_First);
+		}
+
+#if defined(_ADI_COMPILER)
+	void splice_after(iterator _Where, _Myt& _Right,
+		iterator _First, iterator _Last)
+#else
+    /* const_iterator for C++0x */
+	void splice_after(const_iterator _Where, _Myt& _Right,
+		const_iterator _First, const_iterator _Last)
+#endif /* defined(_ADI_COMPILER) */
+		{	// splice *this [_First+1, _Last+1) after _Where
+		splice(++_Where, *this, ++_First, ++_Last);
+		}
+
+ #else /* _HAS_TRADITIONAL_STL */
+	void _Init()
+		{	// initialize storage
+		_Myhead = 0;
+		_Mytail = 0;
+		_Mysize = 0;
+		}
+ #endif /* _HAS_TRADITIONAL_STL */
+
+	};
+
+		// slist TEMPLATE OPERATORS
+template<class _Ty,
+	class _Alloc> inline
+	void swap(slist<_Ty, _Alloc>& _Left, slist<_Ty, _Alloc>& _Right)
+	{	// swap _Left and _Right slists
+	_Left.swap(_Right);
+	}
+
+template<class _Ty,
+	class _Alloc> inline
+	bool operator==(const slist<_Ty, _Alloc>& _Left,
+		const slist<_Ty, _Alloc>& _Right)
+	{	// test for slist equality
+	return (_Left.size() == _Right.size()
+		&& equal(_Left.begin(), _Left.end(), _Right.begin()));
+	}
+
+template<class _Ty,
+	class _Alloc> inline
+	bool operator!=(const slist<_Ty, _Alloc>& _Left,
+		const slist<_Ty, _Alloc>& _Right)
+	{	// test for slist inequality
+	return (!(_Left == _Right));
+	}
+
+template<class _Ty,
+	class _Alloc> inline
+	bool operator<(const slist<_Ty, _Alloc>& _Left,
+		const slist<_Ty, _Alloc>& _Right)
+	{	// test if _Left < _Right for slists
+	return (lexicographical_compare(_Left.begin(), _Left.end(),
+		_Right.begin(), _Right.end()));
+	}
+
+template<class _Ty,
+	class _Alloc> inline
+	bool operator>(const slist<_Ty, _Alloc>& _Left,
+		const slist<_Ty, _Alloc>& _Right)
+	{	// test if _Left > _Right for slists
+	return (_Right < _Left);
+	}
+
+template<class _Ty,
+	class _Alloc> inline
+	bool operator<=(const slist<_Ty, _Alloc>& _Left,
+		const slist<_Ty, _Alloc>& _Right)
+	{	// test if _Left <= _Right for slists
+	return (!(_Right < _Left));
+	}
+
+template<class _Ty,
+	class _Alloc> inline
+	bool operator>=(const slist<_Ty, _Alloc>& _Left,
+		const slist<_Ty, _Alloc>& _Right)
+	{	// test if _Left >= _Right for slists
+	return (!(_Left < _Right));
+	}
+
+ #if _HAS_TRADITIONAL_STL
+ #define __slist__	slist
+ #endif /* _HAS_TRADITIONAL_STL */
+
+_STD_END
+#endif /* _SLIST_ */
+
+/*
+ * Copyright (c) 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * Consult your license regarding permissions and restrictions.
+V5.03:1134 */

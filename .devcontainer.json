@@ -1,0 +1,14 @@
+{
+  "build": {
+    "args": {
+      "RUST_VERSION": "1.82.0"
+    },
+    "context": ".",
+    "dockerfile": "util/docker/ci.Dockerfile"
+  },
+  "mounts": [
+    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+  ],
+  "name": "Styx Environment",
+  "onCreateCommand": "cd ${containerWorkspaceFolder} && rm -rf venv && direnv allow . && just container-setup"
+}

@@ -1,0 +1,46 @@
+variables:
+  DOCKER_TLS_CERTDIR: "/certs"
+  VERSION: ${CI_COMMIT_REF_SLUG}
+stages:
+  - image
+  - build
+
+#-------------------------------------------------------------------------------
+# Build CI image
+#-------------------------------------------------------------------------------
+build_ci_image:
+  stage: image
+  image: docker:20.10
+  tags:
+    - dind
+  services:
+    - docker:20.10-dind
+  only:
+    changes:
+      - extensions/typhunix/docker/ci/*
+      - extensions/typhunix/rust/pytyphunix/requirements.txt
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+  script:
+    - apk --update add wget unzip make
+    - make -w -C docker/ci build push
+
+#-------------------------------------------------------------------------------
+# Build/test/package
+#-------------------------------------------------------------------------------
+build:
+  stage: build
+  image: ${CI_REGISTRY}/${CI_PROJECT_PATH}/ci:latest
+  tags:
+    - docker
+    - styx
+
+  script:
+    - extensions/typhunix/scripts/build_artifacts.sh
+
+  artifacts:
+    paths:
+      - target/release/typhunix-server
+      - target/release/typhunix-client
+      - target/wheels/*.whl
+      - extensions/typhunix/TyphunixPlugin/dist/ghidra_*.zip

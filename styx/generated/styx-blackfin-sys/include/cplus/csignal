@@ -1,0 +1,42 @@
+// csignal standard header
+#if defined (_ADI_COMPILER)
+/************************************************************************
+ *
+ * csignal
+ *
+ * (c) Copyright 2001-2009 Analog Devices, Inc.  All rights reserved.
+ * (c) Copyright 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * $Revision: 1.4 $
+ ************************************************************************/
+
+#pragma once
+#ifndef __NO_BUILTIN
+#pragma system_header /* csignal */
+#endif
+#endif /* _ADI_COMPILER */
+
+#ifndef _CSIGNAL_
+#define _CSIGNAL_
+#include <yvals.h>
+
+#ifdef _STD_USING
+ #undef _STD_USING
+  #include <signal.h>
+ #define _STD_USING
+
+#else /* _STD_USING */
+ #include <signal.h>
+#endif /* _STD_USING */
+
+ #ifdef _GLOBAL_USING
+_STD_BEGIN
+using _CSTD sig_atomic_t; using _CSTD raise; using _CSTD signal;
+_STD_END
+ #endif /* _GLOBAL_USING */
+
+#endif /* _CSIGNAL_ */
+
+/*
+ * Copyright (c) 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * Consult your license regarding permissions and restrictions.
+V5.03:1134 */

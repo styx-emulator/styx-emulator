@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package styx.peripherals.ethernet;
+
+// TODO: add support for multiple ethernet interfaces on a single processor
+service EthernetPort {
+    rpc Receive(EthernetPacket) returns (Empty) {};
+    rpc Subscribe(SubscribeRequest) returns (stream EthernetPacket) {};
+}
+
+// total ethernetpacket should contain a total of at least 64 bytes (frame + crc)
+message EthernetPacket {
+    // Frame format:
+    // destination MAC, source MAC, type/length, data
+    // destination MAC 6 bytes
+    // source MAC 6 bytes
+    // 2 byte type/length field
+    // data 0-1500 bytes
+    // padding to make it at least 60 bytes
+    bytes frame = 1;
+
+    // CRC 4 bytes
+    uint32 crc = 2;
+}
+
+message SubscribeRequest {}
+
+message Empty {}

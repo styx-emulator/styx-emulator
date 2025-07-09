@@ -1,0 +1,28 @@
+// climits standard header
+#if defined (_ADI_COMPILER)
+/************************************************************************
+ *
+ * climits
+ *
+ * (c) Copyright 2001-2009 Analog Devices, Inc.  All rights reserved.
+ * (c) Copyright 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * $Revision: 1.4 $
+ ************************************************************************/
+
+#pragma once
+#ifndef __NO_BUILTIN
+#pragma system_header /* climits */
+#endif
+#endif /* _ADI_COMPILER */
+
+#ifndef _CLIMITS_
+#define _CLIMITS_
+#include <yvals.h>
+
+#include <limits.h>
+#endif /* _CLIMITS_ */
+
+/*
+ * Copyright (c) 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * Consult your license regarding permissions and restrictions.
+V5.03:1134 */

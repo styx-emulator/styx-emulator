@@ -1,0 +1,4 @@
+[toolchain]
+channel = "1.55.5"
+features = ["rust-src", "llvm-tools", "clippy", "rust-analyzer"]
+profile = "default"

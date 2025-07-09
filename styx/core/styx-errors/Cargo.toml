@@ -1,0 +1,23 @@
+[package]
+name = "styx-errors"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+styx-processor-type = { path = "../styx-processor-type" }
+styx-cpu-type = { path = "../styx-cpu-type" }
+styx-memory-type = { path = "../styx-memory-type" }
+
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+derive_more = { workspace = true }
+goblin = { workspace = true }
+tonic = { workspace = true }
+unicorn-engine = { workspace = true }
+styx-workspace-hack = { version = "0.1", path = "../../workspace-hack" }

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<language_definitions>
+    <language processor="M32R"
+              endian="big"
+              size="32"
+              variant="default"
+              version="1.0"
+              slafile="m32r.sla"
+              processorspec="m32r.pspec"
+              id="m32r:2:default">
+        <description>m32r</description>
+        <compiler name="default" spec="m32r.cspec" id="default"/>
+    </language>
+</language_definitions>

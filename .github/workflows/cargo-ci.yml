@@ -1,0 +1,80 @@
+name: cargo-ci
+# run on PR's or pushes to main
+on:
+  pull_request:
+    # dont run if only docs change
+    paths-ignore:
+      - "./**.md"
+      - "docs/**"
+  push:
+    branches:
+      - main
+
+concurrency:
+  # Cancels pending runs when a PR gets updated.
+  group: ${{ github.head_ref || github.run_id }}-${{ github.actor }}-${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  doc-tests-core:
+    name: cargo doc test
+    runs-on: self-hosted
+
+    steps:
+    - name: Checkout source code
+      uses: actions/checkout@v4
+
+    - uses: Swatinem/rust-cache@v2
+
+    - name: run doc tests
+      shell: bash
+      run: |
+        just cargo-doc-test
+
+    - name: clean
+      shell: bash
+      run: |
+        cargo clean
+
+  test-bindings:
+    name: cargo nextest bindings
+    runs-on: self-hosted
+
+    steps:
+    - name: Checkout source code
+      uses: actions/checkout@v4
+
+    - uses: Swatinem/rust-cache@v2
+
+    - name: cargo test bindings
+      shell: bash
+      run: |
+        just cargo-test-bindings
+
+    - name: clean
+      shell: bash
+      run: |
+        cargo clean
+
+  test-core:
+    name: cargo nextest
+    runs-on: self-hosted
+
+    steps:
+    - name: Checkout source code
+      uses: actions/checkout@v4
+
+    - uses: Swatinem/rust-cache@v2
+
+    - name: Test
+      shell: bash
+      run: |
+        sudo apt-get -y update
+        sudo apt-get install -y \
+          device-tree-compiler
+        just cargo-test
+
+    - name: clean
+      shell: bash
+      run: |
+        cargo clean

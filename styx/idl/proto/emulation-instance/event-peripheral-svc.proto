@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package styx.svc.event_peripheral;
+
+option java_multiple_files = true;
+
+
+message EventPeripheralDescription {
+    uint64 peripheral_id = 1;
+    string name = 2;
+    int32 idx = 3;
+}
+
+
+service EventPeripheralService {
+    rpc PeripheralStatus(PeripheralStatusRequest) returns (PeripheralStatusResponse) {}
+}
+
+message PeripheralStatusRequest {
+    EventPeripheralDescription peripheral = 1;
+}
+
+message PeripheralStatusResponse {
+    bool status = 1;
+}

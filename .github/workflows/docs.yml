@@ -1,0 +1,48 @@
+name: docs
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  # Do not cancel any in-progress deployments, but keep only the latest
+  # deployment job in the queue if there is already a job running
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  sphinx-docs:
+    runs-on: self-hosted
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+    - name: Checkout source code
+      uses: actions/checkout@v4
+
+    - name: Site deps
+      shell: bash
+      run: |
+        just python-deps
+        just docs
+
+    - name: Setup Pages
+      uses: actions/configure-pages@v5
+
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        # Upload entire repository
+        path: 'docs/build'
+
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4

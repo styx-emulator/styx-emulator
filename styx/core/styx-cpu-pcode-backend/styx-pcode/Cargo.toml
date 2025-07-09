@@ -1,0 +1,17 @@
+[package]
+name = "styx-pcode"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+styx-cpu-type = { path = "../../styx-cpu-type" }
+styx-sync = { path = "../../styx-sync" }
+num = { workspace = true }
+num-derive = { workspace = true }
+num-traits = { workspace = true }
+smallvec = { workspace = true }
+styx-workspace-hack = { version = "0.1", path = "../../../workspace-hack" }

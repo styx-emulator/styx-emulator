@@ -1,0 +1,14 @@
+[package]
+name = "styx-blackfin-sys"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+styx-workspace-hack = { version = "0.1", path = "../../workspace-hack" }
+
+[build-dependencies]
+bindgen = { workspace = true }

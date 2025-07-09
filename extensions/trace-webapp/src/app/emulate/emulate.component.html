@@ -1,0 +1,231 @@
+<ng-container *ngIf="this.traceSession; then haveData; else noData">
+</ng-container>
+
+<ng-template #noData>
+  <div *ngIf="!traceSession" style="color: red">
+    <p>Session with id {{ this.strTraceSessionId }} does not exist</p>
+  </div>
+</ng-template>
+
+<ng-template #haveData>
+  <div *ngIf="traceSession">
+    <div class="emu-form-container">
+      <!-- INITIALIZE THE TRACE BLOCK -->
+      <span *ngIf="traceSession.initializable">
+        <!-- INITIALIZE -->
+        <div class="initialize-area">
+          <p class="instruction-text-medium">
+            Click to initialize the trace. After initialization, you may
+            start/stop.
+          </p>
+          <table style="margin: 20px">
+            <tr
+              *ngFor="
+                let item of [
+                  ['Architecture:', traceSession.architectureDesc],
+                  ['Trace Mode:', traceSession.modeName],
+                  [
+                    'Program: ',
+                    (traceSession._traceRequest?.traceAppSessionArgsDisplay)!
+                      .pidDisplay
+                  ]
+                ]
+              "
+            >
+              <td style="color: gray; text-align: right; padding-right: 10px">
+                {{ item[0] }}
+              </td>
+              <td>{{ item[1] }}</td>
+            </tr>
+
+            <tr>
+              <td style="padding-top: 15px; float: right">
+                <button
+                  mat-raised-button
+                  matTooltip="Initialize the Trace"
+                  color="primary"
+                  (click)="onInitializeSession()"
+                >
+                  Initialize
+                </button>
+              </td>
+            </tr>
+          </table>
+          <div>
+            @for (alert of alerts; track alert) {
+              <ngb-alert [type]="alert.type" (closed)="close(alert)">{{
+                alert.message
+              }}</ngb-alert>
+            }
+          </div>
+        </div>
+      </span>
+
+      <!-- TRACE IS INITIALIZED-->
+      <span *ngIf="!traceSession.initializable">
+        <input
+          #maxEventsViewChild
+          type="number"
+          value="1000000"
+          inputmode="numeric"
+        />
+
+        <!-- START -->
+        <button
+          mat-icon-button
+          matTooltip="Start Trace"
+          (click)="onStartSession()"
+          [disabled]="!traceSession.startable"
+        >
+          <mat-icon>play_circle</mat-icon>
+        </button>
+
+        <!-- STOP -->
+        <button
+          mat-icon-button
+          matTooltip="Stop Trace"
+          [disabled]="!traceSession.stoppable"
+          (click)="onStopSession()"
+        >
+          <mat-icon>stop_circle</mat-icon>
+        </button>
+
+        <!-- DROP -->
+        <button
+          mat-icon-button
+          matTooltip="Drop/Delete Trace"
+          [disabled]="!traceSession.droppable"
+          (click)="onDropSession()"
+        >
+          <mat-icon>delete_forever</mat-icon>
+        </button>
+
+        <button
+          *ngIf="!this.traceSession!.isEmulated"
+          mat-raised-button
+          class="spl"
+          (click)="onStartSession()"
+          [disabled]="false"
+        >
+          Resume
+        </button>
+
+        <div style="display: inline-flex; margin-left: 10px">
+          <div *ngIf="true || traceSession.stats!.insnCount > 0">
+            <mat-label> Insn# </mat-label>
+            <div class="statchip">{{ traceSession.stats!.insnCount }}</div>
+          </div>
+
+          <div *ngIf="true || traceSession.stats!.memoryChangeCount > 0">
+            <mat-label> MemoryChanges </mat-label>
+            <div class="statchip">
+              {{ traceSession.stats!.memoryChangeCount }}
+            </div>
+          </div>
+
+          <div *ngIf="true || traceSession.stats!.isrEnterCount > 0">
+            <mat-label>IsrEnter:</mat-label>
+            <div class="statchip">
+              {{ traceSession.stats!.isrEnterCount }}
+            </div>
+          </div>
+          <div *ngIf="true || traceSession.stats!.isrExitCount > 0">
+            <mat-label>IsrExit:</mat-label>
+            <div class="statchip">
+              {{ traceSession.stats!.isrExitCount }}
+            </div>
+          </div>
+        </div>
+
+        <p></p>
+        <span>
+          <mat-label class="warnings">
+            {{ traceSession.warningString }}
+          </mat-label>
+
+          <p *ngIf="traceSession.emuEnd - traceSession.emuStart > 0">
+            Elapsed (ms): {{ traceSession.emuEnd - traceSession.emuStart }} ms
+          </p>
+        </span>
+
+        <mat-label class="errors">
+          {{ traceSession.errorString }}
+        </mat-label>
+
+        <div *ngIf="this.traceSession">
+          <div style="width: 100%">
+            <mat-checkbox
+              enabled
+              [(ngModel)]="this.options.scrollToBottom"
+              enabled
+            >
+              Scroll to bottom
+            </mat-checkbox>
+
+            <mat-label style="margin-left: 20px; color: gray"
+              >Session State:
+            </mat-label>
+            <mat-label>{{ this.traceSession!.stateString }}</mat-label>
+
+            <span *ngIf="traceSession.sessionID!.length">
+              <mat-label style="margin-left: 8px; color: gray"
+                >Session ID:
+              </mat-label>
+              <mat-label>
+                {{ this.traceSession!.sessionID }}
+              </mat-label>
+            </span>
+
+            <span *ngIf="this.traceSession!.cumInstPerSec > 0">
+              <mat-label style="margin-left: 8px; color: gray"
+                >Rate(i/s):
+              </mat-label>
+              <mat-label>
+                {{ this.traceSession!.cumInstPerSec }}
+              </mat-label>
+            </span>
+
+            <span *ngIf="this.traceSession!.cumInstCount > 0">
+              <mat-label style="margin-left: 8px; color: gray">
+                Insn Count:</mat-label
+              >
+              <mat-label>
+                {{ this.traceSession!.cumInstCount }}
+              </mat-label>
+            </span>
+          </div>
+
+          <div class="table-container" *ngIf="this.traceSession">
+            <app-var-table
+              [options]="options"
+              [data]="traceSession.stats!.memoryChangeEvents"
+              [watchList]="traceSession.stats!.watchList"
+            >
+            </app-var-table>
+          </div>
+          <span *ngIf="false">
+            <mat-grid-list
+              style="background-color: red"
+              rowHeight="1em"
+              cols="2"
+              *ngIf="this.traceSession"
+            >
+              <mat-grid-tile>PC </mat-grid-tile>
+              <mat-grid-tile>Name </mat-grid-tile>
+              <ng-container
+                *ngFor="let item of this.traceSession!.stats.memoryChangeEvents"
+              >
+                <mat-grid-tile>
+                  {{ item.getPc() }}
+                </mat-grid-tile>
+                <mat-grid-tile>
+                  {{ item.getAddr() }}
+                </mat-grid-tile>
+              </ng-container>
+            </mat-grid-list>
+          </span>
+        </div>
+      </span>
+    </div>
+  </div>
+</ng-template>

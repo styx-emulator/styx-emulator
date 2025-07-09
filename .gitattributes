@@ -1,0 +1,13 @@
+# linguist ignores
+styx/generated/** linguist-vendored
+data/test-binaries/**/*.c linguist-vendored
+data/test-binaries/**/*.h linguist-vendored
+data/test-binaries/**/*.ld linguist-vendored
+data/test-binaries/**/*.s linguist-vendored
+data/test-binaries/**/*.html linguist-vendored
+data/test-binaries/**/*.css linguist-vendored
+data/test-binaries/**/*.sh linguist-vendored
+data/test-binaries/**/CMakeLists.txt linguist-vendored
+styx/core/styx-cpu-pcode-backend/styx-sleigh-bindings/sleigh/* linguist-vendored
+styx/core/styx-cpu-pcode-backend/styx-sleigh-bindings/zlib/* linguist-vendored
+styx/core/styx-cpu-pcode-backend/styx-sla/**/*.java linguist-vendored

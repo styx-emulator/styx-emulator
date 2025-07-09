@@ -1,0 +1,42 @@
+[package]
+name = "styx-processor"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+styx-errors = { path = "../styx-errors" }
+styx-util = { path = "../styx-util" }
+styx-cpu-type = { path = "../styx-cpu-type" }
+styx-memory-type = { path = "../styx-memory-type" }
+styx-loader = { path = "../styx-loader" }
+styx-sync = { path = "../styx-sync" }
+
+as-any = { workspace = true }
+num = { workspace = true }
+delegate = { workspace = true }
+log = { workspace = true }
+rustc-hash = { workspace = true }
+tokio = { workspace = true }
+tokio-stream = { workspace = true }
+tonic = { workspace = true }
+static_assertions = { workspace = true }
+thiserror = { workspace = true }
+paste = { workspace = true }
+bitflags = { workspace = true }
+derive_more = { workspace = true }
+serde = { workspace = true }
+serde_yaml = { workspace = true }
+enum_dispatch = { workspace = true }
+getset = { workspace = true }
+zstd = { workspace = true }
+replace_with = { workspace = true }
+tap = { workspace = true }
+nix = { workspace = true, features = ["signal"] }
+styx-workspace-hack = { version = "0.1", path = "../../workspace-hack" }
+
+[dev-dependencies]
+test-case = { workspace = true }

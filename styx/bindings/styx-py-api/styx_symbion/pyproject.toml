@@ -1,0 +1,6 @@
+
+[project]
+name = "styx_symbion"
+requires-python = ">=3.8"
+classifiers = []
+dynamic = ["version"]

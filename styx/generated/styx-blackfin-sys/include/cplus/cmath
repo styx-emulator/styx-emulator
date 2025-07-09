@@ -1,0 +1,216 @@
+// cmath standard header
+#if defined (_ADI_COMPILER)
+/************************************************************************
+ *
+ * cmath
+ *
+ * (c) Copyright 2001-2009 Analog Devices, Inc.  All rights reserved.
+ * (c) Copyright 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * $Revision: 1.9 $
+ ************************************************************************/
+
+#pragma once
+#ifndef __NO_BUILTIN
+#pragma system_header /* cmath */
+#endif
+#endif /* _ADI_COMPILER */
+
+#ifndef _CMATH_
+#define _CMATH_
+#include <yvals.h>
+
+
+ #if defined(__SUNPRO_CC)	/* compiler test */
+ #define exception	_Math_exception	/* KLUDGE to avoid ambiguity */
+ #endif /* defined(__SUNPRO_CC) */
+
+#ifdef _STD_USING
+ #undef _STD_USING
+  #include <math.h>
+ #define _STD_USING
+
+ #if defined(__GLIBC__)	/* compiler test */
+_STD_BEGIN
+inline double abs(double _Left)
+	{	// return absolute value
+	return (_CSTD fabs(_Left));
+	}
+_STD_END
+ #endif /* defined(__GNUC__) */
+
+#else /* _STD_USING */
+ #include <math.h>
+
+ #if defined(__GNUC__) && (3 <= __GNUC__) && defined(sparc) /* compiler test */
+inline double abs(double _Left)
+	{	// return absolute value
+	return (_CSTD fabs(_Left));
+	}
+ #endif /* 3 <= __GNUC__ etc. */
+
+#endif /* _STD_USING */
+
+ #ifdef _GLOBAL_USING
+
+ #if defined(__BORLANDC__)	/* compiler test */
+_C_STD_BEGIN
+_C_LIB_DECL
+float (atan2f)(float, float);
+float (cosf)(float);
+float (expf)(float);
+float (ldexpf)(float, int);
+float (logf)(float);
+float (powf)(float, float);
+float (sinf)(float);
+float (sqrtf)(float);
+float (tanf)(float);
+_END_C_LIB_DECL
+_C_STD_END
+ #endif /* defined(__BORLANDC__) */
+
+ #if defined(__MINGW32__) || defined(__SUNPRO_CC)	/* compiler test */ \
+	|| defined(__APPLE__) || defined(__GLIBC__)
+_C_STD_BEGIN
+_C_LIB_DECL
+float (atan2f)(float, float);
+float (cosf)(float);
+float (expf)(float);
+float (ldexpf)(float, int);
+float (logf)(float);
+float (powf)(float, float);
+float (sinf)(float);
+float (sqrtf)(float);
+float (tanf)(float);
+
+long double (atan2l)(long double, long double);
+long double (cosl)(long double);
+long double (expl)(long double);
+long double (ldexpl)(long double, int);
+long double (logl)(long double);
+long double (powl)(long double, long double);
+long double (sinl)(long double);
+long double (sqrtl)(long double);
+long double (tanl)(long double);
+_END_C_LIB_DECL
+_C_STD_END
+ #endif /* defined(__MINGW32__) etc. */
+
+_STD_BEGIN
+
+ #if defined(__GLIBC__) || defined(__BORLANDC__)	/* compiler test */ \
+	|| defined(__MINGW32__) || defined(__APPLE__)
+		/* double OVERLOADS */
+inline double abs(double _Left)
+	{	// return absolute value
+	return (_CSTD fabs(_Left));
+	}
+
+ #else /* defined(__SUNPRO_CC) etc. */
+using _CSTD acosf; using _CSTD asinf;
+using _CSTD atanf; using _CSTD atan2f; using _CSTD ceilf;
+using _CSTD cosf; using _CSTD coshf; using _CSTD expf;
+using _CSTD fabsf; using _CSTD floorf; using _CSTD fmodf;
+#if !(defined(_ADI_COMPILER) && defined(__ADSP21000__))
+using _CSTD frexpf;
+#endif
+using _CSTD ldexpf; using _CSTD logf;
+#if !(defined(_ADI_COMPILER) && defined(__ADSP21000__))
+using _CSTD log10f;
+#endif
+using _CSTD modff; using _CSTD powf;
+using _CSTD sinf; using _CSTD sinhf; using _CSTD sqrtf;
+using _CSTD tanf; using _CSTD tanhf;
+
+#if !defined(_ADI_COMPILER)
+using _CSTD acosl; using _CSTD asinl;
+using _CSTD atanl; using _CSTD atan2l; using _CSTD ceill;
+using _CSTD cosl; using _CSTD coshl; using _CSTD expl;
+using _CSTD fabsl; using _CSTD floorl; using _CSTD fmodl;
+using _CSTD frexpl; using _CSTD ldexpl; using _CSTD logl;
+using _CSTD log10l; using _CSTD modfl; using _CSTD powl;
+using _CSTD sinl; using _CSTD sinhl; using _CSTD sqrtl;
+using _CSTD tanl; using _CSTD tanhl;
+#endif  /* !_ADI_COMPILER */
+
+using _CSTD abs;
+ #endif /* defined(__SUNPRO_CC) etc. */
+
+using _CSTD acos; using _CSTD asin;
+using _CSTD atan; using _CSTD atan2; using _CSTD ceil;
+using _CSTD cos; using _CSTD cosh; using _CSTD exp;
+using _CSTD fabs; using _CSTD floor; using _CSTD fmod;
+
+#if !(defined(_ADI_COMPILER) && defined(__ADSP21000__))
+using _CSTD frexp;
+#endif
+
+using _CSTD ldexp; using _CSTD log;
+using _CSTD log10;
+
+#if !(defined(_ADI_COMPILER) && defined(__ADSP21000__))
+using _CSTD modf;
+#endif
+
+using _CSTD pow;
+using _CSTD sin; using _CSTD sinh; using _CSTD sqrt;
+using _CSTD tan; using _CSTD tanh;
+
+ #if _HAS_C9X
+using _CSTD float_t; using _CSTD double_t;
+
+using _CSTD acosh; using _CSTD asinh; using _CSTD atanh;
+using _CSTD cbrt; using _CSTD erf; using _CSTD erfc;
+using _CSTD expm1; using _CSTD exp2;
+using _CSTD hypot; using _CSTD ilogb; using _CSTD lgamma;
+using _CSTD log1p; using _CSTD log2; using _CSTD logb;
+using _CSTD llrint; using _CSTD lrint; using _CSTD nearbyint;
+using _CSTD rint; using _CSTD llround; using _CSTD lround;
+using _CSTD fdim; using _CSTD fma; using _CSTD fmax; using _CSTD fmin;
+using _CSTD round; using _CSTD trunc;
+using _CSTD remainder; using _CSTD remquo;
+using _CSTD copysign; using _CSTD nan; using _CSTD nextafter;
+using _CSTD scalbn; using _CSTD scalbln;
+using _CSTD nexttoward; using _CSTD tgamma;
+
+using _CSTD acoshf; using _CSTD asinhf; using _CSTD atanhf;
+using _CSTD cbrtf; using _CSTD erff; using _CSTD erfcf;
+using _CSTD expm1f; using _CSTD exp2f;
+using _CSTD hypotf; using _CSTD ilogbf; using _CSTD lgammaf;
+using _CSTD log1pf; using _CSTD log2f; using _CSTD logbf;
+using _CSTD llrintf; using _CSTD lrintf; using _CSTD nearbyintf;
+using _CSTD rintf; using _CSTD llroundf; using _CSTD lroundf;
+using _CSTD fdimf; using _CSTD fmaf; using _CSTD fmaxf; using _CSTD fminf;
+using _CSTD roundf; using _CSTD truncf;
+using _CSTD remainderf; using _CSTD remquof;
+using _CSTD copysignf; using _CSTD nanf;
+using _CSTD nextafterf; using _CSTD scalbnf; using _CSTD scalblnf;
+using _CSTD nexttowardf; using _CSTD tgammaf;
+
+using _CSTD acoshl; using _CSTD asinhl; using _CSTD atanhl;
+using _CSTD cbrtl; using _CSTD erfl; using _CSTD erfcl;
+using _CSTD expm1l; using _CSTD exp2l;
+using _CSTD hypotl; using _CSTD ilogbl; using _CSTD lgammal;
+using _CSTD log1pl; using _CSTD log2l; using _CSTD logbl;
+using _CSTD llrintl; using _CSTD lrintl; using _CSTD nearbyintl;
+using _CSTD rintl; using _CSTD llroundl; using _CSTD lroundl;
+using _CSTD fdiml; using _CSTD fmal; using _CSTD fmaxl; using _CSTD fminl;
+using _CSTD roundl; using _CSTD truncl;
+using _CSTD remainderl; using _CSTD remquol;
+using _CSTD copysignl; using _CSTD nanl;
+using _CSTD nextafterl; using _CSTD scalbnl; using _CSTD scalblnl;
+using _CSTD nexttowardl; using _CSTD tgammal;
+ #endif /* _HAS_C9X */
+
+_STD_END
+ #endif /* _GLOBAL_USING */
+
+ #if defined(__SUNPRO_CC)	/* compiler test */
+ #undef exception
+ #endif /* defined(__SUNPRO_CC) */
+
+#endif /* _CMATH_ */
+
+/*
+ * Copyright (c) 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * Consult your license regarding permissions and restrictions.
+V5.03:1134 */

@@ -1,0 +1,21 @@
+<feature name="org.gnu.gdb.mips.cpu">
+  <reg name="r0" bitsize="20"/>
+  <reg name="r1" bitsize="20"/>
+  <reg name="r2" bitsize="16"/>
+  <reg name="r3" bitsize="20"/>
+  <reg name="r4" bitsize="20"/>
+  <reg name="r5" bitsize="20"/>
+  <reg name="r6" bitsize="20"/>
+  <reg name="r7" bitsize="20"/>
+  <reg name="r8" bitsize="20"/>
+  <reg name="r9" bitsize="20"/>
+  <reg name="r10" bitsize="20"/>
+  <reg name="r11" bitsize="20"/>
+  <reg name="r12" bitsize="20"/>
+  <reg name="r13" bitsize="20"/>
+  <reg name="r14" bitsize="20"/>
+  <reg name="r15" bitsize="20"/>
+  <reg name="pc" bitsize="20" type="code_ptr"/>
+  <reg name="sp" bitsize="20" type="data_ptr"/>
+  <reg name="sr" bitsize="16"/>
+</feature>

@@ -1,0 +1,56 @@
+/*
+ * Emulation output container, TRACE tab
+ */
+.emulation-output-container {
+  /* margin: 30px 10px 0px 10px; */
+  padding: 5px;
+  width: 95%;
+  color: white;
+  display: block;
+}
+
+/*
+ * session list
+ */
+.session-list {
+  margin-top: 10px;
+  padding: 10px;
+}
+
+.session-list table {
+  font-family: Consolas;
+  min-height: 0px;
+}
+
+.session-list td,
+th {
+  min-width: none;
+  font-family: Consolas;
+  font-size: 12px;
+  padding: 2px;
+  margin: 2px;
+
+  height: 10px;
+  min-height: 0px;
+}
+
+.mat-mdc-row {
+  height: 10px;
+  min-height: 0px;
+  cursor: pointer;
+}
+
+.mat-mdc-cell {
+  height: 10px;
+  min-height: 10px;
+}
+
+.mat-mdc-row:hover {
+  filter: brightness(0.8);
+}
+
+.session-hint-container {
+  margin: 10px 0px 10px 10px;
+  /* color: cyan; */
+  /* font-size: 18px; */
+}

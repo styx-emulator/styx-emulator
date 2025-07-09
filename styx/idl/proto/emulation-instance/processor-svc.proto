@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package styx.svc.processor;
+
+import "processor-plugin-svc.proto";
+import "cpu-engine-svc.proto";
+
+option java_multiple_files = true;
+
+
+service ProcessorService {
+    rpc RunningCpus(RunningCpusRequest) returns (RunningCpusResponse) {}
+    rpc RunningPlugins(RunningPluginsRequest) returns (RunningPluginsResponse) {}
+    rpc ExecutorPlugin(ExecutorPluginRequest) returns (ExecutorPluginResponse) {}
+    rpc StartExecution(StartExecutionRequest) returns (StartExecutionResponse) {}
+    rpc StopExecution(StopExecutionRequest) returns (StopExecutionResponse) {}
+    rpc ProcessorState(ProcessorStateRequest) returns (ProcessorStateResponse) {}
+    rpc InitializeProcessor(InitializeProcessorRequest) returns (InitializeProcessorResponse) {}
+    rpc PauseProcessor(PauseProcessorRequest) returns (PauseProcessorResponse) {}
+    rpc ShutdownProcessor(ShutdownProcessorRequest) returns (ShutdownProcessorResponse) {}
+    rpc RegistersList(styx.svc.cpu_engine.RegistersListRequest) returns (styx.svc.cpu_engine.RegistersListResponse) {}
+}
+
+service ProcessorMetadataService {
+    rpc AvailableProcessors(AvailableProcessorsRequest) returns (AvailableProcessorsResponse) {}
+    rpc AvailablePlugins(styx.svc.processor_plugin.AvailablePluginsRequest) returns (styx.svc.processor_plugin.AvailablePluginsResponse) {}
+}
+
+message RunningCpusRequest {}
+message RunningCpusResponse {}
+message RunningPluginsRequest {}
+message RunningPluginsResponse {}
+message ExecutorPluginRequest {}
+message ExecutorPluginResponse {}
+message StartExecutionRequest {}
+message StartExecutionResponse {}
+message StopExecutionRequest {}
+message StopExecutionResponse {}
+message ProcessorStateRequest {}
+message ProcessorStateResponse {}
+message InitializeProcessorRequest {}
+message InitializeProcessorResponse {}
+message PauseProcessorRequest {}
+message PauseProcessorResponse {}
+message ShutdownProcessorRequest {}
+message ShutdownProcessorResponse {}
+
+message AvailableProcessorsRequest {}
+message AvailableProcessorsResponse {}

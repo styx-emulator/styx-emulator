@@ -1,0 +1,99 @@
+#!/usr/bin/env bash
+#
+# Bootstraps the guix dependencies, and creates links to
+# retain built packages + profiles thru standard guix system
+# garbage collection
+#
+# Inputs:
+# FORCE_BUILD: forcibly rebuild the dependencies + profile for the guix shell
+# BOOTSTRAP_GUIX_CHECK: its okay if the profile already exists, we're just checking
+
+# exit on error
+set -e
+
+# Check to ensure the required env vars are set, if not then
+# print a message and exit with error
+function assert_var_present() {
+    local VAR="${1}"
+
+    # ensure the variable is set to something
+    if [ -n "${!VAR}" ]; then
+        return 0
+    else
+        echo "[ERROR]: '${VAR} is not set when it should be! Please \`direnv allow\`'"
+        return 1
+    fi
+}
+
+# Load the `__GUIX_PREFIX` from `load-guix-vars.bash`
+set -a
+source "${STYX_ROOT}/dist/guix/load-guix-vars.bash"
+set +a
+
+# We use the defined guix prefix, which by default uses
+# the pinned channels.scm in `styx-emulator/dist/guix`
+assert_var_present "__GUIX_PREFIX"
+PREFIX="${__GUIX_PREFIX}"
+
+# the GUILE_LOAD_PATH is set in direnv and adds the
+# `styx-emulator/dist/guix/modules` directory to the guile
+# load path. We implicitly use this for package dependencies
+# we are about to build, note that due to current jank we also
+# need to do the same for __GUIX_LOAD_PATH
+assert_var_present "GUILE_LOAD_PATH"
+assert_var_present "__GUIX_LOAD_PATH"
+LOAD_PATHS=""
+for val in ${__GUIX_LOAD_PATH//,/ }; do
+    LOAD_PATHS+="-L ${val} "
+done
+
+# Make sure this is populated, this is the set of dependencies
+# needed for our guix shell
+assert_var_present "__GUIX_SHELL_MANIFEST"
+
+# Make sure that the output directory is present. We will store
+# links here for the built manifest.
+assert_var_present "__GUIX_LINK_DIR"
+
+# make sure that we explicitly set the substitutes to use, one of
+# the default datacenters goes down all the time and makes all
+# operations take significantly longer
+assert_var_present "STYX_GUIX_SUBSTITUTES"
+SUBSTITUTES="--substitute-urls=${STYX_GUIX_SUBSTITUTES}"
+
+# Ensure the guix command is usable
+if ! command -v guix &> /dev/null; then
+    echo "guix is not available on PATH: '${PATH}}', cannot bootstrap styx guix env"
+    exit 1;
+fi
+
+# Ensure that the link for the shell manifest is not already set.
+# If it is set, check if the FORCE_BUILD environment variable was set.
+GUIX_MANIFEST_LINK_PATH="${__GUIX_LINK_DIR}/shell-manifest"
+if [ -L "${GUIX_MANIFEST_LINK_PATH}" ]; then
+    echo "Previous Guix manifest links found"
+
+    # If the force flag is not set, then error out unless just checking.
+    if [ -z "${FORCE_BUILD}" ]; then
+        if [ -z "${BOOTSTRAP_GUIX_CHECK}" ]; then
+            echo "Force flag not set. Exiting with error."
+            exit 1  # Use exit instead of return outside functions
+        else
+            # Just checking to ensure the profile is already built.
+            # Exit successfully without error.
+            exit 0
+        fi
+    else
+        # If FORCE_BUILD is set, remove existing manifest link.
+        echo "Force flag set, removing existing manifest link"
+        rm -f "${GUIX_MANIFEST_LINK_PATH}"*
+        guix gc
+    fi
+fi
+
+
+# Now we can actually build the dependencies
+CMD="${PREFIX} build -r ${GUIX_MANIFEST_LINK_PATH} ${LOAD_PATHS} -m ${__GUIX_SHELL_MANIFEST} ${SUBSTITUTES}"
+echo "Bootstrapping styx guix env: '${CMD}'"
+eval "${CMD}"
+touch "${GUIX_MANIFEST_LINK_PATH}"

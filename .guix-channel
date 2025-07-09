@@ -1,0 +1,4 @@
+;; Points to the packages we build and expose via a guix channel
+(channel
+    (version 0)
+    (directory "dist/guix/modules/styx-packages"))

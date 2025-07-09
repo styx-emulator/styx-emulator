@@ -1,0 +1,10 @@
+--- original	2024-11-20 14:57:26.613973490 -0500
++++ modified	2024-11-20 14:57:23.499955741 -0500
+@@ -1757,6 +1757,7 @@
+ :resbank is opcode_00_15=0b0000000001011011
+ {
+     # This can be left as NOP, as it's used for saving/restoring context on interrupts
++    # This should be changed from a nop
+     r0 = r0;
+ }
+ 

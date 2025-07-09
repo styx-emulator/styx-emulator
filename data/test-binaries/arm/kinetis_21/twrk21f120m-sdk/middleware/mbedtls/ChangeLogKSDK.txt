@@ -1,0 +1,81 @@
+/*!
+@page middleware_log Middleware Change Log
+
+@section mbedtls mbedTLS for KSDK
+  The current version of mbedTLS is based on mbedTLS 2.6.0 released 2017-Aug-10.
+
+ - 2.6.0
+    - New features:
+      - Ported mbedTLS 2.6.0 to KSDK.
+      - Added MBEDTLS_FREESCALE_FREERTOS_CALLOC_ALT to allow alternate implementation of pvPortCalloc() when using \middleware\mbedtls\port\ksdk\ksdk_mbedtls.c.
+
+ - 2.5.1_rev1
+    - New features:
+      - Added support for DCP driver.
+
+ - 2.5.1
+    - New features:
+      - Ported mbedTLS 2.5.1 to KSDK.
+
+ - 2.4.2_rev2
+    - New features:
+      - Added Curve25519 support for CAU3.
+      - Addeded MBEDTLS_ECP_MUL_MXZ_ALT configuration parameter enabling overloading of ecp_mul_mxz().
+
+ - 2.4.2_rev1
+    - New features:
+      - Added support for CAU3 driver.
+      - Added new files:
+      - \middleware\mbedtls\port\ksdk\des_alt.c - contains regular software implementation of DES algorithm with added MBEDTLS_DES3_SETKEY_DEC_ALT and MBEDTLS_DES3_SETKEY_ENC_ALT config parameters.
+      - \middleware\mbedtls\port\ksdk\des_alt.h - contains modified mbedtls_des_context and mbedtls_des3_context structures.
+      - Added MBEDTLS_DES3_SETKEY_DEC_ALT configuration parameter enabling reloading of mbedtls_des3_set2key_dec() and mbedtls_des3_set3key_dec().
+      - Added MBEDTLS_DES3_SETKEY_ENC_ALT configuration parameter enabling reloading of mbedtls_des3_set2key_enc() and mbedtls_des3_set3key_enc().
+
+ - 2.4.2
+    - New features:
+      - Ported mbedTLS 2.4.2 to KSDK 2.0.0.
+      - Added CRYPTO_InitHardware() function.
+      - Added new file:
+        - \middleware\mbedtls\port\ksdk\ksdk_mbedtls.h - contains declaration of CRYPTO_InitHardware() function and should be included in applications.
+
+ - 2.3.0_rev1
+    - New features:
+      - Added support for CAAM driver.
+      - In LTC-specific wrapper, allocate temporary integers from heap in one large block.
+
+ - 2.3.0
+    - New features:
+      - Ported mbedTLS 2.3.0 to KSDK 2.0.0.
+
+  - 2.2.1
+    - New features:
+      - Ported mbedTLS 2.2.1 to KSDK 2.0.0.
+      - Added support of MMCAU cryptographic acceleration module. Accelerated MD5, SHA, AES, and DES.
+      - Added support of LTC cryptographic acceleration module. Accelerated AES, DES, and PKHA.
+      - Added new files:
+      - \middleware\mbedtls\port\ksdk\ksdk_mbedtls.c - alternative implementation of cryptographic algorithm functions using LTC and MMCAU   module drivers.
+      - \middleware\mbedtls\port\ksdk\ksdk_mbedtls_config.h - configuration settings used by mbedTLS KSDK bare metal examples.
+      - Added mbedTLS KSDK bare-metal examples:
+        - \boards\<board name>\demo_apps\mbedtls\mbedtls_benchmark - KSDK mbedTLS benchmark application.
+        - \boards\<board name>\demo_apps\mbedtls\mbedtls_selftest - KSDK mbedTLS self-test application.
+      - Added MBEDTLS_GCM_CRYPT_ALT configuration parameter enabling reloading of mbedtls_gcm_crypt_and_tag().
+      - Added MBEDTLS_ECP_MUL_COMB_ALT to enable alternate implementation of ecp_mul_comb().
+      - Added MBEDTLS_ECP_ADD_ALT configuration parameter enabling reloading of ecp_add().
+      - Added MBEDTLS_DES_SETKEY_DEC_ALT configuration parameter enabling reloading of mbedtls_des_setkey_dec(), mbedtls_des3_set2key_dec() and mbedtls_des3_set3key_dec().
+      - Added MBEDTLS_DES_SETKEY_ENC_ALT configuration parameter enabling reloading of mbedtls_des_setkey_enc(),  mbedtls_des3_set2key_enc() and mbedtls_des3_set3key_enc().
+      - Added MBEDTLS_DES_CRYPT_CBC_ALT configuration parameter enabling reloading of mbedtls_des_crypt_cbc().
+      - Added MBEDTLS_DES3_CRYPT_CBC_ALT configuration parameter enabling reloading of mbedtls_des3_crypt_cbc().
+      - Added MBEDTLS_AES_CRYPT_CBC_ALT configuration parameter enabling reloading of mbedtls_aes_crypt_cbc().
+      - Added MBEDTLS_AES_CRYPT_CTR_ALT configuration parameter enabling reloading of mbedtls_aes_crypt_ctr().
+      - Added MBEDTLS_CCM_CRYPT_ALT configuration parameter enabling reloading of  mbedtls_ccm_encrypt_and_tag() and mbedtls_ccm_auth_decrypt().
+      - Added MBEDTLS_MPI_ADD_ABS_ALT configuration parameter enabling reloading of  mbedtls_mpi_add_abs().
+      - Added MBEDTLS_MPI_SUB_ABS_ALT configuration parameter enabling reloading of mbedtls_mpi_sub_abs().
+      - Added MBEDTLS_MPI_EXP_MOD_ALT configuration parameter enabling reloading of mbedtls_mpi_exp_mod().
+      - Added MBEDTLS_MPI_MUL_MPI_ALT configuration parameter enabling reloading of mbedtls_mpi_mul_mpi().
+      - Added MBEDTLS_MPI_MOD_MPI_ALT configuration parameter enabling reloading of mbedtls_mpi_mod_mpi().
+      - Added MBEDTLS_MPI_GCD_ALT configuration parameter enabling reloading of mbedtls_mpi_gcd().
+      - Added MBEDTLS_MPI_INV_MOD_ALT configuration parameter enabling reloading of mbedtls_mpi_inv_mod().
+      - Added MBEDTLS_MPI_IS_PRIME_ALT configuration parameter enabling reloading of mbedtls_mpi_is_prime().
+      - Added encrypt/decrypt  mode to mbedtls_des_context and mbedtls_des3_context structure.
+      - Added carriage return '\r' for mbedtls_printf() in self test functions.
+*/

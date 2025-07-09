@@ -1,0 +1,74 @@
+syntax = "proto3";
+
+package styx.svc.memory_manager;
+
+import "memory.proto";
+
+option java_multiple_files = true;
+
+
+service MemoryManagerService {
+    rpc MemoryManagerStatus(MemoryManagerStatusRequest) returns (MemoryManagerStatusResponse) {}
+    rpc MemoryRead(MemoryReadRequest) returns (MemoryReadResponse) {}
+    rpc MemoryWrite(MemoryWriteRequest) returns (MemoryWriteResponse) {}
+    rpc MemoryMap(MemoryMapRequest) returns (MemoryMapResponse) {}
+    rpc MemoryUnmap(MemoryUnmapRequest) returns (MemoryUnmapResponse) {}
+    rpc MemoryRegions(MemoryRegionsRequest) returns (MemoryRegionsResponse) {}
+}
+
+
+message MemoryManagerStatusRequest {
+}
+
+message MemoryManagerStatusResponse {
+}
+
+message MemoryReadRequest {
+    uint64 address = 1;
+    uint64 size = 2;
+}
+
+message MemoryReadResponse {
+    bytes data = 1;
+}
+
+message MemoryWriteRequest {
+    uint64 address = 1;
+    bytes data = 2;
+}
+
+message MemoryWriteResponse {
+}
+
+message MemoryMapRequest {
+    uint64 address = 1;
+    uint64 size = 2;
+}
+
+
+enum MemoryManagerError {
+    INVALID_ADDRESS = 0;
+    INVALID_SIZE = 1;
+    MAP_FAILED = 2;
+    UNMAP_FAILED = 3;
+}
+
+message MemoryMapResponse {
+    MemoryManagerError error = 1;
+}
+
+message MemoryUnmapRequest {
+    uint64 address = 1;
+    uint64 size = 2;
+}
+
+message MemoryUnmapResponse {
+    MemoryManagerError error = 1;
+}
+
+message MemoryRegionsRequest {
+}
+
+message MemoryRegionsResponse {
+    repeated styx.meta.memory.MemoryRegion regions = 1;
+}

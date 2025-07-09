@@ -1,0 +1,15 @@
+[package]
+name = "styx-peripherals"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+styx-base-clock = { path = "./styx-base-clock" }
+styx-uart = { path = "./styx-uart" }
+styx-workspace-hack = { version = "0.1", path = "../workspace-hack" }

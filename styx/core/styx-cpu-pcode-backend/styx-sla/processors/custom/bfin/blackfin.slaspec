@@ -1,0 +1,7 @@
+# sleigh specification for the analog devices blackfin series
+
+@define ENDIAN "little"
+@define ALIGNMENT "2"
+
+@include "blackfin.sinc"
+@include "blackfinInstructions.sinc"

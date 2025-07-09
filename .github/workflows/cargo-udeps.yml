@@ -1,0 +1,44 @@
+name: unused dependency check
+on:
+  pull_request:
+    # dont run if only docs change
+    paths-ignore:
+      - "./**.md"
+      - "docs/**"
+
+env:
+  STYX_DOCKER_SUDO_REQUIRED: yes
+
+concurrency:
+  # Cancels pending runs when a PR gets updated.
+  group: ${{ github.head_ref || github.run_id }}-${{ github.actor }}-${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: unused dependency check
+    runs-on: self-hosted
+
+    steps:
+    - name: Checkout source code
+      uses: actions/checkout@v4
+
+    - name: Install prerequisites
+      shell: bash
+      run: |
+        sudo apt-get -y update
+        sudo apt-get install -y \
+           libssl-dev
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@v1
+      with:
+        toolchain: stable
+        components: ''
+
+    - uses: Swatinem/rust-cache@v2
+
+    - name: Run cargo-udeps
+      shell: bash
+      run: |
+        cargo +nightly udeps --all --all-targets --exclude styx-workspace-hack

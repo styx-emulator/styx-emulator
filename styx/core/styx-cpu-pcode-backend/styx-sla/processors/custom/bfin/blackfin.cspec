@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<compiler_spec>
+    <global>
+        <range space="ram"/>
+    </global>
+
+    <stackpointer register="SP" space="ram" />
+    <returnaddress>
+        <register name="RETS"/>
+    </returnaddress>
+
+    <default_proto>
+        <prototype name="default" extrapop="0" stackshift="0">
+            <input>
+                <pentry minsize="1" maxsize="4">
+                    <register name="R0"/>
+                </pentry>
+                <pentry minsize="1" maxsize="4">
+                    <register name="R1"/>
+                </pentry>
+                <pentry minsize="1" maxsize="4">
+                    <register name="R2"/>
+                </pentry>
+                <pentry minsize="1" maxsize="28" align="4">
+                    <addr space="stack" offset="12"/>
+                </pentry>
+            </input>
+            <output>
+                <pentry minsize="1" maxsize="4">
+                    <register name="R0"/>
+                </pentry>
+                <pentry minsize="5" maxsize="8">
+                    <addr space="join" piece1="R0" piece2="R1"/>
+                </pentry>
+            </output>
+            <unaffected>
+                <register name="R4"/>
+                <register name="R5"/>
+                <register name="R6"/>
+                <register name="R7"/>
+                <register name="P4"/>
+                <register name="P5"/>
+                <register name="SP"/>
+                <register name="FP"/>
+            </unaffected>
+        </prototype>
+    </default_proto>
+
+  <callfixup name="neg_idx_jmp_table">
+    <pcode>
+      <body><![CDATA[
+            SP = SP - 4;
+            *SP = P5;
+
+            P1 = *P0;
+            P0 = P0 + 4;
+
+            P2 = 0;
+
+            P4 = P0 + (P1 << 2);
+            P4 = P4 + 4;
+
+            LC0 = P1;
+            <LOOP>
+
+            if (P1 <= P2) goto <LAB_0007c6a2>;
+
+            P3 = P1 + P2;
+            P3 = P3 >> 1;
+
+            P5 = P0 + (P3 << 2);
+
+            R1 = *P5;
+
+            if (R1 == R0) goto <NEGATIVE_IDX_JUMP_TABLE_RESOLVER>;
+
+            if (R1 < R0) goto <INC_P3>;
+            P1 = P3;
+
+            <INC_P3>
+            P3 = P3 + 1;
+
+            if (R1 >= R0) goto <HANDLE_LOOP_COUNTER>;
+            P2 = P3;
+
+            <HANDLE_LOOP_COUNTER>
+            LC0 = LC0 - 1;
+
+            if (LC0 >= 0) goto <LOOP>;
+
+            <LAB_0007c6a2>
+            P3 = -1;
+
+            <NEGATIVE_IDX_JUMP_TABLE_RESOLVER>
+            P1 = P4 + (P3 << 2);
+            P1 = *P1;
+            P5 = SP;
+            SP = SP + 4;
+            goto [P1];
+
+      ]]></body>
+    </pcode>
+  </callfixup>
+</compiler_spec>

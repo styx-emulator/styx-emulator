@@ -1,0 +1,53 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.2.0
+    hooks:
+      - id: trailing-whitespace
+        args: ["--markdown-linebreak-ext=md"]
+        exclude_types: [diff]
+        exclude: "styx/core/styx-cpu-pcode-backend/styx-sla/(processors|patches)"
+      - id: end-of-file-fixer
+        exclude: "^.+json|styx/core/styx-cpu-pcode-backend/styx-sla/(processors|patches)"
+      - id: check-yaml
+        args: ["--unsafe"]
+      - id: check-json
+        exclude: ^extensions.*/tsconfig.*json|^extensions/.*/.vscode.*
+      - id: check-toml
+      - id: debug-statements
+        exclude: extensions/typhunix/TyphunixPlugin/ghidra_scripts/DumpSymbols.py
+      - id: mixed-line-ending
+        args: ["--fix=lf"]
+  - repo: https://github.com/sphinx-contrib/sphinx-lint
+    rev: v1.0.0
+    hooks:
+      - id: sphinx-lint
+
+  - repo: https://github.com/doublify/pre-commit-rust
+    rev: v1.0
+    hooks:
+    - id: fmt
+    - id: cargo-check
+    - id: clippy
+      args: ["--workspace", "--all-targets", "--", "-Dwarnings"]
+
+  - repo: local
+    hooks:
+    - id: license-check
+      name: license-check
+      entry: cargo run -q --package xtask -- license -c --files
+      language: system
+      files: '' # filtered in the license checker
+    - id: fmt-toml
+      name: taplo (toml formatter)
+      language: system
+      # cargo install taplo-cli
+      entry: taplo fmt
+      require_serial: true
+      files: \.toml$ # Note, .taplo.toml also has include/exclude filters
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v3.4.0
+    hooks:
+      - id: conventional-pre-commit
+        name: conventional-pre-commit
+        stages: [commit-msg]
+        args: []
