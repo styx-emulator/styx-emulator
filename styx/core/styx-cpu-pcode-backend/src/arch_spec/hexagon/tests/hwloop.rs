@@ -28,6 +28,100 @@ fn test_hwloop0() {
 }
 
 #[test]
+fn test_duplex_hwloop_nested() {
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(
+        r#"
+       0:	0b c0 20 69	6920c00b { 	loop1(0x4,#0x3) }
+       4:	0b c0 00 69	6900c00b { 	loop0(0x8,#0x3) }
+       8:	00 80 00 7f	7f008000 { 	nop
+       c:	33 31 22 20	20223133   	r2 = add(r2,#0x2); 	r3 = add(r3,#1) }  :endloop0
+      10:	61 40 01 b0	b0014061 { 	r1 = add(r1,#0x3)
+      14:	00 80 00 7f	7f008000   	nop
+      18:	00 c0 00 7f	7f00c000   	nop }  :endloop1
+      1c:	45 c1 05 b0	b005c145 { 	r5 = add(r5,#0xa) }
+      20:	86 c2 00 78	7800c286 { 	r6 = #0x14 }
+      24:	c7 c3 00 78	7800c3c7 { 	r7 = #0x1e }
+    "#,
+    );
+
+    let exit = cpu.execute(&mut mmu, &mut ev, 43).unwrap();
+    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+
+    let r1 = cpu.read_register::<u32>(HexagonRegister::R1).unwrap();
+    let r2 = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
+    let r3 = cpu.read_register::<u32>(HexagonRegister::R3).unwrap();
+    let r5 = cpu.read_register::<u32>(HexagonRegister::R5).unwrap();
+    let r6 = cpu.read_register::<u32>(HexagonRegister::R6).unwrap();
+    let r7 = cpu.read_register::<u32>(HexagonRegister::R7).unwrap();
+
+    assert_eq!(r1, 9);
+    assert_eq!(r2, 18);
+    assert_eq!(r3, 9);
+    assert_eq!(r5, 10);
+    assert_eq!(r6, 20);
+    assert_eq!(r7, 30);
+}
+
+#[test]
+fn test_duplex_hwloop1() {
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(
+        r#"
+       0:	0b c0 20 69	6920c00b { 	loop1(0x4,#0x3) }
+       4:	00 40 00 7f	7f004000 { 	nop
+       8:	00 80 00 7f	7f008000   	nop
+       c:	33 31 22 20	20223133   	r2 = add(r2,#0x2); 	r3 = add(r3,#1) }  :endloop1
+      10:	45 c1 05 b0	b005c145 { 	r5 = add(r5,#0xa) }
+      14:	86 c2 00 78	7800c286 { 	r6 = #0x14 }
+      18:	c7 c3 00 78	7800c3c7 { 	r7 = #0x1e }
+    "#,
+    );
+
+    let exit = cpu.execute(&mut mmu, &mut ev, 16).unwrap();
+    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+
+    let r2 = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
+    let r3 = cpu.read_register::<u32>(HexagonRegister::R3).unwrap();
+    let r5 = cpu.read_register::<u32>(HexagonRegister::R5).unwrap();
+    let r6 = cpu.read_register::<u32>(HexagonRegister::R6).unwrap();
+    let r7 = cpu.read_register::<u32>(HexagonRegister::R7).unwrap();
+
+    assert_eq!(r2, 6);
+    assert_eq!(r3, 3);
+    assert_eq!(r5, 10);
+    assert_eq!(r6, 20);
+    assert_eq!(r7, 30);
+}
+
+#[test]
+fn test_duplex_hwloop0() {
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(
+        r#"
+       0:	0b c0 00 69	6900c00b { 	loop0(0x4,#0x3) }
+       4:	00 80 00 7f	7f008000 { 	nop
+       8:	33 31 22 20	20223133   	r2 = add(r2,#0x2); 	r3 = add(r3,#1) }  :endloop0
+       c:	45 c1 05 b0	b005c145 { 	r5 = add(r5,#0xa) }
+      10:	86 c2 00 78	7800c286 { 	r6 = #0x14 }
+      14:	c7 c3 00 78	7800c3c7 { 	r7 = #0x1e }
+    "#,
+    );
+
+    let exit = cpu.execute(&mut mmu, &mut ev, 13).unwrap();
+    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+
+    let r2 = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
+    let r3 = cpu.read_register::<u32>(HexagonRegister::R3).unwrap();
+    let r5 = cpu.read_register::<u32>(HexagonRegister::R5).unwrap();
+    let r6 = cpu.read_register::<u32>(HexagonRegister::R6).unwrap();
+    let r7 = cpu.read_register::<u32>(HexagonRegister::R7).unwrap();
+
+    assert_eq!(r2, 6);
+    assert_eq!(r3, 3);
+    assert_eq!(r5, 10);
+    assert_eq!(r6, 20);
+    assert_eq!(r7, 30);
+}
+
+#[test]
 fn test_hwloop01() {
     let (mut cpu, mut mmu, mut ev) = setup_objdump(
         r#"

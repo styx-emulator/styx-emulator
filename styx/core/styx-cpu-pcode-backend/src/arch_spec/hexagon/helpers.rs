@@ -361,7 +361,11 @@ impl HexagonGeneratorHelper {
             // last in loop 0
             else if pkt_type == PktLoopParseBits::NotEndOfPacket2
                 && (parse_next == PktLoopParseBits::NotEndOfPacket1
-                    || parse_next == PktLoopParseBits::EndOfPacket)
+                    || parse_next == PktLoopParseBits::EndOfPacket
+                    // Is this undocumented? the assembler will happily make endloop0
+                    // spit out a duplex as last instruction, but
+                    // this case isn't covered in the manual AFAICT.
+                    || parse_next == PktLoopParseBits::Duplex)
             {
                 trace!("hwloop help: last in loop 0");
                 self.state.pkt_endloop = 1;
@@ -438,6 +442,10 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                                 // by having the map grow infinitely
                                 self.subinsn_map.remove(&self.pc_varnode.offset);
                                 self.state.pkt_insns = self.state.pkt_insns + 1;
+
+                                // For some reason, duplexes can end an endloop0
+                                self.state
+                                    .handle_endloop_set(unwrapped_pc, &mut context_opts);
 
                                 return Ok(context_opts);
                             }
