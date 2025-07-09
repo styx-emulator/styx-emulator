@@ -1,5 +1,5 @@
 use derive_more::FromStr;
-use log::{debug, warn};
+use log::debug;
 use styx_pcode::{pcode::VarnodeData, sla::SlaUserOps};
 use styx_pcode_translator::sla::HexagonUserOps;
 use styx_processor::{event_controller::EventController, memory::Mmu};
