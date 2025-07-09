@@ -55,9 +55,7 @@ impl PktLoopParseBits {
 
 #[derive(Debug, Clone)]
 enum SubinstructionData {
-    EndDuplex(u32),
     EndDuplexEndPacket(u32),
-    StartDuplex(u32),
 }
 
 // this is to avoid https://smallcultfollowing.com/babysteps/blog/2018/11/01/after-nll-interprocedural-conflicts/
@@ -175,7 +173,6 @@ impl HexagonGeneratorHelperState {
 
     fn common_handle_start_of_pkt(
         &mut self,
-        backend: &mut PcodeBackend,
         context_opts: &mut SmallVec<[ContextOption; 4]>,
         unwrapped_pc: u64,
     ) {
@@ -257,8 +254,6 @@ impl HexagonGeneratorHelper {
         saved_last_insn_was_end_of_pkt: bool,
         unwrapped_pc: u64,
         insn_data: u32,
-        parse_next: PktLoopParseBits,
-        parse_next1: PktLoopParseBits,
     ) -> Result<(), GeneratePcodeError> {
         let insclass = ((insn_data >> 28) & 0b1110) | ((insn_data >> 13) & 0b1);
         trace!("duplex instruction, insclass {}", insclass);
@@ -328,7 +323,7 @@ impl HexagonGeneratorHelper {
 
             self.detect_handle_branch(backend, unwrapped_pc);
             self.state
-                .common_handle_start_of_pkt(backend, context_opts, unwrapped_pc);
+                .common_handle_start_of_pkt(context_opts, unwrapped_pc);
         }
 
         Ok(())
@@ -429,28 +424,24 @@ impl GeneratorHelp for HexagonGeneratorHelper {
 
                 match self.subinsn_map.get_mut(&self.pc_varnode.offset) {
                     Some(subinsn_data) => {
-                        let (duplex_ended, subinsn_type) = match subinsn_data {
+                        match subinsn_data {
                             // Update shared state to the start of the next packet, as is done in the EndPkt case later
                             SubinstructionData::EndDuplexEndPacket(ty) => {
                                 trace!("in end duplex that's an end of packet, pushing the next packet and such");
+
                                 self.state.mark_end_of_pkt(backend, unwrapped_pc + 2);
+                                self.state.duplex_ended = true;
 
-                                (true, ty)
+                                context_opts.push(ContextOption::HexagonSubinsn(*ty));
+
+                                // Consume as we go to prevent a memory leak
+                                // by having the map grow infinitely
+                                self.subinsn_map.remove(&self.pc_varnode.offset);
+                                self.state.pkt_insns = self.state.pkt_insns + 1;
+
+                                return Ok(context_opts);
                             }
-                            SubinstructionData::EndDuplex(ty) => (true, ty),
-                            SubinstructionData::StartDuplex(ty) => (false, ty),
                         };
-
-                        self.state.duplex_ended = duplex_ended;
-
-                        context_opts.push(ContextOption::HexagonSubinsn(*subinsn_type));
-
-                        // Consume as we go to prevent a memory leak
-                        // by having the map grow infinitely
-                        self.subinsn_map.remove(&self.pc_varnode.offset);
-                        self.state.pkt_insns = self.state.pkt_insns + 1;
-
-                        return Ok(context_opts);
                     }
                     None => {}
                 }
@@ -479,7 +470,7 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                         let insn_next2 = ((insn_data_wide >> 96) & 0xffffffff) as u32;
 
                         let parse_next = PktLoopParseBits::new_from_insn(insn_next);
-                        let parse_next1 = PktLoopParseBits::new_from_insn(insn_next1);
+                        let _parse_next1 = PktLoopParseBits::new_from_insn(insn_next1);
                         let _parse_next2 = PktLoopParseBits::new_from_insn(insn_next2);
 
                         self.state.handle_duplex_immext(
@@ -500,8 +491,6 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                                 saved_last_insn_was_end_of_pkt,
                                 unwrapped_pc,
                                 insn_data,
-                                parse_next,
-                                parse_next1,
                             )?,
                             // First instruction in the program won't have anything taken care of
                             PktLoopParseBits::NotEndOfPacket1
@@ -536,11 +525,8 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                                 // handler
                                 self.detect_handle_branch(backend, unwrapped_pc);
 
-                                self.state.common_handle_start_of_pkt(
-                                    backend,
-                                    &mut context_opts,
-                                    unwrapped_pc,
-                                );
+                                self.state
+                                    .common_handle_start_of_pkt(&mut context_opts, unwrapped_pc);
                             }
                             PktLoopParseBits::NotEndOfPacket1
                             | PktLoopParseBits::NotEndOfPacket2 => {
@@ -570,7 +556,6 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                                     //
                                     // NOTE: handling the branching stuff here is redundant
                                     self.state.common_handle_start_of_pkt(
-                                        backend,
                                         &mut context_opts,
                                         unwrapped_pc,
                                     );

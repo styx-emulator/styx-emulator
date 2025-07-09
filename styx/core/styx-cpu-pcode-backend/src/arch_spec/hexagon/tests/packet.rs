@@ -91,14 +91,12 @@ fn test_all_packet_adjacent() {
         (
             4,
             "{ %0 = add(r20, #299); %1 = mpyi(r21, r20); %2 = #10; %3 = #21;  }",
-            Box::new(
-                |r20: u32, r21: u32, regvec: Vec<u32>, backend: &mut PcodeBackend| {
-                    assert_eq!(regvec[0], r20 + 299);
-                    assert_eq!(regvec[1], r21 * r20);
-                    assert_eq!(regvec[2], 10);
-                    assert_eq!(regvec[3], 21);
-                },
-            ) as Box<dyn Fn(u32, u32, Vec<u32>, &mut PcodeBackend) -> ()>,
+            Box::new(|r20: u32, r21: u32, regvec: Vec<u32>| {
+                assert_eq!(regvec[0], r20 + 299);
+                assert_eq!(regvec[1], r21 * r20);
+                assert_eq!(regvec[2], 10);
+                assert_eq!(regvec[3], 21);
+            }) as Box<dyn Fn(u32, u32, Vec<u32>) -> ()>,
             12,
             4,
         ),
@@ -106,13 +104,11 @@ fn test_all_packet_adjacent() {
         (
             3,
             "{ %0 = add(r20, #299); %1 = #10; %2 = #21; }",
-            Box::new(
-                |r20: u32, r21: u32, regvec: Vec<u32>, backend: &mut PcodeBackend| {
-                    assert_eq!(regvec[0], r20 + 299);
-                    assert_eq!(regvec[1], 10);
-                    assert_eq!(regvec[2], 21);
-                },
-            ),
+            Box::new(|r20: u32, _r21: u32, regvec: Vec<u32>| {
+                assert_eq!(regvec[0], r20 + 299);
+                assert_eq!(regvec[1], 10);
+                assert_eq!(regvec[2], 21);
+            }),
             8,
             3,
         ),
@@ -122,12 +118,10 @@ fn test_all_packet_adjacent() {
             // NOTE: keystone had difficulties assembling stuff like {R4 = R21; R5 = R20}. It would turn this into
             // {R4 = R5; R5 = R4}, for some reason.
             "{ %0 = #8; %1 = #14 }",
-            Box::new(
-                |r20: u32, r21: u32, regvec: Vec<u32>, backend: &mut PcodeBackend| {
-                    assert_eq!(regvec[0], 8);
-                    assert_eq!(regvec[1], 14);
-                },
-            ),
+            Box::new(|_r20: u32, _r21: u32, regvec: Vec<u32>| {
+                assert_eq!(regvec[0], 8);
+                assert_eq!(regvec[1], 14);
+            }),
             4,
             2,
         ),
@@ -135,11 +129,9 @@ fn test_all_packet_adjacent() {
         (
             1,
             "{ %0 = #1552 }",
-            Box::new(
-                |r20: u32, r21: u32, regvec: Vec<u32>, backend: &mut PcodeBackend| {
-                    assert_eq!(regvec[0], 1552);
-                },
-            ),
+            Box::new(|_r20: u32, _r21: u32, regvec: Vec<u32>| {
+                assert_eq!(regvec[0], 1552);
+            }),
             4,
             1,
         ),
@@ -147,12 +139,10 @@ fn test_all_packet_adjacent() {
         (
             2,
             "{ %0 = #199; %1 = or(r20, r21) }",
-            Box::new(
-                |r20: u32, r21: u32, regvec: Vec<u32>, backend: &mut PcodeBackend| {
-                    assert_eq!(regvec[0], 199);
-                    assert_eq!(regvec[1], r20 | r21);
-                },
-            ),
+            Box::new(|r20: u32, r21: u32, regvec: Vec<u32>| {
+                assert_eq!(regvec[0], 199);
+                assert_eq!(regvec[1], r20 | r21);
+            }),
             8,
             2,
         ),
@@ -160,13 +150,11 @@ fn test_all_packet_adjacent() {
         (
             3,
             "{ %0 = add(r20, #3993); %1 = and(r21, #90); %2 = mpyi(r21, r20) }",
-            Box::new(
-                |r20: u32, r21: u32, regvec: Vec<u32>, backend: &mut PcodeBackend| {
-                    assert_eq!(regvec[0], r20 + 3993);
-                    assert_eq!(regvec[1], r21 & 90);
-                    assert_eq!(regvec[2], r21 * r20);
-                },
-            ),
+            Box::new(|r20: u32, r21: u32, regvec: Vec<u32>| {
+                assert_eq!(regvec[0], r20 + 3993);
+                assert_eq!(regvec[1], r21 & 90);
+                assert_eq!(regvec[2], r21 * r20);
+            }),
             12,
             3,
         ),
@@ -174,14 +162,12 @@ fn test_all_packet_adjacent() {
         (
             4,
             "{ %0 = #2; %1 = and(r20, r21); %2 = add(r21, r20); %3 = mpyi(r21, r20) }",
-            Box::new(
-                |r20: u32, r21: u32, regvec: Vec<u32>, backend: &mut PcodeBackend| {
-                    assert_eq!(regvec[0], 2);
-                    assert_eq!(regvec[1], r20 & r21);
-                    assert_eq!(regvec[2], r21 + r20);
-                    assert_eq!(regvec[3], r21 * r20);
-                },
-            ),
+            Box::new(|r20: u32, r21: u32, regvec: Vec<u32>| {
+                assert_eq!(regvec[0], 2);
+                assert_eq!(regvec[1], r20 & r21);
+                assert_eq!(regvec[2], r21 + r20);
+                assert_eq!(regvec[3], r21 * r20);
+            }),
             16,
             4,
         ),
@@ -325,8 +311,8 @@ fn test_all_packet_adjacent() {
                     })
                     .collect();
 
-                ins0.2(r20, r21, ins0regs, &mut cpu);
-                ins1.2(r20, r21, ins1regs, &mut cpu);
+                ins0.2(r20, r21, ins0regs);
+                ins1.2(r20, r21, ins1regs);
 
                 tot_assembled += 1;
                 asm_phase += 1;
