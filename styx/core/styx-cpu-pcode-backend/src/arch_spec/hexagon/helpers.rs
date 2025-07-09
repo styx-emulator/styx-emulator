@@ -560,9 +560,8 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                                         unwrapped_pc,
                                     );
                                 }
-
                                 // This is both the start and end of a packet (single insn pkt)
-                                if saved_last_insn_was_end_of_pkt {
+                                else if saved_last_insn_was_end_of_pkt {
                                     trace!("start and end of pkt");
                                     // Normally, this would be handled in the "hexagon start of packet" handler,
                                     // that arm of the match is never taken if we have both a start and end of a packet.

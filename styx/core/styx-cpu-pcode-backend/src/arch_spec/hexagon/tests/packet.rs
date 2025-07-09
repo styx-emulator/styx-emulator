@@ -2,7 +2,7 @@ use log::info;
 
 use crate::arch_spec::hexagon::tests::*;
 
-// TODO: can you mix a duplex instruction with some other stuff in a packet?
+// can you mix a duplex instruction with some other stuff in a packet?
 // (yes, this is tested somewhere here)
 #[test]
 fn test_packet_instructions() {
@@ -57,6 +57,7 @@ fn test_packet_instructions() {
     assert_eq!(end_isa_pc - initial_isa_pc, 12);
 }
 
+// TODO: want to also be able to check context options here, to make sure pktstart is set correctly
 #[test]
 fn test_all_packet_adjacent() {
     styx_util::logging::init_logging();
@@ -65,13 +66,13 @@ fn test_all_packet_adjacent() {
     // D, ID, IID (DD doesn't happen, the rest don't happen bc duplex must be slots 0 and 1, according to manual)
     //
     // what we will do:
-    // { nop } { P1 } { P2 }
+    // { set } { P1 } { P2 }
     // { P1 } { P2 }
     //
     // at every insn, check the pkt start at the backend to make sure it's consistent with what we expect
     // we also make sure the results of the packets are what we expect.
     //
-    // the nop is to see if edge cases where we are handling the first packet given to the helper works properly.
+    // the extra set is to see if edge cases where we are handling the first packet given to the helper works properly.
     //
     // and check the backend to see if the pkt start is set correctly for
     // all combinations
@@ -237,6 +238,7 @@ fn test_all_packet_adjacent() {
                     assert_eq!(code.bytes.len(), ins0.3 + ins1.3 + 8);
                 }
 
+                // NOTE: this is inefficient, but properly resets the state
                 let (mut cpu, mut mmu, mut ev) = setup_cpu(init_pc, code.bytes);
 
                 cpu.write_register(HexagonRegister::R20, 32u32).unwrap();
