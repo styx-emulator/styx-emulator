@@ -61,4 +61,5 @@ pub enum Arch {
     Z80,
     Msp430,
     Msp430X,
+    Hexagon,
 }
