@@ -29,12 +29,8 @@ fn test_hwloop0() {
 
 #[test]
 fn test_hwloop01() {
-    styx_util::logging::init_logging();
-
-    let (mut cpu, mut mmu, mut ev) = setup_cpu(
-        0x1000,
-        styx_util::parse_objdump(
-            r#"
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(
+        r#"
        0:	0b c0 20 69	6920c00b { 	loop1(0x4,#0x3) }
        4:	20 c0 00 b0	b000c020 { 	r0 = add(r0,#0x1) }
        8:	0b c0 00 69	6900c00b { 	loop0(0xc,#0x3) }
@@ -45,8 +41,6 @@ fn test_hwloop01() {
       1c:	24 f2 00 78	7800f224 { 	r4 = #0x191 }
       20:	45 f2 00 78	7800f245 { 	r5 = #0x192 }
     "#,
-        )
-        .unwrap(),
     );
 
     cpu.write_register(HexagonRegister::R0, 0u32).unwrap();
@@ -73,21 +67,16 @@ fn test_hwloop01() {
 
 #[test]
 fn test_hwloop_predicate() {
-    styx_util::logging::init_logging();
     // a loop1 should have at min 3 insns in its packet
     // runs 3 times
-    let (mut cpu, mut mmu, mut ev) = setup_cpu(
-        0x1000,
-        styx_util::parse_objdump(
-            r#"
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(
+        r#"
        0:	0b c0 00 69	6900c00b { 	loop0(0x4,#0x3) }
        4:	60 c2 80 75	7580c260 { 	p0 = cmp.gtu(r0,#0x13) }
        8:	40 81 80 74	74808140 { 	if (!p0) r0 = add(r0,#0xa)
        c:	00 c0 00 7f	7f00c000   	nop }  :endloop0
        10:	41 f2 00 78	7800f241 { 	r1 = #0x192 }
         "#,
-        )
-        .unwrap(),
     );
 
     cpu.write_register(HexagonRegister::R0, 0u32).unwrap();
@@ -105,14 +94,10 @@ fn test_hwloop_predicate() {
 // similar to the other inner loop one
 #[test]
 fn test_hwloop_inner() {
-    styx_util::logging::init_logging();
-
     // a loop1 should have at min 3 insns in its packet
     // runs 3 times
-    let (mut cpu, mut mmu, mut ev) = setup_cpu(
-        0x1000,
-        styx_util::parse_objdump(
-            r#"
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(
+        r#"
        0:	0b c0 20 69	6920c00b { 	loop1(0x4,#0x3) }
        4:	0b c0 00 69	6900c00b { 	loop0(0x8,#0x3) }
        8:	42 80 02 e0	e0028042 { 	r2 = +mpyi(r2,#0x2)
@@ -125,8 +110,6 @@ fn test_hwloop_inner() {
       24:	06 42 00 78	78004206 { 	r6 = #0x10
       28:	47 d0 01 78	7801d047   	r7 = #0x282 }
         "#,
-        )
-        .unwrap(),
     );
 
     cpu.write_register(HexagonRegister::R0, 2u32).unwrap();
@@ -158,15 +141,12 @@ fn test_hwloop_inner() {
 
 #[test]
 fn test_hwloop0_iteronce() {
-    styx_util::logging::init_logging();
     // multiply by 2 to r0, add 1 to r1.
 
     // a loop1 should have at min 3 insns in its packet
     // runs 3 times
-    let (mut cpu, mut mmu, mut ev) = setup_cpu(
-        0x1000,
-        styx_util::parse_objdump(
-            r#"
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(
+        r#"
        0:	09 c0 20 69	6920c009 { 	loop1(0x4,#0x1) }
        4:	40 40 00 e1	e1004040 { 	r0 += mpyi(r0,#0x2)
        8:	21 80 01 b0	b0018021   	r1 = add(r1,#0x1)
@@ -174,8 +154,6 @@ fn test_hwloop0_iteronce() {
       10:	62 6e 09 78	78096e62 { 	r2 = #0x1373
       14:	83 d7 07 78	7807d783   	r3 = #0xebc }
         "#,
-        )
-        .unwrap(),
     );
 
     cpu.write_register(HexagonRegister::R0, 3u32).unwrap();
@@ -197,22 +175,17 @@ fn test_hwloop0_iteronce() {
 
 #[test]
 fn test_hwloop1() {
-    styx_util::logging::init_logging();
     // multiply by 2 to r0, add 1 to r1.
 
     // a loop1 should have at min 3 insns in its packet
     // runs 3 times
-    let (mut cpu, mut mmu, mut ev) = setup_cpu(
-        0x1000,
-        styx_util::parse_objdump(
-            r#"
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(
+        r#"
        0:	0b c0 20 69	6920c00b { 	loop1(0x4,#0x3) }
        4:	40 40 00 e0	e0004040 { 	r0 = +mpyi(r0,#0x2)
        8:	21 80 01 b0	b0018021   	r1 = add(r1,#0x1)
        c:	00 c0 00 7f	7f00c000   	nop }  :endloop1
         "#,
-        )
-        .unwrap(),
     );
 
     cpu.write_register(HexagonRegister::R0, 3u32).unwrap();

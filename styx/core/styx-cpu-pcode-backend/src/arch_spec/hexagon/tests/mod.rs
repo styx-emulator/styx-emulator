@@ -16,15 +16,15 @@ pub(crate) use crate::RegisterManager;
 pub use styx_processor::cpu::{CpuBackend, CpuBackendExt};
 
 mod branching;
-mod compounds;
+mod compound;
 mod dotnew;
-mod duplexes;
+mod duplex;
 mod general;
 mod hwloop;
-mod immediates;
-mod packets;
-mod reg_postfixes;
-mod regpairs;
+mod immediate;
+mod packet;
+mod reg_postfix;
+mod regpair;
 
 pub fn setup_asm(
     asm_str: &str,
@@ -73,6 +73,17 @@ pub fn setup_cpu(init_pc: u64, code: Vec<u8>) -> (PcodeBackend, Mmu, EventContro
     mmu.code().write(init_pc).bytes(&code).unwrap();
 
     (cpu, mmu, ev)
+}
+
+pub fn setup_objdump(objdump: &str) -> (PcodeBackend, Mmu, EventController) {
+    styx_util::logging::init_logging();
+
+    const START: u64 = 0x1000u64;
+
+    setup_cpu(
+        START,
+        styx_util::parse_objdump(objdump).expect("failed to parse objdump supplied to test case!"),
+    )
 }
 
 pub fn get_isa_pc(cpu: &mut PcodeBackend) -> u32 {

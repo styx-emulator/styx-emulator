@@ -109,17 +109,12 @@ fn test_store_dotnew_halfword_add_immext() {
 
 #[test]
 fn test_predicate_dotnew() {
-    styx_util::logging::init_logging();
-    let (mut cpu, mut mmu, mut ev) = setup_cpu(
-        0x1000,
-        styx_util::parse_objdump(
-            r#"
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(
+        r#"
        0:	40 40 00 75	75004040 { 	p0 = cmp.eq(r0,#0x2)
        4:	21 60 00 7e	7e006021   	if (p0.new) r1 = #0x1
        8:	41 e0 80 7e	7e80e041   	if (!p0.new) r1 = #0x2 }
 "#,
-        )
-        .unwrap(),
     );
     cpu.write_register(HexagonRegister::R0, 2u32).unwrap();
     cpu.write_register(HexagonRegister::R1, 1u32).unwrap();

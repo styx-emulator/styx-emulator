@@ -92,21 +92,15 @@ lab:
 
 #[test]
 fn test_basic_branching_single_insn_pkt() {
-    styx_util::logging::init_logging();
-
     const R1: u32 = 47;
     // similar to basic branching, but ensures that the pkts are standalone with only 1 insn
-    let (mut cpu, mut mmu, mut ev) = setup_cpu(
-        0x1000,
-        styx_util::parse_objdump(
-            r#"
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(
+        r#"
        0:	04 c0 01 17	1701c004 { 	r0 = r1 ; jump 0x8 }
        4:	a0 fd 00 78	7800fda0 { 	r0 = #0x1ed }
        8:	00 c7 00 b0	b000c700 { 	r0 = add(r0,#0x38) }
        c:	42 c0 00 b0	b000c042 { 	r2 = add(r0,#0x2) }
 "#,
-        )
-        .unwrap(),
     );
     cpu.write_register(HexagonRegister::R1, R1).unwrap();
 
