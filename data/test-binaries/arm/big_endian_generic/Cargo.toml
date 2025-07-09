@@ -1,0 +1,13 @@
+[package]
+name = "big_endian_generic"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+styx-workspace-hack = { version = "0.1", path = "../../../../styx/workspace-hack" }
+thiserror = { workspace = true }
+anyhow = { workspace = true }

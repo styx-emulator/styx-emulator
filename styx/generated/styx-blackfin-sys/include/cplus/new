@@ -1,0 +1,165 @@
+// new standard header
+#if defined (_ADI_COMPILER)
+/************************************************************************
+ *
+ * new
+ *
+ * (c) Copyright 2001-2009 Analog Devices, Inc.  All rights reserved.
+ * (c) Copyright 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * $Revision: 1.8 $
+ ************************************************************************/
+
+#pragma once
+#ifndef __NO_BUILTIN
+#pragma system_header /* new */
+#endif
+#endif /* _ADI_COMPILER */
+
+#ifndef _NEW_
+#define _NEW_
+#include <exception>
+
+ #if !defined(__GNUC__) || (__GNUC__ < 3)
+_X_STD_BEGIN
+
+ #else /* __GNUC__ < 3 */
+namespace std {
+ #endif /* __GNUC__ < 3 */
+
+		// CLASS bad_alloc
+class bad_alloc
+	: public _XSTD exception
+	{	// base of all bad allocation exceptions
+public:
+
+ #if __EDG__ || defined(__SUNPRO_CC)
+	bad_alloc(const char *_Message = _MESG("bad allocation")) _THROW0()
+		: exception(_Message)
+		{	// construct from message string
+		}
+
+ #else /* __EDG__ etc. */
+	bad_alloc() _THROW0()
+		{	// construct with no message string
+		}
+
+	virtual const char *what() const _THROW0()
+		{	// report a bad allocation
+		return ("bad allocation");
+		}
+ #endif /* __EDG__ etc. */
+
+//	virtual ~bad_alloc() _THROW0()
+//		{}	// destroy the object
+
+ #if _HAS_EXCEPTIONS
+
+ #else /* _HAS_EXCEPTIONS */
+
+protected:
+	virtual void _Doraise() const
+		{	// perform class-specific exception handling
+		_RAISE(*this);
+		}
+ #endif /* _HAS_EXCEPTIONS */
+
+	};
+
+ #if !defined(__GNUC__) || (__GNUC__ < 3)
+_X_STD_END
+
+ #else /* __GNUC__ < 3 */
+} /* namespace std */
+
+ #if _HAS_NAMESPACE
+
+ #else /* _HAS_NAMESPACE */
+using _STD bad_alloc;
+ #endif /* _HAS_NAMESPACE */
+
+ #endif /* __GNUC__ < 3 */
+
+_STD_BEGIN
+		// SUPPORT TYPES
+typedef void (*new_handler)();	// handler for operator new failures
+
+struct nothrow_t
+	{	// placement new tag type to suppress exceptions
+	};
+
+extern const nothrow_t nothrow;	// constant for placement new tag
+
+		// FUNCTION AND OBJECT DECLARATIONS
+new_handler set_new_handler(new_handler)
+	_THROW0();	// establish alternate new handler
+
+extern new_handler _New_hand;	// pointer to current new handler
+_STD_END
+
+		// new AND delete DECLARATIONS (NB: NOT IN std)
+
+ #if defined(__SUNPRO_CC)
+void operator delete(void *) throw();	// delete allocated storage
+
+void *operator new(_CSTD size_t)
+	throw(_STD bad_alloc);	// allocate or throw exception
+
+ #else /* defined(__SUNPRO_CC) */
+void operator delete(void *) _THROW0();	// delete allocated storage
+
+void *operator new(_CSTD size_t)
+	_THROWS(_XSTD bad_alloc);	// allocate or throw exception
+ #endif /* defined(__SUNPRO_CC) */
+
+void *operator new(_CSTD size_t, const _STD nothrow_t&)
+	_THROW0();	// allocate or return null pointer
+
+inline void *operator new(_CSTD size_t, void *_Where) _THROW0()
+	{	// construct with placement at _Where
+	return (_Where);
+	}
+
+ #if defined(__SUNPRO_CC)
+void operator delete[](void *) throw();	// delete allocated array
+
+void *operator new[](_CSTD size_t)
+	throw(_STD bad_alloc);	// allocate array or throw exception
+
+ #else /* defined(__SUNPRO_CC) */
+void operator delete[](void *) _THROW0();	// delete allocated array
+
+void *operator new[](_CSTD size_t)
+	_THROWS(_XSTD bad_alloc);	// allocate array or throw exception
+ #endif /* defined(__SUNPRO_CC) */
+
+void *operator new[](_CSTD size_t, const _STD nothrow_t&)
+	_THROW0();	// allocate array or return null pointer
+
+inline void *operator new[](_CSTD size_t, void *_Where) _THROW0()
+	{	// construct array with placement at _Where
+	return (_Where);
+	}
+
+void operator delete(void *, const _STD nothrow_t&)
+	_THROW0();	// delete if nothrow new fails -- REPLACEABLE
+
+void operator delete[](void *, const _STD nothrow_t&)
+	_THROW0();	// delete if nothrow array new fails -- REPLACEABLE
+
+#if defined(_ADI_COMPILER)
+inline
+#endif
+void operator delete(void *, void *) _THROW0()
+	{}	// delete if placement new fails
+
+#if defined(_ADI_COMPILER)
+inline
+#endif
+void operator delete[](void *, void *) _THROW0()
+	{}	// delete if placement array new fails
+#endif /* _NEW_ */
+
+/*
+ * Copyright (c) 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * Consult your license regarding permissions and restrictions.
+V5.03:1134 */

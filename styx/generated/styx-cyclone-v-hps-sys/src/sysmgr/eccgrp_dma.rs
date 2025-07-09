@@ -1,0 +1,125 @@
+// BSD 2-Clause License
+//
+// Copyright (c) 2024, Styx Emulator Project
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, this
+//    list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#[doc = "Register `eccgrp_dma` reader"]
+pub type R = crate::R<EccgrpDmaSpec>;
+#[doc = "Register `eccgrp_dma` writer"]
+pub type W = crate::W<EccgrpDmaSpec>;
+#[doc = "Field `en` reader - Enable ECC for DMA RAM"]
+pub type EnR = crate::BitReader;
+#[doc = "Field `en` writer - Enable ECC for DMA RAM"]
+pub type EnW<'a, REG> = crate::BitWriter<'a, REG>;
+#[doc = "Field `injs` reader - Changing this bit from zero to one injects a single, correctable error into the DMA RAM. This only injects one error into the DMA RAM."]
+pub type InjsR = crate::BitReader;
+#[doc = "Field `injs` writer - Changing this bit from zero to one injects a single, correctable error into the DMA RAM. This only injects one error into the DMA RAM."]
+pub type InjsW<'a, REG> = crate::BitWriter<'a, REG>;
+#[doc = "Field `injd` reader - Changing this bit from zero to one injects a double, non-correctable error into the DMA RAM. This only injects one double bit error into the DMA RAM."]
+pub type InjdR = crate::BitReader;
+#[doc = "Field `injd` writer - Changing this bit from zero to one injects a double, non-correctable error into the DMA RAM. This only injects one double bit error into the DMA RAM."]
+pub type InjdW<'a, REG> = crate::BitWriter<'a, REG>;
+#[doc = "Field `serr` reader - This bit is an interrupt status bit for DMA RAM ECC single, correctable error. It is set by hardware when single, correctable error occurs in DMA RAM. Software needs to write 1 into this bit to clear the interrupt status."]
+pub type SerrR = crate::BitReader;
+#[doc = "Field `serr` writer - This bit is an interrupt status bit for DMA RAM ECC single, correctable error. It is set by hardware when single, correctable error occurs in DMA RAM. Software needs to write 1 into this bit to clear the interrupt status."]
+pub type SerrW<'a, REG> = crate::BitWriter1C<'a, REG>;
+#[doc = "Field `derr` reader - This bit is an interrupt status bit for DMA RAM ECC double bit, non-correctable error. It is set by hardware when double bit, non-correctable error occurs in DMA RAM. Software needs to write 1 into this bit to clear the interrupt status."]
+pub type DerrR = crate::BitReader;
+#[doc = "Field `derr` writer - This bit is an interrupt status bit for DMA RAM ECC double bit, non-correctable error. It is set by hardware when double bit, non-correctable error occurs in DMA RAM. Software needs to write 1 into this bit to clear the interrupt status."]
+pub type DerrW<'a, REG> = crate::BitWriter1C<'a, REG>;
+impl R {
+    #[doc = "Bit 0 - Enable ECC for DMA RAM"]
+    #[inline(always)]
+    pub fn en(&self) -> EnR {
+        EnR::new((self.bits & 1) != 0)
+    }
+    #[doc = "Bit 1 - Changing this bit from zero to one injects a single, correctable error into the DMA RAM. This only injects one error into the DMA RAM."]
+    #[inline(always)]
+    pub fn injs(&self) -> InjsR {
+        InjsR::new(((self.bits >> 1) & 1) != 0)
+    }
+    #[doc = "Bit 2 - Changing this bit from zero to one injects a double, non-correctable error into the DMA RAM. This only injects one double bit error into the DMA RAM."]
+    #[inline(always)]
+    pub fn injd(&self) -> InjdR {
+        InjdR::new(((self.bits >> 2) & 1) != 0)
+    }
+    #[doc = "Bit 3 - This bit is an interrupt status bit for DMA RAM ECC single, correctable error. It is set by hardware when single, correctable error occurs in DMA RAM. Software needs to write 1 into this bit to clear the interrupt status."]
+    #[inline(always)]
+    pub fn serr(&self) -> SerrR {
+        SerrR::new(((self.bits >> 3) & 1) != 0)
+    }
+    #[doc = "Bit 4 - This bit is an interrupt status bit for DMA RAM ECC double bit, non-correctable error. It is set by hardware when double bit, non-correctable error occurs in DMA RAM. Software needs to write 1 into this bit to clear the interrupt status."]
+    #[inline(always)]
+    pub fn derr(&self) -> DerrR {
+        DerrR::new(((self.bits >> 4) & 1) != 0)
+    }
+}
+impl W {
+    #[doc = "Bit 0 - Enable ECC for DMA RAM"]
+    #[inline(always)]
+    #[must_use]
+    pub fn en(&mut self) -> EnW<EccgrpDmaSpec> {
+        EnW::new(self, 0)
+    }
+    #[doc = "Bit 1 - Changing this bit from zero to one injects a single, correctable error into the DMA RAM. This only injects one error into the DMA RAM."]
+    #[inline(always)]
+    #[must_use]
+    pub fn injs(&mut self) -> InjsW<EccgrpDmaSpec> {
+        InjsW::new(self, 1)
+    }
+    #[doc = "Bit 2 - Changing this bit from zero to one injects a double, non-correctable error into the DMA RAM. This only injects one double bit error into the DMA RAM."]
+    #[inline(always)]
+    #[must_use]
+    pub fn injd(&mut self) -> InjdW<EccgrpDmaSpec> {
+        InjdW::new(self, 2)
+    }
+    #[doc = "Bit 3 - This bit is an interrupt status bit for DMA RAM ECC single, correctable error. It is set by hardware when single, correctable error occurs in DMA RAM. Software needs to write 1 into this bit to clear the interrupt status."]
+    #[inline(always)]
+    #[must_use]
+    pub fn serr(&mut self) -> SerrW<EccgrpDmaSpec> {
+        SerrW::new(self, 3)
+    }
+    #[doc = "Bit 4 - This bit is an interrupt status bit for DMA RAM ECC double bit, non-correctable error. It is set by hardware when double bit, non-correctable error occurs in DMA RAM. Software needs to write 1 into this bit to clear the interrupt status."]
+    #[inline(always)]
+    #[must_use]
+    pub fn derr(&mut self) -> DerrW<EccgrpDmaSpec> {
+        DerrW::new(self, 4)
+    }
+}
+#[doc = "This register is used to enable ECC on the DMA RAM. ECC errors can be injected into the write path using bits in this register. This register contains interrupt status of the ECC single/double bit error. Only reset by a cold reset (ignores warm reset).\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`eccgrp_dma::R`](R).  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`eccgrp_dma::W`](W). You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
+pub struct EccgrpDmaSpec;
+impl crate::RegisterSpec for EccgrpDmaSpec {
+    type Ux = u32;
+    const OFFSET: u64 = 344u64;
+}
+#[doc = "`read()` method returns [`eccgrp_dma::R`](R) reader structure"]
+impl crate::Readable for EccgrpDmaSpec {}
+#[doc = "`write(|w| ..)` method takes [`eccgrp_dma::W`](W) writer structure"]
+impl crate::Writable for EccgrpDmaSpec {
+    type Safety = crate::Unsafe;
+    const ZERO_TO_MODIFY_FIELDS_BITMAP: u32 = 0;
+    const ONE_TO_MODIFY_FIELDS_BITMAP: u32 = 0x18;
+}
+#[doc = "`reset()` method sets eccgrp_dma to value 0"]
+impl crate::Resettable for EccgrpDmaSpec {
+    const RESET_VALUE: u32 = 0;
+}

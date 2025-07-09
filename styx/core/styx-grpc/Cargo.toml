@@ -1,0 +1,54 @@
+[package]
+name = "styx-grpc"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+styx-macros-args = { path = "../../../incubation/styx-macros-args" }
+styx-util = { path = "../styx-util" }
+styx-errors = { path = "../styx-errors" }
+typhunix-macros = { workspace = true }
+log = { workspace = true }
+tonic = { workspace = true }
+prost = { workspace = true }
+prost-types = { workspace = true }
+prost-wkt-types = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+clap = { workspace = true, features = ["string"] }
+serde_json = { workspace = true }
+futures-lite = { workspace = true }
+async-fs = { workspace = true }
+pyo3 = { workspace = true, optional = true }
+styx-workspace-hack = { version = "0.1", path = "../../workspace-hack" }
+tokio = { workspace = true }
+tokio-stream = { workspace = true }
+h2 = { workspace = true }
+regex = { workspace = true }
+
+[build-dependencies]
+styx-macros-args = { path = "../../../incubation/styx-macros-args" }
+prost-wkt-types = { workspace = true }
+tonic-build = { workspace = true }
+glob = { workspace = true }
+
+
+[dev-dependencies]
+log = { workspace = true }
+serde_yaml = { workspace = true }
+styx-core = { workspace = true }
+
+[features]
+default = []
+pyo3_bindings = ["pyo3"]
+
+[package.metadata.cargo-udeps.ignore]
+normal = ["typhunix-macros"]

@@ -1,0 +1,265 @@
+// iosfwd standard header
+#if defined (_ADI_COMPILER)
+/************************************************************************
+ *
+ * iosfwd
+ *
+ * (c) Copyright 2001-2009 Analog Devices, Inc.  All rights reserved.
+ * (c) Copyright 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * $Revision: 1.8 $
+ ************************************************************************/
+
+#pragma once
+#ifndef __NO_BUILTIN
+#pragma system_header /* iosfwd */
+#endif
+#endif /* _ADI_COMPILER */
+
+#ifndef _IOSFWD_
+#define _IOSFWD_
+#include <cstdio>
+#include <cstring>
+#if !(defined(_ADI_COMPILER) && defined(__ADSP21000__))
+#include <cwchar>
+#endif
+#include <xstddef>
+_STD_BEGIN
+
+		// STREAM POSITIONING TYPES (from <streambuf>)
+
+ #if _HAS_DINKUM_CLIB
+ #define _FSEEK_OFF(str, off, way)	(long)fseek(str, (long)(off), way)
+
+typedef long streamoff;
+typedef int streamsize;
+
+ #else /* _HAS_DINKUM_CLIB */
+#if defined (_ADI_COMPILER)
+typedef long streamoff;
+typedef int streamsize;
+#else
+typedef _Longlong streamoff;
+typedef _Longlong streamsize;
+#endif /* _ADI_COMPILER */
+ #endif /* _HAS_DINKUM_CLIB */
+
+ #if !defined(_FSEEK_OFF)
+  #define _FSEEK_OFF(str, off, way)	fseek(str, off, way)
+ #endif /* defined(_FSEEK_OFF) */
+
+extern fpos_t _Fpz;
+extern const streamoff _BADOFF;
+		// CLASS fpos (from <streambuf>)
+class fpos
+	{	// store arbitrary file position
+	typedef _Mbstatet _Statetype;
+	typedef fpos _Myt;
+
+public:
+	fpos(streamoff _Off = 0)
+		: _Myoff(_Off), _Fpos(_Fpz), _Mystate(_Stz)
+		{	// construct with stream offset
+		}
+
+	fpos(_Statetype _State, fpos_t _Fileposition)
+		: _Myoff(0), _Fpos(_Fileposition), _Mystate(_State)
+		{	// construct with conversion state and C file position
+		}
+
+	_Statetype state() const
+		{	// return conversion state
+		return (_Mystate);
+		}
+
+	void state(_Statetype _State)
+		{	// set conversion state
+		_Mystate = _State;
+		}
+
+	fpos_t seekpos() const
+		{	// return C file position
+		return (_Fpos);
+		}
+
+	operator streamoff() const
+		{	// return offset
+		return ((streamoff)(_Myoff + _FPOSOFF(_Fpos)));
+		}
+
+	streamoff operator-(const _Myt& _Right) const
+		{	// return difference of file positions as an offset
+		return ((streamoff)*this - (streamoff)_Right);
+		}
+
+	_Myt& operator+=(streamoff _Off)
+		{	// add offset
+		_Myoff += _Off;
+		return (*this);
+		}
+
+	_Myt& operator-=(streamoff _Off)
+		{	// subtract offset
+		_Myoff -= _Off;
+		return (*this);
+		}
+
+	_Myt operator+(streamoff _Off) const
+		{	// return this + offset
+		_Myt _Tmp = *this;
+		return (_Tmp += _Off);
+		}
+
+	_Myt operator-(streamoff _Off) const
+		{	// return this - offset
+		_Myt _Tmp = *this;
+		return (_Tmp -= _Off);
+		}
+
+	bool operator==(const _Myt& _Right) const
+		{	// test for file position equality
+		return ((streamoff)*this == (streamoff)_Right);
+		}
+
+	bool operator==(streamoff _Right) const
+		{	// test for file position equality with streamoff
+		return ((streamoff)*this == _Right);
+		}
+
+	bool operator!=(const _Myt& _Right) const
+		{	// test for file position inequality
+		return (!(*this == _Right));
+		}
+
+private:
+	static _Statetype _Stz;	// initial conversion state
+	streamoff _Myoff;	// stream offset
+	fpos_t _Fpos;	// C file position
+	_Statetype _Mystate;	// current conversion state
+	};
+
+ #if _HAS_TRADITIONAL_POS_TYPE
+ #define _POS_TYPE_FROM_STATE(postype, state, position)	\
+	postype(_FPOSOFF(position))
+ #define _POS_TYPE_TO_FPOS_T(pos)	_Postype_to_fpos_t(pos)
+ #define _POS_TYPE_TO_STATE(pos)	_Postype_to_mbstate_t(pos)
+
+typedef streamoff streampos;
+fpos_t _Postype_to_fpos_t(streampos);
+_Mbstatet _Postype_to_mbstate_t(streampos);
+
+ #else /* _HAS_TRADITIONAL_POS_TYPE */
+ #define _POS_TYPE_FROM_STATE(postype, state, position)	\
+	postype(state, position)
+ #define _POS_TYPE_TO_FPOS_T(pos)	pos.seekpos()
+ #define _POS_TYPE_TO_STATE(pos)	pos.state()
+
+typedef fpos streampos;
+ #endif /* _HAS_TRADITIONAL_POS_TYPE */
+
+		// STRUCT char_traits (FROM <string>)
+struct char_traits
+	{	// properties of a string or stream char element
+	typedef char _Elem;
+	typedef _Elem char_type;
+	typedef int int_type;
+	typedef streampos pos_type;
+	typedef streamoff off_type;
+	typedef _Mbstatet state_type;
+
+	static void assign(_Elem& _Left, const _Elem& _Right)
+		{	// assign an element
+		_Left = _Right;
+		}
+
+	static bool eq(const _Elem& _Left, const _Elem& _Right)
+		{	// test for element equality
+		return (_Left == _Right);
+		}
+
+	static bool lt(const _Elem& _Left, const _Elem& _Right)
+		{	// test if _Left precedes _Right
+		return (_Left < _Right);
+		}
+
+	static int compare(const _Elem *_First1, const _Elem *_First2,
+		size_t _Count)
+		{	// compare [_First1, _First1 + _Count) with [_First2, ...)
+		return (_CSTD memcmp(_First1, _First2, _Count));
+		}
+
+	static size_t length(const _Elem *_First)
+		{	// find length of null-terminated string
+		return (_CSTD strlen(_First));
+		}
+
+	static _Elem *copy(_Elem *_First1, const _Elem *_First2,
+		size_t _Count)
+		{	// copy [_First1, _First1 + _Count) to [_First2, ...)
+		return ((_Elem *)_CSTD memcpy(_First1, _First2, _Count));
+		}
+
+	static const _Elem *find(const _Elem *_First, size_t _Count,
+		const _Elem& _Ch)
+		{	// look for _Ch in [_First, _First + _Count)
+		return ((const _Elem *)_CSTD memchr(_First, _Ch, _Count));
+		}
+
+	static _Elem *move(_Elem *_First1, const _Elem *_First2,
+		size_t _Count)
+		{	// copy [_First1, _First1 + _Count) to [_First2, ...)
+		return ((_Elem *)_CSTD memmove(_First1, _First2, _Count));
+		}
+
+	static _Elem *assign(_Elem *_First, size_t _Count, _Elem _Ch)
+		{	// assign _Count * _Ch to [_First, ...)
+		return ((_Elem *)_CSTD memset(_First, _Ch, _Count));
+		}
+
+	static _Elem to_char_type(const int_type& _Meta)
+		{	// convert metacharacter to character
+		return ((_Elem)_Meta);
+		}
+
+	static int_type to_int_type(const _Elem& _Ch)
+		{	// convert character to metacharacter
+		return ((unsigned char)_Ch);
+		}
+
+	static bool eq_int_type(const int_type& _Left,
+		const int_type& _Right)
+		{	// test for metacharacter equality
+		return (_Left == _Right);
+		}
+
+	static int_type eof()
+		{	// return end-of-file metacharacter
+		return (EOF);
+		}
+
+	static int_type not_eof(const int_type& _Meta)
+		{	// return anything but EOF
+		return (_Meta != eof() ? _Meta : !eof());
+		}
+	};
+
+		// FORWARD REFERENCES
+class char_allocator;
+class ios_base;
+class ios;
+class streambuf;
+class istream;
+class ostream;
+class stringbuf;
+class istringstream;
+class ostringstream;
+class filebuf;
+class ifstream;
+class ofstream;
+
+_STD_END
+#endif /* _IOSFWD_ */
+
+/*
+ * Copyright (c) 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * Consult your license regarding permissions and restrictions.
+V5.03:1134 */

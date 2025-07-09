@@ -1,0 +1,81 @@
+syntax = "proto3";
+package typhunix_interop;
+
+import "symbolic.proto";
+
+// Best practices: https://protobuf.dev/programming-guides/api/
+// import "google/protobuf/empty.proto";
+
+// option java_package = "com.example.tutorial";
+option java_outer_classname = "GhidraState";
+// option java_multiple_files = true;
+
+service Typhunix {
+
+  /// Ping the server
+  rpc Ping(PingRequest) returns (PingResponse) {}
+
+  /// Retrieve a list of program identifiers that have been registered
+  rpc GetProgramsIdentifiers(symbolic.ProgramFilter)
+      returns (stream symbolic.ProgramIdentifier) {}
+
+  /// Retrieve a list of programs opened in Ghidra/CodeBrowser
+  rpc GetPrograms(symbolic.ProgramFilter) returns (stream symbolic.Program) {}
+
+  /// Stops the server (todo)
+  rpc StopServer(StopServerRequest) returns (StopServerResponse) {}
+
+  /// Get a stream of symbols for the given program
+  rpc GetSymbols(symbolic.Program) returns (stream symbolic.Symbol) {}
+
+  /// Get a stream of DataTypes for the program
+  rpc GetDataTypes(symbolic.Program) returns (stream symbolic.DataType) {}
+
+  /// Retrieve a list of programs + symbols + data types
+  rpc GetProgramsWithSymbols(symbolic.ProgramFilter) returns (stream symbolic.ProgramsWithSymbols) {}
+
+  /// subscribe to changes to symbols, datatypes
+  rpc Subscribe(symbolic.Program) returns (Ack) {}
+
+  /// Unsubscribe to changes
+  rpc UnSubscribe(symbolic.Program) returns (Ack) {}
+
+  /// Ghidra side: Register a Ghidra program along with its artifacts
+  /// (Program metadata, symbols, data types)
+  rpc RegisterNew(ConnectMessage) returns (Ack) {}
+
+  /// Ghidra-side: push a symbol update
+  rpc SymbolUpdate(symbolic.Symbol) returns (Ack) {}
+
+  /// Ghidra-side: push a DataType update
+  rpc DataTypeUpdate(symbolic.DataType) returns (Ack) {}
+
+  /// Ghidra-side: A program was opened in Ghidra (CodeBrowser)
+  rpc ProgramOpened(symbolic.Program) returns (Ack) {}
+
+  /// Ghidra-side: A program was closed in Ghidra (CodeBrowser)
+  rpc ProgramClosed(symbolic.Program) returns (Ack) {}
+}
+
+message Ack {
+  string uuid = 1;
+  bool success = 2;
+}
+
+message PingRequest {}
+
+message PingResponse {}
+
+/// Connect message, used to initialize state for a Ghidra project
+/// Called when a program is opened with CodeBrowser in Ghidra
+message ConnectMessage {
+  symbolic.Program program = 1;
+  repeated symbolic.DataType data_types = 2;
+  repeated symbolic.Symbol symbols = 3;
+}
+
+// Request to shutdown server
+message StopServerRequest { string uuid = 1; }
+
+// Response that server is shutting down
+message StopServerResponse {}

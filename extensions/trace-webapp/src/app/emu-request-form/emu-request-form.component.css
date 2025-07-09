@@ -1,0 +1,39 @@
+.request-param-block-title {
+  display: block;
+  border-top-color: black;
+  border-top-width: 1px;
+  border-top-style: solid;
+  margin-top: 5px;
+  color: black;
+}
+
+.request-params-container {
+  border-color: gray;
+  border-width: 1px;
+  border-style: solid;
+  border-radius: 4px;
+  margin: 8px 0px 20px 8px;
+  padding: 2px;
+}
+
+.firmware-choice {
+  display: block;
+  margin-left: 40px;
+  margin-right: 5px;
+}
+
+.regex-field {
+  /* margin: 20px; */
+  padding: 20px;
+}
+
+.remote-filename {
+  padding-bottom: 0px;
+  margin-left: 30px;
+  margin-bottom: 25px;
+  font-size: small;
+}
+
+.trace-plugin-params {
+  margin-left: 20px;
+}

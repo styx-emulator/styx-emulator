@@ -1,0 +1,133 @@
+// rope header
+#ifndef _ROPE_
+#define _ROPE_
+#include <string>
+_STD_BEGIN
+
+		// TEMPLATE CLASS rope
+template<class _Elem,
+	class _Ax = allocator<_Elem> >
+	class rope
+		: public basic_string<_Elem, char_traits<_Elem>, _Ax>
+	{	// null-terminated transparent array of elements
+public:
+	typedef rope<_Elem, _Ax> _Myt;
+	typedef basic_string<_Elem, char_traits<_Elem>, _Ax> _Mybase;
+
+	typedef typename _Mybase::allocator_type allocator_type;
+	typedef typename _Mybase::size_type size_type;
+	typedef typename _Mybase::difference_type difference_type;
+	typedef typename _Mybase::pointer pointer;
+	typedef typename _Mybase::const_pointer const_pointer;
+	typedef typename _Mybase::reference reference;
+	typedef typename _Mybase::const_reference const_reference;
+	typedef typename _Mybase::value_type value_type;
+	typedef typename _Mybase::iterator iterator;
+	typedef typename _Mybase::const_iterator const_iterator;
+	typedef typename _Mybase::reverse_iterator reverse_iterator;
+	typedef typename _Mybase::const_reverse_iterator const_reverse_iterator;
+
+	rope()
+		: _Mybase()
+		{	// construct empty string
+		}
+
+	explicit rope(const allocator_type& _Al)
+		: _Mybase(_Al)
+		{	// construct empty string with allocator
+		}
+
+	rope(const _Myt& _Right)
+		: _Mybase(_Right)
+		{	// construct by copying _Right
+		}
+
+	rope(const _Myt& _Right, size_type _Roff,
+		size_type _Count = _Mybase::npos)
+		: _Mybase(_Right, _Roff, _Count)
+		{	// construct from _Right [_Roff, _Roff + _Count)
+		}
+
+	rope(const _Myt& _Right, size_type _Roff, size_type _Count,
+		const allocator_type& _Al)
+		: _Mybase(_Right, _Roff, _Count, _Al)
+		{	// construct from _Right [_Roff, _Roff + _Count) with allocator
+		}
+
+	rope(const _Elem *_Ptr, size_type _Count)
+		: _Mybase(_Ptr, _Count)
+		{	// construct from [_Ptr, _Ptr + _Count)
+		}
+
+	rope(const _Elem *_Ptr, size_type _Count, const allocator_type& _Al)
+		: _Mybase(_Ptr, _Count, _Al)
+		{	// construct from [_Ptr, _Ptr + _Count) with allocator
+		}
+
+	rope(const _Elem *_Ptr)
+		: _Mybase(_Ptr)
+		{	// construct from [_Ptr, <null>)
+		}
+
+	rope(const _Elem *_Ptr, const allocator_type& _Al)
+		: _Mybase(_Ptr, _Al)
+		{	// construct from [_Ptr, <null>) with allocator
+		}
+
+	rope(size_type _Count, _Elem _Ch)
+		: _Mybase(_Count, _Ch)
+		{	// construct from _Count * _Ch
+		}
+
+	rope(size_type _Count, _Elem _Ch, const allocator_type& _Al)
+		: _Mybase(_Count, _Ch, _Al)
+		{	// construct from _Count * _Ch with allocator
+		}
+
+	template<class _It>
+		rope(_It _First, _It _Last)
+		: _Mybase(_First, _Last)
+		{	// construct from [_First, _Last)
+		}
+
+	template<class _It>
+		rope(_It _First, _It _Last, const allocator_type& _Al)
+		: _Mybase(_First, _Last, _Al)
+		{	// construct from [_First, _Last) with allocator
+		}
+
+ #if _IS_EMBEDDED
+
+ #else /* _IS_EMBEDDED */
+
+ #if _HAS_TRADITIONAL_ITERATORS
+
+ #else /* _HAS_TRADITIONAL_ITERATORS */
+
+	rope(const_pointer _First, const_pointer _Last)
+		: _Mybase(_First, _Last)
+		{	// construct from [_First, _Last), const pointers
+		}
+ #endif /* _HAS_TRADITIONAL_ITERATORS */
+
+ #endif /* _IS_EMBEDDED */
+
+	rope(const_iterator _First, const_iterator _Last)
+		: _Mybase(_First, _Last)
+		{	// construct from [_First, _Last), const_iterators
+		}
+
+	~rope()
+		{	// destroy the string
+		}
+	};
+
+typedef rope<char, allocator<char> > crope;
+typedef rope<wchar_t, allocator<wchar_t> > wrope;
+_STD_END
+#endif /* _ROPE */
+
+/*
+ * Copyright (c) 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * Consult your license regarding permissions and restrictions.
+V5.03:1134 */

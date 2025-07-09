@@ -1,0 +1,74 @@
+<feature name="org.gnu.gdb.sh.core">
+  <!-- General Purpose Registers -->
+  <reg name="r0" bitsize="32" type="int32"/>
+  <reg name="r1" bitsize="32" type="int32"/>
+  <reg name="r2" bitsize="32" type="int32"/>
+  <reg name="r3" bitsize="32" type="int32"/>
+  <reg name="r4" bitsize="32" type="int32"/>
+  <reg name="r5" bitsize="32" type="int32"/>
+  <reg name="r6" bitsize="32" type="int32"/>
+  <reg name="r7" bitsize="32" type="int32"/>
+  <reg name="r8" bitsize="32" type="int32"/>
+  <reg name="r9" bitsize="32" type="int32"/>
+  <reg name="r10" bitsize="32" type="int32"/>
+  <reg name="r11" bitsize="32" type="int32"/>
+  <reg name="r12" bitsize="32" type="int32"/>
+  <reg name="r13" bitsize="32" type="int32"/>
+  <reg name="r14" bitsize="32" type="int32"/>
+  <reg name="r15" bitsize="32" type="data_ptr"/>
+
+  <!-- Control Registers -->
+  <reg name="pc" bitsize="32" type="code_ptr"/>
+  <reg name="pr" bitsize="32" type="int32"/>
+  <reg name="gbr" bitsize="32" type="int32"/>
+  <reg name="vbr" bitsize="32" type="int32"/>
+  <reg name="mach" bitsize="32" type="int32"/>
+  <reg name="macl" bitsize="32" type="int32"/>
+  <reg name="sr" bitsize="32" type="int32"/>
+
+  <!-- Floating-Point Control Registers -->
+  <reg name="fpul" bitsize="32" type="int32"/>
+  <reg name="fpscr" bitsize="32" type="int32"/>
+
+  <!-- Floating-Point Data Registers -->
+  <reg name="fr0" bitsize="32" type="float"/>
+  <reg name="fr1" bitsize="32" type="float"/>
+  <reg name="fr2" bitsize="32" type="float"/>
+  <reg name="fr3" bitsize="32" type="float"/>
+  <reg name="fr4" bitsize="32" type="float"/>
+  <reg name="fr5" bitsize="32" type="float"/>
+  <reg name="fr6" bitsize="32" type="float"/>
+  <reg name="fr7" bitsize="32" type="float"/>
+  <reg name="fr8" bitsize="32" type="float"/>
+  <reg name="fr9" bitsize="32" type="float"/>
+  <reg name="fr10" bitsize="32" type="float"/>
+  <reg name="fr11" bitsize="32" type="float"/>
+  <reg name="fr12" bitsize="32" type="float"/>
+  <reg name="fr13" bitsize="32" type="float"/>
+  <reg name="fr14" bitsize="32" type="float"/>
+  <reg name="fr15" bitsize="32" type="float"/>
+
+  <!-- System Registers -->
+  <reg name="ssr" bitsize="32" type="int32"/>
+  <reg name="spc" bitsize="32" type="code_ptr"/>
+
+  <!-- Banked Registers (Bank 0) -->
+  <reg name="r0b0" bitsize="32" type="int32"/>
+  <reg name="r1b0" bitsize="32" type="int32"/>
+  <reg name="r2b0" bitsize="32" type="int32"/>
+  <reg name="r3b0" bitsize="32" type="int32"/>
+  <reg name="r4b0" bitsize="32" type="int32"/>
+  <reg name="r5b0" bitsize="32" type="int32"/>
+  <reg name="r6b0" bitsize="32" type="int32"/>
+  <reg name="r7b0" bitsize="32" type="int32"/>
+
+  <!-- Banked Registers (Bank 1) -->
+  <reg name="r0b1" bitsize="32" type="int32"/>
+  <reg name="r1b1" bitsize="32" type="int32"/>
+  <reg name="r2b1" bitsize="32" type="int32"/>
+  <reg name="r3b1" bitsize="32" type="int32"/>
+  <reg name="r4b1" bitsize="32" type="int32"/>
+  <reg name="r5b1" bitsize="32" type="int32"/>
+  <reg name="r6b1" bitsize="32" type="int32"/>
+  <reg name="r7b1" bitsize="32" type="int32"/>
+</feature>

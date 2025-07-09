@@ -1,0 +1,43 @@
+<div *ngIf="this.mode == 0" class="tableFixHead" id="event_table_parent">
+  <table #eventsTable id="events_table">
+    <thead>
+      <tr>
+        <th>Item#</th>
+        <th>Insn#</th>
+        <th>PC</th>
+        <th>Address</th>
+        <th>Symbol</th>
+        <th>Old Value</th>
+        <th>New Value</th>
+      </tr>
+    </thead>
+    <tbody id="event_body">
+      <tr *ngFor="let item of this.data; let index = index">
+        <td>{{ index }}</td>
+        <td>{{ item.getInsnNum() }}</td>
+        <td>{{ item.getPc() | hex }}</td>
+        <td>{{ item.getAddr() | hex }}</td>
+        <td>{{ getChangeRep(item) }}</td>
+        <td>{{ item.getOldValue() }}</td>
+        <td>{{ item.getNewValue() }}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div *ngIf="this.mode == 1 && latestItem?.hasVar()" class="watchvar">
+  <mat-label class="datatype">
+    {{ "struct " + latestItem?.getVar()?.getTypename() }}
+  </mat-label>
+  <mat-label>
+    {{ latestItem?.getVar()?.getName() }}
+  </mat-label>
+
+  <table>
+    <tr *ngFor="let m of latestItem?.getMembersList()">
+      <td class="datatype">{{ m.getVar()?.getTypename() }}</td>
+      <td class="varname">{{ m.getVar()?.getName() }}</td>
+      <td class="varvalue">{{ m.getReprVal() }}</td>
+    </tr>
+  </table>
+</div>

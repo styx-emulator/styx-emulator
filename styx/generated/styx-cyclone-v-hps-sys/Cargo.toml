@@ -1,0 +1,137 @@
+[package]
+name = "styx-cyclone-v-hps-sys"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+# need extra lints for this crate, so we can't use the workspace
+# defaults :upside_down_face:
+[lints.rust]
+# TODO: fix generation of type/function names
+non_camel_case_types = "allow"
+non_snake_case = "allow"
+dead_code = "allow"
+
+[lints.clippy]
+empty_docs = "allow"
+
+[lints.rustdoc]
+# TODO: fix generation of urls + doc comments
+bare_urls = "allow"
+broken_intra_doc_links = "deny"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+vcell = { workspace = true }
+styx-workspace-hack = { version = "0.1", path = "../../workspace-hack" }
+
+[dev-dependencies]
+compiletest_rs = { workspace = true }
+
+[features]
+default = ["uart0"]
+acpidmap = []
+can0 = []
+can1 = []
+clkmgr = []
+dap = []
+dmanonsecure = []
+dmasecure = []
+emac0 = []
+emac1 = []
+fpga2hpsregs = []
+fpgamgrdata = []
+fpgamgrregs = []
+gpio0 = []
+gpio1 = []
+gpio2 = []
+hps2fpgaregs = []
+i2c0 = []
+i2c1 = []
+i2c2 = []
+i2c3 = []
+l3regs = []
+l4wd0 = []
+l4wd1 = []
+lwfpgaslaves = []
+lwhps2fpgaregs = []
+mpul2 = []
+mpuscu = []
+nanddata = []
+nandregs = []
+ocram = []
+osc1timer0 = []
+osc1timer1 = []
+qspidata = []
+qspiregs = []
+rom = []
+rstmgr = []
+scanmgr = []
+sdmmc = []
+sdr = []
+spim0 = []
+spim1 = []
+spis0 = []
+spis1 = []
+sptimer0 = []
+sptimer1 = []
+stm = []
+sysmgr = []
+uart0 = []
+uart1 = []
+usb0 = []
+usb1 = []
+all-peripherals = [
+  "acpidmap",
+  "can0",
+  "can1",
+  "clkmgr",
+  "dap",
+  "dmanonsecure",
+  "dmasecure",
+  "emac0",
+  "emac1",
+  "fpga2hpsregs",
+  "fpgamgrdata",
+  "fpgamgrregs",
+  "gpio0",
+  "gpio1",
+  "gpio2",
+  "hps2fpgaregs",
+  "i2c0",
+  "i2c1",
+  "i2c2",
+  "i2c3",
+  "l3regs",
+  "l4wd0",
+  "l4wd1",
+  "lwfpgaslaves",
+  "lwhps2fpgaregs",
+  "mpul2",
+  "mpuscu",
+  "nanddata",
+  "nandregs",
+  "ocram",
+  "osc1timer0",
+  "osc1timer1",
+  "qspidata",
+  "qspiregs",
+  "rom",
+  "rstmgr",
+  "scanmgr",
+  "sdmmc",
+  "sdr",
+  "spim0",
+  "spim1",
+  "spis0",
+  "spis1",
+  "sptimer0",
+  "sptimer1",
+  "stm",
+  "sysmgr",
+  "uart0",
+  "uart1",
+  "usb0",
+  "usb1",
+]

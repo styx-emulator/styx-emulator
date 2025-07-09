@@ -1,0 +1,41 @@
+[package]
+name = "styx-tracebus"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+# See more keys and their definitions at
+# https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+default = ["numbered"]
+numbered = []
+
+[dependencies]
+styx-macros = { path = "../styx-macros" }
+styx-sync = { path = "../styx-sync" }
+styx-util = { path = "../styx-util" }
+
+enum_dispatch = { workspace = true }
+log = { workspace = true }
+bitflags = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+ipmpsc = { workspace = true }
+bitflags_serde_shim = { workspace = true }
+uuid = { workspace = true }
+envy = { workspace = true }
+tokio-util = { workspace = true }
+bytes = { workspace = true }
+futures-core = { workspace = true }
+styx-workspace-hack = { version = "0.1", path = "../../workspace-hack" }
+
+
+[dev-dependencies]
+test-log = { workspace = true }
+env_logger = { workspace = true }
+test-case = { workspace = true }
+
+[build-dependencies]
+tonic-build = { workspace = true }

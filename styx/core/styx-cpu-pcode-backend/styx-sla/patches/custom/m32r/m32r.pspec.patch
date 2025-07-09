@@ -1,0 +1,24 @@
+diff --git a/data/languages/m32r.pspec b/data/languages/m32r.pspec
+index e577ffc..7fe7e89 100644
+--- a/data/languages/m32r.pspec
++++ b/data/languages/m32r.pspec
+@@ -1776,12 +1776,12 @@
+ 		<symbol name="DEC4CT" address="0x80204E"/>
+ 	</default_symbols>
+ 	<default_memory_blocks>
+-		<memory_block name="CS0" start_address="0x100000" length="0x100000" mode="rw"/>
+-		<memory_block name="CS1" start_address="0x200000" length="0x200000" mode="rw"/>
+-		<memory_block name="CS2" start_address="0x400000" length="0x200000" mode="rw"/>
+-		<memory_block name="CS3" start_address="0x600000" length="0x200000" mode="rw"/>
+-		<memory_block name="SFR" start_address="0x800000" length="0x4000" mode="rw"/>
+-		<memory_block name="RAM" start_address="0x804000" length="0x1C000" mode="rw"/>
++		<memory_block name="CS0" start_address="0x100000" length="0x100000" mode="rw" initialized="false"/>
++		<memory_block name="CS1" start_address="0x200000" length="0x200000" mode="rw" initialized="false"/>
++		<memory_block name="CS2" start_address="0x400000" length="0x200000" mode="rw" initialized="false"/>
++		<memory_block name="CS3" start_address="0x600000" length="0x200000" mode="rw" initialized="false"/>
++		<memory_block name="SFR" start_address="0x800000" length="0x4000" mode="rw" initialized="false"/>
++		<memory_block name="RAM" start_address="0x804000" length="0x1C000" mode="rw" initialized="false"/>
+ 	</default_memory_blocks>
+ 
+ </processor_spec>
+\ No newline at end of file

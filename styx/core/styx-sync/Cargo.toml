@@ -1,0 +1,29 @@
+[package]
+name = "styx-sync"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[target.'cfg(shuttle)'.dependencies]
+shuttle = { workspace = true }
+
+[target.'cfg(loom)'.dependencies]
+loom = { workspace = true }
+
+[target.'cfg(not(loom))'.dependencies]
+# this is here instead of in the workspace root because no one
+# else should be importing lazy_static
+lazy_static = { workspace = true }
+
+[dependencies]
+# at some point we might need to provide a
+# re-exported compat layer over once_cell or
+# std::cell::OnceLock
+once_cell = { workspace = true }
+tokio = { workspace = true }
+styx-workspace-hack = { version = "0.1", path = "../../workspace-hack" }

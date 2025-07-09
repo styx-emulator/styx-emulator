@@ -1,0 +1,68 @@
+// iomanip standard header
+#if defined (_ADI_COMPILER)
+/************************************************************************
+ *
+ * iomanip
+ *
+ * (c) Copyright 2001-2009 Analog Devices, Inc.  All rights reserved.
+ * (c) Copyright 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * $Revision: 1.4 $
+ ************************************************************************/
+
+#pragma once
+#ifndef __NO_BUILTIN
+#pragma system_header /* iomanip */
+#endif
+#endif /* _ADI_COMPILER */
+
+#ifndef _IOMANIP_
+#define _IOMANIP_
+#include <istream>
+_STD_BEGIN
+
+		// MACROS
+#define _SMNAME(suf)	_Smanip_##suf	/* qualify _Smanip with suffix */
+
+#define _SMANIP(suf, T, B)	\
+ struct _SMNAME(suf) \
+	{	/* store function pointer and argument value */ \
+	_SMNAME(suf)(void (*_Left)(B&, T), T _Val) \
+		: _Pfun(_Left), _Manarg(_Val) \
+		{ \
+		}	/* construct from function pointer and argument value */ \
+\
+	void (*_Pfun)(B&, T);	/* the function pointer */ \
+	T _Manarg;	/* the argument value */ \
+	}; \
+\
+inline istream& operator>>(istream& _Istr, const _SMNAME(suf)& _Manip) \
+	{	/* extract by calling function with input stream and argument */ \
+	(*_Manip._Pfun)(_Istr, _Manip._Manarg); \
+	return (_Istr); \
+	} \
+\
+inline ostream& operator<<(ostream& _Ostr, const _SMNAME(suf)& _Manip) \
+	{	/* insert by calling function with output stream and argument */ \
+	(*_Manip._Pfun)(_Ostr, _Manip._Manarg); \
+	return (_Ostr); \
+	}
+
+		// INSTANTIATIONS
+_SMANIP(char, char, ios)
+_SMANIP(fmt, ios_base::fmtflags, ios_base)
+_SMANIP(int, int, ios_base)
+_SMANIP(str, streamsize, ios_base)
+
+_SMNAME(char) setfill(char);
+_SMNAME(fmt) resetiosflags(ios_base::fmtflags);
+_SMNAME(fmt) setiosflags(ios_base::fmtflags);
+_SMNAME(int) setbase(int);
+_SMNAME(str) setprecision(streamsize);
+_SMNAME(str) setw(streamsize);
+_STD_END
+#endif /* _IOMANIP_ */
+
+/*
+ * Copyright (c) 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * Consult your license regarding permissions and restrictions.
+V5.03:1134 */

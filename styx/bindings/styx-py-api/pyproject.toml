@@ -1,0 +1,23 @@
+[build-system]
+requires = ["maturin>=1.7,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "styx_emulator"
+license = "BSD-2 Clause"
+project_url = "https://github.com/styx-emulator"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+]
+dynamic = ["version"]
+
+[tool.maturin]
+features = ["pyo3/extension-module"]
+profile = "release"
+auditwheel = "check"
+strip = true
+sdist-generator = "cargo"
+python-source = "python/styx_emulator"

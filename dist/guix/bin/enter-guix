@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+#
+# Enters a sandboxed guix shell
+
+# exit on error
+set -e
+
+# ensure we're already bootstrapped
+export BOOTSTRAP_GUIX_CHECK=1
+"${STYX_ROOT}/dist/guix/bin/bootstrap-guix" || true
+
+# Load the `__GUIX_PREFIX` from `load-guix-vars.bash`
+set -a
+source "${STYX_ROOT}/dist/guix/load-guix-vars.bash"
+set +a
+
+# prep the shell command
+SUBTITUTES="--substitute-urls=${STYX_GUIX_SUBSTITUTES}"
+ARGS="${__GUIX_SHELL_ARGS}"
+PREFIX="${__GUIX_PREFIX}"
+ENV_KEEP="-E LIBCLANG_PATH "
+USE_MANIFEST="-m ${__GUIX_SHELL_MANIFEST}"
+LOAD_PATHS="" # to be set below
+EXPORTS="" # to be set below
+SHARES="" # to be set below
+
+# expand the provided env vars to keep from `__GUIX_PRESERVED_ENV_VARS`
+for val in ${__GUIX_PRESERVED_ENV_VARS//,/ }; do
+    ENV_KEEP+="-E ${val} "
+done
+# expand the provided share dirs to SHARES from `__GUIX_SHELL_SHARE_DIRS`
+for val in ${__GUIX_SHELL_SHARE_DIRS//,/ }; do
+    SHARES+="--share=${val} "
+done
+# expand the provided export dirs to EXPORTS from `__GUIX_SHELL_EXPORT_DIRS`
+for val in ${__GUIX_SHELL_EXPORT_DIRS//,/ }; do
+    EXPORTS+="--export=${val} "
+done
+# expand the provided load paths to LOAD_PATHS from `__GUIX_LOAD_PATHS`
+for val in ${__GUIX_LOAD_PATH//,/ }; do
+    LOAD_PATHS+="-L ${val} "
+done
+
+# manually export the LIBCLANG_PATH for the single subshell invocation
+# this allows the profile in the shell to find libclang when building
+# rust projects
+export LIBCLANG_PATH="${HOME}/.guix-profile/lib"
+
+# enter the guix shell a la bash
+CMD="${PREFIX} shell ${ARGS} ${SUBTITUTES} ${LOAD_PATHS} ${ENV_KEEP} ${SHARES} ${EXPORTS} ${USE_MANIFEST} -- bash"
+eval "${CMD}"

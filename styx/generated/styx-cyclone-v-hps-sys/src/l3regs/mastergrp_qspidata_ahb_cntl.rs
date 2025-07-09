@@ -1,0 +1,178 @@
+// BSD 2-Clause License
+//
+// Copyright (c) 2024, Styx Emulator Project
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, this
+//    list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#[doc = "Register `mastergrp_qspidata_ahb_cntl` reader"]
+pub type R = crate::R<MastergrpQspidataAhbCntlSpec>;
+#[doc = "Register `mastergrp_qspidata_ahb_cntl` writer"]
+pub type W = crate::W<MastergrpQspidataAhbCntlSpec>;
+#[doc = "\n\nValue on reset: 0"]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DecerrEn {
+    #[doc = "0: `0`"]
+    Disable = 0,
+    #[doc = "1: `1`"]
+    Enable = 1,
+}
+impl From<DecerrEn> for bool {
+    #[inline(always)]
+    fn from(variant: DecerrEn) -> Self {
+        variant as u8 != 0
+    }
+}
+#[doc = "Field `decerr_en` reader - "]
+pub type DecerrEnR = crate::BitReader<DecerrEn>;
+impl DecerrEnR {
+    #[doc = "Get enumerated values variant"]
+    #[inline(always)]
+    pub const fn variant(&self) -> DecerrEn {
+        match self.bits {
+            false => DecerrEn::Disable,
+            true => DecerrEn::Enable,
+        }
+    }
+    #[doc = "`0`"]
+    #[inline(always)]
+    pub fn is_disable(&self) -> bool {
+        *self == DecerrEn::Disable
+    }
+    #[doc = "`1`"]
+    #[inline(always)]
+    pub fn is_enable(&self) -> bool {
+        *self == DecerrEn::Enable
+    }
+}
+#[doc = "Field `decerr_en` writer - "]
+pub type DecerrEnW<'a, REG> = crate::BitWriter<'a, REG, DecerrEn>;
+impl<'a, REG> DecerrEnW<'a, REG>
+where
+    REG: crate::Writable + crate::RegisterSpec,
+{
+    #[doc = "`0`"]
+    #[inline(always)]
+    pub fn disable(self) -> &'a mut crate::W<REG> {
+        self.variant(DecerrEn::Disable)
+    }
+    #[doc = "`1`"]
+    #[inline(always)]
+    pub fn enable(self) -> &'a mut crate::W<REG> {
+        self.variant(DecerrEn::Enable)
+    }
+}
+#[doc = "\n\nValue on reset: 0"]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ForceIncr {
+    #[doc = "0: `0`"]
+    Disable = 0,
+    #[doc = "1: `1`"]
+    Enable = 1,
+}
+impl From<ForceIncr> for bool {
+    #[inline(always)]
+    fn from(variant: ForceIncr) -> Self {
+        variant as u8 != 0
+    }
+}
+#[doc = "Field `force_incr` reader - "]
+pub type ForceIncrR = crate::BitReader<ForceIncr>;
+impl ForceIncrR {
+    #[doc = "Get enumerated values variant"]
+    #[inline(always)]
+    pub const fn variant(&self) -> ForceIncr {
+        match self.bits {
+            false => ForceIncr::Disable,
+            true => ForceIncr::Enable,
+        }
+    }
+    #[doc = "`0`"]
+    #[inline(always)]
+    pub fn is_disable(&self) -> bool {
+        *self == ForceIncr::Disable
+    }
+    #[doc = "`1`"]
+    #[inline(always)]
+    pub fn is_enable(&self) -> bool {
+        *self == ForceIncr::Enable
+    }
+}
+#[doc = "Field `force_incr` writer - "]
+pub type ForceIncrW<'a, REG> = crate::BitWriter<'a, REG, ForceIncr>;
+impl<'a, REG> ForceIncrW<'a, REG>
+where
+    REG: crate::Writable + crate::RegisterSpec,
+{
+    #[doc = "`0`"]
+    #[inline(always)]
+    pub fn disable(self) -> &'a mut crate::W<REG> {
+        self.variant(ForceIncr::Disable)
+    }
+    #[doc = "`1`"]
+    #[inline(always)]
+    pub fn enable(self) -> &'a mut crate::W<REG> {
+        self.variant(ForceIncr::Enable)
+    }
+}
+impl R {
+    #[doc = "Bit 0"]
+    #[inline(always)]
+    pub fn decerr_en(&self) -> DecerrEnR {
+        DecerrEnR::new((self.bits & 1) != 0)
+    }
+    #[doc = "Bit 1"]
+    #[inline(always)]
+    pub fn force_incr(&self) -> ForceIncrR {
+        ForceIncrR::new(((self.bits >> 1) & 1) != 0)
+    }
+}
+impl W {
+    #[doc = "Bit 0"]
+    #[inline(always)]
+    #[must_use]
+    pub fn decerr_en(&mut self) -> DecerrEnW<MastergrpQspidataAhbCntlSpec> {
+        DecerrEnW::new(self, 0)
+    }
+    #[doc = "Bit 1"]
+    #[inline(always)]
+    #[must_use]
+    pub fn force_incr(&mut self) -> ForceIncrW<MastergrpQspidataAhbCntlSpec> {
+        ForceIncrW::new(self, 1)
+    }
+}
+#[doc = "Sets the block issuing capability to one outstanding transaction.\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`mastergrp_qspidata_ahb_cntl::R`](R).  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`mastergrp_qspidata_ahb_cntl::W`](W). You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
+pub struct MastergrpQspidataAhbCntlSpec;
+impl crate::RegisterSpec for MastergrpQspidataAhbCntlSpec {
+    type Ux = u32;
+    const OFFSET: u64 = 139332u64;
+}
+#[doc = "`read()` method returns [`mastergrp_qspidata_ahb_cntl::R`](R) reader structure"]
+impl crate::Readable for MastergrpQspidataAhbCntlSpec {}
+#[doc = "`write(|w| ..)` method takes [`mastergrp_qspidata_ahb_cntl::W`](W) writer structure"]
+impl crate::Writable for MastergrpQspidataAhbCntlSpec {
+    type Safety = crate::Unsafe;
+    const ZERO_TO_MODIFY_FIELDS_BITMAP: u32 = 0;
+    const ONE_TO_MODIFY_FIELDS_BITMAP: u32 = 0;
+}
+#[doc = "`reset()` method sets mastergrp_qspidata_ahb_cntl to value 0"]
+impl crate::Resettable for MastergrpQspidataAhbCntlSpec {
+    const RESET_VALUE: u32 = 0;
+}

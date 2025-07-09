@@ -1,0 +1,66 @@
+# Put CI checks for building all C examples here
+#
+# NOTE: these only run on `main`, not on every MR
+name: c-examples-ci
+on:
+  pull_request:
+    # dont run if only docs change
+    paths-ignore:
+      - "./**.md"
+      - "docs/**"
+  push:
+    branches:
+      - main
+
+concurrency:
+  # Cancels pending runs when a PR gets updated.
+  group: ${{ github.head_ref || github.run_id }}-${{ github.actor }}-${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: C examples
+    runs-on: self-hosted
+
+    steps:
+    - name: Checkout source code
+      uses: actions/checkout@v4
+
+    - name: Install prerequisites
+      shell: bash
+      run: |
+        sudo apt-get -y update
+        sudo apt-get install -y \
+           clang \
+           g++ \
+           pkg-config \
+           cmake \
+           curl \
+           git \
+           python3-dev \
+           python3-virtualenv \
+           python3-pip \
+           gdb-multiarch \
+           libclang-dev \
+           protobuf-compiler \
+           wget
+
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@v1
+      with:
+        toolchain: stable
+        components: ''
+
+    - name: Build stm32f107-processor
+      shell: bash
+      run: |
+        cd styx/bindings/styx-c-api/examples/stm32f107-processor
+        make build
+        make clean
+        cd ../../../
+
+    - name: clean
+      shell: bash
+      run: |
+        cargo clean

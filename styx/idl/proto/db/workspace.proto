@@ -1,0 +1,187 @@
+syntax = "proto3";
+package workspace;
+option java_multiple_files = true;
+
+import "db.proto";
+import "args.proto";
+import "symbolic.proto";
+import "emulation_registry.proto";
+import "utils.proto";
+import "google/protobuf/timestamp.proto";
+
+service WorkspaceSvc {
+   /**
+   * Workspace
+   */
+  // Insert or update Workspace
+  rpc UpsertWorkspace(Workspace) returns (db.DbId) {}
+  rpc GetWorkspaces(GetWorkspaceRequest) returns (GetWorkspaceResponse) {}
+
+  /**
+   * TraceAppSessionArgs
+   */
+  // Insert or update TraceAppSessionArgs
+  rpc UpsertTraceAppSess(TraceAppSessRequest) returns (TraceAppSessResponse) {}
+  // Get TraceAppSessionArgs
+  rpc GetTraceAppSess(TraceAppSessRequest) returns (TraceAppSessResponse) {}
+  // Delete TraceAppSessionArgs
+  rpc DelTraceAppSess(TraceAppSessRequest) returns (TraceAppSessResponse) {}
+  // Get TraceAppSessionArgs as a stream
+  rpc GetTraceAppSessStreaming(TraceAppSessRequest) returns (stream args.TraceAppSessionArgs) {}
+
+  /**
+    * TraceSession
+    */
+  // Insert or update TraceSession
+  rpc UpsertTraceSession(TraceSessionRequest) returns (TraceSessionResponse) {}
+  // Get related TraceAppSessionArgs, TraceSession, and Program
+  rpc GetJoinedTraceSessions(GetJoinedTraceSessionsRequest) returns (stream JoinedTraceSession) {}
+
+  /**
+   * WsProgram
+   */
+  // Insert or update WsProgram
+  rpc UpsertWsProgram(UpsertWsProgramRequest) returns (UpsertWsProgramResponse) {}
+  // Get one or more WsPrograms
+  rpc GetWsPrograms(GetWsProgramsRequest) returns (GetWsProgamsResponse) {}
+  // Delete a WsProgram by id
+  rpc DeleteWsProgram(db.DbId) returns (DeleteWsProgramResponse) {}
+}
+
+message GetWorkspaceResponse {
+  repeated Workspace workspaces = 1;
+}
+
+message GetWorkspaceRequest {
+  db.DbId dbid = 1;
+}
+
+
+/**
+ *
+ * WsProgram
+ */
+
+// Encapsulates a binary executable that can be emulated, the characteristics
+// of the processor's architecture, symbols, metadata, and data types
+message WsProgram {
+  int32 id = 1;
+  string name = 2;
+  FileRef file = 3;
+  bytes data = 4;
+  emulation_registry.Config config = 5;
+  args.EmulationArgs emulation_args = 6;
+  symbolic.Program sym_program = 7;
+  args.RawEventLimits limits = 8;
+  args.SymbolSearchOptions symbol_options = 9;
+  repeated symbolic.DataType data_types = 10;
+  repeated symbolic.Symbol symbols = 11;
+
+  // owning workspace
+  db.DbId workspace_id = 12;
+}
+
+message FileRef {
+  string path = 1;
+  uint64 size = 2;
+}
+
+message UpsertWsProgramRequest {
+  WsProgram program = 1;
+}
+
+message UpsertWsProgramResponse {
+  db.DbId ws_program_id = 1;
+}
+
+message GetWsProgramsRequest {
+  int32  ws_program_db_id = 1;
+  bool with_data = 2;
+}
+
+message GetWsProgamsResponse {
+  bool with_data = 1;
+  repeated WsProgram programs = 2;
+}
+
+message DeleteWsProgramResponse {
+  bool status = 1;
+  string message = 2;
+}
+
+
+message JoinedTraceSession {
+  args.TraceAppSessionArgs args = 1;
+  TraceSession session = 2;
+  symbolic.Program program = 3;
+}
+
+message GetJoinedTraceSessionsRequest {
+  repeated db.DbId args_id = 1;
+  repeated string session_id = 2;
+}
+
+// an active trace session for an emulation or trace file
+message TraceSession {
+  int32 id = 1;
+  string session_id = 2;
+  string state = 3;
+  TraceSessionState ts_state = 4;
+  google.protobuf.Timestamp timestamp = 5;
+  utils.EmuMetadata metadata = 6;
+}
+
+message TraceSessionRequest {
+  args.TraceAppSessionArgs args = 1;
+  TraceSession session = 2;
+}
+
+message TraceSessionResponse {
+  args.TraceAppSessionArgs args = 1;
+  TraceSession session = 2;
+}
+
+enum TraceSessionState {
+  Unknown = 0;
+  Error = 1;
+
+  Creating = 2;
+  Created = 3;
+
+  Initializing = 4;
+  Initialized = 5;
+
+  Starting = 6;
+  Running = 7;
+
+  Stopping = 8;
+  StopRequestReceived = 9;
+  Stopped = 10;
+  Paused = 11;
+
+  Dropping = 12;
+  Dropped = 13;
+}
+
+// Encapsulates a request to upsert, delete, or get one or more TraceAppSessionArgs
+message TraceAppSessRequest {
+  db.ItemsPerPage items_per_page = 1;
+  bool transactional = 2;
+  repeated db.DbId dbids = 3;
+  repeated args.TraceAppSessionArgs trace_app_session_args = 4;
+  bool with_msg = 5;
+}
+
+message TraceAppSessResponse {
+  repeated utils.ServiceResponse responses = 1;
+  repeated args.TraceAppSessionArgs trace_app_session_args = 2;
+  repeated db.DbId dbids = 3;
+  bool with_msg = 4;
+}
+
+message Workspace {
+  int32 id = 1;
+  string name = 2;
+  google.protobuf.Timestamp created_timestamp = 3;
+  repeated  WsProgram ws_programs= 4;
+}

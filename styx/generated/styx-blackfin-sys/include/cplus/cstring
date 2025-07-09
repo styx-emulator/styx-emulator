@@ -1,0 +1,77 @@
+// cstring standard header
+#if defined (_ADI_COMPILER)
+/************************************************************************
+ *
+ *
+ *
+ * (c) Copyright 2001-2009 Analog Devices, Inc.  All rights reserved.
+ * (c) Copyright 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * $Revision: 1.4 $
+ ************************************************************************/
+
+#pragma once
+#ifndef __NO_BUILTIN
+#pragma system_header /* cstring */
+#endif
+#endif /* _ADI_COMPILER */
+
+#ifndef _CSTRING_
+#define _CSTRING_
+#include <yvals.h>
+
+#ifdef _STD_USING
+ #undef _STD_USING
+  #include <string.h>
+ #define _STD_USING
+
+#else /* _STD_USING */
+ #include <string.h>
+#endif /* _STD_USING */
+
+ #if defined(__BORLANDC__)	/* compiler test */
+_STD_BEGIN
+inline void * memchr(void *_Str, int _Ch, size_t _Size)
+	{	/* find first occurrence of c in s[n] */
+	const unsigned char _Uch = _Ch;
+	const unsigned char *_Ustr = (const unsigned char *)_Str;
+
+	for (; 0 < _Size; ++_Ustr, --_Size)
+		if (*_Ustr == _Uch)
+			return ((void *)_Ustr);
+	return (0);
+	}
+
+inline const void * memchr(const void *_Str, int _Ch, size_t _Size)
+	{	/* find first occurrence of c in s[n] */
+	return (memchr((void *)_Str, _Ch, _Size));
+	}
+_STD_END
+ #endif /* defined(__BORLANDC__) */
+
+ #ifdef _GLOBAL_USING
+_STD_BEGIN
+
+ #if defined(__BORLANDC__)	/* compiler test */
+using _CSTD size_t; using _CSTD memcmp;
+
+ #else /* defined(__BORLANDC__) */
+using _CSTD size_t; using _CSTD memchr; using _CSTD memcmp;
+ #endif /* defined(__BORLANDC__) */
+
+using _CSTD memcpy; using _CSTD memmove; using _CSTD memset;
+using _CSTD strcat; using _CSTD strchr; using _CSTD strcmp;
+using _CSTD strcoll; using _CSTD strcpy; using _CSTD strcspn;
+using _CSTD strerror; using _CSTD strlen; using _CSTD strncat;
+using _CSTD strncmp; using _CSTD strncpy; using _CSTD strpbrk;
+using _CSTD strrchr; using _CSTD strspn; using _CSTD strstr;
+using _CSTD strtok; using _CSTD strxfrm;
+
+_STD_END
+ #endif /* _GLOBAL_USING */
+
+#endif /* _CSTRING_ */
+
+/*
+ * Copyright (c) 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * Consult your license regarding permissions and restrictions.
+V5.03:1134 */

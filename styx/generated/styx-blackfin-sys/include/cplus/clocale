@@ -1,0 +1,52 @@
+// clocale standard header
+#if defined (_ADI_COMPILER)
+/************************************************************************
+ *
+ * clocale
+ *
+ * (c) Copyright 2001-2009 Analog Devices, Inc.  All rights reserved.
+ * (c) Copyright 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * $Revision: 1.4 $
+ ************************************************************************/
+
+#pragma once
+#ifndef __NO_BUILTIN
+#pragma system_header /* clocale */
+#endif
+#endif /* _ADI_COMPILER */
+
+#ifndef _CLOCALE_
+#define _CLOCALE_
+#include <yvals.h>
+
+
+#ifdef _STD_USING
+ #undef _STD_USING
+  #include <locale.h>
+ #define _STD_USING
+
+#else /* _STD_USING */
+ #include <locale.h>
+
+ #if defined(__BORLANDC__)	/* compiler test */
+  #define LC_MESSAGES	(LC_TIME << 1)
+ #endif /* defined(__BORLANDC__) */
+
+ #ifndef LC_MESSAGES
+  #define LC_MESSAGES	(LC_TIME + 1)
+ #endif /* LC_MESSAGES */
+
+#endif /* _STD_USING */
+
+ #ifdef _GLOBAL_USING
+_STD_BEGIN
+using _CSTD lconv; using _CSTD localeconv; using _CSTD setlocale;
+_STD_END
+ #endif /* _GLOBAL_USING */
+
+#endif /* _CLOCALE_ */
+
+/*
+ * Copyright (c) 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * Consult your license regarding permissions and restrictions.
+V5.03:1134 */

@@ -1,0 +1,44 @@
+[package]
+name = "styx-pcode-translator"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[features]
+default = [
+  "arch_arm",
+  "arch_aarch64",
+  "arch_bfin",
+  "arch_m32r",
+  "arch_mips32",
+  "arch_mips64",
+  "arch_ppc",
+  "arch_superh",
+]
+arch_arm = ["styx-sla/arch_arm"]
+arch_aarch64 = ["styx-sla/arch_aarch64"]
+arch_bfin = ["styx-sla/arch_bfin"]
+arch_m32r = ["styx-sla/arch_m32r"]
+arch_mips32 = ["styx-sla/arch_mips32"]
+arch_mips64 = ["styx-sla/arch_mips64"]
+arch_ppc = ["styx-sla/arch_ppc"]
+arch_superh = ["styx-sla/arch_superh"]
+
+[lints]
+workspace = true
+
+[dependencies]
+styx-pcode = { path = "../styx-pcode" }
+styx-pcode-sleigh-backend = { path = "../styx-pcode-sleigh-backend" }
+styx-sla = { path = "../styx-sla" }
+styx-cpu-type = { path = "../../styx-cpu-type" }
+tracing = { workspace = true }
+rustc-hash = { workspace = true }
+tap = { workspace = true }
+thiserror = { workspace = true }
+styx-util = { path = "../../styx-util" }
+styx-workspace-hack = { version = "0.1", path = "../../../workspace-hack" }
+
+[dev-dependencies]
+keystone-engine = { workspace = true }
+expect-test = { workspace = true }

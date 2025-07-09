@@ -1,0 +1,165 @@
+syntax = "proto3";
+package traceapp;
+
+import "utils.proto";
+import "args.proto";
+import "google/protobuf/duration.proto";
+import "workspace.proto";
+
+
+service TraceAppSessionService {
+  rpc Initialize(InitializeTraceRequest)
+      returns (stream StartTraceAppSessionResponse);
+
+  rpc Start(InitializeTraceRequest)
+      returns (stream StartTraceAppSessionResponse);
+  rpc Stop(AppSession) returns (utils.ResponseStatus);
+  rpc Disconnect(AppSession) returns (utils.ResponseStatus);
+  rpc ListSessionInfo(utils.Empty) returns (ListResponse);
+
+  rpc GetVariableSnapshots(VariableSnapshotRequest) returns (VariableSnapshots);
+
+}
+
+message VariableSnapshotRequest {
+  string session_id = 1;
+  uint64 address = 2;
+  string name = 3;
+}
+
+message VariableSnapshot {
+  CStructRepr struct_repr = 1;
+  ArrayRepr array_repr = 2;
+  BasicRepr basic_repr = 3;
+  string message = 4;
+}
+
+message VariableSnapshots { repeated VariableSnapshot snapshots = 1; }
+
+message ListResponse { repeated SessionInfo data = 1; }
+
+message SessionInfo {
+  string session_id = 1;
+  utils.EmuMetadata metadata = 2;
+}
+
+message SessionStats {
+  // Cumulative instructions executed for the session
+  uint64 insn_count = 1;
+  // Cumulative execution duration for the session
+  google.protobuf.Duration execution_duration = 2;
+  // Cumulative rate of execution for the session
+  uint64 rate = 3;
+}
+
+message InitializeTraceRequest {
+  /// Inputs to trace session
+  args.TraceAppSessionArgs args = 1;
+}
+
+message TraceSessionStateChange {
+  workspace.TraceSessionState state = 1;
+}
+
+// Response type for server streaming response.
+message StartTraceAppSessionResponse {
+  // Response message.
+  string session_id = 1;
+  repeated MemoryChange memory_writes = 2;
+  repeated EndOfEvents end_of_events = 3;
+  repeated Interrupt interrupts = 4;
+  repeated InstructionExec instructions = 5;
+  repeated FunctionGate functions = 6;
+  repeated BasicBlock basic_blocks = 7;
+  Timeout timeout = 8;
+  InstLimitReached insn_limit_reached = 9;
+  TraceSessionStateChange state_change = 10;
+  SessionStats cum_session_stats = 11;
+}
+
+message AppSession { string session_id = 1; }
+
+// (event) MemoryChange
+message MemoryChange {
+  uint64 insn_num = 1;
+  uint64 pc = 2;
+  uint64 addr = 3;
+  string old_value = 4;
+  string new_value = 5;
+  string function_name = 6;
+  string symbol_name = 7;
+  Interrupt interrupt = 8;
+  CStructRepr struct_repr = 9;
+  CVarRepr member_var = 10;
+  ArrayRepr array_repr = 11;
+  BasicRepr basic_repr = 12;
+  bool is_read = 13;
+}
+
+message BasicBlock {
+  uint64 insn_num = 1;
+  uint64 pc = 2;
+  uint32 size = 3;
+  bool is_start = 4;
+  bool is_end = 5;
+}
+
+message InstructionExec {
+  uint64 insn_num = 1;
+  uint64 pc = 2;
+  uint64 insn = 3;
+}
+
+// Interrup
+message Interrupt {
+  uint64 insn_num = 1;
+  uint64 old_pc = 2;
+  uint64 new_pc = 3;
+  bool entered = 4;
+  int32 interrupt_num = 5;
+  repeated FunctionGate stack = 6;
+}
+
+// (event) FunctionGate
+// A Function has been either entered or exited
+message FunctionGate {
+  uint64 insn_num = 1;
+  uint64 function_ref = 2;
+  string function_signature = 3;
+  bool entered = 4;
+  uint64 pc = 5;
+}
+
+// (event) Timeout - timed-out waiting for raw trace events
+message Timeout { uint64 insn_num = 1; }
+message InstLimitReached { uint64 insn_num = 1; }
+
+// (event)
+// All raw trace events have been consumed/processed
+message EndOfEvents { uint64 insn_num = 1; }
+
+message Variable {
+  uint64 symbol_ref = 1;
+  string data_type_ref = 2;
+  repeated bytes memory = 3;
+}
+
+message BasicRepr { CVarRepr var = 1; }
+
+message ArrayRepr { CVarRepr var = 1; }
+
+message CStructRepr {
+  CVarRepr var = 1;
+  repeated CStructMemberRepr members = 2;
+}
+
+message CStructMemberRepr {
+  CVarRepr var = 1;
+  string repr_val = 2;
+}
+
+message CVarRepr {
+  string name = 1;
+  string typename = 2;
+  uint64 size = 3;
+}

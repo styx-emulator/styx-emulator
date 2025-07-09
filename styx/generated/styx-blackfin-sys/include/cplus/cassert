@@ -1,0 +1,26 @@
+// cassert standard header
+#if defined (_ADI_COMPILER)
+/************************************************************************
+ *
+ * cassert
+ *
+ * (c) Copyright 2001-2009 Analog Devices, Inc.  All rights reserved.
+ * (c) Copyright 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * $Revision: 1.4 $
+ ************************************************************************/
+
+/* No pragma once, as we may require redefinition of assert using NDEBUG in
+   our compilation.
+ */
+#ifndef __NO_BUILTIN
+#pragma system_header /* cassert */
+#endif
+#endif /* _ADI_COMPILER */
+
+#include <yvals.h>
+#include <assert.h>
+
+/*
+ * Copyright (c) 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * Consult your license regarding permissions and restrictions.
+V5.03:1134 */

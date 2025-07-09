@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ksdk:examples xmlns:ksdk="http://nxp.com/ksdk/2.0/ksdk_manifest_v3.0.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://nxp.com/ksdk/2.0/ksdk_manifest_v3.0.xsd manifest.xsd">
+  <externalDefinitions>
+    <definition extID="com.nxp.mcuxpresso"/>
+    <definition extID="middleware.freertos.MK21FA12"/>
+    <definition extID="middleware.freertos.heap.heap_4.MK21FA12"/>
+    <definition extID="middleware.usb.device_controller_khci.MK21FA12"/>
+    <definition extID="platform.devices.MK21FA12_CMSIS.MK21FA12"/>
+    <definition extID="platform.devices.MK21FA12_startup.MK21FA12"/>
+    <definition extID="platform.drivers.clock.MK21FA12"/>
+    <definition extID="platform.drivers.common.MK21FA12"/>
+    <definition extID="platform.drivers.flash.MK21FA12"/>
+    <definition extID="platform.drivers.gpio.MK21FA12"/>
+    <definition extID="platform.drivers.port.MK21FA12"/>
+    <definition extID="platform.drivers.sim.MK21FA12"/>
+    <definition extID="platform.drivers.smc.MK21FA12"/>
+    <definition extID="platform.drivers.sysmpu.MK21FA12"/>
+    <definition extID="platform.drivers.uart.MK21FA12"/>
+    <definition extID="platform.utilities.assert.MK21FA12"/>
+    <definition extID="platform.utilities.debug_console.MK21FA12"/>
+    <definition extID="iar"/>
+    <definition extID="mdk"/>
+    <definition extID="kds"/>
+    <definition extID="mcuxpresso"/>
+    <definition extID="armgcc"/>
+  </externalDefinitions>
+  <example id="twrk21f120m_dev_phdc_weighscale_freertos" name="dev_phdc_weighscale_freertos" category="usb_examples" dependency="middleware.usb.device_controller_khci.MK21FA12 platform.drivers.port.MK21FA12 platform.drivers.common.MK21FA12 platform.drivers.clock.MK21FA12 platform.drivers.sim.MK21FA12 middleware.freertos.heap.heap_4.MK21FA12 middleware.freertos.MK21FA12 platform.utilities.debug_console.MK21FA12 platform.drivers.smc.MK21FA12 platform.drivers.flash.MK21FA12 platform.devices.MK21FA12_CMSIS.MK21FA12 platform.devices.MK21FA12_startup.MK21FA12 platform.drivers.uart.MK21FA12 platform.drivers.gpio.MK21FA12 platform.drivers.sysmpu.MK21FA12 platform.utilities.assert.MK21FA12" toolchain="iar mdk armgcc kds mcuxpresso">
+    <projects>
+      <project type="com.crt.advproject.projecttype.exe" nature="org.eclipse.cdt.core.cnature"/>
+    </projects>
+    <toolchainSettings>
+      <!-- Curently, mcux just supports one common settings set for both debug and release -->
+      <toolchainSetting id_refs="com.nxp.mcuxpresso">
+        <!-- asm compiler -->
+        <!-- gcc compiler -->
+        <option id="com.crt.advproject.c.misc.dialect" type="enum">
+          <value>com.crt.advproject.misc.dialect.gnu99</value>
+        </option>
+        <option id="com.crt.advproject.gcc.exe.debug.option.debugging.level" type="enum">
+          <value>gnu.c.debugging.level.default</value>
+        </option>
+        <option id="com.crt.advproject.gcc.exe.release.option.debugging.level" type="enum">
+          <value>gnu.c.debugging.level.default</value>
+        </option>
+        <option id="gnu.c.compiler.option.preprocessor.def.symbols" type="stringList">
+          <value>_DEBUG=1</value>
+          <value>CPU_MK21FN1M0AVMC12</value>
+          <value>USB_STACK_FREERTOS</value>
+          <value>USB_STACK_FREERTOS_HEAP_SIZE=32768</value>
+          <value>FSL_RTOS_FREE_RTOS</value>
+        </option>
+        <option id="gnu.c.compiler.option.optimization.flags" type="string">
+          <value>-fno-common</value>
+        </option>
+        <option id="gnu.c.compiler.option.misc.other" type="string">
+          <value>-c  -ffunction-sections  -fdata-sections  -ffreestanding  -fno-builtin</value>
+        </option>
+        <!-- gcc linker -->
+        <option id="gnu.c.link.option.nostdlibs" type="boolean">
+          <value>true</value>
+        </option>
+        <option id="gnu.c.link.option.other" type="stringList">
+          <value>--gc-sections</value>
+        </option>
+        <option id="com.crt.advproject.link.memory.heapAndStack" type="string">
+          <value>&amp;Heap:Default;Default;0x100&amp;Stack:Default;Default;0x2000</value>
+        </option>
+      </toolchainSetting>
+    </toolchainSettings>
+    <source path="boards/twrk21f120m/usb_examples/usb_device_phdc_weighscale/freertos" target_path="board" type="c_include">
+      <files mask="board.h"/>
+      <files mask="clock_config.h"/>
+      <files mask="pin_mux.h"/>
+    </source>
+    <source path="boards/twrk21f120m/usb_examples/usb_device_phdc_weighscale/freertos" target_path="board" type="src">
+      <files mask="board.c"/>
+      <files mask="clock_config.c"/>
+      <files mask="pin_mux.c"/>
+    </source>
+    <source path="boards/twrk21f120m/usb_examples/usb_device_phdc_weighscale/freertos" target_path="doc" type="doc" toolchain="iar mdk kds mcuxpresso">
+      <files mask="readme.txt"/>
+    </source>
+    <source path="boards/twrk21f120m/usb_examples/usb_device_phdc_weighscale/freertos" target_path="sources/ieee11073_agent" type="c_include">
+      <files mask="ieee11073_agent.h"/>
+      <files mask="ieee11073_timer.h"/>
+      <files mask="ieee11073_types.h"/>
+    </source>
+    <source path="boards/twrk21f120m/usb_examples/usb_device_phdc_weighscale/freertos" target_path="sources/ieee11073_agent" type="src">
+      <files mask="ieee11073_agent.c"/>
+      <files mask="ieee11073_timer.c"/>
+    </source>
+    <source path="boards/twrk21f120m/usb_examples/usb_device_phdc_weighscale/freertos" target_path="sources" type="c_include">
+      <files mask="FreeRTOSConfig.h"/>
+      <files mask="usb_device_config.h"/>
+      <files mask="usb_device_descriptor.h"/>
+      <files mask="usb_shim_agent.h"/>
+      <files mask="weighscale.h"/>
+    </source>
+    <source path="boards/twrk21f120m/usb_examples/usb_device_phdc_weighscale/freertos" target_path="sources" type="src">
+      <files mask="usb_device_descriptor.c"/>
+      <files mask="usb_shim_agent.c"/>
+      <files mask="weighscale.c"/>
+    </source>
+    <source path="boards/twrk21f120m/usb_examples/usb_device_phdc_weighscale/freertos" target_path="usb/device/class/phdc" type="c_include">
+      <files mask="usb_device_phdc.h"/>
+    </source>
+    <source path="boards/twrk21f120m/usb_examples/usb_device_phdc_weighscale/freertos" target_path="usb/device/class/phdc" type="src">
+      <files mask="usb_device_phdc.c"/>
+    </source>
+    <source path="boards/twrk21f120m/usb_examples/usb_device_phdc_weighscale/freertos" target_path="usb/device/class" type="c_include">
+      <files mask="usb_device_class.h"/>
+    </source>
+    <source path="boards/twrk21f120m/usb_examples/usb_device_phdc_weighscale/freertos" target_path="usb/device/class" type="src">
+      <files mask="usb_device_class.c"/>
+    </source>
+    <source path="boards/twrk21f120m/usb_examples/usb_device_phdc_weighscale/freertos" target_path="usb/device/source" type="c_include">
+      <files mask="usb_device_ch9.h"/>
+    </source>
+    <source path="boards/twrk21f120m/usb_examples/usb_device_phdc_weighscale/freertos" target_path="usb/device/source" type="src">
+      <files mask="usb_device_ch9.c"/>
+    </source>
+    <source path="middleware/usb/device" target_path="usb/device/include" type="c_include">
+      <files mask="usb_device.h"/>
+    </source>
+    <source path="middleware/usb/device" target_path="usb/device/source" type="c_include">
+      <files mask="usb_device_dci.h"/>
+    </source>
+    <source path="middleware/usb/device" target_path="usb/device/source" type="src">
+      <files mask="usb_device_dci.c"/>
+    </source>
+  </example>
+</ksdk:examples>

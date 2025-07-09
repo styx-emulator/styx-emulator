@@ -1,0 +1,135 @@
+name: lint
+# run on PR's or pushes to main
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+env:
+  STYX_DOCKER_SUDO_REQUIRED: yes
+
+concurrency:
+  # Cancels pending runs when a PR gets updated.
+  group: ${{ github.head_ref || github.run_id }}-${{ github.actor }}-${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  base-lints:
+    name: base lint check
+    runs-on: self-hosted
+
+    steps:
+    - name: Checkout source code
+      uses: actions/checkout@v4
+    - uses: Swatinem/rust-cache@v2
+
+    - name: Run base lints
+      shell: bash
+      run: |
+        sudo apt-get install -y pre-commit
+        SKIP=clippy,fmt,cargo-check,license-check,fmt-toml pre-commit run -a
+
+  toml-check:
+    name: taplo toml format check
+    runs-on: self-hosted
+    steps:
+    - name: Checkout source code
+      uses: actions/checkout@v4
+    - uses: Swatinem/rust-cache@v2
+
+    - name: taplo toml format check
+      shell: bash
+      run: |
+        sudo apt-get install -y pre-commit
+        pre-commit run -a fmt-toml
+
+  rust-fmt:
+    name: rust format
+    runs-on: self-hosted
+    steps:
+    - name: Checkout source code
+      uses: actions/checkout@v4
+    - uses: Swatinem/rust-cache@v2
+
+    - name: rustfmt
+      shell: bash
+      run: |
+        sudo apt-get install -y pre-commit
+        pre-commit run -a fmt
+
+  cargo-clippy:
+    name: cargo clippy
+    runs-on: self-hosted
+    steps:
+    - name: Checkout source code
+      uses: actions/checkout@v4
+    - uses: Swatinem/rust-cache@v2
+
+    - name: cargo clippy
+      shell: bash
+      run: |
+        sudo apt-get install -y pre-commit
+        pre-commit run -a clippy
+
+    - name: clean
+      shell: bash
+      run: |
+        cargo clean
+
+
+  rust-doc-lint:
+    name: lint rust docs
+    runs-on: self-hosted
+    steps:
+    - name: Checkout source code
+      uses: actions/checkout@v4
+    - uses: Swatinem/rust-cache@v2
+
+    - name: Lint RustDocs
+      shell: bash
+      run: |
+        just lint-docs
+
+    - name: clean
+      shell: bash
+      run: |
+        cargo clean
+
+
+  workspace-hack-lint:
+    name: lint workspace hack
+    runs-on: self-hosted
+    steps:
+    - name: Checkout source code
+      uses: actions/checkout@v4
+    - uses: Swatinem/rust-cache@v2
+
+    - name: Lint workspace-hack
+      shell: bash
+      run: |
+        cargo xtask hakari --stage update --dry-run
+
+    - name: clean
+      shell: bash
+      run: |
+        cargo clean
+
+
+  license-check:
+    name: license check
+    runs-on: self-hosted
+    steps:
+    - name: Checkout source code
+      uses: actions/checkout@v4
+    - uses: Swatinem/rust-cache@v2
+
+    - name: License check
+      shell: bash
+      run: |
+        cargo xtask license -c
+
+    - name: clean
+      shell: bash
+      run: |
+        cargo clean

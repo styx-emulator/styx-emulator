@@ -1,0 +1,254 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<example name="wolfssl_benchmark" category="demo_apps/wolfssl" board_ref="TWR_K21F120M" version="1.0.0" format_version="2.1">
+  <source path="boards/twrk21f120m/demo_apps/wolfssl/wolfssl_benchmark" target_path="sources" type="c_include">
+    <files mask="board.h"/>
+    <files mask="clock_config.h"/>
+    <files mask="pin_mux.h"/>
+    <files mask="user_settings.h"/>
+  </source>
+  <source path="boards/twrk21f120m/demo_apps/wolfssl/wolfssl_benchmark" target_path="doc" type="doc">
+    <files mask="readme.txt"/>
+  </source>
+  <source path="boards/twrk21f120m/demo_apps/wolfssl/wolfssl_benchmark" target_path="sources" type="src">
+    <files mask="board.c"/>
+    <files mask="clock_config.c"/>
+    <files mask="pin_mux.c"/>
+    <files mask="wolfssl_benchmark.c"/>
+  </source>
+  <source path="devices/MK21FA12/arm" target_path="devices/arm" type="src" compilers="arm">
+    <files mask="startup_MK21FA12.s"/>
+  </source>
+  <source path="devices/MK21FA12/drivers" target_path="drivers" type="c_include">
+    <files mask="fsl_clock.h"/>
+    <files mask="fsl_common.h"/>
+    <files mask="fsl_flash.h"/>
+    <files mask="fsl_gpio.h"/>
+    <files mask="fsl_port.h"/>
+    <files mask="fsl_rnga.h"/>
+    <files mask="fsl_smc.h"/>
+    <files mask="fsl_uart.h"/>
+  </source>
+  <source path="devices/MK21FA12/drivers" target_path="drivers" type="src">
+    <files mask="fsl_clock.c"/>
+    <files mask="fsl_common.c"/>
+    <files mask="fsl_flash.c"/>
+    <files mask="fsl_gpio.c"/>
+    <files mask="fsl_rnga.c"/>
+    <files mask="fsl_smc.c"/>
+    <files mask="fsl_uart.c"/>
+  </source>
+  <source path="devices/MK21FA12/gcc" target_path="devices/gcc" type="src" compilers="gcc">
+    <files mask="startup_MK21FA12.S"/>
+  </source>
+  <source path="devices/MK21FA12/iar" target_path="devices/iar" type="src" compilers="iar">
+    <files mask="startup_MK21FA12.s"/>
+  </source>
+  <source path="devices/MK21FA12/utilities/io" target_path="utilities" type="c_include">
+    <files mask="fsl_io.h"/>
+  </source>
+  <source path="devices/MK21FA12/utilities/io" target_path="utilities" type="src">
+    <files mask="fsl_io.c"/>
+  </source>
+  <source path="devices/MK21FA12/utilities/log" target_path="utilities" type="c_include">
+    <files mask="fsl_log.h"/>
+  </source>
+  <source path="devices/MK21FA12/utilities/log" target_path="utilities" type="src">
+    <files mask="fsl_log.c"/>
+  </source>
+  <source path="devices/MK21FA12/utilities/str" target_path="utilities" type="c_include">
+    <files mask="fsl_str.h"/>
+  </source>
+  <source path="devices/MK21FA12/utilities/str" target_path="utilities" type="src">
+    <files mask="fsl_str.c"/>
+  </source>
+  <source path="devices/MK21FA12/utilities" target_path="utilities" type="c_include">
+    <files mask="fsl_debug_console.h"/>
+    <files mask="fsl_debug_console_conf.h"/>
+  </source>
+  <source path="devices/MK21FA12/utilities" target_path="utilities" type="src">
+    <files mask="fsl_assert.c"/>
+    <files mask="fsl_debug_console.c"/>
+  </source>
+  <source path="devices/MK21FA12" target_path="devices" type="c_include">
+    <files mask="MK21FA12.h"/>
+    <files mask="MK21FA12_features.h"/>
+    <files mask="fsl_device_registers.h"/>
+    <files mask="system_MK21FA12.h"/>
+  </source>
+  <source path="devices/MK21FA12" target_path="devices" type="src">
+    <files mask="system_MK21FA12.c"/>
+  </source>
+  <source path="middleware/mmcau/asm-cm4-cm7" target_path="mmcau/asm-cm4-cm7" type="lib" compilers="arm">
+    <files mask="lib_mmcau.lib"/>
+  </source>
+  <source path="middleware/mmcau/asm-cm4-cm7" target_path="mmcau/asm-cm4-cm7" type="lib" compilers="gcc">
+    <files mask="lib_mmcau.a"/>
+  </source>
+  <source path="middleware/mmcau/asm-cm4-cm7" target_path="mmcau/asm-cm4-cm7" type="lib" compilers="iar">
+    <files mask="lib_mmcau.a"/>
+  </source>
+  <source path="middleware/mmcau" target_path="mmcau/" type="c_include">
+    <files mask="cau_api.h"/>
+    <files mask="fsl_mmcau.h"/>
+  </source>
+  <source path="middleware/mmcau" target_path="mmcau/" type="src">
+    <files mask="fsl_mmcau.c"/>
+  </source>
+  <source path="middleware/wolfssl/src" target_path="wolfssl/src" type="src">
+    <files mask="crl.c"/>
+    <files mask="internal.c"/>
+    <files mask="io.c"/>
+    <files mask="keys.c"/>
+    <files mask="ocsp.c"/>
+    <files mask="sniffer.c"/>
+    <files mask="ssl.c"/>
+    <files mask="tls.c"/>
+  </source>
+  <source path="middleware/wolfssl/wolfcrypt/src/port/nxp" target_path="wolfssl/wolfcrypt/src/port/nxp" type="src">
+    <files mask="ksdk_port.c"/>
+  </source>
+  <source path="middleware/wolfssl/wolfcrypt/src" target_path="wolfssl/wolfcrypt/src" type="src">
+    <files mask="aes.c"/>
+    <files mask="arc4.c"/>
+    <files mask="asm.c"/>
+    <files mask="asn.c"/>
+    <files mask="blake2b.c"/>
+    <files mask="camellia.c"/>
+    <files mask="chacha.c"/>
+    <files mask="chacha20_poly1305.c"/>
+    <files mask="coding.c"/>
+    <files mask="compress.c"/>
+    <files mask="curve25519.c"/>
+    <files mask="des3.c"/>
+    <files mask="dh.c"/>
+    <files mask="dsa.c"/>
+    <files mask="ecc.c"/>
+    <files mask="ecc_fp.c"/>
+    <files mask="ed25519.c"/>
+    <files mask="error.c"/>
+    <files mask="fe_low_mem.c"/>
+    <files mask="fe_operations.c"/>
+    <files mask="ge_low_mem.c"/>
+    <files mask="ge_operations.c"/>
+    <files mask="hash.c"/>
+    <files mask="hc128.c"/>
+    <files mask="hmac.c"/>
+    <files mask="idea.c"/>
+    <files mask="integer.c"/>
+    <files mask="logging.c"/>
+    <files mask="md2.c"/>
+    <files mask="md4.c"/>
+    <files mask="md5.c"/>
+    <files mask="memory.c"/>
+    <files mask="misc.c"/>
+    <files mask="pkcs7.c"/>
+    <files mask="poly1305.c"/>
+    <files mask="pwdbased.c"/>
+    <files mask="rabbit.c"/>
+    <files mask="random.c"/>
+    <files mask="ripemd.c"/>
+    <files mask="rsa.c"/>
+    <files mask="sha.c"/>
+    <files mask="sha256.c"/>
+    <files mask="sha512.c"/>
+    <files mask="signature.c"/>
+    <files mask="srp.c"/>
+    <files mask="tfm.c"/>
+    <files mask="wc_encrypt.c"/>
+    <files mask="wc_port.c"/>
+  </source>
+  <source path="middleware/wolfssl/wolfssl/openssl" target_path="wolfssl/wolfssl/openssl" type="c_include">
+    <files mask="bn.h"/>
+    <files mask="ec.h"/>
+    <files mask="ssl.h"/>
+  </source>
+  <source path="middleware/wolfssl/wolfssl/wolfcrypt/port/nxp" target_path="wolfssl/wolfssl/wolfcrypt/port/nxp" type="c_include">
+    <files mask="ksdk_port.h"/>
+  </source>
+  <source path="middleware/wolfssl/wolfssl/wolfcrypt" target_path="wolfssl/wolfssl/wolfcrypt" type="c_include">
+    <files mask="aes.h"/>
+    <files mask="arc4.h"/>
+    <files mask="asn.h"/>
+    <files mask="asn_public.h"/>
+    <files mask="blake2-impl.h"/>
+    <files mask="blake2-int.h"/>
+    <files mask="blake2.h"/>
+    <files mask="camellia.h"/>
+    <files mask="chacha.h"/>
+    <files mask="chacha20_poly1305.h"/>
+    <files mask="cmac.h"/>
+    <files mask="coding.h"/>
+    <files mask="compress.h"/>
+    <files mask="curve25519.h"/>
+    <files mask="des3.h"/>
+    <files mask="dh.h"/>
+    <files mask="dsa.h"/>
+    <files mask="ecc.h"/>
+    <files mask="ed25519.h"/>
+    <files mask="error-crypt.h"/>
+    <files mask="fe_operations.h"/>
+    <files mask="fips_test.h"/>
+    <files mask="ge_operations.h"/>
+    <files mask="hash.h"/>
+    <files mask="hc128.h"/>
+    <files mask="hmac.h"/>
+    <files mask="idea.h"/>
+    <files mask="integer.h"/>
+    <files mask="logging.h"/>
+    <files mask="md2.h"/>
+    <files mask="md4.h"/>
+    <files mask="md5.h"/>
+    <files mask="mem_track.h"/>
+    <files mask="memory.h"/>
+    <files mask="misc.h"/>
+    <files mask="mpi_class.h"/>
+    <files mask="mpi_superclass.h"/>
+    <files mask="pkcs7.h"/>
+    <files mask="poly1305.h"/>
+    <files mask="pwdbased.h"/>
+    <files mask="rabbit.h"/>
+    <files mask="random.h"/>
+    <files mask="ripemd.h"/>
+    <files mask="rsa.h"/>
+    <files mask="settings.h"/>
+    <files mask="sha.h"/>
+    <files mask="sha256.h"/>
+    <files mask="sha512.h"/>
+    <files mask="signature.h"/>
+    <files mask="srp.h"/>
+    <files mask="tfm.h"/>
+    <files mask="types.h"/>
+    <files mask="visibility.h"/>
+    <files mask="wc_encrypt.h"/>
+    <files mask="wc_port.h"/>
+  </source>
+  <source path="middleware/wolfssl/wolfssl" target_path="wolfssl/wolfssl" type="c_include">
+    <files mask="callbacks.h"/>
+    <files mask="certs_test.h"/>
+    <files mask="crl.h"/>
+    <files mask="error-ssl.h"/>
+    <files mask="internal.h"/>
+    <files mask="ocsp.h"/>
+    <files mask="options.h"/>
+    <files mask="sniffer.h"/>
+    <files mask="sniffer_error.h"/>
+    <files mask="ssl.h"/>
+    <files mask="test.h"/>
+    <files mask="version.h"/>
+  </source>
+  <include_paths>
+    <include path="devices"/>
+    <include path="drivers"/>
+    <include path="mmcau/"/>
+    <include path="mmcau/asm-cm4-cm7" compilers="arm"/>
+    <include path="mmcau/asm-cm4-cm7" compilers="gcc"/>
+    <include path="mmcau/asm-cm4-cm7" compilers="iar"/>
+    <include path="sources"/>
+    <include path="utilities"/>
+    <include path="wolfssl/wolfssl/openssl"/>
+    <include path="wolfssl/wolfssl/wolfcrypt/port"/>
+    <include path="wolfssl/wolfssl/wolfcrypt"/>
+    <include path="wolfssl/wolfssl"/>
+    <include path="wolfssl"/>
+  </include_paths>
+</example>

@@ -1,0 +1,19 @@
+[package]
+name = "styx-c-api"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[lib]
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+styx-emulator = { path = "../.." }
+
+# these are all beholden to styx
+bitflags = { version = "*" }
+paste = { version = "*" }
+arbitrary-int = { version = "*" }
+
+[build-dependencies]
+cbindgen = "0.27.0"

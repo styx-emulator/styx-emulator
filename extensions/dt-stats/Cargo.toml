@@ -1,0 +1,19 @@
+[package]
+name = "dt-stats"
+description = "A tool to gather statistics about collections of device trees"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[dependencies]
+fdt = { workspace = true }
+globwalk = { workspace = true }
+clap = { workspace = true }
+rayon = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+styx-workspace-hack = { version = "0.1", path = "../../styx/workspace-hack" }
+
+[lints]
+workspace = true

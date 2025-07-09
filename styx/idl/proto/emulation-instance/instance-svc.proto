@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package styx.svc.instance;
+
+import "utils.proto";
+
+import "google/protobuf/duration.proto";
+
+option java_multiple_files = true;
+
+
+// A service that controls a single styx emulation. The emulation has already
+// been created and is ready to run in a process.
+service SingleEmulationService {
+  // Start the Emulation
+  rpc Start(StartSingleEmulationRequest)
+      returns (StartSingleEmulationResponse) {}
+
+  // Stop the Emulation
+  rpc Stop(utils.Empty) returns (utils.ResponseStatus) {}
+
+  // Drop and cleanup
+  rpc Drop(utils.Empty) returns (utils.ResponseStatus) {}
+
+  // get information about the emulation
+  rpc Info(utils.Empty) returns (utils.ProcessorInfo) {}
+}
+
+message StartSingleEmulationRequest {
+  uint64 instructions = 1;
+  google.protobuf.Duration duration = 2;
+}
+
+message StartSingleEmulationResponse {
+  utils.ResponseStatus status = 1;
+}

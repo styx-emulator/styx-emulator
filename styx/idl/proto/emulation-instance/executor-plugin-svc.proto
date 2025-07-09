@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package styx.svc.executor_plugin;
+
+option java_multiple_files = true;
+
+
+service ExecutorPluginService {
+    rpc ExecutorStatus(ExecutorStatusRequest) returns (ExecutorStatusResponse) {}
+    rpc Execute(ExecuteRequest) returns (ExecuteResponse) {}
+}
+
+enum ExecutorStatus {
+    RUNNING = 0;
+    STOPPED = 1;
+    ERROR = 2;
+}
+
+message ExecutorStatusRequest {}
+
+message ExecutorStatusResponse {
+    ExecutorStatus status = 1;
+}
+
+message ExecuteRequest {}
+
+message ExecuteResponse {
+    ExecutorStatus status = 1;
+}

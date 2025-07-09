@@ -1,0 +1,689 @@
+// ostream standard header
+#if defined (_ADI_COMPILER)
+/************************************************************************
+ *
+ * ostream
+ *
+ * (c) Copyright 2001-2009 Analog Devices, Inc.  All rights reserved.
+ * (c) Copyright 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * $Revision: 1.6 $
+ ************************************************************************/
+
+#pragma once
+#ifndef __NO_BUILTIN
+#pragma system_header /* ostream */
+#endif
+#endif /* _ADI_COMPILER */
+
+#ifndef _OSTREAM_
+#define _OSTREAM_
+#include <ios>
+_STD_BEGIN
+
+		// I/O EXCEPTION MACROS
+
+ #if _HAS_EXCEPTIONS
+ #define _TRY_IO_BEGIN	_TRY_BEGIN	/* begin try block */
+
+ #define _CATCH_IO_END	_CATCH_ALL	/* catch block for _Myios */ \
+	_Myios::setstate(ios_base::badbit, true);	/* set badbit and rethrow */ \
+	_CATCH_END
+
+ #define _CATCH_IO_(x)	_CATCH_ALL	/* catch block for ios x */ \
+	(x).setstate(ios_base::badbit, true);	/* set badbit and rethrow */ \
+	_CATCH_END
+
+ #else /* _HAS_EXCEPTIONS */
+ #define _TRY_IO_BEGIN	{	/* begin try block */
+
+ #define _CATCH_IO_END	}	/* catch block for _Myios */
+
+ #define _CATCH_IO_(x)	}	/* catch block for ios x */
+ #endif /* _HAS_EXCEPTIONS */
+
+		// CLASS ostream
+class ostream
+	: public ios
+	{	// control insertions into a stream buffer
+public:
+	typedef char _Elem;
+	typedef char_traits _Traits;
+	typedef ostream _Myt;
+	typedef ios _Myios;
+	typedef streambuf _Mysb;
+	typedef _Ostrit _Iter;
+	typedef num_put _Nput;
+
+ #if _HAS_TRADITIONAL_IOSTREAMS
+	explicit ostream(streambuf *_Strbuf = 0,
+
+ #else /* _HAS_TRADITIONAL_IOSTREAMS */
+	explicit ostream(streambuf *_Strbuf,
+ #endif /* _HAS_TRADITIONAL_IOSTREAMS */
+
+		bool _Isstd = false)
+		{	// construct from stream buffer pointer
+		init(_Strbuf, _Isstd);
+		}
+
+	ostream(_Uninitialized, bool _Addit = true)
+		{	// construct uninitialized
+		if (_Addit)
+			_Addstd();	// suppress for iostream
+		}
+
+	virtual ~ostream()
+		{	// destroy the object
+		}
+
+	typedef _Traits::int_type int_type;
+	typedef _Traits::pos_type pos_type;
+	typedef _Traits::off_type off_type;
+
+	class _Sentry_base
+		{	// stores thread lock and reference to output stream
+	public:
+		_Sentry_base(_Myt& _Ostr)
+			: _Myostr(_Ostr)
+			{	// lock the stream buffer, if there
+			if (_Myostr.rdbuf() != 0)
+				_Myostr.rdbuf()->_Lock();
+			}
+
+		~_Sentry_base()
+			{	// destroy after unlocking
+			if (_Myostr.rdbuf() != 0)
+				_Myostr.rdbuf()->_Unlock();
+			}
+
+		_Myt& _Myostr;	// the output stream, for _Unlock call at destruction
+		};
+
+	class sentry
+		: public _Sentry_base
+		{	// stores thread lock and state of stream
+	public:
+		explicit sentry(_Myt& _Ostr)
+			: _Sentry_base(_Ostr)
+			{	// construct locking and testing stream
+			if (_Ostr.good() && _Ostr.tie() != 0)
+				_Ostr.tie()->flush();
+			_Ok = _Ostr.good();	// store test only after flushing tie
+			}
+
+		~sentry()
+			{	// destroy the object
+			this->_Myostr._Osfx();
+			}
+
+		operator bool() const
+			{	// test if stream state okay
+			return (_Ok);
+			}
+
+	private:
+		sentry(const sentry&);	// not defined
+		sentry& operator=(const sentry&);	// not defined
+
+		bool _Ok;	// true if stream state okay at construction
+		};
+
+	bool opfx()
+		{	// test stream state and flush tie stream as needed (retained)
+		if (ios_base::good() && _Myios::tie() != 0)
+			_Myios::tie()->flush();
+		return (ios_base::good());
+		}
+
+	void osfx()
+		{	// perform any wrapup (retained)
+		_Osfx();
+		}
+
+	void _Osfx()
+		{	// perform any wrapup
+		_TRY_BEGIN
+		if (ios_base::flags() & ios_base::unitbuf)
+			flush();	// flush stream as needed
+		_CATCH_ALL
+		_CATCH_END
+		}
+
+	_Myt& operator<<(_Myt& (*_Pfn)(_Myt&))
+		{	// call ostream manipulator
+		return ((*_Pfn)(*this));
+		}
+
+	_Myt& operator<<(_Myios& (*_Pfn)(_Myios&))
+		{	// call ios manipulator
+		(*_Pfn)(*(_Myios *)this);
+		return (*this);
+		}
+
+	_Myt& operator<<(ios_base& (*_Pfn)(ios_base&))
+		{	// call ios_base manipulator
+		(*_Pfn)(*(ios_base *)this);
+		return (*this);
+		}
+
+	_Myt& operator<<(_Bool _Val)
+		{	// insert a boolean
+		ios_base::iostate _State = ios_base::goodbit;
+		const sentry _Ok(*this);
+
+		if (_Ok)
+			{	// state okay, use facet to insert
+			const _Nput& _Nput_fac = _USE(ios_base::getloc(), _Nput);
+
+			_TRY_IO_BEGIN
+			if (_Nput_fac.put(_Iter(_Myios::rdbuf()), *this,
+				_Myios::fill(), _Val).failed())
+				_State |= ios_base::badbit;
+			_CATCH_IO_END
+			}
+
+		_Myios::setstate(_State);
+		return (*this);
+		}
+
+	_Myt& operator<<(short _Val)
+		{	// insert a short
+		ios_base::iostate _State = ios_base::goodbit;
+		const sentry _Ok(*this);
+
+		if (_Ok)
+			{	// state okay, use facet to insert
+			const _Nput& _Nput_fac = _USE(ios_base::getloc(), _Nput);
+			ios_base::fmtflags _Bfl =
+				ios_base::flags() & ios_base::basefield;
+			long _Tmp = (_Bfl == ios_base::oct
+				|| _Bfl == ios_base::hex)
+				? (long)(unsigned short)_Val : (long)_Val;
+
+			_TRY_IO_BEGIN
+			if (_Nput_fac.put(_Iter(_Myios::rdbuf()), *this,
+				_Myios::fill(), _Tmp).failed())
+				_State |= ios_base::badbit;
+			_CATCH_IO_END
+			}
+
+		_Myios::setstate(_State);
+		return (*this);
+		}
+
+	_Myt& operator<<(unsigned short _Val)
+		{	// insert an unsigned short
+		ios_base::iostate _State = ios_base::goodbit;
+		const sentry _Ok(*this);
+
+		if (_Ok)
+			{	// state okay, use facet to insert
+			const _Nput& _Nput_fac = _USE(ios_base::getloc(), _Nput);
+
+			_TRY_IO_BEGIN
+			if (_Nput_fac.put(_Iter(_Myios::rdbuf()), *this,
+				_Myios::fill(), (unsigned long)_Val).failed())
+				_State |= ios_base::badbit;
+			_CATCH_IO_END
+			}
+
+		_Myios::setstate(_State);
+		return (*this);
+		}
+
+	_Myt& operator<<(int _Val)
+		{	// insert an int
+		ios_base::iostate _State = ios_base::goodbit;
+		const sentry _Ok(*this);
+
+		if (_Ok)
+			{	// state okay, use facet to insert
+			const _Nput& _Nput_fac = _USE(ios_base::getloc(), _Nput);
+			ios_base::fmtflags _Bfl =
+				ios_base::flags() & ios_base::basefield;
+			long _Tmp = (_Bfl == ios_base::oct
+				|| _Bfl == ios_base::hex)
+				? (long)(unsigned int)_Val : (long)_Val;
+
+			_TRY_IO_BEGIN
+			if (_Nput_fac.put(_Iter(_Myios::rdbuf()), *this,
+				_Myios::fill(), _Tmp).failed())
+				_State |= ios_base::badbit;
+			_CATCH_IO_END
+			}
+
+		_Myios::setstate(_State);
+		return (*this);
+		}
+
+	_Myt& operator<<(unsigned int _Val)
+		{	// insert an unsigned int
+		ios_base::iostate _State = ios_base::goodbit;
+		const sentry _Ok(*this);
+
+		if (_Ok)
+			{	// state okay, use facet to insert
+			const _Nput& _Nput_fac = _USE(ios_base::getloc(), _Nput);
+
+			_TRY_IO_BEGIN
+			if (_Nput_fac.put(_Iter(_Myios::rdbuf()), *this,
+				_Myios::fill(), (unsigned long)_Val).failed())
+				_State |= ios_base::badbit;
+			_CATCH_IO_END
+			}
+
+		_Myios::setstate(_State);
+		return (*this);
+		}
+
+	_Myt& operator<<(long _Val)
+		{	// insert a long
+		ios_base::iostate _State = ios_base::goodbit;
+		const sentry _Ok(*this);
+
+		if (_Ok)
+			{	// state okay, use facet to insert
+			const _Nput& _Nput_fac = _USE(ios_base::getloc(), _Nput);
+
+			_TRY_IO_BEGIN
+			if (_Nput_fac.put(_Iter(_Myios::rdbuf()), *this,
+				_Myios::fill(), _Val).failed())
+				_State |= ios_base::badbit;
+			_CATCH_IO_END
+			}
+
+		_Myios::setstate(_State);
+		return (*this);
+		}
+
+	_Myt& operator<<(unsigned long _Val)
+		{	// insert an unsigned long
+		ios_base::iostate _State = ios_base::goodbit;
+		const sentry _Ok(*this);
+
+		if (_Ok)
+			{	// state okay, use facet to insert
+			const _Nput& _Nput_fac = _USE(ios_base::getloc(), _Nput);
+
+			_TRY_IO_BEGIN
+			if (_Nput_fac.put(_Iter(_Myios::rdbuf()), *this,
+				_Myios::fill(), _Val).failed())
+				_State |= ios_base::badbit;
+			_CATCH_IO_END
+			}
+
+		_Myios::setstate(_State);
+		return (*this);
+		}
+
+ #ifdef _LONGLONG
+	_Myt& operator<<(_LONGLONG _Val)
+		{	// insert a long long
+		ios_base::iostate _State = ios_base::goodbit;
+		const sentry _Ok(*this);
+
+		if (_Ok)
+			{	// state okay, use facet to insert
+			const _Nput& _Nput_fac = _USE(ios_base::getloc(), _Nput);
+
+			_TRY_IO_BEGIN
+			if (_Nput_fac.put(_Iter(_Myios::rdbuf()), *this,
+				_Myios::fill(), _Val).failed())
+				_State |= ios_base::badbit;
+			_CATCH_IO_END
+			}
+
+		_Myios::setstate(_State);
+		return (*this);
+		}
+
+	_Myt& operator<<(_ULONGLONG _Val)
+		{	// insert an unsigned long long
+		ios_base::iostate _State = ios_base::goodbit;
+		const sentry _Ok(*this);
+
+		if (_Ok)
+			{	// state okay, use facet to insert
+			const _Nput& _Nput_fac = _USE(ios_base::getloc(), _Nput);
+
+			_TRY_IO_BEGIN
+			if (_Nput_fac.put(_Iter(_Myios::rdbuf()), *this,
+				_Myios::fill(), _Val).failed())
+				_State |= ios_base::badbit;
+			_CATCH_IO_END
+			}
+
+		_Myios::setstate(_State);
+		return (*this);
+		}
+ #endif /* _LONGLONG */
+
+	_Myt& operator<<(float _Val)
+		{	// insert a float
+		ios_base::iostate _State = ios_base::goodbit;
+		const sentry _Ok(*this);
+
+		if (_Ok)
+			{	// state okay, use facet to insert
+			const _Nput& _Nput_fac = _USE(ios_base::getloc(), _Nput);
+
+			_TRY_IO_BEGIN
+			if (_Nput_fac.put(_Iter(_Myios::rdbuf()), *this,
+				_Myios::fill(), (double)_Val).failed())
+				_State |= ios_base::badbit;
+			_CATCH_IO_END
+			}
+
+		_Myios::setstate(_State);
+		return (*this);
+		}
+
+	_Myt& operator<<(double _Val)
+		{	// insert a double
+		ios_base::iostate _State = ios_base::goodbit;
+		const sentry _Ok(*this);
+
+		if (_Ok)
+			{	// state okay, use facet to insert
+			const _Nput& _Nput_fac = _USE(ios_base::getloc(), _Nput);
+
+			_TRY_IO_BEGIN
+			if (_Nput_fac.put(_Iter(_Myios::rdbuf()), *this,
+				_Myios::fill(), _Val).failed())
+				_State |= ios_base::badbit;
+			_CATCH_IO_END
+			}
+
+		_Myios::setstate(_State);
+		return (*this);
+		}
+
+	_Myt& operator<<(long double _Val)
+		{	// insert a long double
+		ios_base::iostate _State = ios_base::goodbit;
+		const sentry _Ok(*this);
+
+		if (_Ok)
+			{	// state okay, use facet to insert
+			const _Nput& _Nput_fac = _USE(ios_base::getloc(), _Nput);
+
+			_TRY_IO_BEGIN
+			if (_Nput_fac.put(_Iter(_Myios::rdbuf()), *this,
+				_Myios::fill(), _Val).failed())
+				_State |= ios_base::badbit;
+			_CATCH_IO_END
+			}
+
+		_Myios::setstate(_State);
+		return (*this);
+		}
+
+	_Myt& operator<<(const void *_Val)
+		{	// insert a void pointer
+		ios_base::iostate _State = ios_base::goodbit;
+		const sentry _Ok(*this);
+
+		if (_Ok)
+			{	// state okay, use facet to insert
+			const _Nput& _Nput_fac = _USE(ios_base::getloc(), _Nput);
+
+			_TRY_IO_BEGIN
+			if (_Nput_fac.put(_Iter(_Myios::rdbuf()), *this,
+				_Myios::fill(), _Val).failed())
+				_State |= ios_base::badbit;
+			_CATCH_IO_END
+			}
+
+		_Myios::setstate(_State);
+		return (*this);
+		}
+
+	_Myt& operator<<(_Mysb *_Strbuf)
+		{	// insert until end-of-file from a stream buffer
+		ios_base::iostate _State = ios_base::goodbit;
+		bool _Copied = false;
+		const sentry _Ok(*this);
+
+		if (_Ok && _Strbuf != 0)
+			for (int_type _Meta = _Traits::eof(); ; _Copied = true)
+				{	// extract another character from stream buffer
+				_TRY_BEGIN
+				_Meta = _Traits::eq_int_type(_Traits::eof(), _Meta)
+					? _Strbuf->sgetc() : _Strbuf->snextc();
+				_CATCH_ALL
+					_Myios::setstate(ios_base::failbit);
+					_RERAISE;
+				_CATCH_END
+
+				if (_Traits::eq_int_type(_Traits::eof(), _Meta))
+					break;	// end of file, quit
+
+				_TRY_IO_BEGIN
+					if (_Traits::eq_int_type(_Traits::eof(),
+						_Myios::rdbuf()->sputc(
+							_Traits::to_char_type(_Meta))))
+						{	// insertion failed, quit
+						_State |= ios_base::badbit;
+						break;
+						}
+				_CATCH_IO_END
+				}
+
+		ios_base::width(0);
+		_Myios::setstate(_Strbuf == 0 ? ios_base::badbit
+			: !_Copied ? _State | ios_base::failbit : _State);
+		return (*this);
+		}
+
+	_Myt& put(_Elem _Ch)
+		{	// insert a character
+		ios_base::iostate _State = ios_base::goodbit;
+		const sentry _Ok(*this);
+
+		if (!_Ok)
+			_State |= ios_base::badbit;
+		else
+			{	// state okay, insert character
+			_TRY_IO_BEGIN
+			if (_Traits::eq_int_type(_Traits::eof(),
+				_Myios::rdbuf()->sputc(_Ch)))
+				_State |= ios_base::badbit;
+			_CATCH_IO_END
+			}
+
+		_Myios::setstate(_State);
+		return (*this);
+		}
+
+	_Myt& write(const _Elem *_Str,
+		streamsize _Count)
+		{	// insert _Count characters from array _Str
+		ios_base::iostate _State = ios_base::goodbit;
+		const sentry _Ok(*this);
+
+		if (!_Ok)
+			_State |= ios_base::badbit;
+		else
+			{	// state okay, insert characters
+			_TRY_IO_BEGIN
+			if (_Myios::rdbuf()->sputn(_Str, _Count) != _Count)
+				_State |= ios_base::badbit;
+			_CATCH_IO_END
+			}
+
+		_Myios::setstate(_State);
+		return (*this);
+		}
+
+	_Myt& flush()
+		{	// flush output stream
+		ios_base::iostate _State = ios_base::goodbit;
+		if (!ios_base::fail() && _Myios::rdbuf()->pubsync() == -1)
+			_State |= ios_base::badbit;	// sync failed
+		_Myios::setstate(_State);
+		return (*this);
+		}
+
+	_Myt& seekp(pos_type _Pos)
+		{	// set output stream position to _Pos
+		if (!ios_base::fail()
+			&& (off_type)_Myios::rdbuf()->pubseekpos(_Pos,
+				ios_base::out) == _BADOFF)
+			_Myios::setstate(ios_base::failbit);
+		return (*this);
+		}
+
+	_Myt& seekp(off_type _Off, ios_base::seekdir _Way)
+		{	// change output stream position by _Off, according to _Way
+		if (!ios_base::fail()
+			&& (off_type)_Myios::rdbuf()->pubseekoff(_Off, _Way,
+				ios_base::out) == _BADOFF)
+			_Myios::setstate(ios_base::failbit);
+		return (*this);
+		}
+
+	pos_type tellp()
+		{	// return output stream position
+		if (!ios_base::fail())
+			return (_Myios::rdbuf()->pubseekoff(0,
+				ios_base::cur, ios_base::out));
+		else
+			return (pos_type(_BADOFF));
+		}
+	};
+
+		// INSERTERS
+
+inline ostream& operator<<(ostream& _Ostr, const char *_Val)
+	{	// insert NTBS
+	typedef char _Elem;
+	typedef char_traits _Traits;
+	typedef ostream _Myos;
+	ios_base::iostate _State = ios_base::goodbit;
+	streamsize _Count = (streamsize)_Traits::length(_Val);	// may overflow
+	streamsize _Pad = _Ostr.width() <= 0 || _Ostr.width() <= _Count
+		? 0 : _Ostr.width() - _Count;
+	const _Myos::sentry _Ok(_Ostr);
+
+	if (!_Ok)
+		_State |= ios_base::badbit;
+	else
+		{	// state okay, insert
+		_TRY_IO_BEGIN
+		if ((_Ostr.flags() & ios_base::adjustfield) != ios_base::left)
+			for (; 0 < _Pad; --_Pad)	// pad on left
+				if (_Traits::eq_int_type(_Traits::eof(),
+					_Ostr.rdbuf()->sputc(_Ostr.fill())))
+					{	// insertion failed, quit
+					_State |= ios_base::badbit;
+					break;
+					}
+
+		if (_State == ios_base::goodbit
+			&& _Ostr.rdbuf()->sputn(_Val, _Count) != _Count)
+			_State |= ios_base::badbit;
+
+		if (_State == ios_base::goodbit)
+			for (; 0 < _Pad; --_Pad)	// pad on right
+				if (_Traits::eq_int_type(_Traits::eof(),
+					_Ostr.rdbuf()->sputc(_Ostr.fill())))
+					{	// insertion failed, quit
+					_State |= ios_base::badbit;
+					break;
+					}
+		_Ostr.width(0);
+		_CATCH_IO_(_Ostr)
+		}
+
+	_Ostr.setstate(_State);
+	return (_Ostr);
+	}
+
+inline ostream& operator<<(ostream& _Ostr, char _Ch)
+	{	// insert a character
+	typedef char _Elem;
+	typedef char_traits _Traits;
+	typedef ostream _Myos;
+	ios_base::iostate _State = ios_base::goodbit;
+	const _Myos::sentry _Ok(_Ostr);
+
+	if (_Ok)
+		{	// state okay, insert
+		streamsize _Pad = _Ostr.width() <= 1 ? 0 : _Ostr.width() - 1;
+
+		_TRY_IO_BEGIN
+		if ((_Ostr.flags() & ios_base::adjustfield) != ios_base::left)
+			for (; _State == ios_base::goodbit && 0 < _Pad;
+				--_Pad)	// pad on left
+				if (_Traits::eq_int_type(_Traits::eof(),
+					_Ostr.rdbuf()->sputc(_Ostr.fill())))
+					_State |= ios_base::badbit;
+
+		if (_State == ios_base::goodbit
+			&& _Traits::eq_int_type(_Traits::eof(),
+				_Ostr.rdbuf()->sputc(_Ch)))
+			_State |= ios_base::badbit;
+
+		for (; _State == ios_base::goodbit && 0 < _Pad;
+			--_Pad)	// pad on right
+			if (_Traits::eq_int_type(_Traits::eof(),
+				_Ostr.rdbuf()->sputc(_Ostr.fill())))
+				_State |= ios_base::badbit;
+		_CATCH_IO_(_Ostr)
+		}
+
+	_Ostr.width(0);
+	_Ostr.setstate(_State);
+	return (_Ostr);
+	}
+
+inline ostream& operator<<(ostream& _Ostr,
+	const signed char *_Val)
+	{	// insert a signed char NTBS
+	return (_Ostr << (const char *)_Val);
+	}
+
+inline ostream& operator<<(ostream& _Ostr,
+	signed char _Ch)
+	{	// insert a signed char
+	return (_Ostr << (char)_Ch);
+	}
+
+inline ostream& operator<<(ostream& _Ostr,
+	const unsigned char *_Val)
+	{	// insert an unsigned char NTBS
+	return (_Ostr << (const char *)_Val);
+	}
+
+inline ostream& operator<<(ostream& _Ostr,
+	unsigned char _Ch)
+	{	// extract an unsigned char
+	return (_Ostr << (char)_Ch);
+	}
+
+		// MANIPULATORS
+inline ostream& endl(ostream& _Ostr)
+	{	// insert newline and flush stream
+	_Ostr.put('\n');
+	_Ostr.flush();
+	return (_Ostr);
+	}
+
+inline ostream& ends(ostream& _Ostr)
+	{	// insert null character
+	_Ostr.put(char('\0'));
+	return (_Ostr);
+	}
+
+inline ostream& flush(ostream& _Ostr)
+	{	// flush stream
+	_Ostr.flush();
+	return (_Ostr);
+	}
+_STD_END
+#endif /* _OSTREAM_ */
+
+/*
+ * Copyright (c) 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * Consult your license regarding permissions and restrictions.
+V5.03:1134 */

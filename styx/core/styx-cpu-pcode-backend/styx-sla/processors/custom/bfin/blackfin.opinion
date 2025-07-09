@@ -1,0 +1,8 @@
+<opinions>
+    <constraint loader="Executable and Linking Format (ELF)" compilerSpecID="default">
+        <constraint primary="106" processor="Blackfin" />
+    </constraint>
+    <constraint loader="Blackfin boot stream" compilerSpecID="default">
+        <constraint primary="1" processor="Blackfin" />
+    </constraint>
+</opinions>

@@ -1,0 +1,315 @@
+// ios standard header
+#if defined (_ADI_COMPILER)
+/************************************************************************
+ *
+ * ios
+ *
+ * (c) Copyright 2001-2009 Analog Devices, Inc.  All rights reserved.
+ * (c) Copyright 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * $Revision: 1.5 $
+ ************************************************************************/
+
+#pragma once
+#ifndef __NO_BUILTIN
+#pragma system_header /* ios */
+#endif
+#endif /* _ADI_COMPILER */
+
+#ifndef _IOS_
+#define _IOS_
+#include <xlocnum>
+_STD_BEGIN
+
+		// CLASS ios
+class ios
+	: public ios_base
+	{	// base class for istream/ostream
+public:
+	typedef char _Elem;
+	typedef char_traits _Traits;
+	typedef ios _Myt;
+	typedef ostream _Myos;
+	typedef streambuf _Mysb;
+	typedef ctype _Ctype;
+	typedef _Elem char_type;
+	typedef _Traits traits_type;
+	typedef _Traits::int_type int_type;
+	typedef _Traits::pos_type pos_type;
+	typedef _Traits::off_type off_type;
+
+	explicit ios(_Mysb *_Strbuf)
+		{	// construct from stream buffer pointer
+		init(_Strbuf);
+		}
+
+	virtual ~ios()
+		{	// destroy the object
+		}
+
+	void clear(iostate _State = goodbit, bool _Reraise = false)
+		{	// set state, possibly reraise exception
+		ios_base::clear((iostate)(_Mystrbuf == 0
+			? (int)_State | (int)badbit : (int)_State), _Reraise);
+		}
+
+	void clear(io_state _State)
+		{	// set state to _State
+		clear((iostate)_State);
+		}
+
+	void setstate(iostate _State, bool _Reraise = false)
+		{	// merge _State into state, possible reraise exception
+		if (_State != goodbit)
+			clear((iostate)((int)rdstate() | (int)_State), _Reraise);
+		}
+
+	void setstate(io_state _State)
+		{	// merge _State into state
+		setstate((iostate)_State);
+		}
+
+	_Myt& copyfmt(const _Myt& _Right)
+		{	// copy format parameters
+		_Tiestr = _Right.tie();
+		_Fillch = _Right.fill();
+		ios_base::copyfmt(_Right);
+		return (*this);
+		}
+
+	_Myos *tie() const
+		{	// return tie pointer
+		return (_Tiestr);
+		}
+
+	_Myos *tie(_Myos *_Newtie)
+		{	// set tie pointer
+		_Myos *_Oldtie = _Tiestr;
+		_Tiestr = _Newtie;
+		return (_Oldtie);
+		}
+
+	_Mysb *rdbuf() const
+		{	// return stream buffer pointer
+		return (_Mystrbuf);
+		}
+
+	_Mysb *rdbuf(_Mysb *_Strbuf)
+		{	// set stream buffer pointer
+		_Mysb *_Oldstrbuf = _Mystrbuf;
+		_Mystrbuf = _Strbuf;
+		clear();
+		return (_Oldstrbuf);
+		}
+
+	locale imbue(const locale& _Loc)
+		{	// set locale to argument
+		locale _Oldlocale = ios_base::imbue(_Loc);
+		if (rdbuf() != 0)
+			rdbuf()->pubimbue(_Loc);
+		return (_Oldlocale);
+		}
+
+	_Elem fill() const
+		{	// return fill character
+		return (_Fillch);
+		}
+
+	_Elem fill(_Elem _Newfill)
+		{	// set fill character
+		_Elem _Oldfill = _Fillch;
+		_Fillch = _Newfill;
+		return (_Oldfill);
+		}
+
+	char narrow(_Elem _Ch, char _Dflt = '\0') const
+		{	// convert _Ch to byte using imbued locale
+		const _Ctype& _Ctype_fac = _USE(getloc(), _Ctype);
+		return (_Ctype_fac.narrow(_Ch, _Dflt));
+		}
+
+	_Elem widen(char _Byte) const
+		{	// convert _Byte to character using imbued locale
+		const _Ctype& _Ctype_fac = _USE(getloc(), _Ctype);
+		return (_Ctype_fac.widen(_Byte));
+		}
+
+protected:
+	void init(_Mysb *_Strbuf = 0,
+		bool _Isstd = false)
+		{	// initialize with stream buffer pointer
+		_Init();	// initialize ios_base
+		_Mystrbuf = _Strbuf;
+		_Tiestr = 0;
+		_Fillch = widen(' ');
+
+		if (_Mystrbuf == 0)
+			setstate(badbit);
+
+		if (_Isstd)
+			_Addstd();	// special handling for standard streams
+		}
+
+	ios()
+		{	// default constructor, do nothing
+		}
+
+private:
+ #ifndef _IOS_Stdio
+	ios(const _Myt&);	// not defined
+
+	_Myt& operator=(const _Myt&);	// not defined
+ #endif /* _IOS_Stdio */
+
+	_Mysb *_Mystrbuf;	// pointer to stream buffer
+	_Myos *_Tiestr;	// pointer to tied output stream
+	_Elem _Fillch;	// the fill character
+	};
+
+		// MANIPULATORS
+inline ios_base& boolalpha(ios_base& _Iosbase)
+	{	// set boolalpha
+	_Iosbase.setf(ios_base::boolalpha);
+	return (_Iosbase);
+	}
+
+inline ios_base& dec(ios_base& _Iosbase)
+	{	// set basefield to dec
+	_Iosbase.setf(ios_base::dec, ios_base::basefield);
+	return (_Iosbase);
+	}
+
+inline ios_base& fixed(ios_base& _Iosbase)
+	{	// set floatfield to fixed
+	_Iosbase.setf(ios_base::fixed, ios_base::floatfield);
+	return (_Iosbase);
+	}
+
+inline ios_base& hex(ios_base& _Iosbase)
+	{	// set basefield to hex
+	_Iosbase.setf(ios_base::hex, ios_base::basefield);
+	return (_Iosbase);
+	}
+
+	namespace tr1 {	// added with TR1
+inline _STD ios_base& hexfloat(_STD ios_base& _Iosbase)
+	{	// set floatfield to hexfloat
+	_Iosbase.setf(_STD ios_base::hexfloat, _STD ios_base::floatfield);
+	return (_Iosbase);
+	}
+	}	// namespace tr1
+using tr1::hexfloat;
+
+inline ios_base& internal(ios_base& _Iosbase)
+	{	// set adjustfield to internal
+	_Iosbase.setf(ios_base::internal, ios_base::adjustfield);
+	return (_Iosbase);
+	}
+
+inline ios_base& left(ios_base& _Iosbase)
+	{	// set adjustfield to left
+	_Iosbase.setf(ios_base::left, ios_base::adjustfield);
+	return (_Iosbase);
+	}
+
+inline ios_base& noboolalpha(ios_base& _Iosbase)
+	{	// clear boolalpha
+	_Iosbase.unsetf(ios_base::boolalpha);
+	return (_Iosbase);
+	}
+
+inline ios_base& noshowbase(ios_base& _Iosbase)
+	{	// clear showbase
+	_Iosbase.unsetf(ios_base::showbase);
+	return (_Iosbase);
+	}
+
+inline ios_base& noshowpoint(ios_base& _Iosbase)
+	{	// clear showpoint
+	_Iosbase.unsetf(ios_base::showpoint);
+	return (_Iosbase);
+	}
+
+inline ios_base& noshowpos(ios_base& _Iosbase)
+	{	// clear showpos
+	_Iosbase.unsetf(ios_base::showpos);
+	return (_Iosbase);
+	}
+
+inline ios_base& noskipws(ios_base& _Iosbase)
+	{	// clear skipws
+	_Iosbase.unsetf(ios_base::skipws);
+	return (_Iosbase);
+	}
+
+inline ios_base& nounitbuf(ios_base& _Iosbase)
+	{	// clear unitbuf
+	_Iosbase.unsetf(ios_base::unitbuf);
+	return (_Iosbase);
+	}
+
+inline ios_base& nouppercase(ios_base& _Iosbase)
+	{	// clear uppercase
+	_Iosbase.unsetf(ios_base::uppercase);
+	return (_Iosbase);
+	}
+
+inline ios_base& oct(ios_base& _Iosbase)
+	{	// set oct in basefield
+	_Iosbase.setf(ios_base::oct, ios_base::basefield);
+	return (_Iosbase);
+	}
+
+inline ios_base& right(ios_base& _Iosbase)
+	{	// set right in adjustfield
+	_Iosbase.setf(ios_base::right, ios_base::adjustfield);
+	return (_Iosbase);
+	}
+
+inline ios_base& scientific(ios_base& _Iosbase)
+	{	// set scientific in floatfield
+	_Iosbase.setf(ios_base::scientific, ios_base::floatfield);
+	return (_Iosbase);
+	}
+
+inline ios_base& showbase(ios_base& _Iosbase)
+	{	// set showbase
+	_Iosbase.setf(ios_base::showbase);
+	return (_Iosbase);
+	}
+
+inline ios_base& showpoint(ios_base& _Iosbase)
+	{	// set showpoint
+	_Iosbase.setf(ios_base::showpoint);
+	return (_Iosbase);
+	}
+
+inline ios_base& showpos(ios_base& _Iosbase)
+	{	// set showpos
+	_Iosbase.setf(ios_base::showpos);
+	return (_Iosbase);
+	}
+
+inline ios_base& skipws(ios_base& _Iosbase)
+	{	// set skipws
+	_Iosbase.setf(ios_base::skipws);
+	return (_Iosbase);
+	}
+
+inline ios_base& unitbuf(ios_base& _Iosbase)
+	{	// set unitbuf
+	_Iosbase.setf(ios_base::unitbuf);
+	return (_Iosbase);
+	}
+
+inline ios_base& uppercase(ios_base& _Iosbase)
+	{	// set uppercase
+	_Iosbase.setf(ios_base::uppercase);
+	return (_Iosbase);
+	}
+_STD_END
+#endif /* _IOS_ */
+
+/*
+ * Copyright (c) 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * Consult your license regarding permissions and restrictions.
+V5.03:1134 */

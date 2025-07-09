@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<example name="bm" category="usb_examples/usb_host_hid_generic" board_ref="TWR_K21F120M" version="1.0.0" format_version="2.1">
+  <source path="boards/twrk21f120m/usb_examples/usb_host_hid_generic/bm" target_path="sources" type="c_include">
+    <files mask="app.h"/>
+    <files mask="board.h"/>
+    <files mask="clock_config.h"/>
+    <files mask="host_hid_generic.h"/>
+    <files mask="pin_mux.h"/>
+    <files mask="usb_host_config.h"/>
+  </source>
+  <source path="boards/twrk21f120m/usb_examples/usb_host_hid_generic/bm" target_path="doc" type="doc">
+    <files mask="readme.txt"/>
+  </source>
+  <source path="boards/twrk21f120m/usb_examples/usb_host_hid_generic/bm" target_path="sources" type="src">
+    <files mask="app.c"/>
+    <files mask="board.c"/>
+    <files mask="clock_config.c"/>
+    <files mask="host_hid_generic.c"/>
+    <files mask="pin_mux.c"/>
+  </source>
+  <source path="devices/MK21FA12/arm" target_path="devices/arm" type="src" compilers="arm">
+    <files mask="startup_MK21FA12.s"/>
+  </source>
+  <source path="devices/MK21FA12/drivers" target_path="drivers" type="c_include">
+    <files mask="fsl_clock.h"/>
+    <files mask="fsl_common.h"/>
+    <files mask="fsl_flash.h"/>
+    <files mask="fsl_gpio.h"/>
+    <files mask="fsl_port.h"/>
+    <files mask="fsl_sim.h"/>
+    <files mask="fsl_smc.h"/>
+    <files mask="fsl_sysmpu.h"/>
+    <files mask="fsl_uart.h"/>
+  </source>
+  <source path="devices/MK21FA12/drivers" target_path="drivers" type="src">
+    <files mask="fsl_clock.c"/>
+    <files mask="fsl_common.c"/>
+    <files mask="fsl_flash.c"/>
+    <files mask="fsl_gpio.c"/>
+    <files mask="fsl_sim.c"/>
+    <files mask="fsl_smc.c"/>
+    <files mask="fsl_sysmpu.c"/>
+    <files mask="fsl_uart.c"/>
+  </source>
+  <source path="devices/MK21FA12/gcc" target_path="devices/gcc" type="src" compilers="gcc">
+    <files mask="startup_MK21FA12.S"/>
+  </source>
+  <source path="devices/MK21FA12/iar" target_path="devices/iar" type="src" compilers="iar">
+    <files mask="startup_MK21FA12.s"/>
+  </source>
+  <source path="devices/MK21FA12/utilities/io" target_path="utilities" type="c_include">
+    <files mask="fsl_io.h"/>
+  </source>
+  <source path="devices/MK21FA12/utilities/io" target_path="utilities" type="src">
+    <files mask="fsl_io.c"/>
+  </source>
+  <source path="devices/MK21FA12/utilities/log" target_path="utilities" type="c_include">
+    <files mask="fsl_log.h"/>
+  </source>
+  <source path="devices/MK21FA12/utilities/log" target_path="utilities" type="src">
+    <files mask="fsl_log.c"/>
+  </source>
+  <source path="devices/MK21FA12/utilities/str" target_path="utilities" type="c_include">
+    <files mask="fsl_str.h"/>
+  </source>
+  <source path="devices/MK21FA12/utilities/str" target_path="utilities" type="src">
+    <files mask="fsl_str.c"/>
+  </source>
+  <source path="devices/MK21FA12/utilities" target_path="utilities" type="c_include">
+    <files mask="fsl_debug_console.h"/>
+    <files mask="fsl_debug_console_conf.h"/>
+  </source>
+  <source path="devices/MK21FA12/utilities" target_path="utilities" type="src">
+    <files mask="fsl_assert.c"/>
+    <files mask="fsl_debug_console.c"/>
+  </source>
+  <source path="devices/MK21FA12" target_path="devices" type="c_include">
+    <files mask="MK21FA12.h"/>
+    <files mask="MK21FA12_features.h"/>
+    <files mask="fsl_device_registers.h"/>
+    <files mask="system_MK21FA12.h"/>
+  </source>
+  <source path="devices/MK21FA12" target_path="devices" type="src">
+    <files mask="system_MK21FA12.c"/>
+  </source>
+  <source path="middleware/usb/host/class" target_path="usb/host/class" type="c_include">
+    <files mask="usb_host_hid.h"/>
+    <files mask="usb_host_hub.h"/>
+    <files mask="usb_host_hub_app.h"/>
+  </source>
+  <source path="middleware/usb/host/class" target_path="usb/host/class" type="src">
+    <files mask="usb_host_hid.c"/>
+    <files mask="usb_host_hub.c"/>
+    <files mask="usb_host_hub_app.c"/>
+  </source>
+  <source path="middleware/usb/host" target_path="usb/host" type="c_include">
+    <files mask="usb_host.h"/>
+    <files mask="usb_host_devices.h"/>
+    <files mask="usb_host_framework.h"/>
+    <files mask="usb_host_hci.h"/>
+    <files mask="usb_host_khci.h"/>
+  </source>
+  <source path="middleware/usb/host" target_path="usb/host" type="src">
+    <files mask="usb_host_devices.c"/>
+    <files mask="usb_host_framework.c"/>
+    <files mask="usb_host_hci.c"/>
+    <files mask="usb_host_khci.c"/>
+  </source>
+  <source path="middleware/usb/include" target_path="usb/include" type="c_include">
+    <files mask="usb.h"/>
+    <files mask="usb_misc.h"/>
+    <files mask="usb_spec.h"/>
+  </source>
+  <source path="middleware/usb/osa" target_path="usb/osa" type="c_include">
+    <files mask="usb_osa.h"/>
+    <files mask="usb_osa_bm.h"/>
+    <files mask="usb_osa_freertos.h"/>
+  </source>
+  <source path="middleware/usb/osa" target_path="usb/osa" type="src">
+    <files mask="usb_osa_bm.c"/>
+    <files mask="usb_osa_freertos.c"/>
+  </source>
+  <include_paths>
+    <include path="devices"/>
+    <include path="drivers"/>
+    <include path="sources"/>
+    <include path="usb/host/class"/>
+    <include path="usb/host"/>
+    <include path="usb/include"/>
+    <include path="usb/osa"/>
+    <include path="utilities"/>
+  </include_paths>
+</example>

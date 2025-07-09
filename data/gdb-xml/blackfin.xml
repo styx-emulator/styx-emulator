@@ -1,0 +1,57 @@
+<feature name="org.gnu.gdb.bfin">
+  <reg name="R0" bitsize="32"/>
+  <reg name="R1" bitsize="32"/>
+  <reg name="R2" bitsize="32"/>
+  <reg name="R3" bitsize="32"/>
+  <reg name="R4" bitsize="32"/>
+  <reg name="R5" bitsize="32"/>
+  <reg name="R6" bitsize="32"/>
+  <reg name="R7" bitsize="32"/>
+  <reg name="P0" bitsize="32" type="data_ptr"/>
+  <reg name="P1" bitsize="32" type="data_ptr"/>
+  <reg name="P2" bitsize="32" type="data_ptr"/>
+  <reg name="P3" bitsize="32" type="data_ptr"/>
+  <reg name="P4" bitsize="32" type="data_ptr"/>
+  <reg name="P5" bitsize="32" type="data_ptr"/>
+  <reg name="SP" bitsize="32" type="data_ptr"/>
+  <reg name="FP" bitsize="32" type="data_ptr"/>
+  <reg name="I0" bitsize="32" type="data_ptr"/>
+  <reg name="I1" bitsize="32" type="data_ptr"/>
+  <reg name="I2" bitsize="32" type="data_ptr"/>
+  <reg name="I3" bitsize="32" type="data_ptr"/>
+  <reg name="M0" bitsize="32"/>
+  <reg name="M1" bitsize="32"/>
+  <reg name="M2" bitsize="32"/>
+  <reg name="M3" bitsize="32"/>
+  <reg name="B0" bitsize="32" type="data_ptr"/>
+  <reg name="B1" bitsize="32" type="data_ptr"/>
+  <reg name="B2" bitsize="32" type="data_ptr"/>
+  <reg name="B3" bitsize="32" type="data_ptr"/>
+  <reg name="L0" bitsize="32"/>
+  <reg name="L1" bitsize="32"/>
+  <reg name="L2" bitsize="32"/>
+  <reg name="L3" bitsize="32"/>
+  <reg name="A0X" bitsize="32"/>
+  <reg name="A0W" bitsize="32"/>
+  <reg name="A1X" bitsize="32"/>
+  <reg name="A1W" bitsize="32"/>
+  <reg name="ASTAT" bitsize="32"/>
+  <reg name="RETS" bitsize="32" type="code_ptr"/>
+  <reg name="LC0" bitsize="32"/>
+  <reg name="LT0" bitsize="32" type="code_ptr"/>
+  <reg name="LB0" bitsize="32" type="code_ptr"/>
+  <reg name="LC1" bitsize="32"/>
+  <reg name="LT1" bitsize="32" type="code_ptr"/>
+  <reg name="LB1" bitsize="32" type="code_ptr"/>
+  <reg name="CYCLES" bitsize="32"/>
+  <reg name="CYCLES2" bitsize="32"/>
+  <reg name="USP" bitsize="32"/>
+  <reg name="SEQSTAT" bitsize="32"/>
+  <reg name="SYSCFG" bitsize="32"/>
+  <reg name="RETI" bitsize="32" type="code_ptr"/>
+  <reg name="RETX" bitsize="32" type="code_ptr"/>
+  <reg name="RETN" bitsize="32" type="code_ptr"/>
+  <reg name="RETE" bitsize="32" type="code_ptr"/>
+  <reg name="PC" bitsize="32" type="code_ptr"/>
+  <reg name="CC" bitsize="32"/>
+</feature>

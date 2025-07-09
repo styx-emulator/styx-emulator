@@ -1,0 +1,62 @@
+// BSD 2-Clause License
+//
+// Copyright (c) 2024, Styx Emulator Project
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, this
+//    list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+mod builder;
+pub use builder::ProcessorBuilder;
+
+mod processor_struct;
+pub use processor_struct::Processor;
+
+mod processor_state;
+pub use processor_state::ProcessorState;
+
+mod emulation_report;
+pub use emulation_report::EmulationReport;
+
+mod target_exit_reason;
+pub use target_exit_reason::TargetExitReason;
+
+mod target;
+pub use target::Target;
+
+use crate::util::module_system::ModuleSystem;
+use pyo3::{exceptions::PyAssertionError, types::PyModuleMethods, PyErr, PyResult};
+
+use std::fmt::Debug;
+
+fn convert_machine_err(e: impl Debug) -> PyErr {
+    PyAssertionError::new_err(format!("{e:?}"))
+}
+
+pub(crate) fn register(m: &mut ModuleSystem) -> PyResult<()> {
+    m.register("processor", |m| {
+        m.add_class::<builder::ProcessorBuilder>()?;
+        m.add_class::<processor_struct::Processor>()?;
+        m.add_class::<target::Target>()?;
+        m.add_class::<processor_state::ProcessorState>()?;
+        Ok(())
+    })?;
+
+    Ok(())
+}

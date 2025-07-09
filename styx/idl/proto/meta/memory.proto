@@ -1,0 +1,98 @@
+syntax = "proto3";
+
+package styx.meta.memory;
+
+message MemoryOperation {
+    enum Operation {
+        READ = 0;
+        WRITE = 1;
+    }
+
+    Operation operation = 1;
+}
+
+message MemoryPermissions {
+  bool READ = 1;
+  bool WRITE = 2;
+  bool EXECUTE = 3;
+}
+
+message MemoryPrivilege {
+    uint64 level = 1;
+}
+
+message MemoryRange {
+  uint64 start = 1;
+  uint64 size = 2;
+}
+
+message MemoryRangeList {
+    repeated MemoryRange ranges = 1;
+}
+
+message MemoryRegion {
+  uint64 start = 1;
+  uint64 end = 2;
+  MemoryPermissions permissions = 3;
+  MemoryPrivilege privilege = 4;
+  string name = 5;
+}
+
+message MemoryRegionList {
+    repeated MemoryRegion regions = 1;
+}
+
+message EmptyContext {}
+message StyxMemorySnapshotError {
+    oneof error {
+        EmptyContext empty = 1;
+    }
+}
+
+message SnapshotError {
+    StyxMemorySnapshotError styx = 1;
+}
+message DataInvalidSize {
+    uint64 declared_size = 1;
+    uint64 actual_size = 2;
+}
+message InvalidRegionPermissions {
+    MemoryPermissions have = 1;
+    MemoryPermissions need = 2;
+}
+message InvalidMemoryRange {
+    MemoryOperation op = 1;
+    uint64 request_min = 2;
+    uint64 request_max = 3;
+    uint64 limit_min = 4;
+    uint64 limit_max = 5;
+}
+message ZeroSize {}
+message OverlappingRegion {
+    uint64 base = 1;
+    uint64 size = 2;
+}
+message EmptyMemoryBank {}
+message InvalidBaseAddress {
+    uint64 base = 1;
+}
+message SizeTooLarge {
+    uint64 size = 1;
+}
+message SizeTooSmall {
+    uint64 size = 1;
+    uint64 min_size = 2;
+}
+message StyxMemoryError {
+    oneof error {
+        DataInvalidSize data_invalid_size = 1;
+        InvalidRegionPermissions invalid_region_permissions = 2;
+        InvalidMemoryRange invalid_memory_range = 3;
+        ZeroSize zero_size = 4;
+        OverlappingRegion overlapping_region = 5;
+        EmptyMemoryBank empty_memory_bank = 6;
+        InvalidBaseAddress invalid_base_address = 7;
+        SizeTooLarge size_too_large = 8;
+        SizeTooSmall size_too_small = 9;
+    }
+}

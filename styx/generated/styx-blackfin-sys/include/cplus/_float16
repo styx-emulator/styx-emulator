@@ -1,0 +1,606 @@
+#pragma once
+#ifndef __NO_BUILTIN
+#pragma system_header /* _float16 */
+#endif
+/************************************************************************
+ *
+ * _float16 : $Revision: 1.2 $
+ *
+ * (c) Copyright 2002-2006 Analog Devices, Inc.  All rights reserved.
+ *
+ ************************************************************************/
+
+/* Support class for the 16.16 float representation. */
+
+#ifndef __FLOAT16_DEFINED
+#define __FLOAT16_DEFINED
+
+#if !defined(__cplusplus)
+#  error <_float16> only available with -c++
+#endif
+
+#  include <float16.h>
+#  include <fract.h>
+
+#ifdef _FLOAT16_TRACE
+#   include <stdio.h>
+#endif
+
+
+class _float16 {
+  public:
+    float16 v;
+
+//----------------------------------------------------------------
+// Create an uninitialized _float16
+//----------------------------------------------------------------
+_float16 ()
+{
+#ifdef _FLOAT16_TRACE
+	printf("[0x%8.8x] Constructed\n",this);
+#endif
+	v.u = 0 ;
+}
+
+//----------------------------------------------------------------
+// Construct a _float16 from various types.
+//----------------------------------------------------------------
+_float16 (fract16 val)
+{
+	v = ::fr16_to_fl16(val);
+#ifdef _FLOAT16_TRACE
+	printf("[0x%8.8x] Constructed with fract16 v(0x%8.8x) = 0x%8.8x\n",
+	this,val,v);
+#endif
+}
+
+_float16 (double val)
+{
+	v = ::fl_to_fl16(val);
+#ifdef _FLOAT16_TRACE
+	printf("[0x%8.8x] Constructed with double v(0x%8.8x) = 0x%8.8x\n",
+	this,val,v);
+#endif
+}
+
+_float16 (float16 val)
+{
+	v = val;
+}
+
+
+//--------------------------------------------------------------
+// Various Operators
+//--------------------------------------------------------------
+
+float16 operator- () const
+{
+#ifdef _FLOAT16_TRACE
+	_float16 x = ::negate_fl16(v);
+	printf("[0x%8.8x] operator -(0x%8.8x) returns value 0x%8.8x\n",
+	this,v,x.v);
+	return x;
+#else
+	return ::negate_fl16(v);
+#endif
+}
+
+float16 operator + (const _float16 s) const
+{
+#ifdef _FLOAT16_TRACE
+	_float16 x = ::add_fl16(v,s.v);
+	printf("[0x%8.8x] operator + _float16 (v=0x%8.8x, s.v=0x%8.8x) = "
+	       "0x%8.8x\n",
+		this,v,s.v,x.v);
+	return x;
+#else
+	return ::add_fl16(v,s.v);
+#endif
+}
+
+float16 operator + ( const fract16 d) const
+{
+#ifdef _FLOAT16_TRACE
+	_float16 f2(d);
+	_float16 x = ::add_fl16(v,f2.v);
+	printf("[0x%8.8x] operator + fract16 (v=0x%8.8x, f2.v=0x%8.8x) = 0x%8.8x\n",
+		this,v,f2.v,x.v);
+	return x;
+#else
+	_float16 f2(d);
+	return ::add_fl16(v,f2.v);
+#endif
+}
+
+float16 operator + ( const double f ) const
+{
+#ifdef _FLOAT16_TRACE
+	_float16 f2(f);
+	_float16 x = ::add_fl16(v,f2.v);
+	printf("[0x%8.8x] operator + double (v=0x%8.8x, f2.v=0x%8.8x) = 0x%8.8x\n",
+		this,v,f2.v,x.v);
+	return x;
+#else
+	_float16 f2(f);
+	return ::add_fl16(v,f2.v);
+#endif
+}
+
+_float16& operator += (const _float16 s)
+{
+#ifdef _FLOAT16_TRACE
+	printf("[0x%8.8x] operator += _float16 (v=0x%8.8x, s.v=0x%8.8x) = ",
+		this,v,s.v);
+	v = ::add_fl16(v,s.v);
+	printf("0x%8.8x\n",v);
+	return *this;
+#else
+	v = ::add_fl16(v,s.v);
+	return *this;
+#endif
+}
+
+_float16& operator += (const fract16 d)
+{
+#ifdef _FLOAT16_TRACE
+	_float16 f2(d);
+	printf("[0x%8.8x] operator += fract16 (v=0x%8.8x, f2.v=0x%8.8x) = ",
+		this,v,f2.v);
+	v = ::add_fl16(v,f2.v);
+	printf("0x%8.8x\n",v);
+	return *this;
+#else
+	_float16 f2(d);
+	v = ::add_fl16(v,f2.v);
+	return *this;
+#endif
+}
+
+_float16& operator += (const double f)
+{
+#ifdef _FLOAT16_TRACE
+	_float16 f2(f);
+	printf("[0x%8.8x] operator += double (v=0x%8.8x, f2.v=0x%8.8x) = ",
+		this,v,f2.v);
+	v = ::add_fl16(v,f2.v);
+	printf("0x%8.8x\n",v);
+	return *this;
+#else
+	_float16 f2(f);
+	v = ::add_fl16(v,f2.v);
+	return *this;
+#endif
+}
+
+float16 operator - (const _float16 s) const
+{
+#ifdef _FLOAT16_TRACE
+	_float16 x = ::sub_fl16(v,s.v);
+	printf("[0x%8.8x] operator - _float16 (v=0x%8.8x, s.v=0x%8.8x) = "
+	       "0x%8.8x\n"
+	,this,v,s.v,x.v);
+	return x;
+#else
+	return ::sub_fl16(v,s.v);
+#endif
+}
+
+float16 operator - (const fract16 d) const
+{
+#ifdef _FLOAT16_TRACE
+	_float16 f2(d);
+	_float16 x = ::sub_fl16(v,f2.v);
+	printf("[0x%8.8x] operator - fract16 (v=0x%8.8x, f2.v=0x%8.8x) = 0x%8.8x\n",
+	this,v,f2.v,x.v);
+	return x;
+#else
+	_float16 f2(d);
+	return ::sub_fl16(v,f2.v);
+#endif
+}
+
+float16 operator - (const double f) const
+{
+#ifdef _FLOAT16_TRACE
+	_float16 f2(f);
+	_float16 x = ::sub_fl16(v,f2.v);
+	printf("[0x%8.8x] operator - double (v=0x%8.8x, f2.v=0x%8.8x) = 0x%8.8x\n",
+	this,v,f2.v,x.v);
+	return x;
+#else
+	_float16 f2(f);
+	return ::sub_fl16(v,f2.v);
+#endif
+}
+
+_float16& operator -= (const _float16 s)
+{
+#ifdef _FLOAT16_TRACE
+	printf("[0x%8.8x] operator -= _float16 (v=0x%8.8x, s.v=0x%8.8x) = ",
+		this,v,s.v);
+	v = ::sub_fl16(v,s.v);
+	printf("0x%8.8x\n",v);
+	return *this;
+#else
+	v = ::sub_fl16(v,s.v);
+	return *this;
+#endif
+}
+
+_float16& operator -= (const fract16 d)
+{
+#ifdef _FLOAT16_TRACE
+	_float16 f2(d);
+	printf("[0x%8.8x] operator -= fract16 (v=0x%8.8x, f2.v=0x%8.8x) = ",
+		this,v,f2.v);
+	v = ::sub_fl16(v,f2.v);
+	printf("0x%8.8x\n",v);
+	return *this;
+#else
+	_float16 f2(d);
+	v = ::sub_fl16(v,f2.v);
+	return *this;
+#endif
+}
+
+_float16& operator -= (const double f)
+{
+#ifdef _FLOAT16_TRACE
+	_float16 f2(f);
+	printf("[0x%8.8x] operator -= double (v=0x%8.8x, f2.v=0x%8.8x) = ",
+		this,v,f2.v);
+	v = ::sub_fl16(v,f2.v);
+	printf("0x%8.8x\n",v);
+	return *this;
+#else
+	_float16 f2(f);
+	v = ::sub_fl16(v,f2.v);
+	return *this;
+#endif
+}
+
+float16 operator *(const _float16 s) const
+{
+#ifdef _FLOAT16_TRACE
+	_float16 x = ::mul_fl16(v,s.v);
+	printf("[0x%8.8x] operator * _float16 (v=0x%8.8x, s.v=0x%8.8x) = 0x%8.8x\n",
+	this,v,s.v,x.v);
+	return x;
+#else
+	return mul_fl16(v,s.v);
+#endif
+}
+
+float16 operator *(const fract16 d) const
+{
+#ifdef _FLOAT16_TRACE
+	_float16 f2(d);
+	_float16 x = ::mul_fl16(v,f2.v);
+	printf("[0x%8.8x] operator * fract16 (v=0x%8.8x) = 0x%8.8x\n",
+		this,v,f2.v,x.v);
+	return x;
+#else
+	_float16 f2(d);
+	return ::mul_fl16(v,f2.v);
+#endif
+}
+
+float16 operator *(const double f) const
+{
+#ifdef _FLOAT16_TRACE
+	_float16 f2(f);
+	_float16 x = ::mul_fl16(v,f2.v);
+	printf("[0x%8.8x] operator * double (v=0x%8.8x) = 0x%8.8x\n",
+		this,v,f2.v,x.v);
+	return x;
+#else
+	_float16 f2(f);
+	return ::mul_fl16(v,f2.v);
+#endif
+}
+
+_float16& operator *=(const _float16 s)
+{
+#ifdef _FLOAT16_TRACE
+	printf("[0x%8.8x] operator *= _float16 (v=0x%8.8x,s.v=0x%8.8x)",
+		this,v,s.v);
+	v = ::mul_fl16(v,s.v);
+	printf("0x%8.8x\n",v);
+	return *this;
+#else
+	v = ::mul_fl16(v,s.v);
+	return *this;
+#endif
+}
+
+_float16& operator *=(const fract16 d)
+{
+#ifdef _FLOAT16_TRACE
+	_float16 f2(d);
+	printf("[0x%8.8x] operator *= fract16 (v=0x%8.8x,f2.v=0x%8.8x)",
+		this,v,f2.v);
+	v = ::mul_fl16(v,f2.v);
+	printf("0x%8.8x\n",v);
+	return *this;
+#else
+	_float16 f2(d);
+	v = ::mul_fl16(v,f2.v);
+	return *this;
+#endif
+}
+
+_float16& operator *=(const double f)
+{
+#ifdef _FLOAT16_TRACE
+	_float16 f2(f);
+	printf("[0x%8.8x] operator *= double (v=0x%8.8x,f2.v=0x%8.8x)",
+		this,v,f2.v);
+	v = ::mul_fl16(v,f2.v);
+	printf("0x%8.8x\n",v);
+	return *this;
+#else
+	_float16 f2(f);
+	v = ::mul_fl16(v,f2.v);
+	return *this;
+#endif
+}
+
+float16 operator / ( const _float16 s ) const
+{
+#ifdef _FLOAT16_TRACE
+	_float16 f2 = ::div_fl16(v,s.v);
+	printf("[0x%8.8x] operator / _float16 (v=0x%8.8x,s.v=0x%8.8x) = 0x%8.8x\n",
+				 this,v,s.v,f2.v);
+	return f2;
+#else
+	return ::div_fl16(v,s.v);
+#endif
+}
+
+float16 operator / ( const fract16 d ) const
+{
+#ifdef _FLOAT16_TRACE
+	_float16 x(d);
+	_float16 f2 = ::div_fl16(v,x.v);
+	printf("[0x%8.8x] operator / fract16 (v=0x%8.8x,x.v=0x%8.8x) = 0x%8.8x\n",
+				 this,v,x.v,f2.v);
+	return f2;
+#else
+	_float16 x(d);
+	return ::div_fl16(v,x.v);
+#endif
+}
+
+float16 operator / ( const double f ) const
+{
+#ifdef _FLOAT16_TRACE
+	_float16 x(f);
+	_float16 f2 = ::div_fl16(v,x.v);
+	printf("[0x%8.8x] operator / double (v=0x%8.8x,x.v=0x%8.8x) = 0x%8.8x\n",
+				 this,v,x.v,f2.v);
+	return f2;
+#else
+	_float16 x(f);
+	return ::div_fl16(v,x.v);
+#endif
+}
+
+_float16& operator = (const _float16 s )
+{
+	v = s.v ;
+	return *this;
+}
+
+_float16& operator = (const fract16 d )
+{
+	v = fr16_to_fl16(d);
+	return *this;
+}
+
+_float16& operator = (const double f )
+{
+	v = fl_to_fl16(f);
+	return *this;
+}
+
+_float16& operator = (const float16 fl)
+{
+	v = fl;
+	return *this;
+}
+
+#pragma always_inline
+inline bool operator <  (const _float16 s) { return ( ::cmp_fl16(v,s.v) < 0 ); }
+#pragma always_inline
+inline bool operator <  (const double d)
+{
+	_float16 f2(d);
+	return ( ::cmp_fl16(v,f2.v) < 0  );
+}
+#pragma always_inline
+inline bool operator < (const fract16 f)
+{
+	_float16 f2(f);
+	return ( ::cmp_fl16(v,f2.v) < 0 );
+}
+
+bool operator >  (const _float16 s) { return ( ::cmp_fl16(v,s.v) > 0 ); }
+bool operator >  (const double d)
+{
+	_float16 f2(d);
+	return ( ::cmp_fl16(v,f2.v) > 0 );
+}
+bool operator > (const fract16 f )
+{
+	_float16 f2(f);
+	return ( ::cmp_fl16(v,f2.v) > 0 );
+}
+
+bool operator <= (const _float16 s) { return ( ::cmp_fl16(v,s.v) <= 0  ); }
+bool operator <= (const fract16 d)
+{
+	_float16 f2(d);
+	return ( ::cmp_fl16(v,f2.v) <= 0  );
+}
+bool operator <= ( const double f)
+{
+	_float16 f2(f);
+	return ( ::cmp_fl16(v,f2.v) <= 0 );
+}
+
+bool operator >= (const _float16 s) { return ( ::cmp_fl16(v,s.v) >= 0 ); }
+bool operator >= (const double d)
+{
+	_float16 f2(d);
+	return ( ::cmp_fl16(v,f2.v) >= 0 );
+}
+bool operator >= ( const fract16 f)
+{
+	_float16 f2(f);
+	return ( ::cmp_fl16(v,f2.v) >= 0 );
+}
+
+bool operator == (const _float16 s) { return ( ::cmp_fl16(v,s.v) == 0  ); }
+bool operator == (const double d)
+{
+	_float16 f2(d);
+	return ( ::cmp_fl16(v,f2.v) == 0  );
+}
+bool operator == ( const fract16 f)
+{
+	_float16 f2(f);
+	return ( ::cmp_fl16(v,f2.v) == 0 );
+}
+
+bool operator != (const _float16 s) { return ( ::cmp_fl16(v,s.v) != 0 ); }
+bool operator != (const double d)
+{
+	_float16 f2(d);
+	return ( ::cmp_fl16(v,f2.v) != 0 );
+}
+bool operator != (const fract16 f)
+{
+	_float16 f2(f);
+	return ( ::cmp_fl16(v,f2.v) != 0 );
+}
+
+
+operator float () const
+{
+#ifdef _FLOAT16_TRACE
+	float f = ::fl16_to_fl(v);
+	printf("[0x%8.8x] operator float (0x%8.8x) = %f 0x%8.8x\n",
+		this,v,f,f);
+	return f;
+#else
+	return ::fl16_to_fl(v);
+#endif
+}
+operator double () const
+{
+#ifdef _FLOAT16_TRACE
+	double f = ::fl16_to_fl(v);
+	printf("[0x%8.8x] operator double 0x%8.8x)) = %f 0x%8.8x\n",
+		this,v,f,f);
+	return f;
+#else
+	return ::fl16_to_fl(v);
+#endif
+}
+
+operator fract16 () const
+{
+#ifdef _FLOAT16_TRACE
+	fract16 f2 = ::fl16_to_fr16(v);
+	printf("[0x%8.8x] operator fract16 (0x%8.8x)=0x%8.8x)\n",
+		this,v,f2);
+	return f2;
+#else
+	return ::fl16_to_fl(v);
+#endif
+}
+
+operator float16 () const
+{
+	return v;
+}
+
+};
+
+
+// Global operators
+
+double operator + (double d, _float16 f)
+{
+#ifdef _FLOAT16_TRACE
+	double d2 = double(f);
+	printf("[GLOBAL] operator + d,f (d=0x%8.8x,f(as d)=0x%8.8x) = 0x%8.8x\n",
+		d,d2,d+d2);
+	return (d2+2);
+#else
+	double d2 = double(f);
+	return (d2+d);
+#endif
+}
+
+double operator - (double d,_float16 f)
+{
+#ifdef _FLOAT16_TRACE
+	double d2 = double(f);
+	printf("[GLOBAL] operator - d,f (d=0x%8.8x,f(as d)=0x%8.8x) = 0x%8.8x\n",
+		d,d2,d-d2);
+	return (d-d2);
+#else
+	double d2 = double(f);
+	return (d-d2);
+#endif
+}
+
+double operator * (double d,_float16 f)
+{
+#ifdef _FLOAT16_TRACE
+	double d2 = double(f);
+	printf("[GLOBAL] operator * d,f (d=0x%8.8x,f(as d)=0x%8.8x) = 0x%8.8x\n",
+		d,d2,d*d2);
+	return (d-d2);
+#else
+	double d2 = double(f);
+	return (d*d2);
+#endif
+}
+
+
+bool operator <  (const double d, const _float16 s)
+{
+	double d2(s);
+	return ( d < d2  );
+}
+bool operator >  (const double d, const _float16 s)
+{
+	double d2(s);
+	return ( d < d2  );
+}
+bool operator <= (const double d,const _float16 s)
+{
+	double d2(s);
+	return ( d <= d2 );
+}
+bool operator >= (const double d,const _float16 s)
+{
+	double d2(s);
+	return ( d >= d2 );
+}
+bool operator == (double d, const _float16 s)
+{
+	double d2(s);
+	return ( d == d2 );
+}
+
+#include <stdio.h>
+bool operator != (double d, const _float16 s)
+{
+	double d2(s);
+	return ( d != d2 );
+}
+
+#endif /* _FLOAT16_DEFINED */

@@ -1,0 +1,2 @@
+rootProject.name = 'typhunix'
+settings.include("TyphunixPlugin")

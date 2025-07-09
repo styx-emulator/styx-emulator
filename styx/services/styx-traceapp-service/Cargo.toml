@@ -1,0 +1,36 @@
+[package]
+name = "traceapp-service"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[[bin]]
+name = "traceapp-svc"
+path = "src/traceapp-svc-main.rs"
+
+[[bin]]
+name = "traceapp-cli"
+path = "src/traceapp-cli-main.rs"
+
+
+[dependencies]
+styx-workspace-hack = { version = "0.1", path = "../../workspace-hack" }
+styx-core = { workspace = true }
+
+styx-trace-tools = { path = "../../../incubation/trace-tools" }
+styx-macros-args = { path = "../../../incubation/styx-macros-args" }
+styx-dbmodel = { path = "../../../styx/db/dbmodel" }
+emulation-registry-service = { path = "../styx-emulation-registry-service" }
+
+tracing = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+serde_yaml = { workspace = true }
+serde_json = { workspace = true }
+
+tonic = { workspace = true }
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+tokio-stream = { workspace = true }
+
+clap = { workspace = true }

@@ -1,0 +1,154 @@
+// stack standard header
+#if defined (_ADI_COMPILER)
+/************************************************************************
+ *
+ * stack
+ *
+ * (c) Copyright 2001-2009 Analog Devices, Inc.  All rights reserved.
+ * (c) Copyright 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * $Revision: 1.4 $
+ ************************************************************************/
+
+#pragma once
+#ifndef __NO_BUILTIN
+#pragma system_header /* stack */
+#endif
+#endif  /*_ADI_COMPILER */
+#ifndef _STACK_
+#define _STACK_
+#include <deque>
+_STD_BEGIN
+
+		// TEMPLATE CLASS stack
+template<class _Ty,
+	class _Container = deque<_Ty> >
+	class stack
+	{	// LIFO queue implemented with a container
+public:
+	typedef _Container container_type;
+	typedef typename _Container::value_type value_type;
+	typedef typename _Container::size_type size_type;
+	typedef typename _Container::reference reference;
+	typedef typename _Container::const_reference const_reference;
+
+	stack()
+		: c()
+		{	// construct with empty container
+		}
+
+	explicit stack(const _Container& _Cont)
+		: c(_Cont)
+		{	// construct by copying specified container
+		}
+
+	bool empty() const
+		{	// test if stack is empty
+		return (c.empty());
+		}
+
+	size_type size() const
+		{	// test length of stack
+		return (c.size());
+		}
+
+	reference top()
+		{	// return last element of mutable stack
+		return (c.back());
+		}
+
+	const_reference top() const
+		{	// return last element of nonmutable stack
+		return (c.back());
+		}
+
+	void push(const value_type& _Val)
+		{	// insert element at end
+		c.push_back(_Val);
+		}
+
+	void pop()
+		{	// erase last element
+		c.pop_back();
+		}
+
+	const _Container& _Get_container() const
+		{	// get reference to container
+		return (c);
+		}
+
+protected:
+	_Container c;	// the underlying container
+	};
+
+		// stack TEMPLATE FUNCTIONS
+template<class _Ty,
+	class _Container> inline
+	bool operator==(const stack<_Ty, _Container>& _Left,
+		const stack<_Ty, _Container>& _Right)
+	{	// test for stack equality
+	return (_Left._Get_container() == _Right._Get_container());
+	}
+
+template<class _Ty,
+	class _Container> inline
+	bool operator!=(const stack<_Ty, _Container>& _Left,
+		const stack<_Ty, _Container>& _Right)
+	{	// test for stack inequality
+	return (!(_Left == _Right));
+	}
+
+template<class _Ty,
+	class _Container> inline
+	bool operator<(const stack<_Ty, _Container>& _Left,
+		const stack<_Ty, _Container>& _Right)
+	{	// test if _Left < _Right for stacks
+	return (_Left._Get_container() < _Right._Get_container());
+	}
+
+template<class _Ty,
+	class _Container> inline
+	bool operator>(const stack<_Ty, _Container>& _Left,
+		const stack<_Ty, _Container>& _Right)
+	{	// test if _Left > _Right for stacks
+	return (_Right < _Left);
+	}
+
+template<class _Ty,
+	class _Container> inline
+	bool operator<=(const stack<_Ty, _Container>& _Left,
+		const stack<_Ty, _Container>& _Right)
+	{	// test if _Left <= _Right for stacks
+	return (!(_Right < _Left));
+	}
+
+template<class _Ty,
+	class _Container> inline
+	bool operator>=(const stack<_Ty, _Container>& _Left,
+		const stack<_Ty, _Container>& _Right)
+	{	// test if _Left >= _Right for stacks
+	return (!(_Left < _Right));
+	}
+_STD_END
+#endif /* _STACK_ */
+
+/*
+ * Copyright (c) 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * Consult your license regarding permissions and restrictions.
+ */
+
+/*
+ * This file is derived from software bearing the following
+ * restrictions:
+ *
+ * Copyright (c) 1994
+ * Hewlett-Packard Company
+ *
+ * Permission to use, copy, modify, distribute and sell this
+ * software and its documentation for any purpose is hereby
+ * granted without fee, provided that the above copyright notice
+ * appear in all copies and that both that copyright notice and
+ * this permission notice appear in supporting documentation.
+ * Hewlett-Packard Company makes no representations about the
+ * suitability of this software for any purpose. It is provided
+ * "as is" without express or implied warranty.
+V5.03:1134 */

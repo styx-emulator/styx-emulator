@@ -1,0 +1,611 @@
+// fstream standard header
+#if defined (_ADI_COMPILER)
+/************************************************************************
+ *
+ * fstream
+ *
+ * (c) Copyright 2001-2011 Analog Devices, Inc.  All rights reserved.
+ * (c) Copyright 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * $Revision: 1.15.4.4 $
+ ************************************************************************/
+
+#pragma once
+#ifndef __NO_BUILTIN
+#pragma system_header /* fstream */
+#endif
+#endif /* _ADI_COMPILER */
+
+#ifndef _FSTREAM_
+#define _FSTREAM_
+#include <istream>
+_STD_BEGIN
+
+extern _Filet *_Fiopen(const char *,
+	ios_base::openmode, int);
+extern _Filet *_Fiopen(const wchar_t *,
+	ios_base::openmode, int);
+
+
+
+		// CLASS filebuf
+class filebuf
+	: public streambuf
+	{	// stream buffer associated with a C stream
+public:
+	typedef char _Elem;
+	typedef char_traits _Traits;
+	typedef filebuf _Myt;
+	typedef _Traits::state_type _Myst;
+	typedef streambuf _Mysb;
+
+	virtual ~filebuf()
+		{	// destroy the object
+		if (_Closef)
+			close();
+		}
+
+	filebuf(_Filet *_File = 0)
+		: _Mysb()
+		{	// construct from pointer to C stream
+		_Init(_File, _Newfl);
+		}
+
+	typedef _Traits::int_type int_type;
+	typedef _Traits::pos_type pos_type;
+	typedef _Traits::off_type off_type;
+
+	filebuf(_Uninitialized)
+		: _Mysb(_Noinit)
+		{	// construct uninitialized
+		}
+
+	enum _Initfl
+		{	// reasons for a call to _Init
+		_Newfl, _Openfl, _Closefl};
+
+	bool is_open() const
+		{	// test if C stream has been opened
+		return (_Myfile != 0);
+		}
+
+	_Myt *open(const char *_Filename,
+		ios_base::openmode _Mode,
+		int _Prot = (int)ios_base::_Openprot)
+		{	// open a C stream with specified mode
+		_Filet *_File;
+		if (_Myfile != 0 || (_File = _Fiopen(_Filename, _Mode, _Prot)) == 0)
+			return (0);	// open failed
+
+		_Init(_File, _Openfl);
+		return (this);	// open succeeded
+		}
+
+	_Myt *open(const char *_Filename, ios_base::open_mode _Mode)
+		{	// open a C stream with specified mode (old style)
+		return (open(_Filename, (ios_base::openmode)_Mode));
+		}
+
+	_Myt *close()
+		{	// close the C stream
+		_Myt *_Ans = this;
+		if (_Myfile == 0)
+			_Ans = 0;
+		else
+			{	// put any homing sequence and close file
+			if (!_Endwrite())
+				_Ans = 0;
+			if (fclose(_Myfile) != 0)
+				_Ans = 0;
+			}
+		_Init(0, _Closefl);
+		return (_Ans);
+		}
+
+#if !defined(_ADI_COMPILER)
+/* Don't override with the underlying stdio stream lock, because fstream
+ * operations do not necessarily need to access the underlying stream.
+ */
+
+ #if _HAS_DINKUM_CLIB
+
+ #else /* _HAS_DINKUM_CLIB */
+
+ #if _MULTI_THREAD && _FILE_OP_LOCKS
+	virtual void _Lock()
+		{	// lock file instead of stream buffer
+		_CSTD _Lockfile(_Myfile);
+		}
+
+	virtual void _Unlock()
+		{	// unlock file instead of stream buffer
+		_CSTD _Unlockfile(_Myfile);
+		}
+ #endif /* _MULTI_THREAD && _FILE_OP_LOCKS */
+
+ #endif /* _HAS_DINKUM_CLIB */
+
+#endif /* defined(_ADI_COMPILER) */
+
+ #if _HAS_TRADITIONAL_IOSTREAMS
+	enum
+		{	// constant for default file opening protection
+		_Openprot = 0666};
+
+	_Myt *attach(_FD_TYPE _Fd, const char *_Mode = "r+")
+		{	// open a C stream with C file descriptor and specified mode
+		_Filet *_File;
+		if (_Myfile != 0 || (_File = _CSTD fdopen(_Fd, (char *)_Mode)) == 0)
+			return (0);	// open failed
+
+		_Init(_File, _Openfl);
+		return (this);	// open succeeded
+		}
+
+	_Filet *stdiofile() const
+		{	// get pointer to C stream
+		return (_Myfile);
+		}
+
+	int fd() const
+		{	// get file descriptor for C stream
+		return (_CSTD fileno(_Myfile));
+		}
+ #endif /* _HAS_TRADITIONAL_IOSTREAMS */
+
+#if  defined (_ADI_COMPILER) && defined(__ADSP21000__)
+    // Overload functions in class streambuf
+    // to handle file I/O for packed data
+
+        int_type sbumpc()
+                {       // get a character and point past it
+                return (uflow());
+                }
+
+        int_type sgetc()
+                {       // get a character and don't point past it
+                return (underflow());
+                }
+
+        int_type sputbackc(_Elem _Ch)
+                {       // put back _Char
+                return (pbackfail(_Traits::to_int_type(_Ch)));
+                }
+
+        int_type sungetc()
+                {       // back up one position
+                return (pbackfail());
+                }
+#endif  /* _ADI_COMPILER && __ADSP21000__ */
+
+protected:
+	virtual int_type overflow(int_type _Meta = _Traits::eof())
+		{	// put an element to stream
+		if (_Traits::eq_int_type(_Traits::eof(), _Meta))
+			return (_Traits::not_eof(_Meta));	// EOF, return success code
+#if !( defined(_ADI_COMPILER) && defined(__ADSP21000__))
+                // For SHARC stdout must go via fputc to ensure that
+                // four 8-bit characters are correctly packed
+                // into a 32-bit word.
+		else if (_Mysb::pptr() != 0
+			&& _Mysb::pptr() < _Mysb::epptr())
+			{	// room in buffer, store it
+			*_Mysb::_Pninc() = _Traits::to_char_type(_Meta);
+			return (_Meta);
+			}
+#endif  /* !(_ADI_COMPILER && __ADSP21000__) */
+		else if (_Myfile == 0)
+			return (_Traits::eof());	// no open C stream, fail
+		else
+			return (fputc(_Traits::to_char_type(_Meta), _Myfile) != EOF
+				? _Meta : _Traits::eof());	// put the char
+		}
+
+	virtual int_type pbackfail(int_type _Meta = _Traits::eof())
+		{	// put an element back to stream
+		if (_Mysb::gptr() != 0
+#if defined(_ADI_COMPILER) && defined(__ADSP21000__)
+         // File I/O must be done by calling ungetc for SHARC so only put
+         // back into the input buffer when there is no open stream.
+         && _Myfile == 0
+#endif  /* _ADI_COMPILER && __ADSP21000__ */
+			&& _Mysb::eback() < _Mysb::gptr()
+			&& (_Traits::eq_int_type(_Traits::eof(), _Meta)
+			|| _Traits::eq_int_type(_Traits::to_int_type(_Mysb::gptr()[-1]),
+				_Meta)))
+			{	// just back up position
+			_Mysb::_Gndec();
+			return (_Traits::not_eof(_Meta));
+			}
+		else if (_Myfile == 0 || _Traits::eq_int_type(_Traits::eof(), _Meta))
+			return (_Traits::eof());	// no open C stream or EOF, fail
+		else
+			return (ungetc(_Traits::to_char_type(_Meta), _Myfile) != EOF
+				? _Meta : _Traits::eof());	// put back the char
+		}
+
+	virtual int_type underflow()
+		{	// get an element from stream, but don't point past it
+		int_type _Meta;
+		if (_Mysb::gptr() != 0
+#if defined(_ADI_COMPILER) && defined(__ADSP21000__)
+         // File I/O must be done by calling fgetc for SHARC so only
+         // get from the the input buffer when there is no open stream.
+         && _Myfile == 0
+#endif  /* _ADI_COMPILER && __ADSP21000__ */
+			&& _Mysb::gptr() < _Mysb::egptr())
+			return (_Traits::to_int_type(*_Mysb::gptr()));	// return buffered
+		else if (_Traits::eq_int_type(_Traits::eof(), _Meta = uflow()))
+			return (_Meta);	// uflow failed, return EOF
+		else
+			{	// get a char, don't point past it
+			pbackfail(_Meta);
+			return (_Meta);
+			}
+		}
+
+	virtual int_type uflow()
+		{	// get an element from stream, point past it
+		if (_Mysb::gptr() != 0
+#if defined(_ADI_COMPILER) && defined(__ADSP21000__)
+         // File I/O must be done by calling fgetc for SHARC so only
+         // get from the the input buffer when there is no open stream.
+         && _Myfile == 0
+#endif  /* _ADI_COMPILER && __ADSP21000__ */
+			&& _Mysb::gptr() < _Mysb::egptr())
+			return (_Traits::to_int_type(
+				*_Mysb::_Gninc()));	// return buffered
+		else if (_Myfile == 0)
+			return (_Traits::eof());	// no open C stream, fail
+		else
+			{	// get the char
+			int_type _Byte;
+			return ((_Byte = fgetc(_Myfile)) != EOF ? _Byte
+				: _Traits::eof());
+			}
+		}
+
+	virtual pos_type seekoff(off_type _Off,
+		ios_base::seekdir _Way,
+		ios_base::openmode =
+			(ios_base::openmode)(ios_base::in | ios_base::out))
+		{	// change position by _Off
+		fpos_t _Fileposition;
+
+		if (_Myfile == 0 || !_Endwrite()
+			|| (_Off != 0 || _Way != ios_base::cur)
+				&& _FSEEK_OFF(_Myfile, _Off, _Way) != 0
+			|| fgetpos(_Myfile, &_Fileposition) != 0)
+			return (pos_type(_BADOFF));	// report failure
+		return (_POS_TYPE_FROM_STATE(pos_type, _State,
+			_Fileposition));	// return new position
+		}
+
+	virtual pos_type seekpos(pos_type _Pos,
+		ios_base::openmode =
+			(ios_base::openmode)(ios_base::in | ios_base::out))
+		{	// change position to _Pos
+		fpos_t _Fileposition = _POS_TYPE_TO_FPOS_T(_Pos);
+		off_type _Off = (off_type)_Pos - (off_type)_FPOSOFF(_Fileposition);
+
+		if (_Myfile == 0 || !_Endwrite()
+			|| fsetpos(_Myfile, &_Fileposition) != 0
+			|| _Off != 0 && _FSEEK_OFF(_Myfile, _Off, SEEK_CUR) != 0
+			|| fgetpos(_Myfile, &_Fileposition) != 0)
+			return (pos_type(_BADOFF));	// report failure
+
+		return (_POS_TYPE_FROM_STATE(pos_type, _State,
+			_Fileposition));	// return new position
+		}
+
+	virtual _Mysb *setbuf(_Elem *_Buffer, streamsize _Count)
+		{	// offer _Buffer to C stream
+		if (_Myfile == 0 || setvbuf(_Myfile, (char *)_Buffer,
+			_Buffer == 0 && _Count == 0 ? _IONBF : _IOFBF,
+			_Count * sizeof (_Elem)) != 0)
+			return (0);	// failed
+		else
+			{	// new buffer, reinitialize pointers
+			_Init(_Myfile, _Openfl);
+			return (this);
+			}
+		}
+
+	virtual int sync()
+		{	// synchronize C stream with external file
+		return (_Myfile == 0
+			|| _Traits::eq_int_type(_Traits::eof(), overflow())
+			|| 0 <= fflush(_Myfile) ? 0 : -1);
+		}
+
+#if defined(_ADI_COMPILER) &&  defined(__ADSP21000__)
+    // Overload functions in class streambuf
+    // to handle file I/O for packed data
+
+        int_type xsputc(const _Elem _Ch)
+                {       // put a character
+                return (overflow(_Traits::to_int_type(_Ch)));
+                }
+
+        streamsize xsputn(const _Elem *_Ptr, streamsize _Count)
+                {       // put _Count characters to stream
+                streamsize _Copied;
+
+                for (_Copied = 0; 0 < _Count; )
+                        if (_Traits::eq_int_type(_Traits::eof(),
+                                overflow(_Traits::to_int_type(*_Ptr))))
+                                break;  // single character put failed, quit
+                        else
+                                {       // count character successfully put
+                                ++_Ptr;
+                                ++_Copied;
+                                --_Count;
+                                }
+                return (_Copied);
+                }
+
+        virtual streamsize xsgetn(_Elem * _Ptr, streamsize _Count)
+                {       // get _Count characters from stream
+                int_type _Meta;
+                streamsize _Copied;
+
+                for (_Copied = 0; 0 < _Count; )
+                        if (_Traits::eq_int_type(_Traits::eof(), _Meta = uflow()))
+                                break;  // end of file, quit
+                        else
+                                {       // get a single character
+                                *_Ptr++ = _Traits::to_char_type(_Meta);
+                                ++_Copied;
+                                --_Count;
+                                }
+                return (_Copied);
+                }
+#endif /* _ADI_COMPILER && __ADSP21000__ */
+
+	virtual void imbue(const locale&)
+		{	// set locale to argument (capture nontrivial codecvt facet)
+		}
+
+#if defined(_ADI_COMPILER) && _MULTI_THREAD
+	/* For multi-threaded ADI platforms prototype the function with
+	** the body held in the source file fstream.cpp. Required for
+	** static data issue resolution, so single thread implementations
+	** can use this inline version to reduce overall code size.
+	*/
+	void _Init(_Filet *_File, _Initfl _Which);
+#else
+	void _Init(_Filet *_File, _Initfl _Which)
+		{	// initialize to C stream _File after {new, open, close}
+		static _Myst _Stinit;	// initial state
+		_Closef = _Which == _Openfl;
+
+		_Mysb::_Init();	// initialize stream buffer base object
+
+ #if _HAS_DINKUM_CLIB
+		if (_File != 0 && sizeof (_Elem) == 1)
+			_Mysb::_Init((_Elem **)&_File->_Buf,
+				(_Elem **)&_File->_Next,
+				(_Elem **)&_File->_Rend,
+				(_Elem **)&_File->_Buf,
+				(_Elem **)&_File->_Next,
+				(_Elem **)&_File->_Wend);
+ #endif /* _HAS_DINKUM_CLIB */
+
+ #if _HAS_POINTER_CLIB
+		if (_File != 0 && sizeof (_Elem) == 1)
+			_Mysb::_Init((_Elem **)&_File->_RBEGIN,
+				(_Elem **)&_File->_RNEXT,
+				(_Elem **)&_File->_REND,
+				(_Elem **)&_File->_WBEGIN,
+				(_Elem **)&_File->_WNEXT,
+				(_Elem **)&_File->_WEND);
+ #endif /* _HAS_POINTER_CLIB */
+
+ #if _HAS_CONVENTIONAL_CLIB
+ #ifndef _IORCNT
+  #define _IORCNT	_IOCNT	/* read and write counts are the same */
+  #define _IOWCNT _IOCNT
+ #endif /* _IORCNT */
+
+		if (_File != 0 && sizeof (_Elem) == 1)
+			{	// point inside C stream with [first, first + count) buffer
+
+ #if defined(__sun) && defined(_LP64)	/* compiler test */
+			struct _Myfile_t {
+				unsigned char *_ptr;
+				unsigned char *_base;
+				unsigned char *_end;
+				long _cnt;
+				};
+			_Myfile_t *_File64 = (_Myfile_t *)_File;
+
+			_Elem **_Pb = (_Elem **)&_File64->_IOBASE;
+			_Elem **_Pn = (_Elem **)&_File64->_IOPTR;
+			int *_Nr = (int *)&_File64->_IORCNT + 1;	// uses only lsw!
+			int *_Nw = (int *)&_File64->_IOWCNT + 1;	// buffer < 2^31
+			_Mysb::_Init(_Pb, _Pn, _Nr, _Pb, _Pn, _Nw);
+
+ #else /* defined(__sun), etc. */
+			_Elem **_Pb = (_Elem **)&_File->_IOBASE;
+			_Elem **_Pn = (_Elem **)&_File->_IOPTR;
+			int *_Nr = (int *)&_File->_IORCNT;
+			int *_Nw = (int *)&_File->_IOWCNT;
+			_Mysb::_Init(_Pb, _Pn, _Nr, _Pb, _Pn, _Nw);
+ #endif /* defined(__sun), etc. */
+
+			}
+ #endif /* _HAS_CONVENTIONAL_CLIB */
+
+		_Myfile = _File;
+		_State = _Stinit;
+			}
+#endif  /* _ADI_COMPILER */
+
+	bool _Endwrite()
+		{	// dummy write wrapup (no shift states)
+		return (true);
+		}
+
+private:
+	_Traits::state_type _State;	// current conversion state
+	bool _Closef;	// true if C stream must be closed
+	_Filet *_Myfile;	// pointer to C stream
+	};
+
+		// CLASS ifstream
+class ifstream
+	: public istream
+	{	// input stream associated with a C stream
+public:
+	typedef char _Elem;
+	typedef char_traits _Traits;
+	typedef ifstream _Myt;
+	typedef filebuf _Myfb;
+	typedef ios _Myios;
+
+	ifstream()
+		: istream(&_Filebuffer)
+		{	// construct unopened
+		}
+
+	explicit ifstream(const char *_Filename,
+		ios_base::openmode _Mode = ios_base::in,
+		int _Prot = (int)ios_base::_Openprot)
+		: istream(&_Filebuffer)
+		{	// construct with named file and specified mode
+		if (_Filebuffer.open(_Filename, _Mode | ios_base::in, _Prot) == 0)
+			setstate(failbit);
+		}
+
+	explicit ifstream(_Filet *_File)
+		: istream(&_Filebuffer),
+			_Filebuffer(_File)
+		{	// construct with specified C stream
+		}
+
+ #if _HAS_TRADITIONAL_IOSTREAMS
+	explicit ifstream(_FD_TYPE _Fd)
+		: istream(&_Filebuffer),
+			_Filebuffer(_CSTD fdopen(_Fd, "r"))
+		{	// construct with C file descriptor
+		}
+ #endif /* _HAS_TRADITIONAL_IOSTREAMS */
+
+	virtual ~ifstream()
+		{	// destroy the object
+		}
+
+	_Myfb *rdbuf() const
+		{	// return pointer to file buffer
+		return ((_Myfb *)&_Filebuffer);
+		}
+
+	bool is_open() const
+		{	// test if C stream has been opened
+		return (_Filebuffer.is_open());
+		}
+
+	void open(const char *_Filename,
+		ios_base::openmode _Mode = ios_base::in,
+		int _Prot = (int)ios_base::_Openprot)
+		{	// open a C stream with specified mode
+		if (_Filebuffer.open(_Filename, _Mode | ios_base::in, _Prot) == 0)
+			_Myios::setstate(ios_base::failbit);
+		}
+
+	void open(const char *_Filename, ios_base::open_mode _Mode)
+		{	// open named file with specified mode (old style)
+		open(_Filename, (ios_base::openmode)_Mode);
+		}
+
+	void close()
+		{	// close the C stream
+		if (_Filebuffer.close() == 0)
+			_Myios::setstate(ios_base::failbit);
+		}
+
+private:
+	_Myfb _Filebuffer;	// the file buffer
+	};
+
+		// CLASS ofstream
+class ofstream
+	: public ostream
+	{	// output stream associated with a C stream
+public:
+	typedef char _Elem;
+	typedef char_traits _Traits;
+	typedef ofstream _Myt;
+	typedef filebuf _Myfb;
+	typedef ios _Myios;
+
+	ofstream()
+		: ostream(&_Filebuffer)
+		{	// construct unopened
+		}
+
+	explicit ofstream(const char *_Filename,
+		ios_base::openmode _Mode = ios_base::out,
+		int _Prot = (int)ios_base::_Openprot)
+		: ostream(&_Filebuffer)
+		{	// construct with named file and specified mode
+		if (_Filebuffer.open(_Filename, _Mode | ios_base::out, _Prot) == 0)
+			setstate(failbit);
+		}
+
+	explicit ofstream(_Filet *_File)
+		: ostream(&_Filebuffer),
+			_Filebuffer(_File)
+		{	// construct with specified C stream
+		}
+
+ #if _HAS_TRADITIONAL_IOSTREAMS
+	explicit ofstream(_FD_TYPE _Fd)
+		: ostream(&_Filebuffer),
+			_Filebuffer(_CSTD fdopen(_Fd, "w"))
+		{	// construct with C file descriptor
+		}
+ #endif /* _HAS_TRADITIONAL_IOSTREAMS */
+
+	virtual ~ofstream()
+		{	// destroy the object
+		}
+
+	_Myfb *rdbuf() const
+		{	// return pointer to file buffer
+		return ((_Myfb *)&_Filebuffer);
+		}
+
+	bool is_open() const
+		{	// test if C stream has been opened
+		return (_Filebuffer.is_open());
+		}
+
+	void open(const char *_Filename,
+		ios_base::openmode _Mode = ios_base::out,
+		int _Prot = (int)ios_base::_Openprot)
+		{	// open a C stream with specified mode
+		if (_Filebuffer.open(_Filename, _Mode | ios_base::out, _Prot) == 0)
+			_Myios::setstate(ios_base::failbit);
+		}
+
+	void open(const char *_Filename, ios_base::open_mode _Mode)
+		{	// open a C stream with specified mode (old style)
+		open(_Filename, (ios_base::openmode)_Mode);
+		}
+
+	void close()
+		{	// close the C stream
+		if (_Filebuffer.close() == 0)
+			_Myios::setstate(ios_base::failbit);
+		}
+
+private:
+	_Myfb _Filebuffer;	// the file buffer
+	};
+_STD_END
+#endif /* _FSTREAM_ */
+
+/*
+ * Copyright (c) 1992-2008 by P.J. Plauger.  ALL RIGHTS RESERVED.
+ * Consult your license regarding permissions and restrictions.
+V5.03:1134 */

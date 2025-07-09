@@ -1,0 +1,315 @@
+syntax = "proto3";
+package symbolic;
+option java_package = "typhunix.symbolic";
+option java_outer_classname = "Symbolic";
+option java_multiple_files = false;
+
+// Filter for a particular program
+message ProgramFilter {
+  /// matches if any of these match
+  repeated ProgramIdentifier exact_pids = 1;
+}
+
+/**
+ */
+message DataMessage { string content = 1; }
+
+/// Connect message, used to initialize state for a Ghidra project
+/// Called when a program is opened with CodeBrowser in Ghidra
+message ConnectMessage {
+  Program program = 1;
+  repeated DataType data_types = 2;
+  repeated Symbol symbols = 3;
+}
+
+message ProgramsWithSymbols {
+  Program program = 1;
+  repeated DataType data_types = 2;
+  repeated Symbol symbols = 3;
+}
+
+/**
+ * Information about a symbol stored in ghidra
+ */
+message Symbol {
+  uint64 id = 1;
+  /**
+   * represents the basic types of symbols in ghidra
+   */
+  enum SymbolType {
+    SYMBOL_CLASS = 0;
+    SYMBOL_FUNCTION = 1;
+    SYMBOL_GLOBAL = 2;
+    SYMBOL_GLOBAL_VAR = 3;
+    SYMBOL_LABEL = 4;
+    SYMBOL_LIBRARY = 5;
+    SYMBOL_LOCAL_VAR = 6;
+    SYMBOL_NAMESPACE = 7;
+    SYMBOL_PARAMETER = 8;
+  }
+  string name = 2;
+  int64 address = 3;
+  string namespace = 4; // some things are namespaced out
+  SymbolType type = 5;
+
+  /**
+   * Name of the data type corresponding to a `DataType`
+   */
+  string datatype_name = 6;
+  int64 data_size = 7;
+  FunctionSymbol FunctionSymbol = 8;
+  ProgramIdentifier pid = 9;
+}
+
+/**
+ * Holds enum name/value pairs
+ */
+message EnumNameValue {
+  string name = 1;
+  int64 value = 2;
+}
+
+/**
+ * Represents a data type in ghidra
+ */
+message DataType {
+  uint64 id = 1;
+  /**
+   * Enum of data type variants including the common composite types
+   */
+  enum MetaType {
+    TYPE_BASIC = 0;
+    TYPE_STRUCT = 1;
+    TYPE_ARRAY = 2;
+    TYPE_UNION = 3;
+    TYPE_ENUM = 4;
+    TYPE_BITFIELD = 5;
+  }
+  string name = 2;
+  int32 size = 3;
+  MetaType type = 4;
+  uint32 alignment = 5;
+  string base_data_type_name = 6;
+  int32 offset = 7;
+
+  /**
+   * If the `MetaType` is `TYPE_BITFIELD`
+   *     bitfld_num_bits:  number of bits
+   *     bitfld_offset:    bit offset from the base data type
+   *     bitfld_base_type: the base type of the bit field
+   * of elements in the array. The size of each element is size/num_elements
+   */
+  int32 bitfld_num_bits = 8;
+  int32 bitfld_offset = 9;
+  string bitfld_base_type = 10;
+  /**
+   * If the `MetaType` is `TYPE_ARRAY`, this field is populated with the number
+   * of elements in the array. The size of each element is size/num_elements
+   */
+  uint32 num_elements = 11;
+  string array_elem_type_name = 12;
+
+  /**
+   * If the `MetaType` is not `TYPE_BASIC` then this field should be populated.
+   * eg. a struct type has children members, a union options, an array items
+   * etc.
+   */
+  repeated DataType children = 13;
+  repeated EnumNameValue enums = 14;
+
+  ProgramIdentifier pid = 15;
+}
+
+/**
+ * Represents an architecture as known by ghidra
+ */
+message Architecture {
+
+  /**
+   * Top level architecture name
+   */
+  string processor = 1;
+
+  /**
+   * any variant of the top level name or additions + extensions to the
+   * processor name
+   */
+  string variant = 2;
+
+  /**
+   * The endianness of the architecture
+   */
+  enum EndianType {
+    ENDIAN_LITTLE = 0;
+    ENDIAN_BIG = 1;
+    ENDIAN_MIDDLE = 2;
+    ENDIAN_MIXED = 3;
+  }
+  EndianType endian = 3;
+
+  /**
+   * this bitness of the architecture, eg. "32" "64" "24"
+   */
+  int32 bits = 4;
+}
+
+/**
+ * NOTE: see
+ * https://ghidra.re/ghidra_docs/api/ghidra/app/util/bin/format/ne/Segment.html
+ * for more segment types, unknown how much energy we want to spend on this
+ * since we're bascially only focused on loading firmwares, and each new
+ * operating system and file format will introduce a new interpretation of
+ * "segment" and add more complexities.
+ */
+message Segment {
+  uint64 id = 1;
+  string name = 2;
+  int64 address = 3;
+  int64 size = 4;
+  int32 address_size = 5;
+  uint32 alignment = 6;
+
+  /**
+   * Every once in a while an architecture allows pages or regions to be one
+   * endianness or another.
+   */
+  Architecture.EndianType endian = 7;
+  bool read = 8;
+  bool write = 9;
+  bool execute = 10;
+  bool external = 11;
+
+  /**
+   * Use this to get the bytes of the segment.
+   * Well, don't use this - but you'll get the bytes.
+   */
+  bytes data = 12; // last field, optional. would not recommend actual use
+}
+
+/**
+ * Used to represent cross references in code and data
+ */
+message CrossReference {
+  uint64 id = 1;
+  uint64 src = 2; // address
+  uint64 dst = 3; // address
+  enum RefType {
+    REF_CALL = 0;
+    REF_DATA = 1;
+    REF_BRANCH = 2;
+  }
+  RefType type = 4;
+}
+
+/**
+ * Represents a basic block, has references to successors and predecessors.
+ */
+message BasicBlock {
+  uint64 id = 1;
+  uint64 address = 2;
+  uint32 size = 3;
+  repeated CrossReference predecessors = 4;
+  repeated CrossReference successors = 5;
+
+  /**
+   * Use this to get the bytes of the segment.
+   * Well, don't use this - but you'll get the bytes.
+   */
+  bytes data = 6; // last field, optional. would not recommend actual use}
+}
+
+/**
+ * FunctionSymbol
+ */
+message FunctionSymbol {
+  int64 last_insn = 1;
+  repeated FunctionParameter parameters = 2;
+}
+
+/**
+ * Function parameters
+ */
+message FunctionParameter {
+  string name = 1;
+  string data_type_name = 2;
+  string reg_source = 3;
+  int32 stack_source = 4;
+}
+
+/**
+ * Represents a function, has inbound xrefs and internal blocks, and a link
+ * to it's symbol
+ */
+message Function {
+  uint64 id = 1;
+  Symbol symbol = 2;
+  repeated CrossReference callers = 3;
+  repeated BasicBlock blocks = 4;
+
+  /**
+   * Use this to get the bytes of the segment.
+   * Well, don't use this - but you'll get the bytes.
+   */
+  bytes data = 5; // last field, optional. would not recommend actual use
+}
+
+/**
+ * Metadata about the file loaded by ghidra.
+ */
+message FileMetadata {
+  string name = 1;
+  string path = 2;
+  bytes sha256 = 3;
+  int64 file_size = 4;
+  string loader = 5;
+}
+
+// todo: codify this
+message ProgramIdentifier {
+  string source_id = 1;
+  string name = 2;
+};
+
+// todo: need a way to "tack on" options to messages
+message Property {
+  string name = 1;
+  string value = 2;
+}
+
+/**
+ * General definition for a program in ghidra, doesn't grab too much
+ * as most of the data is only actually useful inside of ghidra.
+ */
+message Program {
+  // Unique for this program. This provides an easy way to store
+  // references to a program across client persistence.
+  ProgramIdentifier pid = 1;
+  string unused01 = 2;
+  Architecture architecture = 3;
+  repeated Function functions = 4;
+  FileMetadata metadata = 5;
+  repeated Segment segments = 6;
+
+  /// `client_uuid` is used for subscribing/un-subscribing to
+  /// `DataType`, `Symbol`, `Program` changes as well as to retrieve
+  /// buffered changes from the server.
+  string client_uuid = 7;
+
+  /// updates_only is a flag indicating that only unsent updates should be
+  /// sent for GetSymbols and GetDataTypes RPCs
+  bool updates_only = 8;
+}
+
+
+/**
+ * Generic data container.
+ */
+message Content {
+  repeated Symbol symbols = 1;
+  repeated DataType data_types = 2;
+  Architecture architecture = 3;
+  repeated Segment segments = 4;
+  repeated Function functions = 5;
+  FileMetadata metadata = 6;
+  Program program = 7;
+}

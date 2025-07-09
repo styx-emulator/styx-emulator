@@ -1,0 +1,51 @@
+/*!
+@page middleware_log Middleware Change Log
+
+@section wolfSSL wolfSSL
+  The current version of WolfSSL is 3.9.8_rev3, based on Release 3.9.8 of wolfSSL.
+
+  - 3.9.8_rev3
+    - New features:
+      - Added support for DCP driver.
+
+  - 3.9.8_rev2
+    - New features:
+      - Added support for CAU3 driver.
+
+  - 3.9.8_rev1
+    - New features:
+      - Added support for CAAM driver.
+      - Added FREESCALE_ALT macros.
+
+  - 3.9.8
+    - New features:
+      - Added support for AES and SHA acceleration modules of LPC devices.
+        Accelerates AES and SHA wolfSSL modules.
+      - LTC acceleration for AES CBC now updates IV.
+
+    - Bug fixes:
+      - Fixed K8x/KL8x LTC RSA sign when FREESCALE_LTC_TFM_RSA_4096_ENABLE macro is enabled.
+
+  - 3.9.0
+    - New features:
+      - Added more LTC public key acceleration (curve25519, ed25519 and RSA4096).
+      - FREESCALE_LTC_TFM_RSA_4096_ENABLE macro added to enable RSA4096 on K8x/KL8x LTC.
+      - LTC_MAX_ECC_BITS increased to 384 to enable ECC-384 curve acceleration on LTC.
+      - FREESCALE_LTC_SHA added for KL8x SHA-1 and SHA-256 hardware acceleration.
+
+    - Other changes:
+      - WolfSSL/wolfcrypt/settings.h is changed to remove unused macros and add support for KSDK 2.0.
+      - LTC public key acceleration is implemented in separate source file ksdk_port.h and ksdk_port.c.
+
+  - 3.8.0
+    - New features:
+      - Added support for Kinetis LTC hardware acceleration module.
+        Accelerates AES, 3DES, TFM module (modular integer arithmetic) and ECC wolfSSL modules.
+      - Added support for Kinetis random number generator modules TRNG and RNGA.
+
+    - Other changes:
+      - The Kinetis MMCAU acceleration now uses "fsl_mmcau.h" instead of "cau_api.h".
+      - In DSA, wc_dsaSign() changed to repeate wc_RNG_GenerateBlock() until k is less than q.
+      - wolfssl/wolfcrypt/settings.h is changed to remove unused macros and add support for KSDK 2.0.
+      - In wolfcrypt/src/asn.c, ksdk_time(time_t) changed to extern, to be defined by application.
+*/

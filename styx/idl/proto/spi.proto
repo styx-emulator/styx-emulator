@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package styx.peripherals.spi;
+
+service SPIPort {
+    rpc Receive(Packet) returns (Empty) {};
+    rpc Subscribe(PortRequest) returns (stream Packet) {};
+}
+
+message Packet {
+    uint32 port = 1;
+    oneof contents {
+        ChipSelect chip_select = 2;
+        Data data = 3;
+    }
+}
+message Data {
+    bytes data = 1;
+}
+message ChipSelect {
+    bool state = 1;
+}
+
+message PortRequest {
+    uint32 port = 1;
+    string device_name = 2;
+}
+
+message Empty {}

@@ -1,0 +1,43 @@
+[package]
+name = "styx-powerquicci-processor"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+styx-core = { workspace = true }
+styx-mpc866m = { path = "../../../event-controllers/ppc/styx-mpc866m" }
+
+async-trait = { workspace = true }
+bilge = { workspace = true }
+paste = { workspace = true }
+tokio = { workspace = true }
+tonic = { workspace = true }
+num-traits = { workspace = true }
+num-derive = { workspace = true }
+enum_dispatch = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+derivative = { workspace = true }
+derive_more = { workspace = true }
+embed-doc-image = { workspace = true }                                      # docs
+styx-workspace-hack = { version = "0.1", path = "../../../workspace-hack" }
+
+# needed to render pictures in documentation until
+# https://github.com/rust-lang/rust/issues/32104 is resolved
+[features]
+default = []
+docimages = []
+tracy = ["styx-plugins/tracy"]
+
+[dev-dependencies]
+styx-plugins = { path = "../../../plugins" }
+
+[package.metadata.cargo-udeps.ignore]
+normal = ["embed-doc-image"]
+development = ["styx-plugins"]

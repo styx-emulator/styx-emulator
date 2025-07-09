@@ -1,0 +1,7 @@
+FROM docker.io/ubuntu:24.04
+
+RUN apt-get update && apt-get upgrade -y
+RUN apt-get install -y \
+    vim \
+    gcc-powerpc-linux-gnu \
+    binutils-powerpc-linux-gnu

@@ -1,0 +1,137 @@
+syntax = "proto3";
+
+package styx.svc.cpu_engine;
+
+import "arch.proto";
+import "cpu-hooks.proto";
+import "cpu-engine.proto";
+import "memory.proto";
+import "memory-manager-svc.proto";
+
+option java_multiple_files = true;
+
+service CpuEngineService {
+    rpc StartExecution(StartExecutionRequest) returns (StartExecutionResponse) {}
+    rpc StopExecution(StopExecutionRequest) returns (StopExecutionResponse) {}
+    rpc RegistersList(RegistersListRequest) returns (RegistersListResponse) {}
+    rpc ReadRegister(ReadRegisterRequest) returns (ReadRegisterResponse) {}
+    rpc WriteRegister(WriteRegisterRequest) returns (WriteRegisterResponse) {}
+    rpc ReadMemory(styx.svc.memory_manager.MemoryReadRequest) returns (styx.svc.memory_manager.MemoryReadResponse) {}
+    rpc WriteMemory(styx.svc.memory_manager.MemoryWriteRequest) returns (styx.svc.memory_manager.MemoryWriteResponse) {}
+    rpc MemoryRegions(styx.svc.memory_manager.MemoryRegionsRequest) returns (styx.svc.memory_manager.MemoryRegionsResponse) {}
+    rpc MemoryMap(styx.svc.memory_manager.MemoryMapRequest) returns (styx.svc.memory_manager.MemoryMapResponse) {}
+    rpc MemoryUnmap(styx.svc.memory_manager.MemoryUnmapRequest) returns (styx.svc.memory_manager.MemoryUnmapResponse) {}
+    rpc ContextSave(ContextSaveRequest) returns (ContextSaveResponse) {}
+    rpc ContextRestore(ContextRestoreRequest) returns (ContextRestoreResponse) {}
+    rpc AddHook(AddHookRequest) returns (AddHookResponse) {}
+    rpc DeleteHook(DeleteHookRequest) returns (DeleteHookResponse) {}
+    rpc GetPc(GetPcRequest) returns (GetPcResponse) {}
+    rpc SetPc(SetPcRequest) returns (SetPcResponse) {}
+}
+
+service CpuEngineMetadataService {
+    rpc AvailableCpuEngines(AvailableCpuEnginesRequest) returns (AvailableCpuEnginesResponse) {}
+}
+
+message StartExecutionRequest {}
+message StartExecutionResponse {}
+message StopExecutionRequest {}
+message StopExecutionResponse {}
+
+enum RegistersError {
+    UNKNOWN = 0;
+    NOT_FOUND = 1;
+    INVALID_VALUE = 2;
+}
+
+message RegistersListRequest {}
+
+message RegistersListResponse {
+    repeated styx.meta.arch.RegisterDescription registers = 1;
+}
+
+message ReadRegisterRequest {
+    string name = 1;
+    int64 enum_value = 2;
+}
+
+message ReadRegisterResponse {
+    bytes value = 1;
+}
+
+message WriteRegisterRequest {
+    string name = 1;
+    int64 enum_value = 2;
+    bytes value = 3;
+}
+
+message WriteRegisterResponse {
+    RegistersError error = 1;
+}
+
+message ContextSaveRequest {}
+
+message ContextSaveResponse {
+    repeated styx.meta.arch.RegisterValue registers = 1;
+    repeated styx.meta.memory.MemoryRegion regions = 2;
+}
+
+message ContextRestoreRequest {
+    repeated styx.meta.arch.RegisterValue registers = 1;
+    repeated styx.meta.memory.MemoryRegion regions = 2;
+}
+
+message ContextRestoreResponse {}
+
+message AddHookRequest {
+    oneof hook {
+        styx.meta.cpu_hooks.CodeHook code_hook = 1;
+        styx.meta.cpu_hooks.MemReadHook mem_read_hook = 2;
+        styx.meta.cpu_hooks.MemWriteHook mem_write_hook = 3;
+        styx.meta.cpu_hooks.InterruptHook interrupt_hook = 4;
+        styx.meta.cpu_hooks.BlockHook block_hook = 5;
+        styx.meta.cpu_hooks.InvalidInsnHook invalid_insn_hook = 6;
+        styx.meta.cpu_hooks.ProtectionFaultHook protection_fault_hook = 7;
+        styx.meta.cpu_hooks.UnmappedFaultHook unmapped_fault_hook = 8;
+    }
+}
+
+
+message AddHookResponse {
+    styx.meta.cpu_hooks.HookToken token = 1;
+}
+
+message DeleteHookRequest {
+    styx.meta.cpu_hooks.HookToken token = 1;
+}
+
+message DeleteHookResponse {}
+
+
+message GetPcRequest {}
+
+message GetPcResponse {
+    styx.meta.arch.RegisterValue pc = 1;
+}
+
+message SetPcRequest {
+    bytes value = 1;
+}
+
+message SetPcResponse {
+    RegistersError error = 1;
+}
+
+
+message AvailableCpuEnginesRequest {}
+message AvailableCpuEnginesResponse {}
+
+message ArchSupportDescription {
+    styx.meta.arch.Arch architecture = 1;
+    repeated string variants = 2;
+}
+
+message CpuEngineDescription {
+    styx.meta.cpu_engine.Backend backend = 1;
+    repeated ArchSupportDescription arch_support = 2;
+}

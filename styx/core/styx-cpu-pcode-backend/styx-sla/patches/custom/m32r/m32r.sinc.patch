@@ -1,0 +1,81 @@
+diff --git a/data/languages/m32r.sinc b/data/languages/m32r.sinc
+index 5f3dd73..3ad4d79 100644
+--- a/data/languages/m32r.sinc
++++ b/data/languages/m32r.sinc
+@@ -85,7 +85,47 @@ FPREL_2:	rel					is	rel16	[ rel = rel16 + 0x80c000; ] { export *:2 rel; }
+ FP_ADDRESS:	rel					is	rel16	[ rel = rel16 + 0x80c000; ] { export &:4 rel; }
+ 
+ 
++#:FCMPE
++#:FMADD
++#:FMSUB
++#:FTOI
++#:FTOS
++#:ITOF
+ 
++:UTOF   Rdest, Rsrc                 is op3=13 & Rsrc; op12=0x00; op1=4 & Rdest; op12=0x40 {
++	Rdest = int2float(Rsrc & 0x7FFFFFFF);
++}
++:ITOF   Rdest, Rsrc                 is op3=13 & Rsrc; op12=0x00; op1=4 & Rdest; op12=0x00 {
++	Rdest = int2float(Rsrc);
++}
++
++:FCMP	Rdest, Rsrc, Rsrc2			is op3=13 & Rsrc; op3=0 & Rsrc2; op1=0 & Rdest; op12=0xC0 {
++	if (Rsrc f== Rsrc2) goto <eq>;
++	if (Rsrc f> Rsrc2) goto <gr>;
++	if (Rsrc f< Rsrc2) goto <le>;
++	<eq>
++	Rdest = 0;
++	goto <end>;
++	<gr>
++	Rdest = 1;
++	goto <end>;
++	<le>
++	Rdest = -1;
++	goto <end>;	
++	<end>
++}
++:FSUB	Rdest, Rsrc, Rsrc2			is op3=13 & Rsrc; op3=0 & Rsrc2; op1=0 & Rdest; op12=0x40 {
++	Rdest = Rsrc f- Rsrc2;
++}
++:FADD	Rdest, Rsrc, Rsrc2			is op3=13 & Rsrc; op3=0 & Rsrc2; op1=0 & Rdest; op12=0x00 {
++	Rdest = Rsrc f+ Rsrc2;
++}
++:FDIV	Rdest, Rsrc, Rsrc2			is op3=13 & Rsrc; op3=0 & Rsrc2; op1=2 & Rdest; op12=0x00 {
++	Rdest = Rsrc f/ Rsrc2;
++}
++:FMUL	Rdest, Rsrc, Rsrc2			is op3=13 & Rsrc; op3=0 & Rsrc2; op1=1 & Rdest; op12=0x00 {
++	Rdest = Rsrc f* Rsrc2;
++}
+ :ADD	Rdest, Rsrc				is op1=0 & Rdest; op3=10 & Rsrc {
+ 	Rdest = Rdest + Rsrc;
+ }
+@@ -275,17 +315,7 @@ FP_ADDRESS:	rel					is	rel16	[ rel = rel16 + 0x80c000; ] { export &:4 rel; }
+ 	Rdest  = Rdest / Rsrc;
+ }
+ 
+-#:FADD
+-#:FCMP
+-#:FCMPE
+-#:FDIV
+-#:FMADD
+-#:FMSUB
+-#:FMUL
+-#:FSUB
+-#:FTOI
+-#:FTOS
+-#:ITOF
++
+ 
+ :JL		Rsrc					is op12=0x1E; op3=12 & Rsrc {
+ 	R14 = (inst_start & 0xFFFFFFFC) + 4;
+@@ -299,6 +327,9 @@ FP_ADDRESS:	rel					is	rel16	[ rel = rel16 + 0x80c000; ] { export &:4 rel; }
+ }
+ 
+ # Alias for: JMP R14
++:RET_NOP						is op12=0x1F; op34=0xCE; op12=0xF0; op34=0x00 {
++	return [R14];
++}
+ :RET							is op12=0x1F; op34=0xCE {
+ 	return [R14];
+ }

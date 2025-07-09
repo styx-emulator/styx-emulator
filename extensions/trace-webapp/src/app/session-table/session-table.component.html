@@ -1,0 +1,133 @@
+<span style="float: right"
+  ><button
+    mat-mini-fab
+    class="tb-icon"
+    [routerLink]="[Rts.NewSession]"
+    matTooltip="Create a new session"
+  >
+    <mat-icon>add</mat-icon>
+  </button></span
+>
+
+<ng-container
+  *ngIf="
+    this.sessionTable.dataSource.data.length > 0;
+    then haveData;
+    else noData
+  "
+>
+</ng-container>
+<ng-template #noData>
+  <div>No sessions</div>
+</ng-template>
+
+<ng-template #haveData>
+  <div>
+    <div style="display: inline; font-size: larger; font-weight: bolder">
+      Sessions ({{ this.sessionTable.dataSource.data.length }})
+    </div>
+
+    <table
+      class="session-list"
+      mat-table
+      [dataSource]="this.sessionTable.dataSource"
+    >
+      <!-- Selectedable ROW  -->
+      <ng-container matColumnDef="select">
+        <th mat-header-cell *matHeaderCellDef></th>
+        <td mat-cell *matCellDef="let row">
+          <mat-checkbox
+            (click)="$event.stopPropagation()"
+            (change)="$event ? sessionTable.selection.toggle(row) : null"
+            [checked]="sessionTable.selection.isSelected(row)"
+          >
+          </mat-checkbox>
+        </td>
+      </ng-container>
+      <!-- Column: Delete Session -->
+      <ng-container matColumnDef="deleteSession">
+        <th mat-header-cell *matHeaderCellDef>Delete</th>
+        <td mat-cell *matCellDef="let traceSession">
+          <button
+            [disabled]="!traceSession.droppable"
+            (click)="onSessionDropped(traceSession)"
+            matTooltip="Drop/Delete this session"
+            mat-icon-button
+            color="red"
+          >
+            <mat-icon>delete</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+      <!-- Column: Local Session Id -->
+      <ng-container matColumnDef="localSessionId">
+        <th mat-header-cell *matHeaderCellDef>ID</th>
+        <td mat-cell *matCellDef="let row">
+          <mat-checkbox
+            after
+            (click)="$event.stopPropagation()"
+            (change)="$event ? sessionTable.selection.toggle(row) : null"
+            [checked]="sessionTable.selection.isSelected(row)"
+          >
+            {{ row.id }}
+          </mat-checkbox>
+        </td>
+      </ng-container>
+
+      <!-- Column: id-->
+      <ng-container matColumnDef="msgId">
+        <th mat-header-cell *matHeaderCellDef>DbId</th>
+        <td mat-cell *matCellDef="let traceSession">
+          {{ traceSession.msgId }}
+        </td>
+      </ng-container>
+
+      <!-- Column: Target (targetDesc) -->
+      <ng-container matColumnDef="targetDesc">
+        <th mat-header-cell *matHeaderCellDef>Arch</th>
+        <td mat-cell *matCellDef="let traceSession">
+          {{ traceSession.architectureDesc }}
+        </td>
+      </ng-container>
+      <!-- Column: Program -->
+      <ng-container matColumnDef="program">
+        <th mat-header-cell *matHeaderCellDef>Program</th>
+        <td mat-cell *matCellDef="let traceSession">
+          {{ traceSession.program }}
+        </td>
+      </ng-container>
+      <!-- Column: Session ID (app) -->
+      <ng-container matColumnDef="sessionId">
+        <th mat-header-cell *matHeaderCellDef>SessionID</th>
+        <td mat-cell *matCellDef="let traceSession">
+          {{ traceSession.sessionID }}
+        </td>
+      </ng-container>
+      <!-- Column: trace mode (emulation/raw) -->
+      <ng-container matColumnDef="traceModeName">
+        <th mat-header-cell *matHeaderCellDef>Mode</th>
+        <td mat-cell *matCellDef="let traceSession">
+          {{ traceSession.modeName }}
+        </td>
+      </ng-container>
+      <!-- Column Session state -->
+      <ng-container matColumnDef="sessionState">
+        <th mat-header-cell *matHeaderCellDef>Status</th>
+        <td mat-cell *matCellDef="let traceSession">
+          {{ traceSession.stateString }}
+        </td>
+      </ng-container>
+
+      <!-- HEADER ROW -->
+      <tr mat-header-row *matHeaderRowDef="sessionTable.columnNames"></tr>
+      <!-- TABLE ROW -->
+      <tr
+        mat-row
+        (click)="this.sessionTable.selection.select(row)"
+        (dblclick)="this.onSessionDoubleClick(row)"
+        matTooltip="Double Clck to execute"
+        *matRowDef="let row; columns: sessionTable.columnNames"
+      ></tr>
+    </table>
+  </div>
+</ng-template>

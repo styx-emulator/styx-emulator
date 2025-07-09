@@ -1,0 +1,57 @@
+[package]
+name = "styx-integration-tests"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+styx-core = { workspace = true }
+styx-plugins = { path = "../plugins" }
+emulation-service = { path = "../services/styx-emulation-service/", optional = true }
+
+tonic = { workspace = true }
+derive_more = { workspace = true }
+tokio-stream = { workspace = true }
+async-stream = { workspace = true }
+futures = { workspace = true }
+tokio = { workspace = true }
+num-traits = { workspace = true }
+num-derive = { workspace = true }
+async-trait = { workspace = true }
+thiserror = { workspace = true }
+embed-doc-image = { workspace = true }
+derivative = { workspace = true }
+paste = { workspace = true }
+bilge = { workspace = true }
+getset = { workspace = true }
+binary-heap-plus = { workspace = true }
+tower-service = { workspace = true }
+tracing = { workspace = true }
+gdbstub = { workspace = true }
+gdbstub_arch = { workspace = true }
+gdbmi = { workspace = true }
+tracing-subscriber = { workspace = true }
+console-subscriber = { workspace = true }
+tracing-tracy = { workspace = true, optional = true }
+tracing-opentelemetry = { workspace = true }
+opentelemetry = { workspace = true }
+opentelemetry-otlp = { workspace = true }
+tokio-util = { workspace = true }
+clap = { workspace = true }
+serde = { workspace = true }
+serde_yaml = { workspace = true }
+log = { workspace = true }
+styx-workspace-hack = { version = "0.1", path = "../workspace-hack" }
+rand = { workspace = true }
+
+[features]
+default = []
+# TODO enable on default when all procs are done
+# default = ["factory"]
+factory = ["dep:emulation-service"]
+# tracy = ["dep:tracing-tracy", "styx-plugins/tracy"]

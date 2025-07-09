@@ -1,0 +1,177 @@
+
+// Builds a Ghidra Extension for a given Ghidra installation.
+//
+// An absolute path to the Ghidra installation directory must be supplied either by setting the
+// GHIDRA_INSTALL_DIR environment variable or Gradle project property:
+//
+//     > export GHIDRA_INSTALL_DIR=<Absolute path to Ghidra>
+//     > gradle
+//
+//         or
+//
+//     > gradle -PGHIDRA_INSTALL_DIR=<Absolute path to Ghidra>
+//
+// Gradle should be invoked from the directory of the project to build.  Please see the
+// application.gradle.version property in <GHIDRA_INSTALL_DIR>/Ghidra/application.properties
+// for the correction version of Gradle to use for the Ghidra installation you specify.
+
+//----------------------START "DO NOT MODIFY" SECTION------------------------------
+
+plugins {
+    id "com.diffplug.spotless" version "6.1.0"
+    id 'com.google.protobuf' version '0.8.18'
+    id "java"
+    id 'application' // package a grpc client
+    id 'eclipse'
+}
+
+eclipse.project.name = "TyphunixPlugin"
+tasks.named("distTar") { duplicatesStrategy = 'exclude' }
+tasks.named("distZip") { duplicatesStrategy = 'exclude' }
+
+def ghidraInstallDir
+if (System.env.GHIDRA_INSTALL_DIR) {
+    ghidraInstallDir = System.env.GHIDRA_INSTALL_DIR
+}
+else if (project.hasProperty("GHIDRA_INSTALL_DIR")) {
+    ghidraInstallDir = project.getProperty("GHIDRA_INSTALL_DIR")
+}
+if (ghidraInstallDir) {
+    apply from: new File(ghidraInstallDir).getCanonicalPath() + "/support/buildExtension.gradle"
+}
+else {
+    throw new GradleException("GHIDRA_INSTALL_DIR is not defined!")
+}
+
+repositories {
+    maven { url "https://maven-central.storage-download.googleapis.com/maven2/" }
+    mavenCentral()
+    mavenLocal()
+}
+def ghidraDir = file(ghidraInstallDir + "/Ghidra").getCanonicalFile().getAbsolutePath()
+def ghidraProps = new Properties()
+def ghidraVersion
+def ghidraUserDirectory
+def ghidraReleaseName
+file(ghidraDir + "/application.properties").withReader { reader ->
+    ghidraProps.load(reader)
+        ghidraReleaseName = ghidraProps.getProperty('application.release.name')
+    ghidraVersion = ghidraProps.getProperty('application.version')
+    ghidraUserDirectory = "${project.gradle.gradleUserHomeDir.parent}/.ghidra/.ghidra_${ghidra_version}_${ghidraReleaseName}"
+}
+
+def userDir = new File(ghidraUserDirectory)
+if(!userDir.exists()){
+    userDir.mkdirs()
+}
+
+def grpcVersion = '1.50.2'
+def protobufVersion = '3.21.7'
+def protocVersion = protobufVersion
+
+dependencies {
+    implementation "io.grpc:grpc-protobuf:${grpcVersion}"
+    implementation "io.grpc:grpc-stub:${grpcVersion}"
+    compileOnly "org.apache.tomcat:annotations-api:6.0.53"
+
+    // examples/advanced need this for JsonFormat
+    implementation "com.google.protobuf:protobuf-java-util:${protobufVersion}"
+
+    runtimeOnly "io.grpc:grpc-netty-shaded:${grpcVersion}"
+
+    testImplementation "org.mockito:mockito-core:3.+"
+
+    testImplementation "io.grpc:grpc-testing:${grpcVersion}"
+    testImplementation "junit:junit:4.12"
+    testImplementation "org.mockito:mockito-core:3.4.0"
+    protobuf files('../../../styx/idl/proto/typhunix/')
+}
+
+protobuf {
+
+    generatedFilesBaseDir = "$projectDir/src"
+
+    protoc {
+         artifact = "com.google.protobuf:protoc:${protocVersion}"
+    }
+    plugins {
+        grpc { artifact = "io.grpc:protoc-gen-grpc-java:${grpcVersion}" }
+    }
+    generateProtoTasks {
+        all()*.plugins { grpc {} }
+    }
+}
+
+tasks.whenTaskAdded { task ->
+    if (task.name == 'extractIncludeProto'){
+        task.getDependsOn().add(copyDependencies)
+    } else if (task.name == 'generateProto'){
+        zipSource.dependsOn task
+        processResources.dependsOn task
+        spotlessJava.dependsOn task
+    }
+}
+
+
+tasks.register('cleanAll', Delete) {
+    dependsOn clean
+    dependsOn cleanEclipse
+    delete 'dist', 'lib'
+    // Protobuf generated files
+    delete 'src/main/grpc/typhunix_interop/TyphunixGrpc.java'
+    delete 'src/main/java/typhunix_interop/GhidraState.java'
+}
+
+// Inform IDEs like IntelliJ IDEA, Eclipse or NetBeans about the generated code.
+sourceSets {
+    main {
+        java {
+            srcDirs 'src/main/grpc'
+            srcDirs 'src/main/java/ghidra_state' // proto files
+            srcDirs rootProject.ext.COMPATABILITY
+        }
+    }
+    scripts {
+        java {
+            srcDirs 'ghidra_scripts'
+        }
+    }
+    integrationTest {
+        java {
+            srcDirs = ['src/test/java'] // overwrite srcDir with new path
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+        }
+        resources {
+            srcDirs = ['src/test/resources']
+            compileClasspath += main.output + test.output
+            runtimeClasspath += main.output + test.output
+        }
+    }
+}
+
+apply from: "$rootProject.projectDir/gradle/javaProject.gradle"
+apply from: "$rootProject.projectDir/gradle/support/javaTestProject.gradle"
+
+// Code style formatting
+spotless {
+    // optional: limit format enforcement to just the files changed by this feature branch
+    // ratchetFrom 'origin/main'
+    format 'misc', {
+        // define the files to apply `misc` to
+        target '*.gradle', '*.md', '.gitignore'
+
+        // define the steps to apply to those files
+        trimTrailingWhitespace()
+        indentWithSpaces(4)
+        endWithNewline()
+    }
+    java {
+        target 'src/*/java/typhunix_plugin/**/*.java', 'ghidra_scripts/*.java'
+        targetExclude('src/main/java/typhunix_interop/*.java')
+        targetExclude('src/main/grpc/**/*.java')
+        // The Ghidra formatting file was taken from Ghidra 10.1.1 located in
+        // eclipse/GhidraEclipseFormatter.xml Ghidra repo
+        eclipse().configFile('GhidraEclipseFormatter.xml')
+    }
+}

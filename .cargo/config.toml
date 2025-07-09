@@ -1,0 +1,11 @@
+[build]
+rustflags = [
+  "--cfg",
+  "tokio_unstable", # we always build with tokio_unstable so tracing plugins can be used w/o pain
+]
+
+[alias]
+xtask = "run --package xtask --"
+
+[target.xtask]
+rustflags = ["-C", "opt-level=3"]

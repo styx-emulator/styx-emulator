@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+package styx.peripherals.i2c;
+
+/*
+    RPC documentation:
+
+    `RegisterClient` is used when first connecting a new device to the I2C peripheral. You pass information about
+    the device and in return get a new Receiver handle for the stream that represents the I2C bus.  Attempting to
+    register multiple devices with the same address on a single bus will return an error.
+
+    `Broadcast` is used to write data or send signals on the I2C bus, which gets sent to all devices including the master interface.
+
+    Example transmission between the STM32 I2C peripheral (master) and a device connected to the I2C bus (slave).
+    - processor is running and his IPC port is up
+    - device starts up and calls the `RegisterClient` RPC, getting back a receiver for the stream
+    - master generates a start condition, sending a Start signal to all receivers
+    - master sends a data packet containing the address of the device it wants to communicate with
+    - slave device recognizes the address as its own and sends an Ack signal using the `Broadcast` RPC
+    - masters sees the Ack signal and begins writing or reading data from the bus, with slave/master generating
+        Ack signals or the slave sending data with the `Broadcast` RPC as necessary.
+    - etc.
+*/
+
+service I2CPort {
+    // write onto the bus
+    rpc Broadcast(I2CPacket) returns (Empty) {}
+    // register a new device on the bus
+    rpc RegisterClient(I2CRegistration) returns (stream I2CPacket) {}
+}
+
+message I2CRegistration {
+    uint32 bus = 1;
+    uint32 dev_address = 2;
+    string device_name = 3;
+}
+
+message I2CPacket {
+    // which I2C bus are we targeting
+    uint32 bus = 1;
+    // packet contents
+    oneof contents {
+        Data data = 4;
+        Signal sig = 5;
+    }
+}
+
+message Data {
+    uint32 data = 1;
+}
+
+message Signal {
+    oneof sig {
+        Ack ack = 4;
+        Start start = 6;
+        Stop stop = 7;
+    }
+}
+message Ack {}
+message Start {}
+message Stop {}
+message Empty {}

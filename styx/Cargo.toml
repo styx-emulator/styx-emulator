@@ -1,0 +1,81 @@
+[package]
+name = "styx-emulator"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+
+[[bench]]
+name = "pcode_vs_unicorn_ppc"
+harness = false
+
+[[bench]]
+name = "pcode_register_hooks"
+harness = false
+
+[[bench]]
+name = "pcode_backend"
+harness = false
+
+[[bench]]
+name = "snapshots"
+harness = false
+
+[dependencies]
+styx-integration-tests = { path = "./integration-tests", features = [
+  "factory",
+] }
+styx-core = { path = "./core" }
+styx-event-controllers = { path = "./event-controllers" }
+styx-devices = { path = "./devices" }
+styx-plugins = { path = "./plugins" }
+styx-peripherals = { path = "./peripherals" }
+styx-processors = { path = "./processors" }
+styx-workspace-hack = { version = "0.1", path = "workspace-hack" }
+
+[dev-dependencies]
+keystone-engine = { workspace = true }
+tracing = { workspace = true }
+criterion = { workspace = true }
+clap = { workspace = true }
+emulation-service = { path = "./services/styx-emulation-service" }
+styx-macros-args = { path = "../incubation/styx-macros-args" }
+serde = { workspace = true }
+serde_yaml = { workspace = true }
+gdbstub = { workspace = true }
+gdbstub_arch = { workspace = true }
+gdbmi = { workspace = true }
+async-trait = { workspace = true }
+derivative = { workspace = true }
+tokio = { workspace = true }
+enum-map = { workspace = true }
+
+[features]
+default = [
+  "arch_arm",
+  "arch_aarch64",
+  "arch_bfin",
+  "arch_m32r",
+  "arch_mips64",
+  "arch_ppc",
+  "arch_superh",
+]
+arch_arm = ["styx-core/arch_arm"]
+arch_aarch64 = ["styx-core/arch_aarch64"]
+arch_bfin = ["styx-core/arch_bfin"]
+arch_m32r = ["styx-core/arch_m32r"]
+arch_mips64 = ["styx-core/arch_mips64"]
+arch_ppc = ["styx-core/arch_ppc"]
+arch_superh = ["styx-core/arch_superh"]
+pyo3_bindings = ["styx-core/pyo3_bindings"]
+tracy = ["styx-plugins/tracy"]
+tui = ["styx-plugins/tui"]
+
+# useful when running flame graph with benches
+# note: this throws a warning that it is ignored when running with --workspace
+# but it is needed when running benches with `cargo bench --package styx-emulator ...`
+[profile.bench]
+inherits = "release-dev"

@@ -1,0 +1,341 @@
+stages:
+  - image
+  - lint
+  - generate
+  - test
+  - deploy
+
+workflow:
+  rules:
+    # always run on main
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: always
+    # dont run on merge events
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: never
+    # run branch pipelines on branches that just got a push so that you can optionally run CI
+    # on something that doesn't have an MR yet
+    - if: $CI_COMMIT_BRANCH && $CI_PIPELINE_SOURCE == "push"
+
+variables:
+  CARGO_BUILD_JOBS: 4
+  CARGO_HOME: /cache/cargo
+  STYX_CI_IMAGE: $CI_REGISTRY_IMAGE/styx-ci:$CI_COMMIT_BRANCH
+  TYPHUNIX_CI_IMAGE: $CI_REGISTRY_IMAGE/typhunix-ci:$CI_COMMIT_BRANCH
+
+# retry when runner fails to setup the job
+.default_retry: &default_retry
+    max: 2
+    when: runner_system_failure
+
+# source files to monitoring for rebuilding the typhunix ci image
+.typhunix_ci_changes: &typhunix_ci_changes
+  changes:
+    compare_to: 'refs/heads/main'
+    paths:
+      - extensions/typhunix/docker/ci/*
+      - extensions/typhunix/rust/typhunix-python-bindings/requirements.txt
+
+# monitors for any changes in typhunix code
+.typhunix_changes: &typhunix_changes
+  changes:
+    compare_to: 'refs/heads/main'
+    paths:
+      - extensions/typhunix/**/*
+
+# Default styx job paremeters
+.styx-job:
+  tags:
+    - docker
+    - styx
+  image:
+    name: $STYX_CI_IMAGE
+    pull_policy: [always]
+  retry:
+    *default_retry
+  cache:
+    - key: cargo-cache
+      paths:
+        - /cache/cargo
+      policy: pull-push
+    - key:
+        files:
+          - Cargo.lock
+        prefix: $CI_JOB_NAME
+      paths:
+        - target/
+      policy: $CACHE_POLICY
+  rules:
+    # always run on main
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: always
+      variables:
+        # Always push cache in main
+        CACHE_POLICY: pull-push
+    - if: $CI_COMMIT_BRANCH && $CI_PIPELINE_SOURCE == "push"
+      changes:
+        - Cargo.lock
+      variables:
+        # Only push cache if Cargo.lock changed
+        CACHE_POLICY: pull-push
+    - if: $CI_COMMIT_BRANCH && $CI_PIPELINE_SOURCE == "push"
+      variables:
+        CACHE_POLICY: pull
+  before_script:
+    - . ~/.cargo/env
+    - export CARGO_INCREMENTAL=0
+
+# Default styx test job paremeters
+.styx-test:
+  extends: .styx-job
+  stage: test
+
+
+#################################################
+# Image Job Logic                               #
+#################################################
+
+# The intent here is to enable having lazy image building of containers as they
+# are needed, meaning that:
+# - all jobs use `<name>-ci:<BRANCH_NAME>`, except the image builders
+# - the image builder is always run
+# - when the ci files for the specified builder are updated, the `REBUILD_IMAGE` is set
+# - if the `REBUILD_IMAGE` var is set, the image is built and pused to the above image name
+# - if the `REBUILD_IMAGE` var is not set, `latest` is tagged and pushed as the above image name
+# - an image @ `<name>-si:<BRANCH_NAME>` now exists to use
+# - if `main` is the branch name and we rebuilt, we also push to `latest`
+.image-builder:
+  stage: image
+  image: docker:20.10
+  tags:
+    - dind
+    - styx
+  retry:
+    *default_retry
+  services:
+    - docker:20.10-dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - apk --update add wget unzip make
+
+# Styx image builder
+styx-rebuild:
+  extends: .image-builder
+  rules:
+    # if on a main push, and the files were modified
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes:
+        compare_to: 'refs/heads/main'
+        paths:
+          - docker/**
+      variables:
+        REBUILD_IMAGE: "yes"
+    # if on a main push without the modified files, dont set the rebuild flag
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    # if on an MR push, and the files were modified
+    - if: $CI_COMMIT_BRANCH && $CI_PIPELINE_SOURCE == "push"
+      changes:
+        compare_to: 'refs/heads/main'
+        paths:
+          - docker/**
+      when: manual
+      variables:
+        REBUILD_IMAGE: "yes"
+    # if on an MR push without the modified files, dont set the rebuild flag
+    - if: $CI_COMMIT_BRANCH && $CI_PIPELINE_SOURCE == "push"
+      when: manual
+  script:
+    - make -C util/docker/ ci-build push
+
+# python wheel image builder
+styx-python-image-builder:
+  extends: .image-builder
+  rules:
+    # if on a main push, and the files were modified
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes:
+        compare_to: 'refs/heads/main'
+        paths:
+          - docker/**
+      variables:
+        REBUILD_IMAGE: "yes"
+    # if on a main push without the modified files, dont set the rebuild flag
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    # if on an MR push, and the files were modified
+    - if: $CI_COMMIT_BRANCH && $CI_PIPELINE_SOURCE == "push"
+      changes:
+        compare_to: 'refs/heads/main'
+        paths:
+          - docker/**
+      when: manual
+      variables:
+        REBUILD_IMAGE: "yes"
+    # if on an MR push without the modified files, dont set the rebuild flag
+    - if: $CI_COMMIT_BRANCH && $CI_PIPELINE_SOURCE == "push"
+      when: manual
+  script:
+    - make -C util/docker/ python-build python-push
+
+# Typhunix image builder
+typhunix-rebuild:
+  extends: .image-builder
+  rules:
+    # if on a main push, and the files were modified, set rebuild flag
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes:
+        !reference [.typhunix_ci_changes, changes]
+      variables:
+        REBUILD_IMAGE: "yes"
+    # if on a main push without the modified files, run but dont set the rebuild flag
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    # if on a push, and the ci files were modified, run and set the rebuild flag
+    - if: $CI_COMMIT_BRANCH && $CI_PIPELINE_SOURCE == "push"
+      changes:
+        !reference [.typhunix_ci_changes, changes]
+      when: manual
+      variables:
+        REBUILD_IMAGE: "yes"
+    # if on a push without the modified CI files, dont set the rebuild flag but
+    # still run the builder since we need to tag/push branch image if going to do
+    # typhunix test later
+    - if: $CI_COMMIT_BRANCH && $CI_PIPELINE_SOURCE == "push"
+      changes:
+        !reference [.typhunix_changes, changes]
+      when: manual
+  script:
+    - make -w -C extensions/typhunix/docker/ci ci-build push
+
+#################################################
+# Lint jobs                                     #
+#################################################
+
+pre-commit:
+  extends: .styx-job
+  stage: lint
+  needs: ['styx-rebuild']
+  script:
+    - python3 -m pip install pre-commit
+    - pre-commit install
+    - SKIP=clippy pre-commit run -a
+    - cargo clippy --workspace --all-targets --all-features -- -Dwarnings
+    - just clean-target
+
+lint-docs:
+  extends: .styx-job
+  stage: lint
+  needs: ['styx-rebuild']
+  script:
+    - just lint-docs
+
+lint-workspace-hack:
+  extends: .styx-job
+  stage: lint
+  needs: ['styx-rebuild']
+  script:
+    - cargo xtask hakari --stage update --dry-run
+
+#################################################
+# Build Python whl                              #
+#################################################
+build-python-wheels:
+  extends: .styx-job
+  stage: test
+  when: always
+  image: $CI_REGISTRY_IMAGE/styx-python-builder
+  script:
+    - cd ./styx/bindings/styx-py-api
+    - maturin build --release -f --strip --sdist --compatibility manylinux_2_28
+  artifacts:
+    when: on_success
+    paths:
+      - ./styx/bindings/target/wheels/
+
+publish-python-wheels:
+  extends: .styx-job
+  stage: deploy
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  image: python:latest
+  before_script:
+    - echo "ignoring default before script because this uses python:latest instead of styx_ci:<branch_name>"
+  script:
+    - pip install twine
+    - TWINE_PASSWORD=${CI_JOB_TOKEN} TWINE_USERNAME=gitlab-ci-token python -m twine upload --skip-existing --repository-url ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi styx/bindings/target/wheels/*
+#################################################
+# Test jobs                                     #
+#################################################
+cargo-test:
+  extends: .styx-test
+  artifacts:
+    # upload test output on both success or fail
+    when: always
+    paths:
+      - target/nextest/default/junit.xml
+    reports:
+      junit: target/nextest/default/junit.xml
+  script:
+    - just test
+    - just clean-target
+
+cargo-miri:
+  extends: .styx-test
+  script:
+    - just cargo-miri
+
+asan-test:
+  extends: .styx-test
+  script:
+    - just asan-test
+    - just clean-target
+
+typhunix-test:
+  stage: test
+  allow_failure: true
+  needs: ['typhunix-rebuild']
+  image:
+    name: $TYPHUNIX_CI_IMAGE
+    pull_policy: [always]
+  tags:
+    - docker
+    - styx
+  rules:
+    # only add to normal pipeline if the files changed
+    - if: $CI_COMMIT_BRANCH && $CI_PIPELINE_SOURCE == "push"
+      changes:
+        !reference [.typhunix_changes, changes]
+    # always run on main
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  retry:
+    *default_retry
+  script:
+    - extensions/typhunix/scripts/build_artifacts.sh
+  artifacts:
+    paths:
+      - target/release/typhunix-server
+      - target/release/typhunix-client
+      - target/wheels/*.whl
+      - extensions/typhunix/TyphunixPlugin/dist/ghidra_*.zip
+
+#################################################
+# Docs Building                                 #
+#################################################
+pages:
+  stage: deploy
+  image: $STYX_CI_IMAGE
+  tags:
+    - docker
+    - styx
+  retry:
+    *default_retry
+  before_script:
+    - . ~/.cargo/env
+  only:
+    - main
+  script:
+    - just setup
+    - just docs-deps
+    - rm -rf public
+    - mv ./docs/build public
+  artifacts:
+    paths:
+      - public
