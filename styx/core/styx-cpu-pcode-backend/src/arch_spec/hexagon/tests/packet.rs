@@ -60,7 +60,7 @@ fn test_packet_instructions() {
 #[test]
 fn test_all_packet_adjacent() {
     styx_util::logging::init_logging();
-    // there are 11 types of packet combos (for now)
+    // there are 7 types of packet combos (for now)
     // 1, 2, 3, 4 (sized, no duplex)
     // D, ID, IID (DD doesn't happen, the rest don't happen bc duplex must be slots 0 and 1, according to manual)
     //
@@ -68,12 +68,14 @@ fn test_all_packet_adjacent() {
     // { nop } { P1 } { P2 }
     // { P1 } { P2 }
     //
+    // at every insn, check the pkt start at the backend to make sure it's consistent with what we expect
+    // we also make sure the results of the packets are what we expect.
+    //
     // the nop is to see if edge cases where we are handling the first packet given to the helper works properly.
     //
     // and check the backend to see if the pkt start is set correctly for
     // all combinations
 
-    // guaranteed setup r0 = 32, r1 = 997
     // tuples are: no of regs, asm, verify, and expected length in bytes, and no insns to exec
     // TODO: structify
 
@@ -215,77 +217,118 @@ fn test_all_packet_adjacent() {
                 reg_cnt += 1;
             }
 
-            let asm = asm0.clone() + ";" + &asm1;
+            let mut asm_phase = 0;
+            let asm_plain = asm0.clone() + ";" + &asm1;
+            let asm_with_sets = "{ r23 = #123; r22 = #443; };".to_owned() + &asm0 + ";" + &asm1;
 
-            info!("assembling {}", asm);
+            for asm in [asm_plain, asm_with_sets] {
+                info!("assembling {}", asm);
 
-            let code0 = ks.asm(asm0, init_pc).expect("Could not assemble");
-            let code1 = ks.asm(asm1, init_pc).expect("Could not assemble");
-            let code = ks.asm(asm, init_pc).expect("Could not assemble");
-            trace!("bytes {:x?}", code.bytes);
+                let has_sets = asm_phase == 1;
+                let code0 = ks.asm(asm0.clone(), init_pc).expect("Could not assemble");
+                let code1 = ks.asm(asm1.clone(), init_pc).expect("Could not assemble");
+                let code = ks.asm(asm, init_pc).expect("Could not assemble");
+                trace!("bytes {:x?}", code.bytes);
 
-            assert_eq!(code0.bytes.len(), ins0.3);
-            assert_eq!(code1.bytes.len(), ins1.3);
+                assert_eq!(code0.bytes.len(), ins0.3);
+                assert_eq!(code1.bytes.len(), ins1.3);
 
-            let (mut cpu, mut mmu, mut ev) = setup_cpu(init_pc, code.bytes);
-
-            cpu.write_register(HexagonRegister::R20, 32u32).unwrap();
-            cpu.write_register(HexagonRegister::R21, 991u32).unwrap();
-
-            let mut expected_pkt_start = init_pc;
-            for ins in [ins0, ins1] {
-                // go ahead and run the first insn, then verify pkt start, then check that shared state is set right
-                if ins.4 > 1 {
-                    for k in 0..(ins.4 - 1) {
-                        trace!("k is {}", k);
-                        let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
-                        assert_eq!(TargetExitReason::InstructionCountComplete, exit);
-                        let pkt_start = cpu
-                            .shared_state
-                            .get(&crate::SharedStateKey::HexagonPktStart)
-                            .unwrap();
-                        // ok to truncate here
-                        assert_eq!(*pkt_start as u64, expected_pkt_start);
-                    }
+                if has_sets {
+                    assert_eq!(code.bytes.len(), ins0.3 + ins1.3 + 8);
                 }
 
-                let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
-                assert_eq!(TargetExitReason::InstructionCountComplete, exit);
-                let pkt_start = cpu
-                    .shared_state
-                    .get(&crate::SharedStateKey::HexagonPktStart)
-                    .unwrap();
+                let (mut cpu, mut mmu, mut ev) = setup_cpu(init_pc, code.bytes);
 
-                expected_pkt_start = expected_pkt_start + ins.3 as u64;
-                trace!(
-                    "asserting that {} == {}",
-                    *pkt_start as u64,
-                    expected_pkt_start
-                );
-                assert_eq!(*pkt_start as u64, expected_pkt_start);
+                cpu.write_register(HexagonRegister::R20, 32u32).unwrap();
+                cpu.write_register(HexagonRegister::R21, 991u32).unwrap();
 
-                trace!("pkt finished successfully");
+                let mut expected_pkt_start = init_pc;
+                if has_sets {
+                    let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+                    assert_eq!(TargetExitReason::InstructionCountComplete, exit);
+                    let pkt_start = cpu
+                        .shared_state
+                        .get(&crate::SharedStateKey::HexagonPktStart)
+                        .unwrap();
+                    // ok to truncate here
+                    assert_eq!(*pkt_start as u64, expected_pkt_start);
+
+                    // again
+                    let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+                    assert_eq!(TargetExitReason::InstructionCountComplete, exit);
+                    let pkt_start = cpu
+                        .shared_state
+                        .get(&crate::SharedStateKey::HexagonPktStart)
+                        .unwrap();
+
+                    // two sets
+                    expected_pkt_start += 8;
+                    assert_eq!(*pkt_start as u64, expected_pkt_start);
+
+                    let r22 = cpu.read_register::<u32>(HexagonRegister::R22).unwrap();
+                    let r23 = cpu.read_register::<u32>(HexagonRegister::R23).unwrap();
+
+                    assert_eq!(r22, 443);
+                    assert_eq!(r23, 123);
+                }
+
+                for ins in [ins0, ins1] {
+                    // go ahead and run the first insn, then verify pkt start, then check that shared state is set right
+                    if ins.4 > 1 {
+                        for k in 0..(ins.4 - 1) {
+                            trace!("k is {}", k);
+                            let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+                            assert_eq!(TargetExitReason::InstructionCountComplete, exit);
+                            let pkt_start = cpu
+                                .shared_state
+                                .get(&crate::SharedStateKey::HexagonPktStart)
+                                .unwrap();
+                            // ok to truncate here
+                            assert_eq!(*pkt_start as u64, expected_pkt_start);
+                        }
+                    }
+
+                    let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+                    assert_eq!(TargetExitReason::InstructionCountComplete, exit);
+                    let pkt_start = cpu
+                        .shared_state
+                        .get(&crate::SharedStateKey::HexagonPktStart)
+                        .unwrap();
+
+                    expected_pkt_start = expected_pkt_start + ins.3 as u64;
+                    trace!(
+                        "asserting that {} == {}",
+                        *pkt_start as u64,
+                        expected_pkt_start
+                    );
+                    assert_eq!(*pkt_start as u64, expected_pkt_start);
+
+                    trace!("pkt finished successfully");
+                }
+
+                let r20 = cpu.read_register::<u32>(HexagonRegister::R20).unwrap();
+                let r21 = cpu.read_register::<u32>(HexagonRegister::R21).unwrap();
+
+                let ins0regs = ins0regs
+                    .clone()
+                    .into_iter()
+                    .map(|reg| cpu.read_register::<u32>(reg).unwrap())
+                    .collect();
+                let ins1regs = ins1regs
+                    .clone()
+                    .into_iter()
+                    .map(|reg| {
+                        trace!("reading register {:?}", reg);
+                        cpu.read_register::<u32>(reg).unwrap()
+                    })
+                    .collect();
+
+                ins0.2(r20, r21, ins0regs, &mut cpu);
+                ins1.2(r20, r21, ins1regs, &mut cpu);
+
+                tot_assembled += 1;
+                asm_phase += 1;
             }
-
-            let r20 = cpu.read_register::<u32>(HexagonRegister::R20).unwrap();
-            let r21 = cpu.read_register::<u32>(HexagonRegister::R21).unwrap();
-
-            let ins0regs = ins0regs
-                .into_iter()
-                .map(|reg| cpu.read_register::<u32>(reg).unwrap())
-                .collect();
-            let ins1regs = ins1regs
-                .into_iter()
-                .map(|reg| {
-                    trace!("reading register {:?}", reg);
-                    cpu.read_register::<u32>(reg).unwrap()
-                })
-                .collect();
-
-            ins0.2(r20, r21, ins0regs, &mut cpu);
-            ins1.2(r20, r21, ins1regs, &mut cpu);
-
-            tot_assembled += 1;
         }
     }
 
@@ -294,5 +337,6 @@ fn test_all_packet_adjacent() {
         tot_assembled,
         insns.len()
     );
-    assert_eq!(tot_assembled, insns.len() * insns.len());
+    // times two for the "set" instructions
+    assert_eq!(tot_assembled, insns.len() * insns.len() * 2);
 }
