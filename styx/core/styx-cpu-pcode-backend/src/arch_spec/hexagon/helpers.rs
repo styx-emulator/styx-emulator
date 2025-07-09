@@ -373,10 +373,12 @@ impl HexagonGeneratorHelper {
 
         // check for hardware loop
         // check if lc0/lc1 is greater than 1, since
-        //
+        // a hwloop terminates when lc0/lc1 == 1
+        // so it will never get set to zero after the hwloop executes
         trace!("hwloop help: lc0 {} lc1 {}", lc0, lc1);
 
         // check if this packet is the last packet in a hardware loop
+        // these are from the manual, section 10.6
         if lc0 > 1 || lc1 > 1 {
             // last in loop 1
             if pkt_type == PktLoopParseBits::NotEndOfPacket1 {
@@ -603,6 +605,10 @@ impl GeneratorHelp for HexagonGeneratorHelper {
 
                                 // Not a duplex, so next ins is +4 away in packet distance
                                 self.state.mark_end_of_pkt(backend, unwrapped_pc + 4);
+
+                                // A single instruction packet can't have an endloop
+                                // section 10.6: endloop0 has to have 2 or more instructions
+                                // endloop3 has to have 3 or more.
                                 self.state
                                     .handle_endloop_set(unwrapped_pc, &mut context_opts);
                             }
