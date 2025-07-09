@@ -24,7 +24,7 @@ fn test_immediates() {
     // it doesn't seem like it..
     let exit = cpu.execute(&mut mmu, &mut ev, 5).unwrap();
 
-    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
     let r1 = cpu.read_register::<u32>(HexagonRegister::R1).unwrap();
     let r2 = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
@@ -51,7 +51,7 @@ fn test_immediate_instruction() {
     // We'll have two instructions for immext
     let exit = cpu.execute(&mut mmu, &mut ev, 2).unwrap();
 
-    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
     let r1 = cpu.read_register::<u32>(HexagonRegister::R1).unwrap();
 

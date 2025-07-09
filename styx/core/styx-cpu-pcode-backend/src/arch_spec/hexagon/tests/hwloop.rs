@@ -20,7 +20,7 @@ fn test_hwloop0() {
     cpu.write_register(HexagonRegister::R0, 7u32).unwrap();
 
     let exit = cpu.execute(&mut mmu, &mut ev, 7).unwrap();
-    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
     let r0 = cpu.read_register::<u32>(HexagonRegister::R0).unwrap();
 
@@ -45,7 +45,7 @@ fn test_duplex_hwloop_nested() {
     );
 
     let exit = cpu.execute(&mut mmu, &mut ev, 43).unwrap();
-    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
     let r1 = cpu.read_register::<u32>(HexagonRegister::R1).unwrap();
     let r2 = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
@@ -77,7 +77,7 @@ fn test_duplex_hwloop1() {
     );
 
     let exit = cpu.execute(&mut mmu, &mut ev, 16).unwrap();
-    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
     let r2 = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
     let r3 = cpu.read_register::<u32>(HexagonRegister::R3).unwrap();
@@ -106,7 +106,7 @@ fn test_duplex_hwloop0() {
     );
 
     let exit = cpu.execute(&mut mmu, &mut ev, 13).unwrap();
-    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
     let r2 = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
     let r3 = cpu.read_register::<u32>(HexagonRegister::R3).unwrap();
@@ -142,7 +142,7 @@ fn test_hwloop01() {
     cpu.write_register(HexagonRegister::R2, 1u32).unwrap();
 
     let exit = cpu.execute(&mut mmu, &mut ev, 37).unwrap();
-    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
     let r0 = cpu.read_register::<u32>(HexagonRegister::R0).unwrap();
     let r1 = cpu.read_register::<u32>(HexagonRegister::R1).unwrap();
@@ -176,7 +176,7 @@ fn test_hwloop_predicate() {
     cpu.write_register(HexagonRegister::R0, 0u32).unwrap();
 
     let exit = cpu.execute(&mut mmu, &mut ev, 11).unwrap();
-    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
     let r0 = cpu.read_register::<u32>(HexagonRegister::R0).unwrap();
     let r1 = cpu.read_register::<u32>(HexagonRegister::R1).unwrap();
@@ -211,7 +211,7 @@ fn test_hwloop_inner() {
     cpu.write_register(HexagonRegister::R2, 3u32).unwrap();
 
     let exit = cpu.execute(&mut mmu, &mut ev, 35).unwrap();
-    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
     // TODO: need to check that the last packet sets context option for hexagonendloop, and
     // that their pcodes are only length 1 each.
@@ -254,7 +254,7 @@ fn test_hwloop0_iteronce() {
     cpu.write_register(HexagonRegister::R1, 29u32).unwrap();
 
     let exit = cpu.execute(&mut mmu, &mut ev, 6).unwrap();
-    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
     let r0 = cpu.read_register::<u32>(HexagonRegister::R0).unwrap();
     let r1 = cpu.read_register::<u32>(HexagonRegister::R1).unwrap();
@@ -286,7 +286,7 @@ fn test_hwloop1() {
     cpu.write_register(HexagonRegister::R1, 29u32).unwrap();
 
     let exit = cpu.execute(&mut mmu, &mut ev, 10).unwrap();
-    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
     let r0 = cpu.read_register::<u32>(HexagonRegister::R0).unwrap();
     let r1 = cpu.read_register::<u32>(HexagonRegister::R1).unwrap();

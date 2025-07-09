@@ -31,7 +31,7 @@ fn test_hi_lo_mpyu() {
         .unwrap();
 
     let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
-    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
     let r2 = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
 
@@ -52,7 +52,7 @@ fn test_lo_lo_add() {
         .unwrap();
 
     let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
-    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
     let r2 = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
 
@@ -70,12 +70,12 @@ fn test_hi_lo_set() {
     );
 
     let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
-    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
     let r2 = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
     assert_eq!(r2, 0x10100000);
 
     let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
-    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
     let r2 = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
     assert_eq!(r2, 0x10104332);
 }

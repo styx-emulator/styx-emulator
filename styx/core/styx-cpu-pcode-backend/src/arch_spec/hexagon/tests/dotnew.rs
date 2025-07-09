@@ -127,7 +127,7 @@ fn test_predicate_dotnew() {
     // it doesn't seem like it..
     let exit = cpu.execute(&mut mmu, &mut ev, 3).unwrap();
 
-    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
     let r0 = cpu.read_register::<u32>(HexagonRegister::R0).unwrap();
     let r1 = cpu.read_register::<u32>(HexagonRegister::R1).unwrap();
@@ -162,14 +162,14 @@ fn test_dotnew_basic(
 
     // Load
     let exit = cpu.execute(&mut mmu, &mut ev, insn_count_1).unwrap();
-    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
     let r2 = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
     assert_eq!(r2, write_value);
 
     // Store
     let exit = cpu.execute(&mut mmu, &mut ev, insn_count_2).unwrap();
-    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
     let data = mmu.read_u32_le_virt_data(DST_MEMLOC).unwrap();
     assert_eq!(data, read_value);
@@ -368,7 +368,7 @@ fn test_all_dotnew_class() {
 
                 // Run
                 let exit = cpu.execute(&mut mmu, &mut ev, case.insns_to_exec).unwrap();
-                assert_eq!(TargetExitReason::InstructionCountComplete, exit);
+                assert_eq!(TargetExitReason::InstructionCountComplete, exit.exit_reason);
 
                 // Read from memory
                 let addr = mem_base + 4;

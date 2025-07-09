@@ -9,7 +9,7 @@ fn test_single_instruction() {
     let initial_isa_pc = get_isa_pc(&mut cpu);
     let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
 
-    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
     let r5 = cpu.read_register::<u32>(HexagonRegister::R5).unwrap();
 

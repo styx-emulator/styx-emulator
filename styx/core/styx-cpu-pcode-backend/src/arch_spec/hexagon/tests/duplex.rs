@@ -11,7 +11,7 @@ fn test_duplex_immext() {
     cpu.write_register(HexagonRegister::R1, 470u32).unwrap();
 
     let exit = cpu.execute(&mut mmu, &mut ev, 4).unwrap();
-    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
     let r2 = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
     let r3 = cpu.read_register::<u32>(HexagonRegister::R3).unwrap();
@@ -35,13 +35,13 @@ fn test_duplex_instructions() {
     let initial_isa_pc = get_isa_pc(&mut cpu);
 
     let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
-    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
     let mid_isa_pc = get_isa_pc(&mut cpu);
     assert_eq!(initial_isa_pc, mid_isa_pc);
 
     let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
-    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
     let end_isa_pc = get_isa_pc(&mut cpu);
     let r5 = cpu.read_register::<u32>(HexagonRegister::R5).unwrap();

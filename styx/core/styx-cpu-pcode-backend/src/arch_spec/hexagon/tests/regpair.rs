@@ -72,7 +72,7 @@ fn test_regpair_helper(
     let (mut cpu, mut mmu, mut ev) = setup_asm(&assembly, None);
 
     let exit = cpu.execute(&mut mmu, &mut ev, 2).unwrap();
-    assert_eq!(exit, TargetExitReason::InstructionCountComplete);*/
+    assert_eq!(exit.exit_exit_reason, TargetExitReason::InstructionCountComplete);*/
 
     cpu.write_register(hex_regpair, (HI << 32) | LO).unwrap();
 

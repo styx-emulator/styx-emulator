@@ -17,7 +17,7 @@ fn test_cond_branching() {
     cpu.write_register(HexagonRegister::R1, 32u64).unwrap();
 
     let exit = cpu.execute(&mut mmu, &mut ev, 7).unwrap();
-    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
     let r5 = cpu.read_register::<u32>(HexagonRegister::R5).unwrap();
     let r4 = cpu.read_register::<u32>(HexagonRegister::R4).unwrap();
@@ -65,7 +65,7 @@ lab:
     trace!("starting initial jump");
     // register transfer jump 1 insn
     let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
-    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
     let mid_isa_pc = get_isa_pc(&mut cpu);
     assert_eq!(mid_isa_pc - initial_isa_pc, 12);
@@ -73,7 +73,7 @@ lab:
     // There's an immext here
     trace!("starting initial multiply");
     let exit = cpu.execute(&mut mmu, &mut ev, 2).unwrap();
-    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
     let end_branch_isa_pc = get_isa_pc(&mut cpu);
     assert_eq!(end_branch_isa_pc - initial_isa_pc, 20);
@@ -81,7 +81,7 @@ lab:
     // Last addition
     trace!("starting addition");
     let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
-    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
     let r0 = cpu.read_register::<u32>(HexagonRegister::R0).unwrap();
     let r2 = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
@@ -110,14 +110,14 @@ fn test_basic_branching_single_insn_pkt() {
     trace!("starting initial jump");
     // register transfer jump is 1 insn
     let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
-    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
     let mid_isa_pc = get_isa_pc(&mut cpu);
     assert_eq!(mid_isa_pc - initial_isa_pc, 8);
 
     trace!("starting initial multiply");
     let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
-    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
     let end_branch_isa_pc = get_isa_pc(&mut cpu);
     assert_eq!(end_branch_isa_pc - initial_isa_pc, 12);
@@ -125,7 +125,7 @@ fn test_basic_branching_single_insn_pkt() {
     // Last addition
     trace!("starting addition");
     let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
-    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
     let end_isa_pc = get_isa_pc(&mut cpu);
     assert_eq!(end_isa_pc - initial_isa_pc, 16);

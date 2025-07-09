@@ -29,7 +29,7 @@ fn test_packet_instructions() {
     // Packet is 3 insns long, let's get the PC in the middle
     // and ensure it's not moving within a packet.
     let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
-    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
     // truncate
     let mid_isa_pc = get_isa_pc(&mut cpu);
@@ -38,7 +38,7 @@ fn test_packet_instructions() {
     // let's now finish up. The no op is because styx internally only
     // sets the pc manager's isa pc at the start of the next instruction.
     let exit = cpu.execute(&mut mmu, &mut ev, 2).unwrap();
-    assert_eq!(exit, TargetExitReason::InstructionCountComplete);
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
     let r1 = cpu.read_register::<u32>(HexagonRegister::R1).unwrap();
     let r2 = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
@@ -245,7 +245,7 @@ fn test_all_packet_adjacent() {
                 let mut expected_pkt_start = init_pc;
                 if has_sets {
                     let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
-                    assert_eq!(TargetExitReason::InstructionCountComplete, exit);
+                    assert_eq!(TargetExitReason::InstructionCountComplete, exit.exit_reason);
                     let pkt_start = cpu
                         .shared_state
                         .get(&crate::SharedStateKey::HexagonPktStart)
@@ -255,7 +255,7 @@ fn test_all_packet_adjacent() {
 
                     // again
                     let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
-                    assert_eq!(TargetExitReason::InstructionCountComplete, exit);
+                    assert_eq!(TargetExitReason::InstructionCountComplete, exit.exit_reason);
                     let pkt_start = cpu
                         .shared_state
                         .get(&crate::SharedStateKey::HexagonPktStart)
@@ -278,7 +278,7 @@ fn test_all_packet_adjacent() {
                         for k in 0..(ins.no_insns_to_exec - 1) {
                             trace!("k is {}", k);
                             let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
-                            assert_eq!(TargetExitReason::InstructionCountComplete, exit);
+                            assert_eq!(TargetExitReason::InstructionCountComplete, exit.exit_reason);
                             let pkt_start = cpu
                                 .shared_state
                                 .get(&crate::SharedStateKey::HexagonPktStart)
@@ -289,7 +289,7 @@ fn test_all_packet_adjacent() {
                     }
 
                     let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
-                    assert_eq!(TargetExitReason::InstructionCountComplete, exit);
+                    assert_eq!(TargetExitReason::InstructionCountComplete, exit.exit_reason);
                     let pkt_start = cpu
                         .shared_state
                         .get(&crate::SharedStateKey::HexagonPktStart)
