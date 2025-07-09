@@ -278,7 +278,10 @@ fn test_all_packet_adjacent() {
                         for k in 0..(ins.no_insns_to_exec - 1) {
                             trace!("k is {}", k);
                             let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
-                            assert_eq!(TargetExitReason::InstructionCountComplete, exit.exit_reason);
+                            assert_eq!(
+                                TargetExitReason::InstructionCountComplete,
+                                exit.exit_reason
+                            );
                             let pkt_start = cpu
                                 .shared_state
                                 .get(&crate::SharedStateKey::HexagonPktStart)

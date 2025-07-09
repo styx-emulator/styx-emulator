@@ -24,7 +24,6 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //! Implements the high-level CPU Architecture description for Hexagon
 //! Variants.
-
 use derive_more::Display;
 use enum_dispatch::enum_dispatch;
 
