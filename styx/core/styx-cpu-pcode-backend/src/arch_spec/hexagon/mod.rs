@@ -9,6 +9,8 @@ mod dotnew;
 mod pkt_semantics;
 mod regpairs;
 
+mod system;
+
 #[cfg(test)]
 pub mod tests;
 
@@ -31,6 +33,12 @@ pub fn build() -> ArchSpecBuilder<sla::Hexagon> {
     spec.call_other_manager
         .add_handler_other_sla(HexagonUserOps::Newreg, NewReg {})
         .unwrap();
+
+    system::tlb::add_tlb_callothers(&mut spec);
+    system::icache::add_icache_callothers(&mut spec);
+    system::dcache::add_dcache_callothers(&mut spec);
+    system::l2::add_l2_callothers(&mut spec);
+    system::interrupt::add_interrupt_callothers(&mut spec);
 
     regpairs::add_register_pair_handlers(&mut spec);
 
