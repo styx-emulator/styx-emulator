@@ -1,4 +1,5 @@
 use crate::arch_spec::hexagon::tests::*;
+use log::info;
 use test_case::test_case;
 
 // need a separate conditional too
@@ -174,4 +175,221 @@ fn test_dotnew_basic(
     assert_eq!(data, read_value);
 
     (cpu, mmu, ev)
+}
+
+struct DotnewGenericTestCase {
+    asm: String,
+    insns_to_exec: usize,
+    extra_check_handler: Box<dyn Fn(&mut PcodeBackend, bool)>,
+    iclass: u8,
+    expected_bytes: usize,
+    predicate_type: PredicateType,
+}
+
+#[derive(Copy, Clone, PartialEq, Debug)]
+enum PredicateType {
+    NegatedPredicate,
+    Predicate,
+    None,
+}
+
+#[derive(Copy, Clone)]
+enum DotnewSizes {
+    Byte,
+    Halfword,
+    Word,
+}
+
+#[test]
+fn test_all_dotnew_class() {
+    styx_util::logging::init_logging();
+
+    let mem_base = 0x100u32;
+    let mem_initval = 0x43287761;
+    let init_pc = 0x1000;
+
+    let ks = Keystone::new(
+        keystone_engine::Arch::HEXAGON,
+        keystone_engine::Mode::LITTLE_ENDIAN,
+    )
+    .expect("Could not initialize Keystone engine");
+
+    let classes = vec![
+        DotnewGenericTestCase {
+            asm:
+                "{ P2 = cmp.eq(R4, #4); } { R0 = memw(R3 + #0x0); if (P2)	mem%0(R3+R2<<#2)=R0.new }"
+                    .to_owned(),
+            insns_to_exec: 3,
+            extra_check_handler: Box::new(|backend: &mut PcodeBackend, branch_taken: bool| {})
+                as Box<dyn Fn(&mut PcodeBackend, bool) -> ()>,
+            iclass: 0b0011,
+            expected_bytes: 12,
+            predicate_type: PredicateType::Predicate,
+        },
+        DotnewGenericTestCase {
+            asm: "{ P2 = cmp.eq(R4, #4);  R0 = memw(R3 + #0x0); if (P2.new)	mem%0(R3+#4)=R0.new }"
+                .to_owned(),
+            insns_to_exec: 3,
+            extra_check_handler: Box::new(|backend: &mut PcodeBackend, branch_taken: bool| {}),
+            iclass: 0b0100,
+            expected_bytes: 12,
+            predicate_type: PredicateType::Predicate,
+        },
+        DotnewGenericTestCase {
+            asm:
+                "{ P2 = cmp.eq(R4, #4); } { R0 = memw(R3 + #0x0); if (!P2)	mem%0(R10++#4)=R0.new }"
+                    .to_owned(),
+            insns_to_exec: 3,
+            extra_check_handler: Box::new(|backend: &mut PcodeBackend, branch_taken| {
+                let r10 = backend.read_register::<u32>(HexagonRegister::R10).unwrap();
+                if branch_taken {
+                    assert_eq!(0x108, r10);
+                } else {
+                    assert_eq!(0x104, r10)
+                }
+            }),
+            iclass: 0b1010,
+            expected_bytes: 12,
+            predicate_type: PredicateType::NegatedPredicate,
+        },
+        DotnewGenericTestCase {
+            asm: "{ P2 = cmp.eq(R4, #4); R0 = memw(R3 + #0x0); if (!P2.new)	mem%0(#0x104)=R0.new }"
+                .to_owned(),
+            insns_to_exec: 3,
+            extra_check_handler: Box::new(|backend: &mut PcodeBackend, branch_taken: bool| {}),
+            iclass: 0b1010,
+            expected_bytes: 16,
+            predicate_type: PredicateType::NegatedPredicate,
+        },
+        DotnewGenericTestCase {
+            asm: "{ R0 = memw(R3 + #0x0); mem%0(r5=#0x104)=R0.new }".to_owned(),
+            insns_to_exec: 3,
+            extra_check_handler: Box::new(|backend: &mut PcodeBackend, branch_taken: bool| {
+                let r5 = backend.read_register::<u32>(HexagonRegister::R5).unwrap();
+                assert_eq!(0x104, r5);
+            }),
+            iclass: 0b1010,
+            expected_bytes: 12,
+            predicate_type: PredicateType::None,
+        },
+        DotnewGenericTestCase {
+            asm: "{ R0 = memw(R3 + #0x0); mem%0(gp+#4)=R0.new }".to_owned(),
+            insns_to_exec: 3,
+            extra_check_handler: Box::new(|backend: &mut PcodeBackend, branch_taken: bool| {}),
+            iclass: 0b0100,
+            expected_bytes: 8,
+            predicate_type: PredicateType::None,
+        },
+        DotnewGenericTestCase {
+            asm: "{ R0 = memw(R3 + #0x0); mem%0(r3+r2<<#2)=R0.new }".to_owned(),
+            insns_to_exec: 3,
+            extra_check_handler: Box::new(|backend: &mut PcodeBackend, branch_taken: bool| {}),
+            iclass: 0b0011,
+            expected_bytes: 8,
+            predicate_type: PredicateType::None,
+        },
+    ];
+
+    let sizes = [DotnewSizes::Byte, DotnewSizes::Halfword, DotnewSizes::Word];
+
+    for case in classes {
+        for size in sizes {
+            let iters = if case.predicate_type != PredicateType::None {
+                2
+            } else {
+                1
+            };
+
+            for i in 0..iters {
+                // Regular predicate
+                let branch_taken_or_no_predicate = i == 0;
+
+                trace!(
+                    "iter {}, branch taken or no predicate {}, predicate type {:?}",
+                    i,
+                    branch_taken_or_no_predicate,
+                    case.predicate_type
+                );
+
+                let postfix = match size {
+                    DotnewSizes::Byte => "b",
+                    DotnewSizes::Halfword => "h",
+                    DotnewSizes::Word => "w",
+                };
+
+                let subst_asm = case.asm.replace("%0", postfix);
+                info!("assembling {}", subst_asm);
+
+                let code = ks
+                    .asm(subst_asm.clone(), init_pc)
+                    .expect("Could not assemble");
+
+                trace!("code is {:?}", code);
+
+                assert_eq!(code.bytes.len(), case.expected_bytes);
+
+                // get last 4 bytes (last insn is dotnew) and make sure iclass matches
+                let last_4: [u8; 4] = code.bytes[(case.expected_bytes - 4)..(case.expected_bytes)]
+                    .try_into()
+                    .expect("Couldn't extract last insn");
+
+                let insn = u32::from_le_bytes(last_4);
+                let iclass = (insn >> 28) & 0xf;
+
+                assert_eq!(iclass, case.iclass as u32);
+
+                let (mut cpu, mut mmu, mut ev) = setup_cpu(init_pc, code.bytes);
+
+                cpu.write_register(HexagonRegister::R2, 1u32).unwrap();
+                cpu.write_register(HexagonRegister::R3, mem_base).unwrap();
+
+                // This sets it so the negated predicate and predicate both fail
+                // on the second iteration
+                if (i == 0
+                    && case.predicate_type == PredicateType::NegatedPredicate)
+                    // To force this to fail
+                    || (i == 1
+                        && case.predicate_type == PredicateType::Predicate)
+                {
+                    trace!("branch taken, negated predicate");
+                    cpu.write_register(HexagonRegister::R4, 3u32).unwrap();
+                } else {
+                    cpu.write_register(HexagonRegister::R4, 4u32).unwrap();
+                }
+
+                cpu.write_register(HexagonRegister::Gp, mem_base).unwrap();
+                // This is for the "indirect with auto increment"
+                cpu.write_register(HexagonRegister::R10, mem_base + 4)
+                    .unwrap();
+
+                // Write memory
+                mmu.write_u32_le_virt_data(mem_base as u64, mem_initval)
+                    .unwrap();
+
+                // Run
+                let exit = cpu
+                    .execute(&mut mmu, &mut ev, case.expected_bytes as u64 / 4)
+                    .unwrap();
+                assert_eq!(TargetExitReason::InstructionCountComplete, exit);
+
+                // Read from memory
+                let addr = mem_base + 4;
+                let expected_val = if branch_taken_or_no_predicate {
+                    trace!("checking memory bc branch taken or no predicate");
+                    match size {
+                        DotnewSizes::Byte => mem_initval & 0xff,
+                        DotnewSizes::Halfword => mem_initval & 0xffff,
+                        DotnewSizes::Word => mem_initval,
+                    }
+                } else {
+                    0
+                };
+
+                let val = mmu.read_u32_le_virt_data(addr as u64).unwrap();
+                assert_eq!(val, expected_val);
+
+                (case.extra_check_handler)(&mut cpu, branch_taken_or_no_predicate);
+            }
+        }
+    }
 }

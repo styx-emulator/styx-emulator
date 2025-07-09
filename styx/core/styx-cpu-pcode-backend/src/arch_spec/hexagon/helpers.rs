@@ -365,6 +365,7 @@ impl HexagonGeneratorHelper {
                     // Is this undocumented? the assembler will happily make endloop0
                     // spit out a duplex as last instruction, but
                     // this case isn't covered in the manual AFAICT.
+                    // Endloop1 and 01 are fine since they must be padded with at least 2 nops.
                     || parse_next == PktLoopParseBits::Duplex)
             {
                 trace!("hwloop help: last in loop 0");
