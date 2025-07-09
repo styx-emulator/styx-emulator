@@ -179,7 +179,7 @@ fn test_dotnew_basic(
 
 struct DotnewGenericTestCase {
     asm: String,
-    insns_to_exec: usize,
+    insns_to_exec: u64,
     extra_check_handler: Box<dyn Fn(&mut PcodeBackend, bool)>,
     iclass: u8,
     expected_bytes: usize,
@@ -220,7 +220,7 @@ fn test_all_dotnew_class() {
                 "{ P2 = cmp.eq(R4, #4); } { R0 = memw(R3 + #0x0); if (P2)	mem%0(R3+R2<<#2)=R0.new }"
                     .to_owned(),
             insns_to_exec: 3,
-            extra_check_handler: Box::new(|backend: &mut PcodeBackend, branch_taken: bool| {})
+            extra_check_handler: Box::new(|_backend: &mut PcodeBackend, _branch_taken: bool| {})
                 as Box<dyn Fn(&mut PcodeBackend, bool) -> ()>,
             iclass: 0b0011,
             expected_bytes: 12,
@@ -230,7 +230,7 @@ fn test_all_dotnew_class() {
             asm: "{ P2 = cmp.eq(R4, #4);  R0 = memw(R3 + #0x0); if (P2.new)	mem%0(R3+#4)=R0.new }"
                 .to_owned(),
             insns_to_exec: 3,
-            extra_check_handler: Box::new(|backend: &mut PcodeBackend, branch_taken: bool| {}),
+            extra_check_handler: Box::new(|_backend: &mut PcodeBackend, _branch_taken: bool| {}),
             iclass: 0b0100,
             expected_bytes: 12,
             predicate_type: PredicateType::Predicate,
@@ -255,8 +255,8 @@ fn test_all_dotnew_class() {
         DotnewGenericTestCase {
             asm: "{ P2 = cmp.eq(R4, #4); R0 = memw(R3 + #0x0); if (!P2.new)	mem%0(#0x104)=R0.new }"
                 .to_owned(),
-            insns_to_exec: 3,
-            extra_check_handler: Box::new(|backend: &mut PcodeBackend, branch_taken: bool| {}),
+            insns_to_exec: 4,
+            extra_check_handler: Box::new(|_backend: &mut PcodeBackend, _branch_taken: bool| {}),
             iclass: 0b1010,
             expected_bytes: 16,
             predicate_type: PredicateType::NegatedPredicate,
@@ -264,7 +264,7 @@ fn test_all_dotnew_class() {
         DotnewGenericTestCase {
             asm: "{ R0 = memw(R3 + #0x0); mem%0(r5=#0x104)=R0.new }".to_owned(),
             insns_to_exec: 3,
-            extra_check_handler: Box::new(|backend: &mut PcodeBackend, branch_taken: bool| {
+            extra_check_handler: Box::new(|backend: &mut PcodeBackend, _branch_taken: bool| {
                 let r5 = backend.read_register::<u32>(HexagonRegister::R5).unwrap();
                 assert_eq!(0x104, r5);
             }),
@@ -274,16 +274,16 @@ fn test_all_dotnew_class() {
         },
         DotnewGenericTestCase {
             asm: "{ R0 = memw(R3 + #0x0); mem%0(gp+#4)=R0.new }".to_owned(),
-            insns_to_exec: 3,
-            extra_check_handler: Box::new(|backend: &mut PcodeBackend, branch_taken: bool| {}),
+            insns_to_exec: 2,
+            extra_check_handler: Box::new(|_backend: &mut PcodeBackend, _branch_taken: bool| {}),
             iclass: 0b0100,
             expected_bytes: 8,
             predicate_type: PredicateType::None,
         },
         DotnewGenericTestCase {
             asm: "{ R0 = memw(R3 + #0x0); mem%0(r3+r2<<#2)=R0.new }".to_owned(),
-            insns_to_exec: 3,
-            extra_check_handler: Box::new(|backend: &mut PcodeBackend, branch_taken: bool| {}),
+            insns_to_exec: 2,
+            extra_check_handler: Box::new(|_backend: &mut PcodeBackend, _branch_taken: bool| {}),
             iclass: 0b0011,
             expected_bytes: 8,
             predicate_type: PredicateType::None,
@@ -367,9 +367,7 @@ fn test_all_dotnew_class() {
                     .unwrap();
 
                 // Run
-                let exit = cpu
-                    .execute(&mut mmu, &mut ev, case.expected_bytes as u64 / 4)
-                    .unwrap();
+                let exit = cpu.execute(&mut mmu, &mut ev, case.insns_to_exec).unwrap();
                 assert_eq!(TargetExitReason::InstructionCountComplete, exit);
 
                 // Read from memory

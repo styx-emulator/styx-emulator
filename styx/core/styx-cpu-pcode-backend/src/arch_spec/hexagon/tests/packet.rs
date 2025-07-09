@@ -57,6 +57,14 @@ fn test_packet_instructions() {
     assert_eq!(end_isa_pc - initial_isa_pc, 12);
 }
 
+struct PacketTestMetadata {
+    no_regs: usize,
+    asm: String,
+    verify_fn: Box<dyn Fn(u32, u32, Vec<u32>) -> ()>,
+    expected_length: usize,
+    no_insns_to_exec: u64,
+}
+
 // TODO: want to also be able to check context options here, to make sure pktstart is set correctly
 #[test]
 fn test_all_packet_adjacent() {
@@ -88,89 +96,90 @@ fn test_all_packet_adjacent() {
     .expect("Could not initialize Keystone engine");
     let insns = vec![
         // packet IID
-        (
-            4,
-            "{ %0 = add(r20, #299); %1 = mpyi(r21, r20); %2 = #10; %3 = #21;  }",
-            Box::new(|r20: u32, r21: u32, regvec: Vec<u32>| {
+        PacketTestMetadata {
+            no_regs: 4,
+            asm: "{ %0 = add(r20, #299); %1 = mpyi(r21, r20); %2 = #10; %3 = #21;  }".to_owned(),
+            verify_fn: Box::new(|r20: u32, r21: u32, regvec: Vec<u32>| {
                 assert_eq!(regvec[0], r20 + 299);
                 assert_eq!(regvec[1], r21 * r20);
                 assert_eq!(regvec[2], 10);
                 assert_eq!(regvec[3], 21);
             }) as Box<dyn Fn(u32, u32, Vec<u32>) -> ()>,
-            12,
-            4,
-        ),
+            expected_length: 12,
+            no_insns_to_exec: 4,
+        },
         // packet ID
-        (
-            3,
-            "{ %0 = add(r20, #299); %1 = #10; %2 = #21; }",
-            Box::new(|r20: u32, _r21: u32, regvec: Vec<u32>| {
+        PacketTestMetadata {
+            no_regs: 3,
+            asm: "{ %0 = add(r20, #299); %1 = #10; %2 = #21; }".to_owned(),
+            verify_fn: Box::new(|r20: u32, _r21: u32, regvec: Vec<u32>| {
                 assert_eq!(regvec[0], r20 + 299);
                 assert_eq!(regvec[1], 10);
                 assert_eq!(regvec[2], 21);
             }),
-            8,
-            3,
-        ),
+            expected_length: 8,
+            no_insns_to_exec: 3,
+        },
         // packet D
-        (
-            2,
+        PacketTestMetadata {
+            no_regs: 2,
             // NOTE: keystone had difficulties assembling stuff like {R4 = R21; R5 = R20}. It would turn this into
             // {R4 = R5; R5 = R4}, for some reason.
-            "{ %0 = #8; %1 = #14 }",
-            Box::new(|_r20: u32, _r21: u32, regvec: Vec<u32>| {
+            asm: "{ %0 = #8; %1 = #14 }".to_owned(),
+            verify_fn: Box::new(|_r20: u32, _r21: u32, regvec: Vec<u32>| {
                 assert_eq!(regvec[0], 8);
                 assert_eq!(regvec[1], 14);
             }),
-            4,
-            2,
-        ),
+            expected_length: 4,
+            no_insns_to_exec: 2,
+        },
         // length 1, no duplex
-        (
-            1,
-            "{ %0 = #1552 }",
-            Box::new(|_r20: u32, _r21: u32, regvec: Vec<u32>| {
+        PacketTestMetadata {
+            no_regs: 1,
+            asm: "{ %0 = #1552 }".to_owned(),
+            verify_fn: Box::new(|_r20: u32, _r21: u32, regvec: Vec<u32>| {
                 assert_eq!(regvec[0], 1552);
             }),
-            4,
-            1,
-        ),
+            expected_length: 4,
+            no_insns_to_exec: 1,
+        },
         // length 2, no duplex
-        (
-            2,
-            "{ %0 = #199; %1 = or(r20, r21) }",
-            Box::new(|r20: u32, r21: u32, regvec: Vec<u32>| {
+        PacketTestMetadata {
+            no_regs: 2,
+            asm: "{ %0 = #199; %1 = or(r20, r21) }".to_owned(),
+            verify_fn: Box::new(|r20: u32, r21: u32, regvec: Vec<u32>| {
                 assert_eq!(regvec[0], 199);
                 assert_eq!(regvec[1], r20 | r21);
             }),
-            8,
-            2,
-        ),
+            expected_length: 8,
+            no_insns_to_exec: 2,
+        },
         // length 3, no duplex
-        (
-            3,
-            "{ %0 = add(r20, #3993); %1 = and(r21, #90); %2 = mpyi(r21, r20) }",
-            Box::new(|r20: u32, r21: u32, regvec: Vec<u32>| {
+        PacketTestMetadata {
+            no_regs: 3,
+            asm: "{ %0 = add(r20, #3993); %1 = and(r21, #90); %2 = mpyi(r21, r20) }".to_owned(),
+            verify_fn: Box::new(|r20: u32, r21: u32, regvec: Vec<u32>| {
                 assert_eq!(regvec[0], r20 + 3993);
                 assert_eq!(regvec[1], r21 & 90);
                 assert_eq!(regvec[2], r21 * r20);
             }),
-            12,
-            3,
-        ),
+            expected_length: 12,
+            no_insns_to_exec: 3,
+        },
         // length 4, no duplex
-        (
-            4,
-            "{ %0 = #2; %1 = and(r20, r21); %2 = add(r21, r20); %3 = mpyi(r21, r20) }",
-            Box::new(|r20: u32, r21: u32, regvec: Vec<u32>| {
+        PacketTestMetadata {
+            no_regs: 4,
+            asm: "{ %0 = #2; %1 = and(r20, r21); %2 = add(r21, r20); %3 = mpyi(r21, r20) }"
+                .to_owned(),
+            verify_fn: Box::new(|r20: u32, r21: u32, regvec: Vec<u32>| {
                 assert_eq!(regvec[0], 2);
                 assert_eq!(regvec[1], r20 & r21);
                 assert_eq!(regvec[2], r21 + r20);
                 assert_eq!(regvec[3], r21 * r20);
             }),
-            16,
-            4,
-        ),
+            expected_length: 16,
+            no_insns_to_exec: 4,
+        },
     ];
     let mut tot_assembled = 0;
 
@@ -181,10 +190,10 @@ fn test_all_packet_adjacent() {
             let ins1 = &insns[j];
 
             let mut reg_cnt = 0;
-            let mut asm0 = ins0.1.to_owned();
+            let mut asm0 = ins0.asm.to_owned();
             let mut ins0regs = vec![];
 
-            for k in 0..ins0.0 {
+            for k in 0..ins0.no_regs {
                 let reg = format!("R{}", k);
                 asm0 = asm0.replace(&format!("%{}", k), &reg);
                 ins0regs
@@ -193,10 +202,10 @@ fn test_all_packet_adjacent() {
             }
 
             let reg_cnt_base = reg_cnt;
-            let mut asm1 = ins1.1.to_owned();
+            let mut asm1 = ins1.asm.to_owned();
             let mut ins1regs = vec![];
 
-            for k in reg_cnt_base..(reg_cnt_base + ins1.0) {
+            for k in reg_cnt_base..(reg_cnt_base + ins1.no_regs) {
                 let reg = format!("R{}", k);
                 asm1 = asm1.replace(&format!("%{}", k - reg_cnt_base), &reg);
                 ins1regs
@@ -217,11 +226,14 @@ fn test_all_packet_adjacent() {
                 let code = ks.asm(asm, init_pc).expect("Could not assemble");
                 trace!("bytes {:x?}", code.bytes);
 
-                assert_eq!(code0.bytes.len(), ins0.3);
-                assert_eq!(code1.bytes.len(), ins1.3);
+                assert_eq!(code0.bytes.len(), ins0.expected_length);
+                assert_eq!(code1.bytes.len(), ins1.expected_length);
 
                 if has_sets {
-                    assert_eq!(code.bytes.len(), ins0.3 + ins1.3 + 8);
+                    assert_eq!(
+                        code.bytes.len(),
+                        ins0.expected_length + ins1.expected_length + 8
+                    );
                 }
 
                 // NOTE: this is inefficient, but properly resets the state
@@ -262,8 +274,8 @@ fn test_all_packet_adjacent() {
 
                 for ins in [ins0, ins1] {
                     // go ahead and run the first insn, then verify pkt start, then check that shared state is set right
-                    if ins.4 > 1 {
-                        for k in 0..(ins.4 - 1) {
+                    if ins.no_insns_to_exec > 1 {
+                        for k in 0..(ins.no_insns_to_exec - 1) {
                             trace!("k is {}", k);
                             let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
                             assert_eq!(TargetExitReason::InstructionCountComplete, exit);
@@ -283,7 +295,7 @@ fn test_all_packet_adjacent() {
                         .get(&crate::SharedStateKey::HexagonPktStart)
                         .unwrap();
 
-                    expected_pkt_start = expected_pkt_start + ins.3 as u64;
+                    expected_pkt_start = expected_pkt_start + ins.expected_length as u64;
                     trace!(
                         "asserting that {} == {}",
                         *pkt_start as u64,
@@ -311,8 +323,8 @@ fn test_all_packet_adjacent() {
                     })
                     .collect();
 
-                ins0.2(r20, r21, ins0regs);
-                ins1.2(r20, r21, ins1regs);
+                (ins0.verify_fn)(r20, r21, ins0regs);
+                (ins1.verify_fn)(r20, r21, ins1regs);
 
                 tot_assembled += 1;
                 asm_phase += 1;
