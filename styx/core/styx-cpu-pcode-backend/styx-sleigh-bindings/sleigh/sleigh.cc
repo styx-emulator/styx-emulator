@@ -658,8 +658,8 @@ void Sleigh::resolve(ParserContext &pos) const
   pos.setParserState(ParserContext::disassembly);
 }
 
-void Sleigh::setContextVariableCached(const string &nm,const Address &addr,
-			       uintm value)
+void Sleigh::setContextVariableCached(const string &nm,const Address &addrLo,
+					const Address &addrHi, uintm value)
 {
   const ContextBitRange &bitrange( context_db->getVariable(nm) );
   int4 num = bitrange.getWord();
@@ -669,7 +669,7 @@ void Sleigh::setContextVariableCached(const string &nm,const Address &addr,
 
 
 
-  cache->setContext(addr, num, mask, value);
+  cache->setContext(addrLo, addrHi, num, mask, value);
 }
 
 /// Resolve handle templates for the given parse tree, assuming Constructors

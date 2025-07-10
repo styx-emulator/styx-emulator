@@ -38,4 +38,5 @@ fn test_uart() {
         .with_builder(Kinetis21Builder::default());
 
     uart_test(builder, 5);
+
 }

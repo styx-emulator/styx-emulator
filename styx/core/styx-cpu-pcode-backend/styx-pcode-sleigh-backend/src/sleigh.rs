@@ -31,8 +31,8 @@ use crate::{
 };
 use cxx::{let_cxx_string, CxxVector, UniquePtr};
 use log::trace;
-use std::pin::Pin;
 use std::{collections::HashMap, path::Path};
+use std::{pin::Pin, u64};
 use styx_cpu_type::ArchEndian;
 use styx_pcode::pcode::{Pcode, SpaceInfo, SpaceName, VarnodeData};
 use styx_sleigh_bindings::{ffi, RustPCodeEmit};
@@ -196,9 +196,10 @@ impl<L> Sleigh<L> {
         let space = space_manager.getSpaceByName(&space_name);
         let sleigh: Pin<&mut ffi::Sleigh> = self.obj.as_mut();
         // safety: this should get dropped?
-        let addr = unsafe { ffi::new_address(space, addr_off) };
+        let addr_lo = unsafe { ffi::new_address(space, 0) };
+        let addr_hi = unsafe { ffi::new_address(space, u64::MAX) };
         trace!("setting context variable at {}", addr_off);
-        sleigh.setContextVariableCached(&variable_cxx, &addr, value);
+        sleigh.setContextVariableCached(&variable_cxx, &addr_lo, &addr_hi, value);
     }
 
     /// Get a map between a register's varnode offset and name.

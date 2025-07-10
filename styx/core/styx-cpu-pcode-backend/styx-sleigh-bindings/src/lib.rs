@@ -175,7 +175,8 @@ pub mod ffi {
         fn setContextVariableCached(
             self: Pin<&mut Sleigh>,
             str: &CxxString,
-            addr: &Address,
+            addr_lo: &Address,
+            addr_hi: &Address,
             value: u32,
         );
 

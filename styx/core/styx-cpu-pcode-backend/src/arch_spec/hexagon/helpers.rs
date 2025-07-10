@@ -70,7 +70,6 @@ struct HexagonGeneratorHelperState {
     pub pkt_endloop: u32,
     pub pkt_endloop_cleared: bool,
     pub dotnew_should_unset: bool,
-    pub latest_endloop: u64,
 }
 
 #[derive(Debug, Clone)]
@@ -103,7 +102,6 @@ impl Default for HexagonGeneratorHelper {
                 pkt_endloop: 0,
                 pkt_endloop_cleared: true,
                 dotnew_should_unset: false,
-                latest_endloop: 0,
             },
         }
     }
@@ -142,13 +140,6 @@ impl HexagonGeneratorHelperState {
         if self.pkt_endloop != 0 {
             context_opts.push(ContextOption::HexagonEndloop(self.pkt_endloop));
 
-            // HACK: we need to clear "endloop" for all instructions
-            // up to and including the first packet after the loop ends
-            // This stores that.
-            if unwrapped_pc > self.latest_endloop {
-                self.latest_endloop = unwrapped_pc;
-            }
-
             self.pkt_endloop = 0;
             self.pkt_endloop_cleared = false;
         }
@@ -179,13 +170,11 @@ impl HexagonGeneratorHelperState {
         context_opts.push(ContextOption::HexagonPktStart(unwrapped_pc as u32));
 
         // endloop is cleared at the start of the next packet
-        if self.pkt_endloop == 0 && !self.pkt_endloop_cleared {
+        if !self.pkt_endloop_cleared {
             context_opts.push(ContextOption::HexagonEndloop(0));
-        }
-
-        if unwrapped_pc > self.latest_endloop {
             self.pkt_endloop_cleared = true;
         }
+
         self.pkt_insns = 0;
     }
 }
