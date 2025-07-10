@@ -25,7 +25,7 @@ pub struct StandardPcManager {
 impl StandardPcManager {
     fn handle_branching_end_of_packet(&mut self, backend: &mut PcodeBackend) {
         self.internal_pc = self.new_internal_pc;
-        self.set_isa_pc(self.internal_pc as u64, backend);
+        self.set_isa_pc(self.internal_pc, backend);
     }
 }
 
@@ -107,7 +107,7 @@ impl ArchPcManager for StandardPcManager {
                         self.internal_pc_set_during_packet
                     );
                     self.internal_pc_set_during_packet = true;
-                    self.internal_pc = self.internal_pc + self.last_bytes_consumed;
+                    self.internal_pc += self.last_bytes_consumed;
                 }
                 _ => {}
             }
@@ -142,7 +142,7 @@ impl ArchPcManager for StandardPcManager {
         // TODO: I think the generator helper needs to set some context
         // regs for pkt_start and pkt_end -- could we just acquire these instead?
 
-        self.internal_pc = self.internal_pc + bytes_consumed;
+        self.internal_pc += bytes_consumed;
 
         // The ISA PC increments in packet granularity.
         // Get the start of the packet. If the start of the packet is the same

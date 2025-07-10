@@ -738,7 +738,6 @@ mod hexagon {
         })
         .to_owned()
         .into_boxed_str()
-        .into()
     }
 
     fn hexagon_basic(_register: &CpuRegister, hex_reg: HexagonRegister) -> Box<str> {

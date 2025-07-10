@@ -39,7 +39,7 @@ fn ppc_common<Sla>(spec: &mut super::ArchSpecBuilder<Sla>) {
     spec.set_pc_manager(StandardPpcPcManager::default().into());
 
     // "Do nothing" generator helper.
-    spec.set_generator(GeneratorHelper::default().into());
+    spec.set_generator(GeneratorHelper::default());
 }
 
 /// [ArchPcManager] for PowerPC Processors.

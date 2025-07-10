@@ -412,31 +412,28 @@ impl GeneratorHelp for HexagonGeneratorHelper {
             Ok(unwrapped_pc) => {
                 self.pc_varnode.offset = unwrapped_pc;
 
-                match self.subinsn_map.get_mut(&self.pc_varnode.offset) {
-                    Some(subinsn_data) => {
-                        match subinsn_data {
-                            // Update shared state to the start of the next packet, as is done in the EndPkt case later
-                            SubinstructionData::EndDuplexEndPacket(ty) => {
-                                trace!("in end duplex that's an end of packet, pushing the next packet and such");
+                if let Some(subinsn_data) = self.subinsn_map.get_mut(&self.pc_varnode.offset) {
+                    match subinsn_data {
+                        // Update shared state to the start of the next packet, as is done in the EndPkt case later
+                        SubinstructionData::EndDuplexEndPacket(ty) => {
+                            trace!("in end duplex that's an end of packet, pushing the next packet and such");
 
-                                self.state.mark_end_of_pkt(backend, unwrapped_pc + 2);
-                                self.state.duplex_ended = true;
+                            self.state.mark_end_of_pkt(backend, unwrapped_pc + 2);
+                            self.state.duplex_ended = true;
 
-                                context_opts.push(ContextOption::HexagonSubinsn(*ty));
+                            context_opts.push(ContextOption::HexagonSubinsn(*ty));
 
-                                // Consume as we go to prevent a memory leak
-                                // by having the map grow infinitely
-                                self.subinsn_map.remove(&self.pc_varnode.offset);
-                                self.state.pkt_insns = self.state.pkt_insns + 1;
+                            // Consume as we go to prevent a memory leak
+                            // by having the map grow infinitely
+                            self.subinsn_map.remove(&self.pc_varnode.offset);
+                            self.state.pkt_insns += 1;
 
-                                // For some reason, duplexes can end an endloop0
-                                self.state.handle_endloop_set(&mut context_opts);
+                            // For some reason, duplexes can end an endloop0
+                            self.state.handle_endloop_set(&mut context_opts);
 
-                                return Ok(context_opts);
-                            }
-                        };
-                    }
-                    None => {}
+                            return Ok(context_opts);
+                        }
+                    };
                 }
 
                 // The hashmap doesn't have anything for us anymore, we
