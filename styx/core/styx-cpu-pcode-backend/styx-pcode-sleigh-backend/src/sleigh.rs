@@ -188,15 +188,13 @@ impl<L> Sleigh<L> {
 
     pub fn set_variable(&mut self, variable: &str, value: u32) {
         let space_manager: &ffi::AddrSpaceManager = self.obj.upcast_ref();
-        // TODO: what if code doesn't reside in RAM?
-        let_cxx_string!(space_name = "ram");
+        let default_code_space = space_manager.getDefaultCodeSpace();
 
         cxx::let_cxx_string!(variable_cxx = variable);
-        let space = space_manager.getSpaceByName(&space_name);
         let sleigh: Pin<&mut ffi::Sleigh> = self.obj.as_mut();
         // safety: this should get dropped?
-        let addr_lo = unsafe { ffi::new_address(space, 0) };
-        let addr_hi = unsafe { ffi::new_address(space, u64::MAX) };
+        let addr_lo = unsafe { ffi::new_address(default_code_space, 0) };
+        let addr_hi = unsafe { ffi::new_address(default_code_space, u64::MAX) };
         sleigh.setContextVariableCached(&variable_cxx, &addr_lo, &addr_hi, value);
     }
 
