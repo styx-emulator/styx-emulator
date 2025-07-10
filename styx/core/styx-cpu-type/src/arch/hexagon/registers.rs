@@ -408,7 +408,7 @@ create_basic_register_enums!(
 
 lazy_static::lazy_static! {
     /// List of all [HexagonRegister]s convert to string and uppercased.
-    /// This is done in a [lazy_static::lazy_static] to avoid recomputing every time [Ppc32Register::register()] is called.
+    /// This is done in a [lazy_static::lazy_static] to avoid recomputing every time [HexagonRegister::register()] is called.
     static ref REGISTER_NAMES: HashMap<HexagonRegister, String> =  {
         HexagonRegister::iter()
             .map(|reg| (reg, reg.to_string().to_uppercase()))
