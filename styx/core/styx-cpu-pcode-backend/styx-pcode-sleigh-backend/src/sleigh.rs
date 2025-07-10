@@ -29,7 +29,7 @@ use crate::{
     pcode_emit::{FromFfiVarnode, PCodeEmitRef},
     sleigh_obj::{DeriveParent, SleighObj},
 };
-use cxx::{let_cxx_string, CxxVector, UniquePtr};
+use cxx::{CxxVector, UniquePtr};
 use std::pin::Pin;
 use std::{collections::HashMap, path::Path};
 use styx_cpu_type::ArchEndian;
