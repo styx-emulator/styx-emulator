@@ -172,11 +172,10 @@ impl<L: Loader + LoaderRequires + 'static> PcodeTranslator<L> {
         self.sleigh.endian()
     }
 
-    pub fn set_context_option(&mut self, addr_off: u64, option: ContextOption) {
+    pub fn set_context_option(&mut self, option: ContextOption) {
         // FIXME check validity (e.g. does this sla have this variable)
         let (variable_name, variable_value) = option.value();
-        self.sleigh
-            .set_variable(variable_name, addr_off, variable_value)
+        self.sleigh.set_variable(variable_name, variable_value)
     }
 
     pub fn user_ops(&self) -> &[UserOpInfo] {
@@ -289,7 +288,7 @@ mod arm_tests {
             load_image,
         )
         .unwrap();
-        translator.set_context_option(start, ContextOption::ThumbMode(true));
+        translator.set_context_option(ContextOption::ThumbMode(true));
 
         let mut pcodes = Vec::new();
         let bytes_used = translator.get_pcode(start, &mut pcodes, ()).unwrap();
@@ -310,7 +309,7 @@ mod arm_tests {
             load_image,
         )
         .unwrap();
-        translator.set_context_option(start, ContextOption::ThumbMode(true));
+        translator.set_context_option(ContextOption::ThumbMode(true));
 
         let mut pcodes = Vec::new();
         let result = translator.get_pcode(start, &mut pcodes, ());
@@ -370,7 +369,7 @@ mod hexagon_tests {
     fn auto_test_decompile(asm: &str, expected_bytes_used: u64, expected_pcodes_len: usize) {
         let (start, mut translator) = manual_test_decompile(asm);
         // TODO: how to pass context options from the individual tests?
-        translator.set_context_option(start, ContextOption::HexagonImmext(0xffffffff));
+        translator.set_context_option(ContextOption::HexagonImmext(0xffffffff));
 
         let mut pcodes = Vec::new();
         let bytes_used = translator.get_pcode(start, &mut pcodes, ()).unwrap();
@@ -386,7 +385,7 @@ mod hexagon_tests {
         let (start, mut translator) =
             manual_test_decompile("{ R1 = memh(R0); R5 = add(R4, R30); }");
 
-        translator.set_context_option(start, ContextOption::HexagonImmext(0xffffffff));
+        translator.set_context_option(ContextOption::HexagonImmext(0xffffffff));
 
         let mut pcodes = vec![];
         let bytes_used = translator.get_pcode(start, &mut pcodes, ()).unwrap();
@@ -410,8 +409,8 @@ mod hexagon_tests {
     #[test]
     fn test_decompile_hexagon_duplex() {
         let (start, mut translator) = manual_test_decompile("{ R2 = R3; R3 = R2; }");
-        translator.set_context_option(start, ContextOption::HexagonImmext(0xffffffff));
-        translator.set_context_option(start, ContextOption::HexagonSubinsn(1));
+        translator.set_context_option(ContextOption::HexagonImmext(0xffffffff));
+        translator.set_context_option(ContextOption::HexagonSubinsn(1));
 
         // TODO: assert that immext is right
         // The first get_pcode call will set immext, and won't return any pcodes
@@ -450,7 +449,7 @@ mod hexagon_tests {
         // The first four bytes used in immediate would be to set the context register
         // then the next four are for the actual instruction
         let (start, mut translator) = manual_test_decompile("{ R0 = add(R0, #305419896); }");
-        translator.set_context_option(start, ContextOption::HexagonImmext(0xffffffff));
+        translator.set_context_option(ContextOption::HexagonImmext(0xffffffff));
 
         // TODO: assert that immext is right
         // The first get_pcode call will set immext, and won't return any pcodes

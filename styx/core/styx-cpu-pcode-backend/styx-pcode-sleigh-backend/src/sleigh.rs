@@ -30,9 +30,8 @@ use crate::{
     sleigh_obj::{DeriveParent, SleighObj},
 };
 use cxx::{let_cxx_string, CxxVector, UniquePtr};
-use log::trace;
+use std::pin::Pin;
 use std::{collections::HashMap, path::Path};
-use std::{pin::Pin, u64};
 use styx_cpu_type::ArchEndian;
 use styx_pcode::pcode::{Pcode, SpaceInfo, SpaceName, VarnodeData};
 use styx_sleigh_bindings::{ffi, RustPCodeEmit};
@@ -187,7 +186,7 @@ impl<L> Sleigh<L> {
         }
     }
 
-    pub fn set_variable(&mut self, variable: &str, addr_off: u64, value: u32) {
+    pub fn set_variable(&mut self, variable: &str, value: u32) {
         let space_manager: &ffi::AddrSpaceManager = self.obj.upcast_ref();
         // TODO: what if code doesn't reside in RAM?
         let_cxx_string!(space_name = "ram");
@@ -198,7 +197,6 @@ impl<L> Sleigh<L> {
         // safety: this should get dropped?
         let addr_lo = unsafe { ffi::new_address(space, 0) };
         let addr_hi = unsafe { ffi::new_address(space, u64::MAX) };
-        trace!("setting context variable at {}", addr_off);
         sleigh.setContextVariableCached(&variable_cxx, &addr_lo, &addr_hi, value);
     }
 

@@ -92,9 +92,7 @@ impl GhidraPcodeGenerator {
         // and apply context options
         for option in context_options.into_iter() {
             trace!("Setting context option: {option:?}");
-            cpu.pcode_generator
-                .translator
-                .set_context_option(address, option);
+            cpu.pcode_generator.translator.set_context_option(option);
         }
 
         let result = cpu
