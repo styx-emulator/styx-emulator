@@ -5977,7 +5977,6 @@ dependencies = [
  "half",
  "keystone",
  "log",
- "num-traits",
  "paste",
  "regex",
  "rustc-hash 2.1.1",
