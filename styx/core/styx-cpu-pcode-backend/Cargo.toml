@@ -60,12 +60,11 @@ styx-workspace-hack = { version = "0.1", path = "../../workspace-hack" }
 derive_more = { workspace = true }
 smallvec = { workspace = true }
 rustc-hash = { workspace = true }
-num-traits = { workspace = true }
-regex = { workspace = true }
 
 [dev-dependencies]
 keystone-engine = { workspace = true }
 test-case = { workspace = true }
+regex = { workspace = true }
 
 
 [lints]
