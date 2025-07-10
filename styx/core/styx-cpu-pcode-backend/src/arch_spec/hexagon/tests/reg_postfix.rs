@@ -57,7 +57,7 @@ fn test_lo_lo_add() {
     let r2 = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
 
     // value is sign extended
-    assert_eq!(r2, (((0x2021 + 0x8871) << 16) as i32 >> 16) as u32);
+    assert_eq!(r2, (((0x2021 + 0x8871) << 16) >> 16) as u32);
 }
 
 #[test]

@@ -122,6 +122,8 @@ fn test_duplex_hwloop0() {
 }
 
 #[test]
+// We want to show the arithmetic for readability reasons
+#[allow(clippy::identity_op)]
 fn test_hwloop01() {
     let (mut cpu, mut mmu, mut ev) = setup_objdump(
         r#"

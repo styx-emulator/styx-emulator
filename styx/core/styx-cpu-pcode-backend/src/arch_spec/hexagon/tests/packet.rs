@@ -60,7 +60,7 @@ fn test_packet_instructions() {
 struct PacketTestMetadata {
     no_regs: usize,
     asm: String,
-    verify_fn: Box<dyn Fn(u32, u32, Vec<u32>) -> ()>,
+    verify_fn: Box<dyn Fn(u32, u32, Vec<u32>)>,
     expected_length: usize,
     no_insns_to_exec: u64,
 }
@@ -104,7 +104,7 @@ fn test_all_packet_adjacent() {
                 assert_eq!(regvec[1], r21 * r20);
                 assert_eq!(regvec[2], 10);
                 assert_eq!(regvec[3], 21);
-            }) as Box<dyn Fn(u32, u32, Vec<u32>) -> ()>,
+            }) as Box<dyn Fn(u32, u32, Vec<u32>)>,
             expected_length: 12,
             no_insns_to_exec: 4,
         },
@@ -213,11 +213,10 @@ fn test_all_packet_adjacent() {
                 reg_cnt += 1;
             }
 
-            let mut asm_phase = 0;
             let asm_plain = asm0.clone() + ";" + &asm1;
             let asm_with_sets = "{ r23 = #123; r22 = #443; };".to_owned() + &asm0 + ";" + &asm1;
 
-            for asm in [asm_plain, asm_with_sets] {
+            for (asm_phase, asm) in [asm_plain, asm_with_sets].into_iter().enumerate() {
                 info!("assembling {}", asm);
 
                 let has_sets = asm_phase == 1;
@@ -298,7 +297,7 @@ fn test_all_packet_adjacent() {
                         .get(&crate::SharedStateKey::HexagonPktStart)
                         .unwrap();
 
-                    expected_pkt_start = expected_pkt_start + ins.expected_length as u64;
+                    expected_pkt_start += ins.expected_length as u64;
                     trace!(
                         "asserting that {} == {}",
                         *pkt_start as u64,
@@ -330,7 +329,6 @@ fn test_all_packet_adjacent() {
                 (ins1.verify_fn)(r20, r21, ins1regs);
 
                 tot_assembled += 1;
-                asm_phase += 1;
             }
         }
     }

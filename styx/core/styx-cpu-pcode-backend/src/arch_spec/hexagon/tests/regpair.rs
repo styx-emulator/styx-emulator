@@ -11,7 +11,7 @@ fn verify_regpairs() {
     styx_util::logging::init_logging();
     let re = Regex::new(r"[A-Z]*\d*").unwrap();
     for (k, v) in REGPAIR_MAP.iter() {
-        let regpair_str = hexagon_reg_to_str(&k);
+        let regpair_str = hexagon_reg_to_str(k);
         let reglo_str = hexagon_reg_to_str(&v.1);
         let reghi_str = hexagon_reg_to_str(&v.0);
 
@@ -42,7 +42,7 @@ fn test_all_regpairs() {
         // since the registers are named consistently in ghidra, we can extract out the register pair name used
         // by keystone/llvm
 
-        let regpair_str = hexagon_reg_to_str(&k);
+        let regpair_str = hexagon_reg_to_str(k);
         let regs: Vec<&str> = re.find_iter(&regpair_str).map(|m| m.as_str()).collect();
 
         let keystone_regpair_str = regs[0].to_owned() + ":" + &regs[1][1..];

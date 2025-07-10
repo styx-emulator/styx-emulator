@@ -22,7 +22,7 @@
 // CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-//! Generic top level container for PPC32 registers
+//! Generic top level container for Hexagon registers
 use std::collections::HashMap;
 use std::num::NonZeroUsize;
 use strum::IntoEnumIterator;

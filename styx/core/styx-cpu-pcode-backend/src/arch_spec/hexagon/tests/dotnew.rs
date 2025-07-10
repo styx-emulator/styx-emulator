@@ -177,10 +177,12 @@ fn test_dotnew_basic(
     (cpu, mmu, ev)
 }
 
+type ExtraCheckHandlerFn = Box<dyn Fn(&mut PcodeBackend, bool)>;
+
 struct DotnewGenericTestCase {
     asm: String,
     insns_to_exec: u64,
-    extra_check_handler: Box<dyn Fn(&mut PcodeBackend, bool)>,
+    extra_check_handler: ExtraCheckHandlerFn,
     iclass: u8,
     expected_bytes: usize,
     predicate_type: PredicateType,
@@ -221,7 +223,7 @@ fn test_all_dotnew_class() {
                     .to_owned(),
             insns_to_exec: 3,
             extra_check_handler: Box::new(|_backend: &mut PcodeBackend, _branch_taken: bool| {})
-                as Box<dyn Fn(&mut PcodeBackend, bool) -> ()>,
+                as ExtraCheckHandlerFn,
             iclass: 0b0011,
             expected_bytes: 12,
             predicate_type: PredicateType::Predicate,
