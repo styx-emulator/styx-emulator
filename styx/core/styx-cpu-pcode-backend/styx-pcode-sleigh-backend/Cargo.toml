@@ -19,4 +19,4 @@ vector-map = { workspace = true }
 smallvec = { workspace = true }
 styx-util = { path = "../../styx-util" }
 styx-workspace-hack = { version = "0.1", path = "../../../workspace-hack" }
-log = "0.4.27"
+log = { workspace = true }
