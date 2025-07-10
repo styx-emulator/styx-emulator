@@ -57,6 +57,9 @@ use super::hexagon;
 ///
 /// Each architecture should implement the [ArchPcManager] trait and supply it to the pcode machine.
 #[enum_dispatch(ArchPcManager)]
+// We derive Clone here because the PcManager
+// is saved and restored in context_save and
+// context_restore using .clone().
 #[derive(Debug, Clone)]
 pub enum PcManager {
     #[cfg(feature = "arch_aarch64")]
