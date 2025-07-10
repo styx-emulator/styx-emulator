@@ -132,11 +132,7 @@ impl HexagonGeneratorHelperState {
             .insert(SharedStateKey::HexagonPktStart, next_start_pc as u128);
     }
 
-    fn handle_endloop_set(
-        &mut self,
-        unwrapped_pc: u64,
-        context_opts: &mut SmallVec<[ContextOption; 4]>,
-    ) {
+    fn handle_endloop_set(&mut self, context_opts: &mut SmallVec<[ContextOption; 4]>) {
         if self.pkt_endloop != 0 {
             context_opts.push(ContextOption::HexagonEndloop(self.pkt_endloop));
 
@@ -434,8 +430,7 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                                 self.state.pkt_insns = self.state.pkt_insns + 1;
 
                                 // For some reason, duplexes can end an endloop0
-                                self.state
-                                    .handle_endloop_set(unwrapped_pc, &mut context_opts);
+                                self.state.handle_endloop_set(&mut context_opts);
 
                                 return Ok(context_opts);
                             }
@@ -567,8 +562,7 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                                 // A single instruction packet can't have an endloop
                                 // section 10.6: endloop0 has to have 2 or more instructions
                                 // endloop3 has to have 3 or more.
-                                self.state
-                                    .handle_endloop_set(unwrapped_pc, &mut context_opts);
+                                self.state.handle_endloop_set(&mut context_opts);
                             }
                             // TODO
                             PktLoopParseBits::Other => {
