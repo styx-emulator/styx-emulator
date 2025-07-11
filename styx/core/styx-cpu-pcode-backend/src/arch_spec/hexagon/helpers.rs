@@ -35,6 +35,8 @@ use styx_pcode_translator::ContextOption;
 use styx_processor::cpu::CpuBackendExt;
 use styx_processor::{cpu::CpuBackend, memory::Mmu};
 
+use super::parse_iclass;
+
 // How many insns to fetch to analyze for duplexes?
 // Is trapping easier?
 // this will be used later if there are performance issues with the current solution
@@ -200,6 +202,14 @@ impl HexagonGeneratorHelperState {
 }
 
 impl HexagonGeneratorHelper {
+    fn handle_dotnew_immext(&mut self, insn_data: u32, backend: &mut PcodeBackend) {
+        // I think I need a separate "parse_iclass function"
+        let iclass = parse_iclass(insn_data);
+        let is_immext = iclass == 0b0000;
+        backend
+            .shared_state
+            .insert(SharedStateKey::HexagonCurrentInsnImmext, is_immext as u128);
+    }
     fn handle_dotnew(
         &mut self,
         insn_data: u32,
@@ -486,6 +496,8 @@ impl GeneratorHelp for HexagonGeneratorHelper {
                         let parse_next = PktLoopParseBits::new_from_insn(insn_next);
                         let _parse_next1 = PktLoopParseBits::new_from_insn(insn_next1);
                         let _parse_next2 = PktLoopParseBits::new_from_insn(insn_next2);
+
+                        self.handle_dotnew_immext(insn_data, backend);
 
                         self.state.handle_duplex_immext(
                             parse_next,

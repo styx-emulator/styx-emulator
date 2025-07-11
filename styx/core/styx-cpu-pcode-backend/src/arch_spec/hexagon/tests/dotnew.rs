@@ -22,7 +22,7 @@
 // CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-use crate::arch_spec::hexagon::tests::*;
+use crate::arch_spec::hexagon::{parse_iclass, tests::*};
 use log::info;
 use test_case::test_case;
 
@@ -212,6 +212,580 @@ struct DotnewGenericTestCase {
     predicate_type: PredicateType,
 }
 
+// A dotnew instruction will always be in Slot 0
+// and stores an offset. The offset points to
+// the instruction whose output is the dotnew.
+//
+// The offset ignores nops and immexts.
+//
+// I hope there aren't instructions that produce
+// zero pcodes other than nop or immext
+//
+// We basically want to try all combinations of instructions
+// in terms of offsets and such
+// Dinsn = instruction that sets dotnew
+//
+// {Immext Dinsn nop dotnew}  -
+// {nop Dinsn insn1 dotnew} -
+// {insn Dinsn nop dotnew} -
+// {Immext Dinsn insn1 dotnew} -
+// {nop Dinsn nop dotnew} -
+// {nop Dinsn Immext dotnew} -
+// {insn Dinsn Immext dotnew} -
+//
+// {nop Immext Dinsn dotnew} -
+// {nop insn1 Dinsn dotnew} -
+// {nop nop Dinsn dotnew} -
+// {insn Immext Dinsn dotnew}
+// {Immext insn1 Dinsn dotnew} -
+// {insn1 insn2 Dinsn dotnew} -
+// {insn1 nop Dinsn dotnew} -
+//
+// {Dinsn nop nop dotnew} -
+// {Dinsn nop insn1 dotnew} -
+// {Dinsn insn1 nop dotnew} -
+// {Dinsn Immext insn1 dotnew} -
+// {Dinsn insn1 insn2 dotnew} -
+// {Dinsn insn1 Immext dotnew} -
+// {Dinsn nop Immext dotnew} -
+//
+//
+// {Immext Dinsn dotnew}
+// {nop Dinsn dotnew}
+// {insn1 Dinsn dotnew}
+//
+// {Dinsn nop dotnew}
+// {Dinsn insn1 dotnew}
+// {Dinsn Immext dotnew}
+//
+// {Dinsn dotnew}
+//
+// There are no duplexes with dotnew, as duplexes use the same slot as dotnew
+//
+#[test]
+fn test_dotnew_offset() {
+    styx_util::logging::init_logging();
+
+    let nop = "nop".to_owned();
+    let insn1 = "r7 = add(r6, #0x10)".to_owned();
+    let insn2 = "r5 = add(r4, #0x20)".to_owned();
+    let dinsn = "r9 = r8".to_owned();
+    let dotnew = "memw(r10+#0x0) = r9.new".to_owned();
+
+    let immext_insn1 = "r7 = add(r6, ##0x10)".to_owned();
+    let immext_dinsn = "r9 = add(r8, ##0x0)".to_owned();
+    let immext_dotnew = "memw(r10+##0x0) = r9.new".to_owned();
+
+    let tests = vec![
+        // Case immext_dinsn, nop, dotnew
+        DotnewOffsetTest {
+            asm: vec![immext_dinsn.to_owned(), nop.to_owned(), dotnew.to_owned()],
+            types: vec![
+                DotnewOffsetItype::Immext,
+                DotnewOffsetItype::Dinsn,
+                DotnewOffsetItype::Nop,
+                DotnewOffsetItype::Dotnew,
+            ],
+            has_insn1: false,
+            has_insn2: false,
+        },
+        // Case nop, dinsn, insn1, dotnew
+        DotnewOffsetTest {
+            asm: vec![
+                nop.to_owned(),
+                dinsn.to_owned(),
+                insn1.to_owned(),
+                dotnew.to_owned(),
+            ],
+            types: vec![
+                DotnewOffsetItype::Nop,
+                DotnewOffsetItype::Dinsn,
+                DotnewOffsetItype::Insn1,
+                DotnewOffsetItype::Dotnew,
+            ],
+            has_insn1: true,
+            has_insn2: false,
+        },
+        // Case insn1, dinsn, nop, dotnew
+        DotnewOffsetTest {
+            asm: vec![
+                insn1.to_owned(),
+                dinsn.to_owned(),
+                nop.to_owned(),
+                dotnew.to_owned(),
+            ],
+            types: vec![
+                DotnewOffsetItype::Insn1,
+                DotnewOffsetItype::Dinsn,
+                DotnewOffsetItype::Nop,
+                DotnewOffsetItype::Dotnew,
+            ],
+            has_insn1: true,
+            has_insn2: false,
+        },
+        // Case immext_dinsn, insn1, dotnew
+        DotnewOffsetTest {
+            asm: vec![immext_dinsn.to_owned(), insn1.to_owned(), dotnew.to_owned()],
+            types: vec![
+                DotnewOffsetItype::Immext,
+                DotnewOffsetItype::Dinsn,
+                DotnewOffsetItype::Insn1,
+                DotnewOffsetItype::Dotnew,
+            ],
+            has_insn1: true,
+            has_insn2: false,
+        },
+        // Case nop, dinsn, nop, dotnew
+        DotnewOffsetTest {
+            asm: vec![
+                nop.to_owned(),
+                dinsn.to_owned(),
+                nop.to_owned(),
+                dotnew.to_owned(),
+            ],
+            types: vec![
+                DotnewOffsetItype::Nop,
+                DotnewOffsetItype::Dinsn,
+                DotnewOffsetItype::Nop,
+                DotnewOffsetItype::Dotnew,
+            ],
+            has_insn1: false,
+            has_insn2: false,
+        },
+        // Case nop, dinsn, immext_dotnew
+        DotnewOffsetTest {
+            asm: vec![nop.to_owned(), dinsn.to_owned(), immext_dotnew.to_owned()],
+            types: vec![
+                DotnewOffsetItype::Nop,
+                DotnewOffsetItype::Dinsn,
+                DotnewOffsetItype::Immext,
+                DotnewOffsetItype::Dotnew,
+            ],
+            has_insn1: false,
+            has_insn2: false,
+        },
+        // Case insn1, dinsn, immext_dotnew
+        DotnewOffsetTest {
+            asm: vec![insn1.to_owned(), dinsn.to_owned(), immext_dotnew.to_owned()],
+            types: vec![
+                DotnewOffsetItype::Insn1,
+                DotnewOffsetItype::Dinsn,
+                DotnewOffsetItype::Immext,
+                DotnewOffsetItype::Dotnew,
+            ],
+            has_insn1: true,
+            has_insn2: false,
+        },
+        // Case nop, immext_dinsn, dotnew
+        DotnewOffsetTest {
+            asm: vec![nop.to_owned(), immext_dinsn.to_owned(), dotnew.to_owned()],
+            types: vec![
+                DotnewOffsetItype::Nop,
+                DotnewOffsetItype::Immext,
+                DotnewOffsetItype::Dinsn,
+                DotnewOffsetItype::Dotnew,
+            ],
+            has_insn1: false,
+            has_insn2: false,
+        },
+        // Case nop, insn1, dinsn, dotnew
+        DotnewOffsetTest {
+            asm: vec![
+                nop.to_owned(),
+                insn1.to_owned(),
+                dinsn.to_owned(),
+                dotnew.to_owned(),
+            ],
+            types: vec![
+                DotnewOffsetItype::Nop,
+                DotnewOffsetItype::Insn1,
+                DotnewOffsetItype::Dinsn,
+                DotnewOffsetItype::Dotnew,
+            ],
+            has_insn1: true,
+            has_insn2: false,
+        },
+        // Case nop, nop, dinsn, dotnew
+        DotnewOffsetTest {
+            asm: vec![
+                nop.to_owned(),
+                nop.to_owned(),
+                dinsn.to_owned(),
+                dotnew.to_owned(),
+            ],
+            types: vec![
+                DotnewOffsetItype::Nop,
+                DotnewOffsetItype::Nop,
+                DotnewOffsetItype::Dinsn,
+                DotnewOffsetItype::Dotnew,
+            ],
+            has_insn1: false,
+            has_insn2: false,
+        },
+        // Case insn1, immext_dinsn, dotnew
+        DotnewOffsetTest {
+            asm: vec![insn1.to_owned(), immext_dinsn.to_owned(), dotnew.to_owned()],
+            types: vec![
+                DotnewOffsetItype::Insn1,
+                DotnewOffsetItype::Immext,
+                DotnewOffsetItype::Dinsn,
+                DotnewOffsetItype::Dotnew,
+            ],
+            has_insn1: true,
+            has_insn2: false,
+        },
+        // Case immext_insn1, dinsn, dotnew
+        DotnewOffsetTest {
+            asm: vec![immext_insn1.to_owned(), dinsn.to_owned(), dotnew.to_owned()],
+            types: vec![
+                DotnewOffsetItype::Immext,
+                DotnewOffsetItype::Insn1,
+                DotnewOffsetItype::Dinsn,
+                DotnewOffsetItype::Dotnew,
+            ],
+            has_insn1: false,
+            has_insn2: false,
+        },
+        // Case insn1, insn2, dinsn, dotnew
+        DotnewOffsetTest {
+            asm: vec![
+                insn1.to_owned(),
+                insn2.to_owned(),
+                dinsn.to_owned(),
+                dotnew.to_owned(),
+            ],
+            types: vec![
+                DotnewOffsetItype::Insn1,
+                DotnewOffsetItype::Insn2,
+                DotnewOffsetItype::Dinsn,
+                DotnewOffsetItype::Dotnew,
+            ],
+            has_insn1: true,
+            has_insn2: true,
+        },
+        // Case insn1, nop, dinsn, dotnew
+        DotnewOffsetTest {
+            asm: vec![
+                insn1.to_owned(),
+                nop.to_owned(),
+                dinsn.to_owned(),
+                dotnew.to_owned(),
+            ],
+            types: vec![
+                DotnewOffsetItype::Insn1,
+                DotnewOffsetItype::Nop,
+                DotnewOffsetItype::Dinsn,
+                DotnewOffsetItype::Dotnew,
+            ],
+            has_insn1: true,
+            has_insn2: false,
+        },
+        // Case dinsn, nop, nop, dotnew
+        DotnewOffsetTest {
+            asm: vec![
+                dinsn.to_owned(),
+                nop.to_owned(),
+                nop.to_owned(),
+                dotnew.to_owned(),
+            ],
+            types: vec![
+                DotnewOffsetItype::Dinsn,
+                DotnewOffsetItype::Nop,
+                DotnewOffsetItype::Nop,
+                DotnewOffsetItype::Dotnew,
+            ],
+            has_insn1: false,
+            has_insn2: false,
+        },
+        // Case dinsn, nop, insn1, dotnew
+        DotnewOffsetTest {
+            asm: vec![
+                dinsn.to_owned(),
+                nop.to_owned(),
+                insn1.to_owned(),
+                dotnew.to_owned(),
+            ],
+            types: vec![
+                DotnewOffsetItype::Dinsn,
+                DotnewOffsetItype::Nop,
+                DotnewOffsetItype::Insn1,
+                DotnewOffsetItype::Dotnew,
+            ],
+            has_insn1: true,
+            has_insn2: false,
+        },
+        // Case dinsn, insn1, nop, dotnew
+        DotnewOffsetTest {
+            asm: vec![
+                dinsn.to_owned(),
+                insn1.to_owned(),
+                nop.to_owned(),
+                dotnew.to_owned(),
+            ],
+            types: vec![
+                DotnewOffsetItype::Dinsn,
+                DotnewOffsetItype::Insn1,
+                DotnewOffsetItype::Nop,
+                DotnewOffsetItype::Dotnew,
+            ],
+            has_insn1: true,
+            has_insn2: false,
+        },
+        // Case dinsn, immext_insn1, dotnew
+        DotnewOffsetTest {
+            asm: vec![dinsn.to_owned(), immext_insn1.to_owned(), dotnew.to_owned()],
+            types: vec![
+                DotnewOffsetItype::Dinsn,
+                DotnewOffsetItype::Immext,
+                DotnewOffsetItype::Insn1,
+                DotnewOffsetItype::Dotnew,
+            ],
+            has_insn1: false,
+            has_insn2: false,
+        },
+        // Case dinsn, insn1, insn2, dotnew
+        DotnewOffsetTest {
+            asm: vec![
+                dinsn.to_owned(),
+                insn1.to_owned(),
+                insn2.to_owned(),
+                dotnew.to_owned(),
+            ],
+            types: vec![
+                DotnewOffsetItype::Dinsn,
+                DotnewOffsetItype::Insn1,
+                DotnewOffsetItype::Insn2,
+                DotnewOffsetItype::Dotnew,
+            ],
+            has_insn1: true,
+            has_insn2: true,
+        },
+        // Case dinsn, insn1, immext_dotnew
+        DotnewOffsetTest {
+            asm: vec![dinsn.to_owned(), insn1.to_owned(), immext_dotnew.to_owned()],
+            types: vec![
+                DotnewOffsetItype::Dinsn,
+                DotnewOffsetItype::Insn1,
+                DotnewOffsetItype::Immext,
+                DotnewOffsetItype::Dotnew,
+            ],
+            has_insn1: true,
+            has_insn2: false,
+        },
+        // Case dinsn, nop, immext_dotnew
+        DotnewOffsetTest {
+            asm: vec![dinsn.to_owned(), nop.to_owned(), immext_dotnew.to_owned()],
+            types: vec![
+                DotnewOffsetItype::Dinsn,
+                DotnewOffsetItype::Nop,
+                DotnewOffsetItype::Immext,
+                DotnewOffsetItype::Dotnew,
+            ],
+            has_insn1: false,
+            has_insn2: false,
+        },
+        // Case immext_dinsn, dotnew
+        DotnewOffsetTest {
+            asm: vec![immext_dinsn.to_owned(), dotnew.to_owned()],
+            types: vec![
+                DotnewOffsetItype::Immext,
+                DotnewOffsetItype::Dinsn,
+                DotnewOffsetItype::Dotnew,
+            ],
+            has_insn1: false,
+            has_insn2: false,
+        },
+        // Case nop, dinsn, dotnew
+        DotnewOffsetTest {
+            asm: vec![nop.to_owned(), dinsn.to_owned(), dotnew.to_owned()],
+            types: vec![
+                DotnewOffsetItype::Nop,
+                DotnewOffsetItype::Dinsn,
+                DotnewOffsetItype::Dotnew,
+            ],
+            has_insn1: false,
+            has_insn2: false,
+        },
+        // Case insn1, dinsn, dotnew
+        DotnewOffsetTest {
+            asm: vec![insn1.to_owned(), dinsn.to_owned(), dotnew.to_owned()],
+            types: vec![
+                DotnewOffsetItype::Insn1,
+                DotnewOffsetItype::Dinsn,
+                DotnewOffsetItype::Dotnew,
+            ],
+            has_insn1: true,
+            has_insn2: false,
+        },
+        // Case dinsn, nop, dotnew
+        DotnewOffsetTest {
+            asm: vec![dinsn.to_owned(), nop.to_owned(), dotnew.to_owned()],
+            types: vec![
+                DotnewOffsetItype::Dinsn,
+                DotnewOffsetItype::Nop,
+                DotnewOffsetItype::Dotnew,
+            ],
+            has_insn1: false,
+            has_insn2: false,
+        },
+        // Case dinsn, insn1, dotnew
+        DotnewOffsetTest {
+            asm: vec![dinsn.to_owned(), insn1.to_owned(), dotnew.to_owned()],
+            types: vec![
+                DotnewOffsetItype::Dinsn,
+                DotnewOffsetItype::Insn1,
+                DotnewOffsetItype::Dotnew,
+            ],
+            has_insn1: true,
+            has_insn2: false,
+        },
+        // Case dinsn, immext_dotnew
+        DotnewOffsetTest {
+            asm: vec![dinsn.to_owned(), immext_dotnew.to_owned()],
+            types: vec![
+                DotnewOffsetItype::Dinsn,
+                DotnewOffsetItype::Immext,
+                DotnewOffsetItype::Dotnew,
+            ],
+            has_insn1: false,
+            has_insn2: false,
+        },
+        // Case dinsn, dotnew
+        DotnewOffsetTest {
+            asm: vec![dinsn.to_owned(), dotnew.to_owned()],
+            types: vec![DotnewOffsetItype::Dinsn, DotnewOffsetItype::Dotnew],
+            has_insn1: false,
+            has_insn2: false,
+        },
+    ];
+
+    assert_eq!(tests.len(), 28);
+
+    let init_pc = 0x1000;
+    let mem_start = 0x100;
+    let expected_val = 0x12023488u32;
+    let ks = Keystone::new(
+        keystone_engine::Arch::HEXAGON,
+        keystone_engine::Mode::LITTLE_ENDIAN,
+    )
+    .expect("Could not initialize Keystone engine");
+    let r4val = 262u32;
+    let r6val = 262u32;
+
+    // this is to ensure that stuff is reset properly
+    let generic_tackon_test =
+        "{ r12 = #0x12321231; memw(r10+#4) = r12.new }; { r13 = add(r8, #114); }";
+
+    for test in tests {
+        let asm = "{".to_owned() + &test.asm.join("; ") + "}; " + generic_tackon_test;
+        trace!("disas on asm {}", asm);
+        // compile
+
+        let code = ks.asm(asm, init_pc).unwrap();
+        let (mut cpu, mut mmu, mut ev) = setup_cpu(init_pc, code.bytes);
+        cpu.write_register(HexagonRegister::R4, r4val).unwrap();
+        cpu.write_register(HexagonRegister::R6, r6val).unwrap();
+        cpu.write_register(HexagonRegister::R8, expected_val)
+            .unwrap();
+        cpu.write_register(HexagonRegister::R10, mem_start as u32)
+            .unwrap();
+
+        let mut total_real_insns = 0;
+        for typ in test.types {
+            let report = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+            assert_eq!(
+                report.exit_reason,
+                TargetExitReason::InstructionCountComplete
+            );
+
+            if typ != DotnewOffsetItype::Immext {
+                total_real_insns += 1;
+            }
+
+            let read_real_insns = cpu
+                .shared_state
+                .get(&crate::SharedStateKey::HexagonTrueInsnCount)
+                .unwrap_or(&0);
+
+            assert_eq!(total_real_insns, *read_real_insns);
+
+            trace!("real read insns is {}", read_real_insns);
+
+            if typ != DotnewOffsetItype::Immext {
+                // The mapping is zero-indexed
+                let dest_reg = cpu
+                    .shared_state
+                    .get(&crate::SharedStateKey::HexagonInsnRegDest(
+                        (*read_real_insns as usize) - 1,
+                    ));
+
+                match typ {
+                    DotnewOffsetItype::Insn1 => assert_eq!(*dest_reg.unwrap(), 7),
+                    DotnewOffsetItype::Insn2 => assert_eq!(*dest_reg.unwrap(), 5),
+                    DotnewOffsetItype::Dinsn => assert_eq!(*dest_reg.unwrap(), 9),
+                    _ => assert_eq!(dest_reg, None),
+                }
+            }
+        }
+
+        // Run the generic tackon test
+        // With immext, we expect to start at 0 but won't be set in map
+        // till we get a real instruction. Same applies for checking is_some
+        // We could check the output every time, but it is highly dependent on the previous run,
+        // and is thus complex.
+        let tackon_totals_results = [total_real_insns, 1, 2, 1];
+        for result in tackon_totals_results.iter() {
+            let report = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+            assert_eq!(
+                report.exit_reason,
+                TargetExitReason::InstructionCountComplete
+            );
+            let total_insns = cpu
+                .shared_state
+                .get(&crate::SharedStateKey::HexagonTrueInsnCount)
+                .unwrap();
+            assert_eq!(*total_insns, *result);
+        }
+
+        let val = mmu.read_u32_le_virt_data(mem_start).unwrap();
+        let val4 = mmu.read_u32_le_virt_data(mem_start + 4u64).unwrap();
+
+        assert_eq!(val, expected_val);
+        assert_eq!(val4, 0x12321231);
+
+        if test.has_insn1 {
+            let r7 = cpu.read_register::<u32>(HexagonRegister::R7).unwrap();
+            assert_eq!(r7, r6val + 0x10)
+        }
+        if test.has_insn2 {
+            let r5 = cpu.read_register::<u32>(HexagonRegister::R5).unwrap();
+            assert_eq!(r5, r4val + 0x20)
+        }
+
+        // tackon
+        let r13 = cpu.read_register::<u32>(HexagonRegister::R13).unwrap();
+        assert_eq!(r13, expected_val + 114);
+    }
+}
+
+#[derive(Debug, Hash, Eq, PartialEq, Clone)]
+enum DotnewOffsetItype {
+    Immext,
+    Dinsn,
+    Insn1,
+    Insn2,
+    Dotnew,
+    Nop,
+}
+
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+struct DotnewOffsetTest {
+    asm: Vec<String>,
+    types: Vec<DotnewOffsetItype>,
+    has_insn1: bool,
+    has_insn2: bool,
+}
+
 #[derive(Copy, Clone, PartialEq, Debug)]
 enum PredicateType {
     NegatedPredicate,
@@ -360,7 +934,7 @@ fn test_all_dotnew_class() {
                     .expect("Couldn't extract last insn");
 
                 let insn = u32::from_le_bytes(last_4);
-                let iclass = (insn >> 28) & 0xf;
+                let iclass = parse_iclass(insn);
 
                 assert_eq!(iclass, case.iclass as u32);
 

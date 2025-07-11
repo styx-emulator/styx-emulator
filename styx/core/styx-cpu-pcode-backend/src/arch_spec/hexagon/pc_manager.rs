@@ -44,6 +44,7 @@ pub struct StandardPcManager {
     last_bytes_consumed: u64,
     // This ignores immext and such
     true_insn_count: usize,
+    reset_insn_count: bool,
 }
 
 impl StandardPcManager {
@@ -211,42 +212,58 @@ impl ArchPcManager for StandardPcManager {
             _ => false,
         };
 
+        if self.reset_insn_count {
+            trace!("resetting insn count at beginning of first packet");
+            self.true_insn_count = 0;
+            self.reset_insn_count = false;
+        }
+
         if new_pkt {
             trace!("resetting internal pc set during pkt");
             self.internal_pc_set_during_packet = false;
             self.new_internal_pc = 0;
-            self.true_insn_count = 0;
+            // This should only reset at the start of the next packet, not now
+            self.reset_insn_count = true;
         }
 
-        if total_pcodes > 0 {
-            trace!("dotnew: inside a real instruction");
-            let mut first_general_reg = 0;
+        if let Some(0) = backend
+            .shared_state
+            .get(&SharedStateKey::HexagonCurrentInsnImmext)
+        {
+            trace!("dotnew: inside a non-immext instruction");
+            let mut first_general_reg = None;
             for i in regs_written {
                 // TODO: make this more reliable;
                 if *i <= 28 * 4 {
-                    first_general_reg = *i / 4;
+                    first_general_reg = Some(*i / 4);
                 }
             }
-            backend.shared_state.insert(
-                SharedStateKey::HexagonInsnRegDest(self.true_insn_count),
-                first_general_reg as u128,
-            );
+
+            // Only insert if there was actually a register
+            if let Some(first_general_reg) = first_general_reg {
+                backend.shared_state.insert(
+                    SharedStateKey::HexagonInsnRegDest(self.true_insn_count),
+                    first_general_reg as u128,
+                );
+            }
+
             trace!(
-                "dotnew: wrote {} -> {}",
+                "dotnew: wrote {} -> {:?}",
                 self.true_insn_count,
                 first_general_reg
             );
             self.true_insn_count += 1;
             trace!(
-                "true instruction count is upped to {}",
+                "dotnew: true instruction count is upped to {}",
                 self.true_insn_count
             );
+
             backend.shared_state.insert(
                 SharedStateKey::HexagonTrueInsnCount,
                 self.true_insn_count as u128,
             );
 
-            trace!("dotnew: first general reg is {}", first_general_reg);
+            trace!("dotnew: first general reg is {:?}", first_general_reg);
         }
 
         Ok(())

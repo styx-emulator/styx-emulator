@@ -24,9 +24,11 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 use log::trace;
 
+use crate::arch_spec::hexagon::parse_iclass;
+
 // This may require some extra stuff
 pub fn parse_dotnew(insn: u32) -> Option<u32> {
-    let iclass = (insn >> 28) & 0xf;
+    let iclass = parse_iclass(insn);
 
     // want bits 27 to 21
     let insn_0011_type = (insn >> 21) & 0b1111111;

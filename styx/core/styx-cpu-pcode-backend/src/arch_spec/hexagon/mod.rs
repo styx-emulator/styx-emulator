@@ -44,6 +44,10 @@ pub use pc_manager::StandardPcManager;
 use pkt_semantics::NewReg;
 use styx_pcode_translator::sla::{self, HexagonUserOps};
 
+fn parse_iclass(insn: u32) -> u32 {
+    (insn >> 28) & 0xf
+}
+
 // Adapted from PPC
 pub fn build() -> ArchSpecBuilder<sla::Hexagon> {
     let mut spec = ArchSpecBuilder::default();
