@@ -109,7 +109,7 @@ resolver = "2"
 
 [workspace.package]
 edition = "2021"
-rust-version = "1.77.1"
+rust-version = "1.88.0"
 version = "1.2.0"
 
 [workspace.lints.rust]
