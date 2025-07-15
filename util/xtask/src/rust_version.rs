@@ -226,7 +226,7 @@ fn update_rust_version(target: &str, check: bool, file_path: String) -> anyhow::
         // we are not checking, we are "doing"
         if !check {
             // write `.rust-version`
-            fs::write(file_path.as_str(), format!("{}\n", target))?;
+            fs::write(file_path.as_str(), format!("{target}\n"))?;
         }
 
         Ok(true)
@@ -242,7 +242,7 @@ mod tests {
     use super::*;
 
     /// Update this variable after updating rust
-    static LIVE_RUST_VERSION: &str = "1.82.0"; // update me
+    static LIVE_RUST_VERSION: &str = "1.88.0"; // update me
 
     // This test will fail when we update the rust version,
     // that means its working :smile:

@@ -41,4 +41,4 @@ jobs:
     - name: Run cargo-udeps
       shell: bash
       run: |
-        cargo +nightly udeps --all --all-targets --exclude styx-workspace-hack
+        cargo +nightly-2025-07-10 udeps --all --all-targets --exclude styx-workspace-hack
