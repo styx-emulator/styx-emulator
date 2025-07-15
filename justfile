@@ -21,6 +21,8 @@ GENERATED_CRATES := `find ./styx/generated -mindepth 1 -maxdepth 1 -type d -name
 EXAMPLE_CRATES := `find ./examples -mindepth 1 -maxdepth 1 -type d -exec test -e "{}/Cargo.toml" \; -print -prune | xargs -n1 basename`
 INCUBATION_CRATES := `find ./incubation -mindepth 1 -maxdepth 1 -type d -exec test -e "{}/Cargo.toml" \; -print -prune | xargs -n1 basename`
 DB_CONTAINER_CRATES := `echo "styx-dbutil styx-dbmodel styx-migration"`
+# useful to exclude from tests which cause errors when run
+MACRO_CRATES := `echo "styx-macros styx-macros-args typhunix-macros"`
 SRC_CRATES := `find ./styx/core -mindepth 1 -maxdepth 1 -type d -exec test -e "{}/Cargo.toml" \; -print -prune | xargs -n1 basename`
 
 # crates to ignore for tests
@@ -47,7 +49,7 @@ license-check:
 full-cargo-test: cargo-test cargo-doc-test cargo-test-bindings
 cargo-test: cargo-test-deps
     #!/bin/bash -e
-    IGNORE_CRATES=`a=({{ DB_CONTAINER_CRATES }}); echo "${a[@]/#/--exclude }"`
+    IGNORE_CRATES=`a=({{ DB_CONTAINER_CRATES }} {{ MACRO_CRATES }}); echo "${a[@]/#/--exclude }"`
     cargo nextest run --workspace --lib --bins --tests $IGNORE_CRATES # no benches
 
 cargo-test-bindings:
