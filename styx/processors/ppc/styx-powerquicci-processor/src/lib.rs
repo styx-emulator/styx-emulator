@@ -90,7 +90,6 @@ pub mod utopia;
 /// To account for this variety, the [`Mpc8xxVariants`] are
 /// used on initialization to properly configure the
 /// processor tree.
-
 pub struct Mpc8xxBuilder {
     family_variant: Mpc8xxVariants,
     meta_variant: ArchVariant,
@@ -228,7 +227,7 @@ mod tests {
     #[allow(unused_macros)]
     macro_rules! mpc8xx_plugin_integration {
         // module name, enum variant
-        ($name:ident, $type_name:expr) => {
+        ($name:ident, $type_name:expr_2021) => {
             mod $name {
                 use super::*;
 

@@ -41,13 +41,16 @@ use tracing::info;
 /// Sets the environment log level to `info` by force, if it is not already
 /// set to something reasonable to view output from the example emulation
 fn set_env_log_info() {
-    env::set_var(
-        "RUST_LOG",
-        match env::var("RUST_LOG") {
-            Ok(v) => v,
-            Err(_) => "info".to_string(),
-        },
-    );
+    // TODO: Audit that the environment access only happens in single-threaded code.
+    unsafe {
+        env::set_var(
+            "RUST_LOG",
+            match env::var("RUST_LOG") {
+                Ok(v) => v,
+                Err(_) => "info".to_string(),
+            },
+        )
+    };
 }
 
 /// path to demo firmware
@@ -80,7 +83,7 @@ fn pre_fuzzing_setup(proc: &mut ProcessorCore) {
         // give a couple of seconds to make sure emulator gets setup
         thread::sleep(Duration::from_secs(2));
 
-        println!("waiting for {} ...", sock_addr);
+        println!("waiting for {sock_addr} ...");
         loop {
             match TcpStream::connect(&sock_addr) {
                 Ok(_) => break,
@@ -93,7 +96,7 @@ fn pre_fuzzing_setup(proc: &mut ProcessorCore) {
         println!("client created");
         let data = client.recv(7, Some(Duration::from_secs(1)));
 
-        println!("recv: {:?}", data);
+        println!("recv: {data:?}");
         println!("client sending test data");
         client.send("0000\n".as_bytes().to_vec());
     });
@@ -105,10 +108,7 @@ fn pre_fuzzing_setup(proc: &mut ProcessorCore) {
             .unwrap();
         // something is broken or the host requested a stop
         if execution_report.exit_reason.fatal() {
-            panic!(
-                "emulation failed to reach fuzzer start address: {:?}",
-                execution_report
-            );
+            panic!("emulation failed to reach fuzzer start address: {execution_report:?}");
         }
         if execution_report.exit_reason.is_stop_request() {
             println!("Reached end of fuzz-case seed test");

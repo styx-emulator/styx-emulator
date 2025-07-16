@@ -900,7 +900,7 @@ fn fmt_frac_16(val: u16, signed: bool) -> f64 {
             acc -= if (val & 0x8000) != 0 { 1.0 } else { 0.0 };
         } else {
             acc += if (val & (1 << (15 - x))) != 0 {
-                f64::powf(2.0, ((if signed { x } else { x + 1 }) as f64) * -1.0)
+                f64::powf(2.0, -((if signed { x } else { x + 1 }) as f64))
             } else {
                 0.0
             }
@@ -922,7 +922,7 @@ fn fmt_frac_32(val: u32, signed: bool) -> f64 {
             acc -= if (val & 0x80000000) != 0 { 1.0 } else { 0.0 };
         } else {
             acc += if (val & (1 << (31 - x))) != 0 {
-                f64::powf(2.0, ((if signed { x } else { x + 1 }) as f64) * -1.0)
+                f64::powf(2.0, -((if signed { x } else { x + 1 }) as f64))
             } else {
                 0.0
             }
@@ -1394,7 +1394,6 @@ fn mac_mul(op1: u16, op2: u16, mul_kind: &MulKind, mul_mode: &MulMode) -> Option
 ///     0x3c4ccad0 (hex),
 ///     0.471093513071537 (signed),
 ///     0.2355467565357685 (unsigned)
-
 #[allow(clippy::too_many_arguments)]
 fn debug_mac_print(
     backend: &mut PcodeBackend,
@@ -1458,7 +1457,7 @@ fn debug_mac_print(
         PassthroughMode::PlusEqual => eprint!(" += "),
         PassthroughMode::MinusEqual => eprint!(" -= "),
     };
-    eprint!("MAC({:#06x}, {:#06x}) ", src1_value, src2_value);
+    eprint!("MAC({src1_value:#06x}, {src2_value:#06x}) ");
     match mul_mode {
         MulMode::Single => (),
         MulMode::Mixed => eprint!("(M) "),

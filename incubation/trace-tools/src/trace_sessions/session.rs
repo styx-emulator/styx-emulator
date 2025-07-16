@@ -111,12 +111,12 @@ impl Session {
             pid,
             *raw_event_limits,
             mem_range,
-            Some(&format!("/tmp/ptrace/{}", session_id)),
+            Some(&format!("/tmp/ptrace/{session_id}")),
             &symbol_search_options,
         )
         .await
         .map_err(|e| {
-            let msg = format!("failed to constrcut EmulationObserver: {}", e);
+            let msg = format!("failed to constrcut EmulationObserver: {e}");
             debug!("{msg}");
             service_err(&msg)
         })?;
@@ -260,7 +260,7 @@ impl Session {
 
         // macro to reduce code tedium and mistakes
         macro_rules! send_response {
-            ($TX: ident, $S: expr, $F: ident, $V:expr) => {
+            ($TX: ident, $S: expr_2021, $F: ident, $V:expr_2021) => {
                 $TX.send(Ok(StartTraceAppSessionResponse {
                     session_id: $S,
                     $F: $V,
@@ -405,6 +405,6 @@ impl Display for Session {
             self.created_time,
             self.age()
         ));
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }

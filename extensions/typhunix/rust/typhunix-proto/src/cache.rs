@@ -154,10 +154,7 @@ impl SymbolCache {
             }
         }
         if audit {
-            println!(
-                "AUDIT: Symbol data (pass one, before correlate), total={}",
-                count
-            );
+            println!("AUDIT: Symbol data (pass one, before correlate), total={count}");
             println!("AUDIT:   - {:20} {}", "Functions:", functions.len());
             println!("AUDIT:   - {:20} {}", "Size < 0:", sz_lt0.len());
             println!("AUDIT:   - {:20} {}", "Size == 0:", sz_eq0.len());
@@ -179,7 +176,7 @@ impl SymbolCache {
             println!("AUDIT: Un-Correlated Symbol Count: {}", bad_sym_dt.len());
             println!("AUDIT:   Symbols with no data type:");
             for s in bad_sym_dt.iter() {
-                println!("AUDIT   {}", s);
+                println!("AUDIT   {s}");
             }
         }
 
@@ -321,7 +318,7 @@ impl From<(&Program, Vec<Symbol>, Vec<DataType>)> for SymbolCache {
 }
 
 fn grpc_wrapped(msg: &str) -> GrpcStatus {
-    GrpcStatus::new(tonic::Code::Unknown, msg)
+    tonic::Status::new(tonic::Code::Unknown, msg)
 }
 
 /// Create / return a [SymbolCache] for the given program by querying typhunix
@@ -331,9 +328,9 @@ pub async fn symbol_cache_from_server(
     program_ident: ProgramIdentifier,
 ) -> Result<Option<SymbolCache>, GrpcStatus> {
     let server_url = std::env::var("TYPHUNIX_URL").map_err(|e| {
-        GrpcStatus::new(
+        tonic::Status::new(
             Code::Unknown,
-            format!("TYPHUNIX_URL variable not set: {:?}", e),
+            format!("TYPHUNIX_URL variable not set: {e:?}"),
         )
     })?;
 

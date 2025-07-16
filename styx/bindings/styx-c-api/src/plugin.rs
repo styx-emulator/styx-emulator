@@ -28,12 +28,12 @@ crate::data::opaque_pointer! {
     pub struct StyxPlugin(Box<dyn styx_emulator::core::plugins::UninitPlugin>)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn StyxPlugin_free(ptr: *mut StyxPlugin) {
     StyxPlugin::free(ptr)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn StyxPlugin_StyxTracePlugin_default(out: *mut StyxPlugin) -> StyxFFIErrorPtr {
     crate::try_out(out, || {
         let out = styx_emulator::plugins::styx_trace::StyxTracePlugin::default();
@@ -41,7 +41,7 @@ pub extern "C" fn StyxPlugin_StyxTracePlugin_default(out: *mut StyxPlugin) -> St
     })
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn StyxPlugin_ProcessorTracingPlugin_default(
     out: *mut StyxPlugin,
 ) -> StyxFFIErrorPtr {

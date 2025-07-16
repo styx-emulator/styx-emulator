@@ -22,7 +22,8 @@
 // CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
+// TODO update tonic when available https://github.com/hyperium/tonic/issues/2253
+#![allow(clippy::result_large_err)]
 //! SessionManager for TraceApp
 
 use super::{oob_pri_queue::InboundOobRequests, session::Session};
@@ -80,13 +81,13 @@ pub struct SessionManager {
     pub inbound_oob_requests: InboundOobRequests,
 }
 macro_rules! pdebug {
-    ($prefix:expr, $msg:expr, $($arg:tt)*) => {
+    ($prefix:expr_2021, $msg:expr_2021, $($arg:tt)*) => {
         debug!("{}: {}: {}", $prefix, $msg, format!("{}", $($arg)*));
     }
 }
 
 macro_rules! pinfo {
-    ($prefix:expr, $msg:expr, $($arg:tt)*) => {
+    ($prefix:expr_2021, $msg:expr_2021, $($arg:tt)*) => {
         info!("{}: {}: {}", $prefix, $msg, format!("{}", $($arg)*));
     }
 }
@@ -128,7 +129,7 @@ impl SessionManager {
         let arc_running = self.running_sessions();
         let mut running_sessions = arc_running.lock().unwrap();
         if let Some(session) = running_sessions.get_mut(session_id) {
-            if let Some(ref mut md) = &mut session.metadata {
+            if let Some(md) = &mut session.metadata {
                 pdebug!(
                     "set_state",
                     session_id,
@@ -142,7 +143,7 @@ impl SessionManager {
         let arc_idle = self.idle_sessions();
         let mut idle_sessions = arc_idle.lock().unwrap();
         if let Some(session) = idle_sessions.get_mut(session_id) {
-            if let Some(ref mut md) = &mut session.metadata {
+            if let Some(md) = &mut session.metadata {
                 pdebug!(
                     "set_state",
                     session_id,
@@ -209,7 +210,7 @@ impl SessionManager {
         if let Some(session) = sessions.get(session_id) {
             Ok(session.mode())
         } else {
-            Err(service_err(&format!("No session: {}", session_id)))
+            Err(service_err(&format!("No session: {session_id}")))
         }
     }
 
@@ -218,7 +219,7 @@ impl SessionManager {
         if let Some(session) = sessions.get(session_id) {
             Ok(session.id())
         } else {
-            Err(service_err(&format!("No session: {}", session_id)))
+            Err(service_err(&format!("No session: {session_id}")))
         }
     }
 
@@ -227,10 +228,7 @@ impl SessionManager {
         if let Some(token) = self.get_token(&session_id) {
             Ok(token)
         } else {
-            Err(service_err(&format!(
-                "No token for session: {}",
-                session_id
-            )))
+            Err(service_err(&format!("No token for session: {session_id}")))
         }
     }
 
@@ -255,7 +253,7 @@ impl SessionManager {
 
     pub async fn debug_session_lists(&self) {
         macro_rules! dbg_map {
-            ($Prefix:expr, $Var: expr) => {
+            ($Prefix:expr_2021, $Var: expr_2021) => {
                 let _s = $Var
                     .lock()
                     .unwrap()
@@ -266,7 +264,7 @@ impl SessionManager {
             };
         }
         macro_rules! dbg_str_vec {
-            ($Prefix:expr, $Vec:expr) => {
+            ($Prefix:expr_2021, $Vec:expr_2021) => {
                 debug!("{}({}): {}", $Prefix, $Vec.len(), $Vec.join(", "))
             };
         }

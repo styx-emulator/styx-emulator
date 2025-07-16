@@ -95,7 +95,7 @@ pub fn register_search(
 
 /// Defines a `static ImmrRegisterDescriptor` type
 macro_rules! immr_registers {
-    ($($abrev:expr, $name:expr, $offset:expr, $size:expr);* $(;)?) => {
+    ($($abrev:expr_2021, $name:expr_2021, $offset:expr_2021, $size:expr_2021);* $(;)?) => {
         paste! {
             pub static IMMR_REGISTERS: &[&'static ImmrRegisterDescriptor] = &[$( &[<$abrev RegisterDesc>] ),* ];
         }
@@ -1454,8 +1454,7 @@ mod tests {
         for i in range {
             assert!(
                 region_contains(i, &registers),
-                "IMMR offset `{0}` ({0:#x}) is not contained in a register",
-                i
+                "IMMR offset `{i}` ({i:#x}) is not contained in a register"
             );
         }
 

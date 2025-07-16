@@ -112,7 +112,7 @@ impl From<uc_error> for StyxMemoryError {
         match value {
             uc_error::EXCEPTION => StyxMemoryError::FFIFailure("Generic Exception".into()),
             uc_error::ARG => StyxMemoryError::FFIFailure("Bad Arguments".into()),
-            _ => StyxMemoryError::FFIFailure(format!("Unicorn Error: {:?}", value)),
+            _ => StyxMemoryError::FFIFailure(format!("Unicorn Error: {value:?}")),
         }
     }
 }

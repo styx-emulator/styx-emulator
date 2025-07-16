@@ -45,14 +45,13 @@ fn gdb_tests_builder() -> ProcessorBuilder<'static> {
         - !FileRaw
             # gdb_core_test_suite requires that the file be loaded at 0x0.
             base: 0x0
-            file: {}
+            file: {test_bin_path}
             perms: !AllowAll
         - !RegisterImmediate
             # adjusted start value, address of _start when based at 0x0
             register: pc
             value: 0x20c4
-"#,
-        test_bin_path
+"#
     );
     build_raw()
         .with_loader(ParameterizedLoader)

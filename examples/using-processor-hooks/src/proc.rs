@@ -36,13 +36,16 @@ use tracing::info;
 /// Sets the environment log level to `info` by force, if it is not already
 /// set to something reasonable to view output from the example emulation
 fn set_env_log_info() {
-    env::set_var(
-        "RUST_LOG",
-        match env::var("RUST_LOG") {
-            Ok(v) => v,
-            Err(_) => "info".to_string(),
-        },
-    );
+    // TODO: Audit that the environment access only happens in single-threaded code.
+    unsafe {
+        env::set_var(
+            "RUST_LOG",
+            match env::var("RUST_LOG") {
+                Ok(v) => v,
+                Err(_) => "info".to_string(),
+            },
+        )
+    };
 }
 
 /// path to demo firmware
@@ -120,7 +123,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("initial PC: 0x{:x}", proc.core.cpu.pc().unwrap());
     let exit = proc.run(Forever);
-    println!("{:?}", exit);
+    println!("{exit:?}");
 
     Ok(())
 }

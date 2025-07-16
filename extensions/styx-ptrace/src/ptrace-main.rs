@@ -313,11 +313,11 @@ async fn handle_signals(mut signals: Signals, cancel_token: CancellationToken, _
             {
                 RESOURCES.set_killed();
                 let siginfo = match signal {
-                    SIGHUP => format!("SIGHUP: {}", signal),
-                    SIGTERM => format!("SIGTERM: {}", signal),
-                    SIGINT => format!("SIGINT: {}", signal),
-                    SIGQUIT => format!("SIGQUIT: {}", signal),
-                    _ => format!("UNKNOWN-SIGNAL: {}", signal),
+                    SIGHUP => format!("SIGHUP: {signal}"),
+                    SIGTERM => format!("SIGTERM: {signal}"),
+                    SIGINT => format!("SIGINT: {signal}"),
+                    SIGQUIT => format!("SIGQUIT: {signal}"),
+                    _ => format!("UNKNOWN-SIGNAL: {signal}"),
                 };
                 debug!("ptrace caught signal {siginfo}, cancel threads ...");
                 cancel_token.cancel();
@@ -354,7 +354,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         Command::FromYAML(ref args) => {
             if let Some(ref yaml_file) = args.yaml_file {
                 let cli_emu_args = yaml_from_file(yaml_file).await?;
-                if let Err(e) = emulate_min(
+                match emulate_min(
                     &app_args.clone(),
                     &cli_emu_args,
                     &raw_event_limit_args,
@@ -362,15 +362,18 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 )
                 .await
                 {
-                    eprintln!("emulate min error: {e}");
-                } else {
-                    eprintln!("emulate min error: OK");
+                    Err(e) => {
+                        eprintln!("emulate min error: {e}");
+                    }
+                    _ => {
+                        eprintln!("emulate min error: OK");
+                    }
                 }
             }
         }
 
         Command::EmulateMin(ref emu_args) => {
-            if let Err(e) = emulate_min(
+            match emulate_min(
                 &app_args.clone(),
                 emu_args,
                 &raw_event_limit_args,
@@ -378,14 +381,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
             )
             .await
             {
-                eprintln!("emulate min error: {e}");
-            } else {
-                eprintln!("emulate min error: OK");
+                Err(e) => {
+                    eprintln!("emulate min error: {e}");
+                }
+                _ => {
+                    eprintln!("emulate min error: OK");
+                }
             }
         }
 
         Command::Launch(ref emu_args) => {
-            if let Err(e) = launch(
+            match launch(
                 &app_args.clone(),
                 emu_args,
                 &raw_event_limit_args,
@@ -393,14 +399,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
             )
             .await
             {
-                eprintln!("launch: error: {e}");
-            } else {
-                eprintln!("launch: OK");
+                Err(e) => {
+                    eprintln!("launch: error: {e}");
+                }
+                _ => {
+                    eprintln!("launch: OK");
+                }
             }
         }
 
         Command::Emulate(ref emu_args) => {
-            if let Err(e) = emulate_full(
+            match emulate_full(
                 &app_args.clone(),
                 emu_args,
                 &raw_event_limit_args,
@@ -408,16 +417,19 @@ async fn main() -> Result<(), Box<dyn Error>> {
             )
             .await
             {
-                eprintln!("launch: error: {e}");
-            } else {
-                eprintln!("launch: OK");
+                Err(e) => {
+                    eprintln!("launch: error: {e}");
+                }
+                _ => {
+                    eprintln!("launch: OK");
+                }
             }
         }
 
         Command::Raw(ref raw_args) => {
             let cancel_token = cancel_token.clone();
 
-            if let Err(e) = analyze_from_file(
+            match analyze_from_file(
                 EventFileType::Raw,
                 raw_args,
                 &app_args.clone(),
@@ -426,9 +438,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
             )
             .await
             {
-                eprintln!("analyze_from_file: error {e}")
-            } else {
-                eprintln!("analyze_from_file: OK")
+                Err(e) => {
+                    eprintln!("analyze_from_file: error {e}")
+                }
+                _ => {
+                    eprintln!("analyze_from_file: OK")
+                }
             }
         }
 
@@ -534,7 +549,7 @@ async fn make_observer(
     )
     .await
     .map_err(|e| {
-        ApplicationError::InvalidRequest(format!("Error constructing EmulationObserver: {}", e))
+        ApplicationError::InvalidRequest(format!("Error constructing EmulationObserver: {e}"))
     })?;
 
     observer.align_variables(regex, false);
@@ -556,7 +571,7 @@ pub async fn emulate_min(
     let mut cli = SingleEmulationServiceClient::connect(service_meta.url()).await?;
     let processor_info = cli.info(Request::new(Empty::default())).await?.into_inner();
     let inpath = service_meta.trace_path.clone();
-    eprintln!("{:?}", processor_info);
+    eprintln!("{processor_info:?}");
     {
         RESOURCES.pids.lock()?.push(service_meta);
     }
@@ -595,7 +610,7 @@ pub async fn launch(
     let mut cli = SingleEmulationServiceClient::connect(service_meta.url()).await?;
     let processor_info = cli.info(Request::new(Empty::default())).await?.into_inner();
     // let inpath = service_meta.trace_path.clone();
-    eprintln!("{:?}", processor_info);
+    eprintln!("{processor_info:?}");
     {
         RESOURCES.pids.lock()?.push(service_meta);
     }
@@ -674,7 +689,7 @@ async fn emulate_full(
 
     while sid.is_none() {
         if let Ok(Some(session_id)) = timeout(Duration::from_secs(1), rx.recv()).await {
-            println!("SESSION_ID={}", session_id);
+            println!("SESSION_ID={session_id}");
             sid = Some(session_id.clone());
         }
         if start_future.is_finished() || ct.is_cancelled() {
@@ -701,20 +716,20 @@ async fn emulate_full(
                 styx_emulator::grpc::utils::EmulationState::Running => {
                     eprintln!("=> Stopping {} ...", target.as_str_name());
                     if let Err(e) = traceapp_service::cli_util::stop(&url.clone(), v).await {
-                        eprintln!("Failed to stop traceapp session: {}", e);
+                        eprintln!("Failed to stop traceapp session: {e}");
                     }
                     eprintln!("=> Dropping {} ...", target.as_str_name());
                     if let Err(e) = traceapp_service::cli_util::disconnect(&url.clone(), v).await {
-                        eprintln!("Failed to drop traceapp session: {}", e);
+                        eprintln!("Failed to drop traceapp session: {e}");
                     }
                 }
                 styx_emulator::grpc::utils::EmulationState::Stopped => {
                     eprintln!("=> Dropping {} ...", target.as_str_name());
                     if let Err(e) = traceapp_service::cli_util::disconnect(&url.clone(), v).await {
-                        eprintln!("Failed to drop traceapp session: {}", e);
+                        eprintln!("Failed to drop traceapp session: {e}");
                     }
                 }
-                _ => eprintln!("tracapp session in unexpected state: {:?}", v),
+                _ => eprintln!("tracapp session in unexpected state: {v:?}"),
             },
             _ => eprintln!("Could not determine session id to stop/drop"),
         }
@@ -722,10 +737,10 @@ async fn emulate_full(
 
     let result_string = match start_future.await? {
         Ok(result) => {
-            format!("Start task result: (Ok) {:?}", result)
+            format!("Start task result: (Ok) {result:?}")
         }
         Err(e) => {
-            format!("Start task result: (Failed) {:?}", e)
+            format!("Start task result: (Failed) {e:?}")
         }
     };
     println!("Result: {result_string}");

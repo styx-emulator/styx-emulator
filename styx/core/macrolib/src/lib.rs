@@ -69,7 +69,7 @@ pub fn derive_clap(item: TokenStream) -> TokenStream {
     let vis = input.vis;
     let ident = input.ident;
 
-    PrintDebug::debugify(&format!("derive_clap: item={}", ident));
+    PrintDebug::debugify(&format!("derive_clap: item={ident}"));
 
     match data {
         // struct / proto message
@@ -83,7 +83,7 @@ pub fn derive_clap(item: TokenStream) -> TokenStream {
             let clap_flatten_attr: Attribute = parse_quote! {#[clap(flatten)]};
             let input_item_name = ident.to_string();
 
-            let field_vec = if let syn::Fields::Named(ref flds) = &fields {
+            let field_vec = if let syn::Fields::Named(flds) = &fields {
                 flds.named.iter().cloned().collect::<Vec<syn::Field>>()
             } else {
                 vec![]
@@ -123,14 +123,14 @@ pub fn derive_clap(item: TokenStream) -> TokenStream {
                     ArgType::Unhandled(arg) => {
                         panic!(
                             "{}",
-                            format!("Unhandled arg for clap: {} {:?}", input_item_name, arg)
+                            format!("Unhandled arg for clap: {input_item_name} {arg:?}")
                         );
                     }
                 }
             }
 
             if debug::is_dbg() {
-                PrintDebug::debugify(&format!("Updated Fields => {}", input_item_name));
+                PrintDebug::debugify(&format!("Updated Fields => {input_item_name}"));
                 let new_fields_string = new_fields
                     .iter()
                     .map(|nf| format!("\n{}", PrintDebug::field_to_string(&nf.field)))
@@ -376,7 +376,7 @@ impl ClapPbHelper {
                 let in_field = in_field.clone();
                 let syn_path = parse_single_path(in_field.ty.to_token_stream());
                 let tpath = path_to_string(&syn_path);
-                PrintDebug::debugify(&format!("tpath: {}", tpath));
+                PrintDebug::debugify(&format!("tpath: {tpath}"));
                 if tpath.starts_with(PROST_OPTION_STR) {
                     let field_name = in_field.ident;
                     let attrs = in_field.attrs;
@@ -392,14 +392,17 @@ impl ClapPbHelper {
                         #(#attrs)*
                         #vis #field_name : Option<#base_type_ident>
                     };
-                    if let Ok(new_field) = syn::Field::parse_named.parse2(nfts.clone()) {
-                        PrintDebug::debugify(&format!(
-                            "\nWriting new field:\n    =>{:?}\n---",
-                            nfts.to_string()
-                        ));
-                        new_field
-                    } else {
-                        panic!("Could not re-write the field");
+                    match syn::Field::parse_named.parse2(nfts.clone()) {
+                        Ok(new_field) => {
+                            PrintDebug::debugify(&format!(
+                                "\nWriting new field:\n    =>{:?}\n---",
+                                nfts.to_string()
+                            ));
+                            new_field
+                        }
+                        _ => {
+                            panic!("Could not re-write the field");
+                        }
                     }
                 } else {
                     in_field
@@ -470,7 +473,7 @@ pub fn derive_styx_app_args(item: TokenStream) -> TokenStream {
     let vis = input.vis;
     let ident = input.ident;
 
-    PrintDebug::debugify(&format!("derive_clap: item={}", ident));
+    PrintDebug::debugify(&format!("derive_clap: item={ident}"));
 
     match data {
         // struct / proto message
@@ -479,7 +482,7 @@ pub fn derive_styx_app_args(item: TokenStream) -> TokenStream {
             fields,
             semi_token,
         }) => {
-            let new_field_vec = if let syn::Fields::Named(ref flds) = &fields {
+            let new_field_vec = if let syn::Fields::Named(flds) = &fields {
                 flds.named.iter().cloned().collect::<Vec<syn::Field>>()
             } else {
                 vec![]
@@ -520,7 +523,7 @@ pub fn derive_styx_app_args(item: TokenStream) -> TokenStream {
                     fields,
                     semi_token: _,
                 }) => {
-                    if let syn::Fields::Named(ref flds) = &fields {
+                    if let syn::Fields::Named(flds) = &fields {
                         flds.named.iter().cloned().collect::<Vec<syn::Field>>()
                     } else {
                         vec![]
@@ -553,7 +556,7 @@ pub fn derive_styx_app_args(item: TokenStream) -> TokenStream {
                 let ident = f.ident.clone().unwrap();
                 assign_for_has_emulation_args.push(quote!(#ident: self. #ident.clone().into()));
                 from_item_to_emulation_args.push(quote!(#ident: value. #ident.into()));
-                let name = format!("{}", ident);
+                let name = format!("{ident}");
                 if name == "target" {
                     emulation_args_to_item.push(quote!(#ident: value. target().into()));
                 } else {

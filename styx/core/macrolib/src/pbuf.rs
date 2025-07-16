@@ -118,7 +118,7 @@ impl ClapPbHelper {
                 let in_field = in_field.clone();
                 let syn_path = parse_single_path(in_field.ty.to_token_stream());
                 let tpath = path_to_string(&syn_path);
-                PrintDebug::debugify(&format!("tpath: {}", tpath));
+                PrintDebug::debugify(&format!("tpath: {tpath}"));
                 if tpath.starts_with(PROST_OPTION_STR) {
                     let field_name = in_field.ident;
                     let attrs = in_field.attrs;
@@ -134,14 +134,17 @@ impl ClapPbHelper {
                         #(#attrs)*
                         #vis #field_name : Option<#base_type_ident>
                     };
-                    if let Ok(new_field) = syn::Field::parse_named.parse2(nfts.clone()) {
-                        PrintDebug::debugify(&format!(
-                            "\nWriting new field:\n    =>{:?}\n---",
-                            nfts.to_string()
-                        ));
-                        new_field
-                    } else {
-                        panic!("Could not re-write the field");
+                    match syn::Field::parse_named.parse2(nfts.clone()) {
+                        Ok(new_field) => {
+                            PrintDebug::debugify(&format!(
+                                "\nWriting new field:\n    =>{:?}\n---",
+                                nfts.to_string()
+                            ));
+                            new_field
+                        }
+                        _ => {
+                            panic!("Could not re-write the field");
+                        }
                     }
                 } else {
                     in_field

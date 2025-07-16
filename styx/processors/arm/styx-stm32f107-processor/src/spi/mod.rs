@@ -202,7 +202,7 @@ impl SPIPortInner {
         // if no data is available, then return 0
         let d = q.pop_front().unwrap_or(0);
 
-        if q.len() == 0 {
+        if q.is_empty() {
             // clear RXNE flag if we just pulled the last value from the queue
             self.inner_hal.sr.set_rxne(false.into());
         }

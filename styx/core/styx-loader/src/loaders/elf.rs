@@ -147,7 +147,7 @@ pub(crate) fn load_elf(
         ArchEndian::BigEndian
     };
 
-    log::trace!("Parsed file endian is `{}`", parsed_endian);
+    log::trace!("Parsed file endian is `{parsed_endian}`");
 
     // if an endianness hint was provided, complain if
     // it's not the same
@@ -159,7 +159,7 @@ pub(crate) fn load_elf(
 
     // get architecture from the binary
     let arch: Arch = ElfMachine(elf.header.e_machine).into();
-    log::trace!("File arch is  `{}`", arch);
+    log::trace!("File arch is  `{arch}`");
 
     // if an architecture hint was provided, complain if
     // it's not the same
@@ -199,8 +199,7 @@ pub(crate) fn load_elf(
                 .get(src_mem_range)
                 .ok_or_else(|| {
                     StyxLoaderError::MalformedInput(format!(
-                        "Segment size `{:X}` cannot be sourced from file",
-                        src_size
+                        "Segment size `{src_size:X}` cannot be sourced from file"
                     ))
                 })?
                 .to_vec();
@@ -224,7 +223,7 @@ pub(crate) fn load_elf(
 
             // add region to collection
             let region = MemoryRegion::new_with_data(base_address, dst_size, perms, src_data)?;
-            log::trace!("Adding {:?}", region);
+            log::trace!("Adding {region:?}");
             regions.push(region);
         }
     }

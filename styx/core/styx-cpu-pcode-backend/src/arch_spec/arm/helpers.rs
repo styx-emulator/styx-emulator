@@ -60,41 +60,41 @@ pub struct StackPointerManager {
 impl StackPointerManager {
     /// Gets the Msp.
     pub fn get_main(&self, backend: &mut PcodeBackend) -> u32 {
-        if let SelectedStackPointer::Process { main } = *self.stored_stack_pointer.lock().unwrap() {
-            main
-        } else {
-            backend.read_register::<u32>(ArmRegister::Sp).unwrap()
+        match *self.stored_stack_pointer.lock().unwrap() {
+            SelectedStackPointer::Process { main } => main,
+            _ => backend.read_register::<u32>(ArmRegister::Sp).unwrap(),
         }
     }
 
     /// Gets the Psp.
     pub fn get_process(&self, backend: &mut PcodeBackend) -> u32 {
-        if let SelectedStackPointer::Main { process } = *self.stored_stack_pointer.lock().unwrap() {
-            process
-        } else {
-            backend.read_register::<u32>(ArmRegister::Sp).unwrap()
+        match *self.stored_stack_pointer.lock().unwrap() {
+            SelectedStackPointer::Main { process } => process,
+            _ => backend.read_register::<u32>(ArmRegister::Sp).unwrap(),
         }
     }
 
     /// Sets the Msp.
     pub fn set_main(&self, new_value: u32, backend: &mut PcodeBackend) {
-        if let SelectedStackPointer::Process { main } =
-            &mut *self.stored_stack_pointer.lock().unwrap()
-        {
-            *main = new_value;
-        } else {
-            backend.write_register(ArmRegister::Sp, new_value).unwrap();
+        match &mut *self.stored_stack_pointer.lock().unwrap() {
+            SelectedStackPointer::Process { main } => {
+                *main = new_value;
+            }
+            _ => {
+                backend.write_register(ArmRegister::Sp, new_value).unwrap();
+            }
         }
     }
 
     /// Sets the Psp.
     pub fn set_process(&self, new_value: u32, backend: &mut PcodeBackend) {
-        if let SelectedStackPointer::Main { process } =
-            &mut *self.stored_stack_pointer.lock().unwrap()
-        {
-            *process = new_value;
-        } else {
-            backend.write_register(ArmRegister::Sp, new_value).unwrap();
+        match &mut *self.stored_stack_pointer.lock().unwrap() {
+            SelectedStackPointer::Main { process } => {
+                *process = new_value;
+            }
+            _ => {
+                backend.write_register(ArmRegister::Sp, new_value).unwrap();
+            }
         }
     }
 

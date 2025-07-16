@@ -145,11 +145,11 @@ fn main() {
     // compile and panic if it fails
     builder
         .compile_protos(&proto_files, &proto_dirs)
-        .unwrap_or_else(|e| panic!("protobuf compile error: {}", e));
+        .unwrap_or_else(|e| panic!("protobuf compile error: {e}"));
 
     // emit directory names where we found proto files - this seems to work well
     // for new files, deleted files, changed files.
     for dir in proto_dirs.iter() {
-        println!("cargo:rerun-if-changed={}", dir);
+        println!("cargo:rerun-if-changed={dir}");
     }
 }

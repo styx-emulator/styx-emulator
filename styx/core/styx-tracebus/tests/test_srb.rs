@@ -33,7 +33,8 @@ use styx_tracebus::{
 #[test]
 #[cfg_attr(miri, ignore)]
 fn test_strace_srb() {
-    std::env::set_var("STRACE_PROVIDER", "srb");
+    // TODO: Audit that the environment access only happens in single-threaded code.
+    unsafe { std::env::set_var("STRACE_PROVIDER", "srb") };
     // Send n trace events, read them back, make sure the backing
     // key does not exist after teardown
     let mut events: Vec<BaseTraceEvent> = Vec::new();

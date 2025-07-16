@@ -114,7 +114,7 @@ pub async fn start(port: Option<u16>, import_cache: bool) -> Result<(), StartSer
         .map_err(|e| StartServerError::BadBindAddress(e.to_string()))?;
 
     let dstatesrvr = async_server_impl::TyphunixImpl::new(true, &cmsgs).await;
-    log::info!("Server listening on {}", addr);
+    log::info!("Server listening on {addr}");
     log::info!("Wildcard enabled:   {}", dstatesrvr.get_wildcard());
     service_ready();
 

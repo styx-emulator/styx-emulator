@@ -275,7 +275,7 @@ impl LicenseChecker {
 
         // check if we have any bad paths
         let bad_paths = self.bad_paths.lock().unwrap();
-        if bad_paths.len() > 0 {
+        if !bad_paths.is_empty() {
             for path in bad_paths.iter() {
                 eprintln!("Missing License: {}", path.as_os_str().to_str().unwrap());
             }
@@ -353,7 +353,7 @@ mod tests {
 
         // Call + return check function
         let res = checker.check_files(true, Vec::new());
-        assert!(res.is_ok(), "Files failed LICENSE checks {:?}", res);
+        assert!(res.is_ok(), "Files failed LICENSE checks {res:?}");
     }
 
     #[test]
@@ -368,7 +368,7 @@ mod tests {
 
         // Call + return check function
         let res = checker.check_files(true, Vec::new());
-        assert!(res.is_ok(), "Files failed LICENSE checks {:?}", res);
+        assert!(res.is_ok(), "Files failed LICENSE checks {res:?}");
     }
 
     #[test]

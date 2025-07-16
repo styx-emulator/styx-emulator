@@ -37,14 +37,14 @@ crate::data::opaque_pointer! {
 }
 
 /// disposes the processor handle
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn StyxProcessor_free(this: *mut StyxProcessor) {
     StyxProcessor::free(this)
 }
 
 /// Start the processor's emulation process, blocking on the current thread until the processor
 /// exits.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn StyxProcessor_start_blocking(
     processor: StyxProcessor,
     report: *mut StyxEmulationReport,
@@ -59,7 +59,7 @@ pub extern "C" fn StyxProcessor_start_blocking(
 /// exits. Provide a limit to number of instructions to execute and milliseconds of wall execution
 /// time. 0 for either of these values disables that timeout. 0 for both values will run until the
 /// processor exits.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn StyxProcessor_start_blocking_constraints(
     processor: StyxProcessor,
     instr: u64,

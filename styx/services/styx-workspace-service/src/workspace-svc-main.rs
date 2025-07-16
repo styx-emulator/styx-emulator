@@ -69,7 +69,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             break;
         } else {
             let msg = msg.unwrap();
-            eprintln!("{}", msg);
+            eprintln!("{msg}");
             warn!("{}", msg);
         }
     }

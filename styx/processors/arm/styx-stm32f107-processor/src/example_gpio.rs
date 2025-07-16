@@ -755,7 +755,7 @@ pub mod port {
             let value = u32::from_le_bytes(
                 value[0..4]
                     .try_into()
-                    .unwrap_or_else(|_| panic!("unable to convert {:?} into u32", value)),
+                    .unwrap_or_else(|_| panic!("unable to convert {value:?} into u32")),
             );
 
             if address == (self.base as u64 + regdefs::CRL.offset as u64) {

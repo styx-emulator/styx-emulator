@@ -28,7 +28,7 @@ crate::data::opaque_pointer! {
     pub struct StyxLoader(Box<dyn styx_emulator::prelude::Loader>)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn StyxLoader_free(ptr: *mut StyxLoader) {
     StyxLoader::free(ptr)
 }
@@ -36,7 +36,7 @@ pub extern "C" fn StyxLoader_free(ptr: *mut StyxLoader) {
 macro_rules! styx_loader_impl {
     ($n:ident($t:ty)) => {
         ::paste::paste! {
-            #[no_mangle]
+            #[unsafe(no_mangle)]
             pub extern "C" fn [< StyxLoader_ $n:camel _new >](out: *mut StyxLoader) -> StyxFFIErrorPtr {
                 crate::try_out(out, || {
                     let item = <$t as Default>::default();

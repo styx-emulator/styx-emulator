@@ -35,7 +35,7 @@ pub type DBIdType = i32;
 /// Macro to serialize an `Option<T>` into a `serde_json::Value`
 /// into a sea-orm model object value
 macro_rules! opt_serde_value {
-    ($var: expr) => {
+    ($var: expr_2021) => {
         if let Some(__some_var) = $var {
             serde_json::to_value(__some_var).unwrap()
         } else {
@@ -47,7 +47,7 @@ macro_rules! opt_serde_value {
 #[macro_export]
 /// shorthand to deserialize from Value to a message
 macro_rules! serde_value {
-    ($var: expr) => {
+    ($var: expr_2021) => {
         serde_json::from_value($var).unwrap_or_default()
     };
 }
@@ -56,7 +56,7 @@ macro_rules! serde_value {
 /// Macro to link child entities to parent entities and ensure
 /// that the proper primary_keys are set
 macro_rules! link_optional_child {
-    ($db_transaction: expr, $parent: expr, $active_model: ty, $msg: expr) => {
+    ($db_transaction: expr_2021, $parent: expr_2021, $active_model: ty, $msg: expr_2021) => {
         if let Some(msg) = $msg {
             let id = msg.id;
             let mut am: $active_model = msg.into();

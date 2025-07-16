@@ -125,9 +125,9 @@ pub trait TraceProvider {
     /// Write/send a trace event
     /// # Returns
     /// - bool: true if the event was written to the buffer, false if
-    ///         it timeed out
+    ///   it timeed out
     /// - TraceError: if unable to write the message for a reason other than
-    ///               timeout (ie buffer full)
+    ///   timeout (ie buffer full)
     fn trace<T>(&self, item: &T) -> Result<bool, TraceError>
     where
         T: for<'de> Deserialize<'de> + Serialize + Traceable;
@@ -183,7 +183,7 @@ pub fn tracer_from_env() -> TraceProviderImpl {
             }
             Err(e) => {
                 // could fail, default to a [NullTracer]
-                warn!("failed to init trace: {}", e);
+                warn!("failed to init trace: {e}");
                 return TraceProviderImpl::NullTracer(NullTracer::default());
             }
         }
@@ -206,7 +206,7 @@ pub fn mkpath(base: Option<String>, ext: &str) -> String {
         Some(v) => v,
         _ => format!("strace_{}_{}", std::process::id(), uuid::Uuid::new_v4()),
     };
-    format!("{}/{}.{}", TRACE_DIR, name, ext)
+    format!("{TRACE_DIR}/{name}.{ext}")
 }
 
 /// Convenience macro for stracing events.
@@ -245,7 +245,7 @@ pub fn mkpath(base: Option<String>, ext: &str) -> String {
 /// ```
 #[macro_export]
 macro_rules! strace {
-    ( $root:expr ) => {{
+    ( $root:expr_2021 ) => {{
         let event = {
             let mut c = $root.clone();
 
@@ -283,7 +283,7 @@ macro_rules! strace {
 /// ```
 #[macro_export]
 macro_rules! branchevt {
-    ( $pc:expr, $newpc: expr, $info:expr ) => {
+    ( $pc:expr_2021, $newpc: expr_2021, $info:expr_2021 ) => {
         $crate::strace!(BranchEvent {
             etype: TraceEventType::BRANCH,
             pc: $pc,
@@ -411,7 +411,7 @@ impl From<std::io::Error> for TraceError {
 /// - [`macro@next_event`]
 #[macro_export]
 macro_rules! receiver {
-    ($Key: expr) => {
+    ($Key: expr_2021) => {
         IPCTracer::get_consumer(TracerReaderOptions::new($Key)).unwrap()
     };
 }
@@ -444,7 +444,7 @@ macro_rules! receiver {
 /// - [`macro@receiver`]
 #[macro_export]
 macro_rules! next_event {
-    ($Rx: ident, $Timeout:expr) => {
+    ($Rx: ident, $Timeout:expr_2021) => {
         // If timeout is zero, do a blocking `recv()`. Note that `recv()` and
         // `recv_timeout()` have different return signatures, so this match will
         // normalize the match arms to `Result<Option<T>, Err>`

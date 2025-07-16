@@ -38,7 +38,7 @@ use styx_core::grpc::{
 
 /// Create an id/name message from the enumeration
 macro_rules! identity {
-    ($ty: ty, $Variant: expr) => {
+    ($ty: ty, $Variant: expr_2021) => {
         <$ty>::new(
             $Variant as u32,
             std::stringify!($Variant)
@@ -261,7 +261,7 @@ pub mod supported_config {
     use super::*;
     use std::collections::{HashMap, HashSet};
     macro_rules! conf {
-        ($id: expr, $name: expr, $arch: expr, $variant: expr, $endian: expr,$loader: expr, $backend: expr) => {
+        ($id: expr_2021, $name: expr_2021, $arch: expr_2021, $variant: expr_2021, $endian: expr_2021,$loader: expr_2021, $backend: expr_2021) => {
             SupportedConfig {
                 id: $id as u32,
                 name: $name.into(),
@@ -320,7 +320,7 @@ pub mod supported_config {
                 "{}",
                 self.target_map
                     .values()
-                    .map(|c| format!("{}", c))
+                    .map(|c| format!("{c}"))
                     .collect::<Vec<String>>()
                     .join("\n")
             )

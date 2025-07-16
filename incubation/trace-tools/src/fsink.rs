@@ -103,7 +103,7 @@ async fn sink(
         max_consecutive_timeouts,
         cancel_token,
     )?;
-    println!("fsink: start consuming {}", file);
+    println!("fsink: start consuming {file}");
     reader.consume()
 }
 
@@ -242,7 +242,7 @@ async fn main() -> Result<(), Error> {
         let rawfile = file.replace(".srb", ".raw");
         let path = Path::new(&rawfile);
         if path.exists() {
-            println!("fsink: raw file already exists: {}", rawfile);
+            println!("fsink: raw file already exists: {rawfile}");
         } else {
             in_progress.insert(file.clone());
             sink_tasks.spawn(async move {
@@ -310,7 +310,7 @@ pub async fn reap_tasks(taskset: &mut JoinSet<Result<SinkResult, TraceError>>) {
                         ),
                         Err(e) => println!("fsink: error: {e}"),
                     },
-                    Err(e) => println!("{:?}", e),
+                    Err(e) => println!("{e:?}"),
                 },
                 None => break, // race condition its OK tho
             },

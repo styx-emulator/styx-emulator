@@ -94,7 +94,8 @@ fn main() {
         .with_timestamp(true)
         .create();
     let args = CliEmulationArgs::parse();
-    std::env::set_var(STRACE_ENV_VAR, "srb");
+    // TODO: Audit that the environment access only happens in single-threaded code.
+    unsafe { std::env::set_var(STRACE_ENV_VAR, "srb") };
     info!("Input as yaml:");
     info!("{}---", serde_yaml::to_string(&args).unwrap());
 

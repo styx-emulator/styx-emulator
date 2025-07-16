@@ -67,7 +67,7 @@ impl From<unicorn_const::Arch> for crate::arch::Arch {
             unicorn_const::Arch::SPARC => crate::arch::Arch::Sparc,
             unicorn_const::Arch::TRICORE => crate::arch::Arch::Tricore,
             unicorn_const::Arch::X86 => crate::arch::Arch::X86,
-            _ => panic!("Unicorn architecture: {:?} has no styx equivalent", value),
+            _ => panic!("Unicorn architecture: {value:?} has no styx equivalent"),
         }
     }
 }

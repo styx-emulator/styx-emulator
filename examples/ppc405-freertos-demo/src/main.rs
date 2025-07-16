@@ -86,13 +86,12 @@ fn freertos_builder() -> ProcessorBuilder<'static> {
         r#"
         - !FileRaw
             base: 0xfff00000
-            file: {}
+            file: {test_bin_path}
             perms: !AllowAll
         - !RegisterImmediate
             register: pc
             value: 0xfffffffc
-"#,
-        test_bin_path
+"#
     );
     ProcessorBuilder::default()
         .with_builder(PowerPC405Builder::default())
@@ -332,13 +331,13 @@ impl UartControl {
         let ipc_port = processor.ipc_port();
         info!("Trying to connect...");
         loop {
-            match TcpStream::connect(format!("127.0.0.1:{}", ipc_port)) {
+            match TcpStream::connect(format!("127.0.0.1:{ipc_port}")) {
                 Ok(_) => break,
                 Err(_) => continue,
             }
         }
 
-        let uart = UartClient::new(format!("http://127.0.0.1:{}", ipc_port), Some(0));
+        let uart = UartClient::new(format!("http://127.0.0.1:{ipc_port}"), Some(0));
         let uart = Arc::new(Mutex::new(uart));
 
         info!("Connected!...");
@@ -527,7 +526,7 @@ impl Widget for &ProcStatus {
             ]),
             Line::from(vec![
                 "Current Task (priority): ".into(),
-                format!("{} ({})", this_task_name, this_task_prio).yellow(),
+                format!("{this_task_name} ({this_task_prio})").yellow(),
             ]),
         ]);
 

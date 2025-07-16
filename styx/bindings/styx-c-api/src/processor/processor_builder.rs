@@ -47,19 +47,19 @@ crate::data::opaque_pointer! {
     pub struct StyxProcessorBuilder(styx_emulator::core::processor::ProcessorBuilder<'static>)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 /// Create a new, default processor builder
 pub extern "C" fn StyxProcessorBuilder_new(out: *mut StyxProcessorBuilder) -> StyxFFIErrorPtr {
     crate::try_out(out, || StyxProcessorBuilder::new(Default::default()))?;
     StyxFFIErrorPtr::Ok
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn StyxProcessorBuilder_free(out: *mut StyxProcessorBuilder) {
     StyxProcessorBuilder::free(out)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn StyxProcessorBuilder_set_target_program(
     mut this: StyxProcessorBuilder,
     path: CStrPtr,
@@ -74,7 +74,7 @@ pub extern "C" fn StyxProcessorBuilder_set_target_program(
 }
 
 // TODO: we need another, non-clone version that people can use with the borrowed stuff
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn StyxProcessorBuilder_set_input_bytes(
     mut this: StyxProcessorBuilder,
     bytes: ArrayPtr<u8>,
@@ -89,7 +89,7 @@ pub extern "C" fn StyxProcessorBuilder_set_input_bytes(
 }
 
 /// Specify what the processor should do in case of an exception
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn StyxProcessorBuilder_set_exception_behavior(
     mut this: StyxProcessorBuilder,
     behavior: crate::processor::StyxExceptionBehavior,
@@ -103,7 +103,7 @@ pub extern "C" fn StyxProcessorBuilder_set_exception_behavior(
 
 /// Set the inter-processor communication (IPC) port for this processor (this should be unique). A
 /// value of zero chooses an open port.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn StyxProcessorBuilder_set_ipc_port(
     mut this: StyxProcessorBuilder,
     ipc_port: u16,
@@ -115,7 +115,7 @@ pub extern "C" fn StyxProcessorBuilder_set_ipc_port(
     StyxFFIErrorPtr::Ok
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 extern "C" fn StyxProcessorBuilder_add_plugin(
     mut this: StyxProcessorBuilder,
     plugin: crate::plugin::StyxPlugin,
@@ -127,7 +127,7 @@ extern "C" fn StyxProcessorBuilder_add_plugin(
     StyxFFIErrorPtr::Ok
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 extern "C" fn StyxProcessorBuilder_set_executor(
     mut this: StyxProcessorBuilder,
     executor: crate::executor::StyxExecutor,
@@ -139,7 +139,7 @@ extern "C" fn StyxProcessorBuilder_set_executor(
     StyxFFIErrorPtr::Ok
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 extern "C" fn StyxProcessorBuilder_set_loader(
     mut this: StyxProcessorBuilder,
     loader: crate::loader::StyxLoader,
@@ -152,7 +152,7 @@ extern "C" fn StyxProcessorBuilder_set_loader(
 }
 
 /// Set which backend the processor should use
-#[no_mangle]
+#[unsafe(no_mangle)]
 extern "C" fn StyxProcessorBuilder_set_backend(
     mut this: StyxProcessorBuilder,
     backend: crate::cpu::StyxBackend,
@@ -164,7 +164,7 @@ extern "C" fn StyxProcessorBuilder_set_backend(
     StyxFFIErrorPtr::Ok
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 extern "C" fn StyxProcessorBuilder_build(
     mut this: StyxProcessorBuilder,
     target: crate::target::StyxTarget,
@@ -208,7 +208,7 @@ macro_rules! styx_processor_add_hook_impl {
         })? ;
     ) => {
         ::paste::paste! {
-            #[no_mangle]
+            #[unsafe(no_mangle)]
             pub extern "C" fn [< StyxProcessorBuilder_add_ $name:snake _hook>](
                 mut this: StyxProcessorBuilder,
                 hook: crate::cpu::[< StyxHook_ $name >],
@@ -220,7 +220,7 @@ macro_rules! styx_processor_add_hook_impl {
                 crate::data::StyxFFIErrorPtr::Ok
             }
 
-            #[no_mangle]
+            #[unsafe(no_mangle)]
             pub extern "C" fn [< StyxProcessorBuilder_add_ $name:snake _data_hook>](
                 mut this: StyxProcessorBuilder,
                 hook: crate::cpu::[< StyxHook_ $name Data>],

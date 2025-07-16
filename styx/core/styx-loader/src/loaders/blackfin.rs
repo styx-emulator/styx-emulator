@@ -78,10 +78,7 @@ fn load_blackfin(data: &[u8]) -> Result<MemoryLoaderDesc, StyxLoaderError> {
         if block.flags.contains(BlockHeaderFlags::FIRST) {
             // bh.argument: start of next stream
             // bh.targetAddress: entry point
-            debug!(
-                "FIRST block found with target entry pc 0x{:X}",
-                target_address
-            );
+            debug!("FIRST block found with target entry pc 0x{target_address:X}");
 
             // set pc to entry point address
             working_description
@@ -91,10 +88,7 @@ fn load_blackfin(data: &[u8]) -> Result<MemoryLoaderDesc, StyxLoaderError> {
         if block.flags.contains(BlockHeaderFlags::INIT) {
             // bh.argument: start of next stream
             // bh.targetAddress: entry point
-            debug!(
-                "INIT block found with target entry pc 0x{:X}",
-                target_address
-            );
+            debug!("INIT block found with target entry pc 0x{target_address:X}");
 
             // set pc to entry point address
             working_description

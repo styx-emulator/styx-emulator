@@ -30,7 +30,7 @@ use styx_core::{peripheral_clients::uart::UartClient, prelude::*};
 /// create a `Vec<u8>` with random bytes of some size
 fn generate_random_vec(length: usize) -> Vec<u8> {
     let mut rng = rand::thread_rng();
-    (0..length).map(|_| rng.gen()).collect()
+    (0..length).map(|_| rng.r#gen()).collect()
 }
 
 /// Given a series of inputs, generate a test suite to exercise
@@ -68,13 +68,13 @@ pub fn uart_test(builder: ProcessorBuilder, port: u16) {
 
     println!("Trying to connect...");
     loop {
-        match TcpStream::connect(format!("127.0.0.1:{}", ipc_port)) {
+        match TcpStream::connect(format!("127.0.0.1:{ipc_port}")) {
             Ok(_) => break,
             Err(_) => continue,
         }
     }
 
-    let mut uart_client = UartClient::new(format!("http://127.0.0.1:{}", ipc_port), Some(port));
+    let mut uart_client = UartClient::new(format!("http://127.0.0.1:{ipc_port}"), Some(port));
 
     println!("Connected!");
 
@@ -90,7 +90,7 @@ pub fn uart_test(builder: ProcessorBuilder, port: u16) {
 
     // added a special case that came up as a bug
     let expected: Vec<u8> = vec![1, 2, 3, 4, 0, 6, 7, 8];
-    println!("sending: {:x?}", expected);
+    println!("sending: {expected:x?}");
     uart_client.send(expected.clone());
     let recv = uart_client.recv(8, None);
     assert_eq!(&expected, &recv);
@@ -100,13 +100,13 @@ pub fn uart_test(builder: ProcessorBuilder, port: u16) {
     for s in sizes {
         // send data and check for response
         let expected_data: Vec<u8> = generate_random_vec(s);
-        println!("sending: {:x?}", expected_data);
+        println!("sending: {expected_data:x?}");
         uart_client.send(expected_data.clone());
         let data = uart_client.recv(s, None);
         assert_eq!(
             &expected_data, &data,
             "failed to receive random expected data with size {s}"
         );
-        println!("Send/Recv of {:?} bytes succeeded", s);
+        println!("Send/Recv of {s:?} bytes succeeded");
     }
 }

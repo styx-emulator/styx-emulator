@@ -120,13 +120,12 @@ fn test_freertos() {
         r#"
         - !FileRaw
             base: 0xfff00000
-            file: {}
+            file: {test_bin_path}
             perms: !AllowAll
         - !RegisterImmediate
             register: pc
             value: 0xfffffffc
-"#,
-        test_bin_path
+"#
     );
 
     let mut processor = ProcessorBuilder::default()

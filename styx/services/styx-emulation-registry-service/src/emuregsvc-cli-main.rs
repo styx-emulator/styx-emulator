@@ -97,7 +97,7 @@ async fn display_response<T>(response: &T)
 where
     T: Debug,
 {
-    println!("------------------------------\n{:?}\n--", response);
+    println!("------------------------------\n{response:?}\n--");
 }
 
 #[tokio::main]

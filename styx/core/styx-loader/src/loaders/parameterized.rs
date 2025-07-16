@@ -149,7 +149,7 @@ type LoadRecords = Vec<LoadRecordType>;
 fn warn_key_overwrite(old_map: &RegisterMap, new_map: &RegisterMap) {
     for key in new_map.keys() {
         if old_map.contains_key(key) {
-            warn!("Register value for {} is being overwritten.", key);
+            warn!("Register value for {key} is being overwritten.");
         }
     }
 }
@@ -291,15 +291,16 @@ impl Loader for ParameterizedLoader {
                 if let Ok(raw_val) = region.read_data(address, 4) {
                     // FIXME: Check endianness.
                     // FIXME: We are arbitrarily doing 32-bit operations.
-                    let val =
-                        u32::from_le_bytes(raw_val[0..4].try_into().unwrap_or_else(|_| {
-                            panic!("unable to convert {:?} into u32", raw_val)
-                        }));
+                    let val = u32::from_le_bytes(
+                        raw_val[0..4]
+                            .try_into()
+                            .unwrap_or_else(|_| panic!("unable to convert {raw_val:?} into u32")),
+                    );
 
                     // Save the generated register values to add to our final descriptor.
                     let reg: ArchRegister = arch.get_register(&reg_name).into();
                     if registers.contains_key(&reg) {
-                        warn!("Register value for {} is being overwritten.", reg_name);
+                        warn!("Register value for {reg_name} is being overwritten.");
                     }
                     registers.insert(reg, val as u64);
                     break;

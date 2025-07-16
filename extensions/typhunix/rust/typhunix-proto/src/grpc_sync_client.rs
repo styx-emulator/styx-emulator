@@ -22,6 +22,8 @@
 // CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// TODO update tonic when available https://github.com/hyperium/tonic/issues/2253
+#![allow(clippy::result_large_err)]
 use crate::grpc_async_client::{get_data_types, get_programs, get_symbols, GrpcStatus};
 use styx_emulator::grpc::typhunix_interop::{
     symbolic::{DataType, Program, ProgramFilter, Symbol},

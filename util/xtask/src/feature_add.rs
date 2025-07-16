@@ -49,7 +49,7 @@ fn find_cargo_files(root: String) -> Vec<PathBuf> {
         GlobWalkerBuilder::from_patterns(root.clone(), &["**/Cargo.toml".to_string()])
             .file_type(FileType::FILE)
             .build()
-            .unwrap_or_else(|_| panic!("Path contains no `{}` files: [{:?}]", CARGO_FILE, root))
+            .unwrap_or_else(|_| panic!("Path contains no `{CARGO_FILE}` files: [{root:?}]"))
             .filter_map(|e| e.ok())
             .map(|i| i.into_path())
             .collect();
@@ -64,7 +64,7 @@ fn find_branch_cargo_files(child_file: String) -> Vec<PathBuf> {
     // Append the child cargo file itself to our list of files to edit.
     let mut target = PathBuf::from(child_file);
     if !target.exists() {
-        panic!("Cargo file does not exist: {:?}", target);
+        panic!("Cargo file does not exist: {target:?}");
     }
     cargo_files.push(target.clone());
 
@@ -316,7 +316,7 @@ baz = []
             for file in &self.master_list {
                 if file.exists() {
                     fs::remove_file(file).unwrap_or_else(|_| {
-                        panic!("Failed to remove test file: {:?}", file);
+                        panic!("Failed to remove test file: {file:?}");
                     });
                 }
             }
@@ -325,7 +325,7 @@ baz = []
             let root_dir = PathBuf::from(&self.target);
             if root_dir.exists() {
                 fs::remove_dir_all(root_dir.clone()).unwrap_or_else(|_| {
-                    panic!("Failed to remove test directory: {:?}", root_dir);
+                    panic!("Failed to remove test directory: {root_dir:?}");
                 });
             }
         }

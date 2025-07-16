@@ -68,7 +68,7 @@ pub struct NonBlockingAppender;
 impl std::io::Write for NonBlockingAppender {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         let buf_len = buf.len();
-        println!("{:?}", buf);
+        println!("{buf:?}");
         Ok(buf_len)
     }
 

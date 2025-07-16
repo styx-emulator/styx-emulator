@@ -39,11 +39,11 @@ mod inner;
 use inner::{UartHalLayer, UartPortNumber};
 
 use styx_peripherals::uart::{IntoUartImpl, UartImpl, UartInterface};
-///
-/// XXX: Some features that are missing:
-///         - UART reset from the Cyclone V Reset Manager.
-///         - UART DMA
-///         - UART non-FIFO mode
+//
+// XXX: Some features that are missing:
+//         - UART reset from the Cyclone V Reset Manager.
+//         - UART DMA
+//         - UART non-FIFO mode
 
 pub fn get_uarts() -> Vec<UartInterface> {
     vec![

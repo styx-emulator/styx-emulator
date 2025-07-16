@@ -154,7 +154,7 @@ impl Parse for VariantOption {
 }
 
 macro_rules! set_option {
-    ($out:ident.$field:ident = $val:expr) => {{
+    ($out:ident.$field:ident = $val:expr_2021) => {{
         if $out.$field.is_some() {
             return Err(Error::new(
                 Span::call_site(),

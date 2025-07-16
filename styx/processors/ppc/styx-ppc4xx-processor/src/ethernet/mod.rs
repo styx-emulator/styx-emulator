@@ -214,7 +214,7 @@ impl EthernetController {
 
         // should this trigger interrupt??
 
-        log::trace!("Send new value to {} subscriber", subscribers);
+        log::trace!("Send new value to {subscribers} subscriber");
     }
 
     fn reset_state(&mut self, mmu: &mut Mmu) -> Result<(), UnknownError> {

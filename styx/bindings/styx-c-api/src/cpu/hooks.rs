@@ -28,7 +28,7 @@ crate::data::opaque_pointer! {
 }
 
 /// free the hook token's handle
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn StyxHookToken_free(ptr: *mut StyxHookToken) {
     StyxHookToken::free(ptr)
 }

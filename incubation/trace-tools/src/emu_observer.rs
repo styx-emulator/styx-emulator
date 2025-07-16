@@ -22,6 +22,8 @@
 // CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// TODO update tonic when available https://github.com/hyperium/tonic/issues/2253
+#![allow(clippy::result_large_err)]
 //! Consume raw emulation events, maintain guest emulation state, emit artifacts
 //!
 //! - consumes and processes all "raw" events
@@ -160,7 +162,7 @@ impl InterruptStack {
     }
 
     pub fn in_isr(&self) -> bool {
-        self.interrupts.read().unwrap().len() > 0
+        !self.interrupts.read().unwrap().is_empty()
     }
 
     /// an Interrupt happened
@@ -343,7 +345,7 @@ impl EmulationObserver {
             .map_err(|e| {
                 let mut msg = String::from("Failed to get typhunix function cache. ");
                 msg.push_str("Make sure the typhunix service is running. The error was: ");
-                format!("{msg} {:?}", e)
+                format!("{msg} {e:?}")
             })?;
 
         let memory = match valid_memory_range {
@@ -378,7 +380,7 @@ impl EmulationObserver {
                 symbol_match_regex,
             })
         } else {
-            Err(format!("No data for pid: {}", program_id))
+            Err(format!("No data for pid: {program_id}"))
         }
     }
 
@@ -411,10 +413,10 @@ impl EmulationObserver {
     pub fn event_stream_from_raw<'a>(
         &'a self,
         filename: &str,
-    ) -> Result<impl Stream<Item = AggregateEvent> + 'a, tonic::Status> {
+    ) -> Result<impl Stream<Item = AggregateEvent> + 'a + use<'a>, tonic::Status> {
         let mut raw = RawTraceFile::open(filename, self.trace_event_count.fetch_add(0, SeqCst))
             .map_err(|e| {
-                let msg = format!("Failed to open {}: {}", filename, e);
+                let msg = format!("Failed to open {filename}: {e}");
                 service_err(&msg)
             })?;
         let mut last_pause_event: AggregateEvent = AggregateEvent::Sentinal;
@@ -452,7 +454,7 @@ impl EmulationObserver {
         &'a self,
         keyfile: &str,
         timeout: Duration,
-    ) -> Result<impl Stream<Item = AggregateEvent> + 'a, tonic::Status> {
+    ) -> Result<impl Stream<Item = AggregateEvent> + 'a + use<'a>, tonic::Status> {
         let mut tmouts = RawTimeoutManager::default();
         let opts = TracerReaderOptions::new(keyfile);
         let rx = match IPCTracer::get_consumer(opts) {

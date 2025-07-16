@@ -120,12 +120,12 @@ struct RegionInfo(
 impl std::fmt::Display for RegionInfo {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let init = match self.4 {
-            Some(val) => format!("{:#x}", val),
+            Some(val) => format!("{val:#x}"),
             None => "-".into(),
         };
 
         let alias_base = match self.5 {
-            Some(base) => format!("A({:#010x})", base),
+            Some(base) => format!("A({base:#010x})"),
             None => "-".into(),
         };
 
@@ -224,7 +224,7 @@ pub struct CycloneVBuilder {
 impl CycloneVBuilder {
     pub fn new(cbar: u32, vbar: u32) -> Self {
         if cbar > 0xFFFF_E000 {
-            panic!("Invalid CBAR address greater than 0xFFFF_E000: {:#x}", cbar);
+            panic!("Invalid CBAR address greater than 0xFFFF_E000: {cbar:#x}");
         }
         Self {
             initial_cbar: cbar,

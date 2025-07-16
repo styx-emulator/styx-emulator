@@ -53,7 +53,7 @@ pub async fn test_connection(url: &str, verbose_msg: bool) -> (bool, Option<Stri
                 let err_msg = err.to_string();
                 let verbose = if let Some(src) = err.source() {
                     if verbose_msg {
-                        format!(": source: {:?}", src)
+                        format!(": source: {src:?}")
                     } else {
                         "".to_string()
                     }
@@ -66,11 +66,11 @@ pub async fn test_connection(url: &str, verbose_msg: bool) -> (bool, Option<Stri
                         false,
                         Some("(transport error) waiting for service".to_string()),
                     ),
-                    _ => (false, Some(format!("{}{}", err_msg, verbose))),
+                    _ => (false, Some(format!("{err_msg}{verbose}"))),
                 }
             }
         },
-        Err(e) => (false, Some(format!("Bad url[{url}]: {}", e))),
+        Err(e) => (false, Some(format!("Bad url[{url}]: {e}"))),
     }
 }
 

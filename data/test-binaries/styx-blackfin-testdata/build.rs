@@ -128,7 +128,7 @@ mod docker_build {
 
         let mut child = cmd
             .spawn()
-            .with_context(|| format!("could not run command: {:?}", cmd))?;
+            .with_context(|| format!("could not run command: {cmd:?}"))?;
         let child_stdin = child
             .stdin
             .as_mut()

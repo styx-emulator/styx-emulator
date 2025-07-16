@@ -60,7 +60,7 @@ pub async fn data_types_from_file<P: AsRef<Path>>(
 /// write symbols/datatypes to a file - truncates if it exists
 /// Note: address fields are i64, but serialized as 0x00000000 strings
 /// See: [`crate::i64_addr_ser_hex_str8`], [`crate::u64_addr_ser_hex_str8`]
-pub async fn dump_to_file<'de, T>(items: &Vec<T>, filename: String) -> Result<(), Box<dyn Error>>
+pub async fn dump_to_file<T>(items: &Vec<T>, filename: String) -> Result<(), Box<dyn Error>>
 where
     T: Serialize,
 {
@@ -85,7 +85,7 @@ pub async fn dump_connect_message<P: AsRef<Path>>(
             println!("nbytes={}", b.len());
         }
         Err(e) => {
-            warn!("failed to serialize ConnectMesssage: {}", e);
+            warn!("failed to serialize ConnectMesssage: {e}");
         }
     }
     file.write_all(

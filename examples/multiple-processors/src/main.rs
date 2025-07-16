@@ -32,13 +32,16 @@ use styx_emulator::processors::arm::stm32f107::Stm32f107Builder;
 
 fn set_env_log(level: &'static str) {
     use std::env;
-    env::set_var(
-        "RUST_LOG",
-        match env::var("RUST_LOG") {
-            Ok(v) => v,
-            Err(_) => level.to_string(),
-        },
-    );
+    // TODO: Audit that the environment access only happens in single-threaded code.
+    unsafe {
+        env::set_var(
+            "RUST_LOG",
+            match env::var("RUST_LOG") {
+                Ok(v) => v,
+                Err(_) => level.to_string(),
+            },
+        )
+    };
 }
 
 fn main() {

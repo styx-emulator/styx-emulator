@@ -37,7 +37,7 @@ pub const SERVICE_PORT: u16 = 55555;
 pub const SERVICE_HOST: &str = "localhost";
 
 pub async fn start(dburl: String, port: u16) -> Result<(), Status> {
-    let addr = format!("0.0.0.0:{}", port)
+    let addr = format!("0.0.0.0:{port}")
         .parse()
         .map_err(|e| Status::new(Code::Unavailable, format!("{e}")))?;
 

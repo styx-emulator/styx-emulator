@@ -94,7 +94,7 @@ fn execute_check(dry_run: bool) -> anyhow::Result<i32> {
     let status_code = status.code().unwrap();
 
     if !status.success() {
-        eprintln!("{}", HAKARI_GENERATE_FAIL_MSG);
+        eprintln!("{HAKARI_GENERATE_FAIL_MSG}");
         tracing::error!(
             "cargo hakari generate failed with error code: {}",
             status_code
@@ -113,7 +113,7 @@ fn execute_check(dry_run: bool) -> anyhow::Result<i32> {
     let status_code = status.code().unwrap();
 
     if !status.success() {
-        eprintln!("{}", HAKARI_MANAGE_FAIL_MSG);
+        eprintln!("{HAKARI_MANAGE_FAIL_MSG}");
         tracing::error!(
             "cargo hakari manage-deps failed with error code: {}",
             status_code
@@ -134,7 +134,7 @@ fn hakari_verify_check() -> anyhow::Result<i32> {
     let status_code = status.code().unwrap();
 
     if !status.success() {
-        eprintln!("{}", HAKARI_VERIFY_FAIL_MSG);
+        eprintln!("{HAKARI_VERIFY_FAIL_MSG}");
         tracing::error!(
             "cargo hakari verify failed with error code: {}",
             status_code

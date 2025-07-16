@@ -74,7 +74,7 @@ pub fn env_or_error(varname: &str) -> Result<String, ApplicationError> {
 /// Convert an [`ApplicationError`] to a [`Status`]
 impl From<ApplicationError> for Status {
     fn from(value: ApplicationError) -> Self {
-        Status::new(tonic::Code::Unknown, format!("{:?}", value))
+        Status::new(tonic::Code::Unknown, format!("{value:?}"))
     }
 }
 
@@ -87,8 +87,7 @@ impl From<std::io::Error> for ApplicationError {
 impl From<tonic::transport::Error> for ApplicationError {
     fn from(value: tonic::transport::Error) -> Self {
         ApplicationError::InitializeEmulationServiceFailed(format!(
-            "Could not start the service: {}",
-            value
+            "Could not start the service: {value}"
         ))
     }
 }

@@ -101,7 +101,7 @@ impl<T> SimpleEthernetClient<T> {
 
             while let Some(recv) = resp.next().await {
                 if let Err(e) = recv {
-                    println!("Server disconnected or other error occured: {:?}", e);
+                    println!("Server disconnected or other error occured: {e:?}");
                     break;
                 }
                 println!("Got packet, writing to file.");

@@ -44,13 +44,16 @@ use tracing::info;
 /// Sets the environment log level to `info` by force, if it is not already
 /// set to something reasonable to view output from the example emulation
 fn set_env_log_info() {
-    env::set_var(
-        "RUST_LOG",
-        match env::var("RUST_LOG") {
-            Ok(v) => v,
-            Err(_) => "debug".to_string(),
-        },
-    );
+    // TODO: Audit that the environment access only happens in single-threaded code.
+    unsafe {
+        env::set_var(
+            "RUST_LOG",
+            match env::var("RUST_LOG") {
+                Ok(v) => v,
+                Err(_) => "debug".to_string(),
+            },
+        )
+    };
 }
 
 /// Get the path to the firmware. Use env::var("FIRMWARE_PATH") if its set, use

@@ -171,7 +171,7 @@ impl WorkspaceSvcNode {
         let port = node
             .get_host_port_ipv4(workspace_service::SERVICE_PORT)
             .await?;
-        let url = format!("http://{}:{}", host, port);
+        let url = format!("http://{host}:{port}");
         Ok(Self { node, url })
     }
 }
@@ -223,7 +223,7 @@ impl TyphunixSvcNode {
         let port = node
             .get_host_port_ipv4(typhunix_server_bin::SERVICE_PORT)
             .await?;
-        let url = format!("http://{}:{}", host, port);
+        let url = format!("http://{host}:{port}");
         Ok(Self { node, url })
     }
 }
@@ -252,8 +252,8 @@ impl PostgesNode {
         let host = node.get_host().await?.to_string();
         let port = node.get_host_port_ipv4(POSGRES_PORT).await?;
         let container_dburl_base =
-            DbUrl::try_from(format!("postgres://postgres:{passwd}@{host}:{}", port).as_str())?;
-        let dburl = DbUrl::try_from(format!("{}/{}", container_dburl_base, dbname).as_str())?;
+            DbUrl::try_from(format!("postgres://postgres:{passwd}@{host}:{port}").as_str())?;
+        let dburl = DbUrl::try_from(format!("{container_dburl_base}/{dbname}").as_str())?;
         let dbu = DbUtil::fresh(&dburl.to_string()).await?;
         let bridge_ip = node.get_bridge_ip_address().await?;
 

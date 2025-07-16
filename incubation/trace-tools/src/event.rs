@@ -96,16 +96,16 @@ impl std::fmt::Display for AggregateEvent {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s = match self {
             AggregateEvent::Sentinal => "Event::Sentinal".to_string(), // ignore sentinal
-            AggregateEvent::Memory(v) => format!("Event::{}", v),
-            AggregateEvent::Function(v) => format!("Event::Function {}", v),
-            AggregateEvent::Instruction(v) => format!("Event::Instruction {}", v),
-            AggregateEvent::Block(v) => format!("Event::Block {}", v),
-            AggregateEvent::NoMoreEvents(v) => format!("Event::NoMoreEvents {}", v),
-            AggregateEvent::InsnLimitReached(v) => format!("Event::InsnLimitReached {}", v),
+            AggregateEvent::Memory(v) => format!("Event::{v}"),
+            AggregateEvent::Function(v) => format!("Event::Function {v}"),
+            AggregateEvent::Instruction(v) => format!("Event::Instruction {v}"),
+            AggregateEvent::Block(v) => format!("Event::Block {v}"),
+            AggregateEvent::NoMoreEvents(v) => format!("Event::NoMoreEvents {v}"),
+            AggregateEvent::InsnLimitReached(v) => format!("Event::InsnLimitReached {v}"),
             AggregateEvent::StopRequested => "Event::StopRequested".to_string(),
-            AggregateEvent::RawTimeout(v) => format!("Event::RawTimeout {}", v),
-            AggregateEvent::Isr(v) => format!("Event::Isr {}", v),
-            AggregateEvent::Error(v) => format!("Event::Error {}", v),
+            AggregateEvent::RawTimeout(v) => format!("Event::RawTimeout {v}"),
+            AggregateEvent::Isr(v) => format!("Event::Isr {v}"),
+            AggregateEvent::Error(v) => format!("Event::Error {v}"),
         };
         write!(f, "{s}")
     }

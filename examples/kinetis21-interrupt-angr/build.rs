@@ -53,7 +53,7 @@ fn main() {
             remove_file(&filename).unwrap_or_else(|_| panic!("Failed to remove: {filename}"));
             exec(
                 Command::new("ln").arg("-s").arg(link_path).arg(&filename),
-                || format!("unable to link {:?}", fpath),
+                || format!("unable to link {fpath:?}"),
             );
         }
     }

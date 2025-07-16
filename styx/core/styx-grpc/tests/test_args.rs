@@ -83,7 +83,7 @@ mod tests {
                 assert!(helpmsg.contains(s));
             }
 
-            log::debug!("{}", helpmsg);
+            log::debug!("{helpmsg}");
         } else {
             unreachable!();
         }
@@ -108,7 +108,7 @@ mod tests {
         assert_eq!(args.firmware_path(), fwpath);
         assert_eq!(args.ipc_port(), Some(0));
         let t = Target::from_str_name(target_name);
-        log::debug!("{:?}", t);
+        log::debug!("{t:?}");
         assert_eq!(args.target(), expected_target);
         assert!(args.trace_plugin_args.is_none());
         assert!(args.emu_run_limits.is_none());
@@ -131,7 +131,7 @@ mod tests {
         ]);
         assert_eq!(args.firmware_path(), fwpath);
         let t = Target::from_str_name(target_name);
-        log::debug!("{:?}", t);
+        log::debug!("{t:?}");
 
         assert_eq!(args.target(), expected_target);
 

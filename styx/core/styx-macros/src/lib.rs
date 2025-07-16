@@ -363,7 +363,7 @@ impl Parse for StyxEventAttrOption {
 
 /// Convert to proc_macro2::TokenStream
 macro_rules! strts2 {
-    ($Expr: expr) => {
+    ($Expr: expr_2021) => {
         $Expr.parse::<proc_macro2::TokenStream>().unwrap()
     };
 }
@@ -777,17 +777,19 @@ impl GdbArchOptions {
                         .unwrap();
                     // we should only have one input to this arg, so blindly
                     // take the first input
-                    if let Some(input_arg) = nested.into_iter().next() {
-                        opts.input_register_map = input_arg
-                            .path()
-                            .to_token_stream()
-                            .to_string()
-                            .replace(' ', "");
-                    } else {
-                        panic!(
-                            "Missing {} arg content of `gdb_target_description`",
-                            ATTR_REGISTER_MAP_NAME,
+                    match nested.into_iter().next() {
+                        Some(input_arg) => {
+                            opts.input_register_map = input_arg
+                                .path()
+                                .to_token_stream()
+                                .to_string()
+                                .replace(' ', "");
+                        }
+                        _ => {
+                            panic!(
+                            "Missing {ATTR_REGISTER_MAP_NAME} arg content of `gdb_target_description`",
                         );
+                        }
                     }
                 }
                 // This is meant to parse something of the form:
@@ -799,26 +801,28 @@ impl GdbArchOptions {
                         .unwrap_or_else(|_| panic!("endianness name"));
                     // we should only have one input to this arg, so blindly
                     // take the first input
-                    if let Some(input_arg) = nested.into_iter().next() {
-                        let endianness = input_arg
-                            .path()
-                            .to_token_stream()
-                            .to_string()
-                            .replace(' ', "")
-                            .to_lowercase();
+                    match nested.into_iter().next() {
+                        Some(input_arg) => {
+                            let endianness = input_arg
+                                .path()
+                                .to_token_stream()
+                                .to_string()
+                                .replace(' ', "")
+                                .to_lowercase();
 
-                        if endianness.contains("little") {
-                            opts.endianness = Endianness::LittleEndian;
-                        } else if endianness.contains("big") {
-                            opts.endianness = Endianness::BigEndian;
-                        } else {
-                            panic!("endianness must be one of `ArchEndian` variants");
+                            if endianness.contains("little") {
+                                opts.endianness = Endianness::LittleEndian;
+                            } else if endianness.contains("big") {
+                                opts.endianness = Endianness::BigEndian;
+                            } else {
+                                panic!("endianness must be one of `ArchEndian` variants");
+                            }
                         }
-                    } else {
-                        panic!(
-                            "Missing {} arg content of `gdb_target_description`",
-                            ATTR_ENDIANNESS_NAME,
+                        _ => {
+                            panic!(
+                            "Missing {ATTR_ENDIANNESS_NAME} arg content of `gdb_target_description`",
                         );
+                        }
                     }
                 }
 

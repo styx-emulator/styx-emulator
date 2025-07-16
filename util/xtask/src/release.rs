@@ -69,10 +69,7 @@ pub fn execute(version: String) -> anyhow::Result<()> {
 
     // generate changelog
     let final_cliff_cmd = format!(
-        "git cliff -t v{version} -u --ignore-tags '{ignore_pattern}' -p {changelog_path}",
-        version = version,
-        ignore_pattern = TAG_IGNORE_PATTERN,
-        changelog_path = changelog_path,
+        "git cliff -t v{version} -u --ignore-tags '{TAG_IGNORE_PATTERN}' -p {changelog_path}",
     );
     // execute GIT_CLIFF_COMMAND here with the args
     _ = shell_command(&final_cliff_cmd, false)?;
@@ -110,7 +107,7 @@ pub fn execute(version: String) -> anyhow::Result<()> {
     // print the changelog contents
     println!("\n**NEW CHANGELOG CONTENTS**");
     println!("==========================\n");
-    println!("{}", changelog_update);
+    println!("{changelog_update}");
     // print a "commit the changes" message
     println!("{}", COMMIT_PROMPT.replace("{version}", &version));
     // print the tag prompt

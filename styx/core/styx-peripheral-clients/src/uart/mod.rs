@@ -111,7 +111,7 @@ where
 
     while let Some(recv) = resp.next().await {
         if let Err(e) = recv {
-            println!("Server disconnected or other error occured: {:?}", e);
+            println!("Server disconnected or other error occured: {e:?}");
             break;
         }
 
@@ -165,7 +165,7 @@ impl UartClient {
         let inner = runtime.block_on(async {
             UartPortClient::connect(addr.clone())
                 .await
-                .unwrap_or_else(|_| panic!("Could not connect to: {}", addr))
+                .unwrap_or_else(|_| panic!("Could not connect to: {addr}"))
         });
 
         // start background receiver thread

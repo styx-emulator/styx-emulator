@@ -107,7 +107,7 @@ impl GhidraPcodeGenerator {
         self.translator.endian()
     }
 
-    pub(crate) fn spaces(&self) -> impl Iterator<Item = (SpaceName, SpaceInfo)> {
+    pub(crate) fn spaces(&self) -> impl Iterator<Item = (SpaceName, SpaceInfo)> + use<> {
         self.translator.get_spaces().into_iter()
     }
 

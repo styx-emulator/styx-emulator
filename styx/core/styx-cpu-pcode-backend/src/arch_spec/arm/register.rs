@@ -256,7 +256,7 @@ impl RegisterCallback for PriorityMaskRegister {
             return Err(RegisterHandleError::CannotHandleRegister(register));
         }
         let priority_mask = self.priority_mask.load(Ordering::Acquire);
-        trace!("Read prim mask: {}", priority_mask);
+        trace!("Read prim mask: {priority_mask}");
         Ok(SizedValue::from_u64(priority_mask, 4))
     }
 

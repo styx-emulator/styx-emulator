@@ -79,7 +79,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         match args.cli_uuid {
             Some(x) => {
                 let result = unsubscribe(endpoint, x).await.unwrap();
-                println!("Unsubscribe: {:?}", result);
+                println!("Unsubscribe: {result:?}");
             }
             _ => println!("Need a --cli_uuid to unsubscribe"),
         }
@@ -135,7 +135,7 @@ async fn import(endpoint: &str) -> Result<(), Box<dyn std::error::Error>> {
             symbols.len(),
             data_types.len()
         );
-        println!("Register: {}", endpoint);
+        println!("Register: {endpoint}");
         register_new(endpoint, symbols, data_types).await?;
     }
     Ok(())

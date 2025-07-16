@@ -76,7 +76,7 @@ impl std::fmt::Display for Program {
         }
         s.push_str(&format!("Arch: [X], Funcs: {}, ", self.functions.len()));
         s.push_str(&format!("segs: {} ... ", self.segments.len()));
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
 
@@ -84,7 +84,7 @@ impl std::fmt::Display for ProgramIdentifier {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let mut s = String::new();
         s.push_str(&format!("({},{})", self.source_id, self.name));
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
 
@@ -92,7 +92,7 @@ impl std::fmt::Display for FileMetadata {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let mut s = String::new();
         s.push_str(&format!("name: {}, loader: {}", self.name, self.loader));
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
 
@@ -109,7 +109,7 @@ impl std::fmt::Display for ConnectMessage {
         s.push_str(&format!(", DataTypes[{}]", self.data_types.len()));
         s.push_str(&format!(", Symbols[{}]", self.symbols.len()));
 
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
 
@@ -143,11 +143,11 @@ impl std::fmt::Display for DataType {
         }
 
         let pref = match &self.pid {
-            Some(pidval) => format!("{}", pidval),
+            Some(pidval) => format!("{pidval}"),
             _ => "".to_string(),
         };
-        s.push_str(&format!("...[pid: {}]", pref));
-        write!(f, "{}", s)
+        s.push_str(&format!("...[pid: {pref}]"));
+        write!(f, "{s}")
     }
 }
 
@@ -162,11 +162,11 @@ impl std::fmt::Display for Symbol {
         s.push_str(&format!(", sz:{}", self.data_size));
         s.push_str(&format!(", ns:{}", self.namespace));
         let pref = match &self.pid {
-            Some(pidval) => format!("{}", pidval),
+            Some(pidval) => format!("{pidval}"),
             _ => "".to_string(),
         };
-        s.push_str(&format!("[pid: {}]", pref));
-        write!(f, "{}", s)
+        s.push_str(&format!("[pid: {pref}]"));
+        write!(f, "{s}")
     }
 }
 

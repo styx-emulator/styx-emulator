@@ -236,20 +236,21 @@ impl WaitForConnection for TcpParameters {
     }
 
     fn wait_for_connection(&self) -> DynResult<GdbSerialConn> {
-        if let Some(tcp_listener) = &*self.listener.lock().unwrap() {
-            if self.verbose {
-                eprintln!("Waiting for a GDB connection on {:?}...", self.sockaddr());
-            }
+        match &*self.listener.lock().unwrap() {
+            Some(tcp_listener) => {
+                if self.verbose {
+                    eprintln!("Waiting for a GDB connection on {:?}...", self.sockaddr());
+                }
 
-            // once we have a stream / addr we have a connected client
-            let (stream, addr) = tcp_listener.accept()?;
-            if self.verbose {
-                eprintln!("Debugger connected from {}", addr);
-            }
+                // once we have a stream / addr we have a connected client
+                let (stream, addr) = tcp_listener.accept()?;
+                if self.verbose {
+                    eprintln!("Debugger connected from {addr}");
+                }
 
-            Ok(Box::new(stream))
-        } else {
-            Err("no TcpListener")?
+                Ok(Box::new(stream))
+            }
+            _ => Err("no TcpListener")?,
         }
     }
 }
@@ -284,19 +285,20 @@ impl WaitForConnection for UdsParameters {
     }
 
     fn wait_for_connection(&self) -> DynResult<GdbSerialConn> {
-        if let Some(uds_listener) = &*self.listener.lock().unwrap() {
-            if self.verbose {
-                eprintln!("Waiting for a GDB connection on {}...", self.path);
-            }
+        match &*self.listener.lock().unwrap() {
+            Some(uds_listener) => {
+                if self.verbose {
+                    eprintln!("Waiting for a GDB connection on {}...", self.path);
+                }
 
-            let (stream, addr) = uds_listener.accept()?;
-            if self.verbose {
-                eprintln!("Debugger connected from {:?}", addr);
-            }
+                let (stream, addr) = uds_listener.accept()?;
+                if self.verbose {
+                    eprintln!("Debugger connected from {addr:?}");
+                }
 
-            Ok(Box::new(stream))
-        } else {
-            Err("no UnixListener")?
+                Ok(Box::new(stream))
+            }
+            _ => Err("no UnixListener")?,
         }
     }
 }

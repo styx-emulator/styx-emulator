@@ -34,7 +34,7 @@ use tracing::{debug, warn};
 
 pub async fn post_analysis(dir: &str) -> Result<(), std::io::Error> {
     debug!("ptrace: post analysis, dir={}", dir);
-    let memfilename = format!("{}/memory.bin", dir);
+    let memfilename = format!("{dir}/memory.bin");
     let mut mem_buffer: Vec<u8> = Vec::new();
 
     // From vars file
@@ -42,7 +42,7 @@ pub async fn post_analysis(dir: &str) -> Result<(), std::io::Error> {
         let path = format!("{dir}/post_analysis_from_vars.txt");
         let dst = OutDst::File(&path);
         let mut out = output_dst(dst)?;
-        let vars = get_variables(format!("{}/variables.json", dir))
+        let vars = get_variables(format!("{dir}/variables.json"))
             .await
             .unwrap();
         for var in vars.iter() {
@@ -127,7 +127,7 @@ pub async fn post_analysis(dir: &str) -> Result<(), std::io::Error> {
                     .unwrap();
                 }
             } else if let Some(carray) = a_repr {
-                writeln!(out, "{:?}", carray).unwrap();
+                writeln!(out, "{carray:?}").unwrap();
             } else {
                 eprintln!("Error: unhandled var");
                 std::process::exit(1);
@@ -143,7 +143,7 @@ pub async fn post_analysis(dir: &str) -> Result<(), std::io::Error> {
         let (_, vars) = {
             let (r1, r2) = futures::join!(
                 read_mem(&memfilename, &mut mem_buffer),
-                get_variables(format!("{}/variables.json", dir))
+                get_variables(format!("{dir}/variables.json"))
             );
             (r1.unwrap(), r2.unwrap())
         };
@@ -161,7 +161,7 @@ pub async fn post_analysis(dir: &str) -> Result<(), std::io::Error> {
             if num_writes > 0 {
                 writeln!(out, "==> {}", var.symbol).unwrap();
                 writeln!(out, "    {} ", var.datatype).unwrap();
-                writeln!(out, "    num_writes: {}", num_writes).unwrap();
+                writeln!(out, "    num_writes: {num_writes}").unwrap();
                 writeln!(out, "    {:?}", compact_repr(&var.mem, 0, var.mem.len())).unwrap();
                 writeln!(out, "    -").unwrap();
                 let (start, end) = (
@@ -179,7 +179,7 @@ pub async fn post_analysis(dir: &str) -> Result<(), std::io::Error> {
 async fn read_mem(memfilename: &str, mem_buffer: &mut Vec<u8>) -> Result<(), std::io::Error> {
     let mut file = File::open(memfilename).unwrap();
     let filesize = std::fs::metadata(memfilename)?.len();
-    print!("Reading memory ({} bytes) ... ", filesize);
+    print!("Reading memory ({filesize} bytes) ... ");
     let n = file.read_to_end(mem_buffer)?;
     assert_eq!(n, filesize as usize);
     Ok(())

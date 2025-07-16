@@ -46,12 +46,12 @@
 ///
 #[macro_export]
 macro_rules! gdb_core_test_suite {
-    ($pc_register:expr,
-     $test_bin_path:expr,
-     $start_address:expr,
-     $bp_one:expr,
-     $bp_two:expr,
-     $wp_one:expr,
+    ($pc_register:expr_2021,
+     $test_bin_path:expr_2021,
+     $start_address:expr_2021,
+     $bp_one:expr_2021,
+     $bp_two:expr_2021,
+     $wp_one:expr_2021,
      $test_target_description_type:tt,
      $gdb_test_processor:ident,
      ) => {

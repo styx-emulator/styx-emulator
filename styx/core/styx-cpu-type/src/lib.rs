@@ -162,10 +162,9 @@ impl From<TargetExitReason> for gdbstub::common::Signal {
             Tgt::SoftwarePowerOff | Tgt::SoftwareReset => Signal::SIGSTOP,
             Tgt::GeneralFault(_) => Signal::SIGSTOP,
             Tgt::DoubleFault(_) | Tgt::TripleFault(_) => Signal::SIGKILL,
-            Tgt::InvalidStateFromTarget(msg) | Tgt::InvalidStateFromHost(msg) => panic!(
-                "Something is very wrong: `{}` attempted to be serialized to gdb",
-                msg
-            ),
+            Tgt::InvalidStateFromTarget(msg) | Tgt::InvalidStateFromHost(msg) => {
+                panic!("Something is very wrong: `{msg}` attempted to be serialized to gdb")
+            }
         }
     }
 }

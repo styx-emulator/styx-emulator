@@ -107,7 +107,7 @@ fn uart_port_rbr_thr_dll_w_hook(
     let data = u32::from_le_bytes(
         data[0..4]
             .try_into()
-            .unwrap_or_else(|_| panic!("unable to convert {:?} into u32", data)),
+            .unwrap_or_else(|_| panic!("unable to convert {data:?} into u32")),
     );
 
     let port = proc
@@ -187,7 +187,7 @@ fn uart_port_rbr_thr_dll_r_hook(
     let mut reg_val = u32::from_le_bytes(
         data[0..4]
             .try_into()
-            .unwrap_or_else(|_| panic!("unable to convert {:?} into u32", data)),
+            .unwrap_or_else(|_| panic!("unable to convert {data:?} into u32")),
     );
 
     let port = proc
@@ -231,7 +231,7 @@ fn uart_port_ier_dlh_w_hook(id: &String, proc: CoreHandle, _address: u64, size: 
     let data = u32::from_le_bytes(
         data[0..4]
             .try_into()
-            .unwrap_or_else(|_| panic!("unable to convert {:?} into u32", data)),
+            .unwrap_or_else(|_| panic!("unable to convert {data:?} into u32")),
     );
 
     let mut do_interrupt = None;
@@ -297,7 +297,7 @@ fn uart_port_ier_dlh_r_hook(
     let mut reg_val = u32::from_le_bytes(
         data[0..4]
             .try_into()
-            .unwrap_or_else(|_| panic!("unable to convert {:?} into u32", data)),
+            .unwrap_or_else(|_| panic!("unable to convert {data:?} into u32")),
     );
 
     let port = proc
@@ -339,7 +339,7 @@ fn uart_port_iir_w_hook(id: &String, proc: CoreHandle, _address: u64, size: u32,
     let data = u32::from_le_bytes(
         data[0..4]
             .try_into()
-            .unwrap_or_else(|_| panic!("unable to convert {:?} into u32", data)),
+            .unwrap_or_else(|_| panic!("unable to convert {data:?} into u32")),
     );
 
     let port = proc
@@ -387,7 +387,7 @@ fn uart_port_lcr_w_hook(id: &String, proc: CoreHandle, _address: u64, size: u32,
     let data = u32::from_le_bytes(
         data[0..4]
             .try_into()
-            .unwrap_or_else(|_| panic!("unable to convert {:?} into u32", data)),
+            .unwrap_or_else(|_| panic!("unable to convert {data:?} into u32")),
     );
 
     let port = proc
@@ -412,7 +412,7 @@ fn uart_port_mcr_w_hook(id: &String, proc: CoreHandle, _address: u64, size: u32,
     let data = u32::from_le_bytes(
         data[0..4]
             .try_into()
-            .unwrap_or_else(|_| panic!("unable to convert {:?} into u32", data)),
+            .unwrap_or_else(|_| panic!("unable to convert {data:?} into u32")),
     );
 
     let port = proc
@@ -518,7 +518,7 @@ fn uart_port_sthr_w_hook(id: &String, proc: CoreHandle, _address: u64, size: u32
     let data = u32::from_le_bytes(
         data[0..4]
             .try_into()
-            .unwrap_or_else(|_| panic!("unable to convert {:?} into u32", data)),
+            .unwrap_or_else(|_| panic!("unable to convert {data:?} into u32")),
     );
 
     let port = proc
@@ -626,7 +626,7 @@ fn uart_port_srr_w_hook(id: &String, proc: CoreHandle, _address: u64, size: u32,
     let data = u32::from_le_bytes(
         data[0..4]
             .try_into()
-            .unwrap_or_else(|_| panic!("unable to convert {:?} into u32", data)),
+            .unwrap_or_else(|_| panic!("unable to convert {data:?} into u32")),
     );
 
     let port = proc

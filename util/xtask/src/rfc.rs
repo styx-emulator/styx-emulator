@@ -96,10 +96,7 @@ fn next_file_number(path: &Path) -> u32 {
     )
     // turn into Option<u32>
     .filter_map(|maybe_number_str|{
-        match maybe_number_str.parse::<u32>() {
-            Ok(num) => Some(num),
-            Err(_) => None,
-        }
+        maybe_number_str.parse::<u32>().ok()
     })
     // get the max, if there are none then we need to return `1`,
     // so the max is currently "0"
@@ -117,13 +114,13 @@ fn content_template(name: String, number: u32) -> String {
 
     format!(
         r#"
-.. _{}_rfc:
+.. _{camel_case_name}_rfc:
 
-{}
-{}
+{titled_line}
+{title_under}
 
-{}
-{}
+{title_name}
+{section_under}
 
 Status: Draft
 
@@ -141,8 +138,7 @@ Drawbacks/Alternatives
 
 Future Work
 ===========
-"#,
-        camel_case_name, titled_line, title_under, title_name, section_under
+"#
     )
 }
 

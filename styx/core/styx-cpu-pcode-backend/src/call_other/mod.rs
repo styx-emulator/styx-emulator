@@ -162,10 +162,7 @@ impl CallOtherManager {
         inputs: &[VarnodeData],
         output: Option<&VarnodeData>,
     ) -> Result<PCodeStateChange, CallOtherTriggerError> {
-        trace!(
-            "Triggering CallOther index {index} with inputs {:?}.",
-            inputs
-        );
+        trace!("Triggering CallOther index {index} with inputs {inputs:?}.");
 
         let handler_ptr = cpu.call_other_manager
             .handlers

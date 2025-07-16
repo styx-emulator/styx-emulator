@@ -154,7 +154,7 @@ async fn at_trace(
                         if func_event.entered && fenter || (!func_event.entered && fexit) {
                             let prefix =
                                 format!("{:010} {:#010x}", func_event.insn_num, func_event.pc);
-                            writeln!(out, "{} {}", prefix, func_event).unwrap();
+                            writeln!(out, "{prefix} {func_event}").unwrap();
                         }
                     }
 
@@ -184,7 +184,7 @@ async fn at_trace(
         }
     }
 
-    writeln!(out, "Finished trace: reason: {}", end_reason).unwrap();
+    writeln!(out, "Finished trace: reason: {end_reason}").unwrap();
 }
 
 /// functions analyzer
@@ -212,7 +212,7 @@ async fn at_functions(
                         if (!fenter && !fexit)
                             || (func_event.entered && fenter || (!func_event.entered && fexit))
                         {
-                            writeln!(out, "{}", func_event).unwrap();
+                            writeln!(out, "{func_event}").unwrap();
                         }
                     }
                     _ => {}
@@ -230,7 +230,7 @@ async fn at_functions(
     }
 
     // finish ...
-    writeln!(out, "Finished: reason: {}", end_reason).unwrap();
+    writeln!(out, "Finished: reason: {end_reason}").unwrap();
 }
 
 /// stats analyzer
@@ -261,7 +261,7 @@ async fn at_stats(
 
                 // body --------------------------------------------------------
                 total += 1;
-                let repr = format!("{}", aggregate_event);
+                let repr = format!("{aggregate_event}");
                 let fields = repr.split_whitespace().collect::<Vec<&str>>();
                 if let Some(s) = fields.first() {
                     let k = s.to_string();
@@ -289,11 +289,11 @@ async fn at_stats(
         }
     }
 
-    writeln!(out, "EOV: {}, Reason: {}", should_stop, end_reason).unwrap();
-    writeln!(out, "Total Events: {}", total).unwrap();
+    writeln!(out, "EOV: {should_stop}, Reason: {end_reason}").unwrap();
+    writeln!(out, "Total Events: {total}").unwrap();
     for (k, v) in hm.iter() {
         let label = format!("{k}:");
-        writeln!(out, " {:<20} {}", label, v).unwrap();
+        writeln!(out, " {label:<20} {v}").unwrap();
     }
 }
 
@@ -322,9 +322,9 @@ async fn at_memory(
                         OutputFormat::Json => {
                             writeln!(out, "{}", serde_json::to_string(&mem).unwrap()).unwrap()
                         }
-                        OutputFormat::Text => writeln!(out, "{:?}", mem).unwrap(),
+                        OutputFormat::Text => writeln!(out, "{mem:?}").unwrap(),
                         OutputFormat::Builtin => {
-                            writeln!(out, "{}", mem).unwrap();
+                            writeln!(out, "{mem}").unwrap();
                         }
                     },
                     _ => {}
@@ -342,7 +342,7 @@ async fn at_memory(
     }
 
     // finish ...
-    writeln!(out, "Finished: reason: {}", end_reason).unwrap();
+    writeln!(out, "Finished: reason: {end_reason}").unwrap();
 
     // while let Some(aggregate_event) = stream.next().await {
     //     check_pause!(cancel_token, aggregate_event);
@@ -372,7 +372,7 @@ async fn at_isr(
                 match aggregate_event {
                     AggregateEvent::Isr(isr) => {
                         if isr.entered {
-                            writeln!(out, "{}", isr).unwrap();
+                            writeln!(out, "{isr}").unwrap();
                         }
                         let mut level = 0;
 
@@ -413,7 +413,7 @@ async fn at_isr(
     }
 
     // finish ...
-    writeln!(out, "Finished: reason: {}", end_reason).unwrap();
+    writeln!(out, "Finished: reason: {end_reason}").unwrap();
 }
 
 pub struct EventRepeater {

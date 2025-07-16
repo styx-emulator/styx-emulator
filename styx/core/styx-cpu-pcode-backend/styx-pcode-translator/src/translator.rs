@@ -125,7 +125,7 @@ impl<L: Loader + LoaderRequires + 'static> PcodeTranslator<L> {
     fn get_registers_option<'a, Sla: SlaRegisters>(
         arch_def: &dyn ArchitectureDef,
         sleigh: &'a mut Sleigh<L>,
-    ) -> impl Iterator<Item = (ArchRegister, Option<VarnodeData>)> + 'a {
+    ) -> impl Iterator<Item = (ArchRegister, Option<VarnodeData>)> + 'a + use<'a, Sla, L> {
         let strings = arch_def
             .registers()
             .registers()
