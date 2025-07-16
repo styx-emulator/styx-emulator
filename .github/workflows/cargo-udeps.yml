@@ -41,4 +41,5 @@ jobs:
     - name: Run cargo-udeps
       shell: bash
       run: |
+        cargo install cargo-udeps@^0.1.54 --locked
         cargo +nightly-2025-07-10 udeps --all --all-targets --exclude styx-workspace-hack
