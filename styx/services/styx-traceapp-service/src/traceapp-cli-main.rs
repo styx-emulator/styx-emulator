@@ -250,13 +250,13 @@ fn summarize_responses(
         responses.len(),
     );
 
-    summary_str.push_str(&format!("\n  max_insn: {}", max_insn));
-    summary_str.push_str(&format!("\n  nfenter:  {}", nfenter));
-    summary_str.push_str(&format!("\n  nfexit:   {}", nfexit));
-    summary_str.push_str(&format!("\n  nintr:    {}", nintr));
-    summary_str.push_str(&format!("\n  nmems:    {}", nmems));
-    summary_str.push_str(&format!("\n  neoe:     {}", neoe));
-    summary_str.push_str(&format!("\n  ninst:    {}", ninst));
+    summary_str.push_str(&format!("\n  max_insn: {max_insn}"));
+    summary_str.push_str(&format!("\n  nfenter:  {nfenter}"));
+    summary_str.push_str(&format!("\n  nfexit:   {nfexit}"));
+    summary_str.push_str(&format!("\n  nintr:    {nintr}"));
+    summary_str.push_str(&format!("\n  nmems:    {nmems}"));
+    summary_str.push_str(&format!("\n  neoe:     {neoe}"));
+    summary_str.push_str(&format!("\n  ninst:    {ninst}"));
 
     summary_str
 }
@@ -278,7 +278,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     match args.command {
         Command::Initialize => {
             let request = request_from_file("").await?;
-            println!("{:?}", request);
+            println!("{request:?}");
             let (etx, mut erx) = mpsc::channel(100);
             // let eargs: EmulationArgs = request.args()?.get_emulation_args().unwrap();
             let cancel_token = CancellationToken::new();
@@ -319,7 +319,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
             while sid.is_none() {
                 if let Ok(Some(session_id)) = timeout(Duration::from_secs(1), rx.recv()).await {
-                    println!("SESSION_ID={}", session_id);
+                    println!("SESSION_ID={session_id}");
                     sid = Some(session_id.clone());
                 }
                 if fut.is_finished() || cancel_token.is_cancelled() {
@@ -361,16 +361,16 @@ async fn main() -> Result<(), Box<dyn Error>> {
                             result,
                         );
                         println!("SUMMARY: {summary}");
-                        format!("Start task result OK: {:?}", result)
+                        format!("Start task result OK: {result:?}")
                     }
                     Err(e) => {
-                        format!("Start task result FAIL: {:?}", e)
+                        format!("Start task result FAIL: {e:?}")
                     }
                 };
                 if let Some(fut) = stopper_fut {
                     match fut.await? {
-                        Ok(stop_task) => println!("stop_task: {:?}", stop_task),
-                        Err(e) => println!("stop_task: {:?}", e),
+                        Ok(stop_task) => println!("stop_task: {stop_task:?}"),
+                        Err(e) => println!("stop_task: {e:?}"),
                     }
                 }
 
@@ -378,17 +378,17 @@ async fn main() -> Result<(), Box<dyn Error>> {
                     println!("=> Dropping ...");
                     let session = match_one_session(&url.clone(), &session_id).await?;
                     disconnect(&url.clone(), &session).await?;
-                    println!("{}", result_string);
+                    println!("{result_string}");
                 }
             } else {
                 eprintln!("No session_id: failed to start");
                 if fut.is_finished() {
                     let result_string = match fut.await? {
                         Ok(result) => {
-                            format!("Start task result OK: {:?}", result)
+                            format!("Start task result OK: {result:?}")
                         }
                         Err(e) => {
-                            format!("Start task result FAIL: {:?}", e)
+                            format!("Start task result FAIL: {e:?}")
                         }
                     };
                     println!("{result_string}")

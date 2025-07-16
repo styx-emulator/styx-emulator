@@ -51,8 +51,10 @@ impl<'a> RustLoadImage<'a> {
     }
 
     unsafe fn load_fill(&mut self, ptr: *mut u8, size: u32, addr: &ffi::Address) {
-        let slice = std::slice::from_raw_parts_mut(ptr, size as usize);
-        self.internal.load_fill(slice, addr);
+        unsafe {
+            let slice = std::slice::from_raw_parts_mut(ptr, size as usize);
+            self.internal.load_fill(slice, addr);
+        }
     }
 
     fn adjust_vma(&mut self, adjust: isize) {
@@ -80,12 +82,14 @@ impl<'a> RustPCodeEmit<'a> {
         outvar: *const ffi::VarnodeData,
         vars: &CxxVector<ffi::VarnodeData>,
     ) {
-        let outvar = if outvar.is_null() {
-            None
-        } else {
-            Some(&*outvar)
-        };
-        self.internal.dump(address, opcode, outvar, vars);
+        unsafe {
+            let outvar = if outvar.is_null() {
+                None
+            } else {
+                Some(&*outvar)
+            };
+            self.internal.dump(address, opcode, outvar, vars);
+        }
     }
 }
 

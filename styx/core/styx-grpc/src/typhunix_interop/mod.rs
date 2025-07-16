@@ -41,7 +41,7 @@ pub fn fmt_address<T>(n: T) -> String
 where
     T: std::fmt::LowerHex,
 {
-    format!("{:#010x}", n)
+    format!("{n:#010x}")
 }
 
 /// Convert the hex string "0x00000000" to u64

@@ -74,7 +74,7 @@ impl I2CClient {
         let inner = runtime.block_on(async {
             I2cPortClient::connect(address.clone())
                 .await
-                .unwrap_or_else(|_| panic!("Could not connect to: {}", address))
+                .unwrap_or_else(|_| panic!("Could not connect to: {address}"))
         });
 
         Self {
@@ -92,17 +92,17 @@ impl I2CClient {
     ///
     /// - A Start or Stop signal on the bus resets the client to the waiting to be addresses state.
     /// - The first data packet after a start signal indicates the address of the slave device that the master is trying to communicate with.
-    ///     If we match that address, we send an Ack signal on the bus and then switch into either read or write mode depending on the state
-    ///     of the LSB in the address data packet.
+    ///   If we match that address, we send an Ack signal on the bus and then switch into either read or write mode depending on the state
+    ///   of the LSB in the address data packet.
     /// - If we got put into read mode, we initiate the transfer by sending the first data packet and then waiting for an Ack signal before sending
-    ///     the next byte.
+    ///   the next byte.
     /// - If we got put into write mode, we wait for the master to send the next data packet, and then send an Ack after performing the write to
-    ///     indicate we are ready for more data.
+    ///   indicate we are ready for more data.
     /// - Once the master is done reading from the device or writing to the device, it will send a stop signal which resets our state.
     ///
     /// Error Conditions:
     /// - Attempting to register multiple devices with the same address on the bus will result in an error from the `register_client` method.
-    ///     On a real I2C interface, duplicate slave addresses will cause unpredicatable behaviour and arbitration errors so we don't allow this.
+    ///   On a real I2C interface, duplicate slave addresses will cause unpredicatable behaviour and arbitration errors so we don't allow this.
     pub fn start_client<D, T>(&self, mut device: D, address: T, bus: Option<u32>)
     where
         T: ToSocketAddrs,
@@ -135,12 +135,12 @@ impl I2CClient {
 
             while let Some(recv) = resp.next().await {
                 if let Err(e) = recv {
-                    debug!("Server disconnected or other error occured: {:?}", e);
+                    debug!("Server disconnected or other error occured: {e:?}");
                     break;
                 }
 
                 let i2c_packet = recv.unwrap();
-                debug!("[{}] Received packet on the bus: {:?}", dev_str, i2c_packet);
+                debug!("[{dev_str}] Received packet on the bus: {i2c_packet:?}");
 
                 // unpack the message from the bus and react accordingly
                 match i2c_packet.contents.unwrap() {

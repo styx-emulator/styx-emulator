@@ -227,7 +227,7 @@ impl std::fmt::Display for CVarRepr {
 impl std::fmt::Display for CStructRepr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let v = if let Some(ref var) = self.var {
-            format!("{}", var)
+            format!("{var}")
         } else {
             "".to_string()
         };
@@ -239,11 +239,11 @@ impl std::fmt::Display for CStructRepr {
 impl std::fmt::Display for BasicRepr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let v = if let Some(ref var) = self.var {
-            format!("{}", var)
+            format!("{var}")
         } else {
             "".to_string()
         };
-        let s = format!("{} ", v);
+        let s = format!("{v} ");
         write!(f, "{s}")
     }
 }
@@ -289,7 +289,7 @@ impl MemoryChange {
         let dt_cls = self.datatype_cls();
         let mut s = self.desc();
         s.push_str(&format!(", addr:{:#010x}", self.addr));
-        s.push_str(&format!(", [{}] ", dt_cls));
+        s.push_str(&format!(", [{dt_cls}] "));
         s.push_str(&self.val_repr());
         s
     }
@@ -338,9 +338,9 @@ impl std::fmt::Display for MemoryChange {
         s.push_str(&format!(" pc:{:#010x}", self.pc));
         s.push_str(&format!(", addr:{:#010x}", self.addr));
         s.push_str(&format!(", size:{}", self.new_value.len()));
-        s.push_str(&format!(", [{}]", dt_cls));
+        s.push_str(&format!(", [{dt_cls}]"));
         if let Some(ref i) = self.interrupt {
-            let ss = format!("  Interrupt: {}", i);
+            let ss = format!("  Interrupt: {i}");
             s.push_str(&ss);
         }
         s.push_str(&format!("\n  {}()", self.function_name));

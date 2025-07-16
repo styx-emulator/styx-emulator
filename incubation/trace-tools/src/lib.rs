@@ -93,7 +93,7 @@ pub fn compact_repr(v: &[u8], from: usize, to: usize) -> String {
             v[from..to]
                 .to_vec()
                 .iter()
-                .map(|v| format!("{:x}", v))
+                .map(|v| format!("{v:x}"))
                 .collect::<Vec<String>>()
                 .join(",")
         )
@@ -109,15 +109,15 @@ pub fn compact_repr(v: &[u8], from: usize, to: usize) -> String {
                     if span == 1 {
                         str_vec.push("0".to_string());
                     } else {
-                        str_vec.push(format!("0;{}", span));
+                        str_vec.push(format!("0;{span}"));
                     }
                     span = 0;
                 }
-                str_vec.push(format!("{:x}", val));
+                str_vec.push(format!("{val:x}"));
             }
         }
         if span > 0 {
-            str_vec.push(format!("0;{}", span));
+            str_vec.push(format!("0;{span}"));
         }
 
         format!(
@@ -164,9 +164,9 @@ impl Default for ConditionVar {
 
 #[macro_export]
 macro_rules! send_state_change {
-    ($Tx: expr, $Sid: expr, $New: expr) => {{
+    ($Tx: expr_2021, $Sid: expr_2021, $New: expr_2021) => {{
         $Tx.send(Ok(StartTraceAppSessionResponse {
-            session_id: $Sid.to_string(),
+            session_id: ToString::to_string($Sid),
             // must be fully qualified as this is in a macro
             state_change: Some(::styx_core::grpc::traceapp::TraceSessionStateChange {
                 state: $New.into(),
@@ -246,9 +246,9 @@ mod tests {
                 ok += 1;
             }
         }
-        eprintln!("OK:      {} {}", ok, expected_ok);
+        eprintln!("OK:      {ok} {expected_ok}");
         assert_eq!(ok, expected_ok);
-        eprintln!("TIMEOUT: {} {}", tmout, expected_timeout);
+        eprintln!("TIMEOUT: {tmout} {expected_timeout}");
         assert_eq!(tmout, expected_timeout);
         eprintln!("ERR:     {} {}", err, 0);
         assert_eq!(err, 0);

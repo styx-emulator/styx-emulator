@@ -61,7 +61,7 @@ impl MemoryBank {
     /// assert_eq!(0x4000, bank.min_address().unwrap());
     /// ```
     pub fn min_address(&self) -> Result<u64, StyxMemoryError> {
-        if self.regions.read().unwrap().len() > 0 {
+        if !self.regions.read().unwrap().is_empty() {
             Ok(self.min_address.load(Ordering::Acquire))
         } else {
             Err(StyxMemoryError::EmptyMemoryBank)
@@ -121,7 +121,7 @@ impl MemoryBank {
     /// assert_eq!(0x4fff, bank.max_address().unwrap());
     /// ```
     pub fn max_address(&self) -> Result<u64, StyxMemoryError> {
-        if self.regions.read().unwrap().len() > 0 {
+        if !self.regions.read().unwrap().is_empty() {
             Ok(self.max_address.load(Ordering::Acquire))
         } else {
             Err(StyxMemoryError::EmptyMemoryBank)
@@ -144,7 +144,7 @@ impl MemoryBank {
     /// ```
     pub fn add_region(&self, region: MemoryRegion) -> Result<(), StyxMemoryError> {
         // only check for overlap if there are regions in the bank
-        if self.regions.read().unwrap().len() > 0
+        if !self.regions.read().unwrap().is_empty()
             && self.check_overlap(region.base(), region.size())
         {
             Err(StyxMemoryError::OverlappingRegion(
@@ -480,7 +480,7 @@ impl MemoryBank {
     pub fn valid_memory(&self) -> Result<MemoryRange, StyxMemoryError> {
         let regions = self.regions.read().unwrap();
 
-        if regions.len() == 0 {
+        if regions.is_empty() {
             Err(StyxMemoryError::EmptyMemoryBank)
         } else {
             Ok(MemoryRange::new(
@@ -1762,7 +1762,7 @@ mod tests {
                     verification[verified_idx], value
                 );
             } else {
-                panic!("read of (valid) address {:#08X} failed", base);
+                panic!("read of (valid) address {base:#08X} failed");
             }
         }
     }
@@ -1789,7 +1789,7 @@ mod tests {
                 verification[verified_idx], value
             );
         } else {
-            panic!("read of (valid) address {:#08X} failed", base);
+            panic!("read of (valid) address {base:#08X} failed");
         }
     }
 
@@ -1858,7 +1858,7 @@ mod tests {
                 let start_idx = base as usize - 0x1000;
                 assert_eq!(validation[start_idx..start_idx + size as usize], value)
             } else {
-                panic!("Read size {} @  {:#08X} failed!", size, base);
+                panic!("Read size {size} @  {base:#08X} failed!");
             }
         }
     }
@@ -1881,7 +1881,7 @@ mod tests {
             let start_idx = base as usize - 0x1000;
             assert_eq!(validation[start_idx..start_idx + size as usize], value)
         } else {
-            panic!("Read size {} @  {:#08X} failed!", size, base);
+            panic!("Read size {size} @  {base:#08X} failed!");
         }
     }
 

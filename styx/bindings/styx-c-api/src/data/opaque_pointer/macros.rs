@@ -31,10 +31,10 @@ macro_rules! opaque_pointer {
                 /// # Safety
                 /// ensure that this pointer is not free'd and that the mutable reference outlives
                 /// the lifetime of this pointer
-                pub unsafe fn from_mut(value: &mut $t) -> Self {
+                pub unsafe fn from_mut(value: &mut $t) -> Self { unsafe {
                     let out = $crate::data::OpaquePointer::from_mut(value);
                     Self(out)
-                }
+                }}
             }
 
             impl std::ops::Deref for $n {

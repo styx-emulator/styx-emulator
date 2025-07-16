@@ -7,7 +7,8 @@ use styx_tracebus::{strace, BaseTraceEvent, TraceProvider, STRACE};
 #[cfg_attr(miri, ignore)]
 /// tests that the [TraceProvider] get set to [NullProvider]
 fn test_strace_not_set() {
-    std::env::set_var("STRACE_PROVIDER", "");
+    // TODO: Audit that the environment access only happens in single-threaded code.
+    unsafe { std::env::set_var("STRACE_PROVIDER", "") };
     strace!(BaseTraceEvent::default());
     let key = STRACE.key();
     assert!(!std::path::Path::new(&key).exists())

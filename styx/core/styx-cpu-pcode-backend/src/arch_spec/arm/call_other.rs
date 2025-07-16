@@ -422,8 +422,7 @@ impl CallOtherCallback for CoprocessorMovefromRt {
             cpu.write(output, value).unwrap();
         } else {
             warn!(
-                "unhandled case in CoprocessorMovefromRt: cpn={}, opc1={}, opc2={}, crn={}, crm={}",
-                cpn, opc1, opc2, crn, crm
+                "unhandled case in CoprocessorMovefromRt: cpn={cpn}, opc1={opc1}, opc2={opc2}, crn={crn}, crm={crm}"
             );
         }
 

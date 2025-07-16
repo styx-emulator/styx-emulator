@@ -88,7 +88,7 @@ impl TimerContainer {
     }
 
     /// Iterator over enabled timers.
-    pub fn enabled_timers(&self) -> impl Iterator<Item = TimerId> {
+    pub fn enabled_timers(&self) -> impl Iterator<Item = TimerId> + use<> {
         let a: Vec<_> = self
             .timers
             .iter()

@@ -23,7 +23,7 @@ fn test_unmapped_execution() {
     cpu.set_pc(0x2000).unwrap();
 
     let res = cpu.execute(&mut mmu, &mut ev, 1000).unwrap();
-    println!("cpu execution res: {:?}", res);
+    println!("cpu execution res: {res:?}");
     assert_eq!(
         res,
         ExecutionReport::new(TargetExitReason::UnmappedMemoryFetch, 0)
@@ -53,7 +53,7 @@ fn test_goes_unmapped_execution() {
 
     // 1 instruction should be mapped
     let res = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
-    println!("res: {:?}", res);
+    println!("res: {res:?}");
 
     assert_eq!(
         res,
@@ -64,7 +64,7 @@ fn test_goes_unmapped_execution() {
     // 1 instruction should be mapped, 2nd instruction is not
     cpu.set_pc(0xFFC).unwrap();
     let res = cpu.execute(&mut mmu, &mut ev, 2).unwrap();
-    println!("cpu execution res: {:?}", res);
+    println!("cpu execution res: {res:?}");
     assert_eq!(
         res,
         ExecutionReport::new(TargetExitReason::UnmappedMemoryFetch, 1)
@@ -90,7 +90,7 @@ fn test_no_permission_execution() {
     cpu.set_pc(0x1000).unwrap();
 
     let res = cpu.execute(&mut mmu, &mut ev, 1000).unwrap();
-    println!("cpu execution res: {:?}", res);
+    println!("cpu execution res: {res:?}");
     assert_eq!(
         res,
         ExecutionReport::new(TargetExitReason::ProtectedMemoryFetch, 0)

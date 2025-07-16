@@ -21,7 +21,7 @@ impl MigrationTrait for Migration {
 
         let db = manager.get_connection();
         macro_rules! exec {
-            ($db: ident, $sql: expr) => {
+            ($db: ident, $sql: expr_2021) => {
                 $db.execute_unprepared($sql).await?
             };
         }

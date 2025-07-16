@@ -51,8 +51,8 @@ pub async fn drop_create(dburl: &DbUrl) -> Result<(), DbOpsErr> {
 
     warn!("drop_create: {baseurl}");
     let cnx = Database::connect(connect_options(baseurl)?).await?;
-    let drop_stmt = format!("drop database if exists\"{}\";", dbname);
-    let create_stmt = format!("create database \"{}\";", dbname);
+    let drop_stmt = format!("drop database if exists\"{dbname}\";");
+    let create_stmt = format!("create database \"{dbname}\";");
     match cnx.get_database_backend() {
         DbBackend::Postgres | DbBackend::MySql => {
             cnx.execute(Statement::from_string(
@@ -160,7 +160,7 @@ impl DbUrl {
             _ => "".to_string(),
         };
         let port = match self.url().port() {
-            Some(v) => format!(":{}", v),
+            Some(v) => format!(":{v}"),
             _ => "".to_string(),
         };
         format!("{scheme}://{username}{password}{host}{port}")
@@ -207,7 +207,7 @@ mod tests {
     use tracing::{debug, info};
     use workspace_service::cli_util as ws_svc_cli;
     macro_rules! count {
-        ($entity: ty, $cnx: expr) => {
+        ($entity: ty, $cnx: expr_2021) => {
             <$entity>::find().count($cnx).await.unwrap()
         };
     }
@@ -257,7 +257,7 @@ mod tests {
     fn test_dburl() {
         let dbstr = "postgres://postgres:styx@localhost/styxdb";
         let dburl: DbUrl = dbstr.try_into().unwrap();
-        assert_eq!(format!("{}", dburl), String::from(dbstr));
+        assert_eq!(format!("{dburl}"), String::from(dbstr));
         assert!(dburl.dbname().is_some());
         assert_eq!(dburl.url().scheme(), "postgres");
         assert_eq!(dburl.url().password().unwrap(), "styx");

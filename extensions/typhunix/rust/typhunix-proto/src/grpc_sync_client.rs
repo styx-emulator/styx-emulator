@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: BSD-2-Clause
+#![allow(clippy::result_large_err)]
 use crate::grpc_async_client::{get_data_types, get_programs, get_symbols, GrpcStatus};
 use styx_emulator::grpc::typhunix_interop::{
     symbolic::{DataType, Program, ProgramFilter, Symbol},

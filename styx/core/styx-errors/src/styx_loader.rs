@@ -52,12 +52,12 @@ impl From<GoblinError> for StyxLoaderError {
         match value {
             GoblinError::Malformed(error_text) => Self::MalformedInput(error_text),
             GoblinError::BadMagic(magic_value) => {
-                Self::MalformedInput(format!("Bad file magic: {:X}", magic_value))
+                Self::MalformedInput(format!("Bad file magic: {magic_value:X}"))
             }
             scroll_error @ GoblinError::Scroll(_) => Self::LoaderBackend(Box::new(scroll_error)),
             GoblinError::IO(io_error) => io_error.into(),
             GoblinError::BufferTooShort(n, msg) => {
-                Self::MalformedInput(format!("Buffer too short for `{:X}`: `{}`", n, msg))
+                Self::MalformedInput(format!("Buffer too short for `{n:X}`: `{msg}`"))
             }
             _ => unreachable!("Goblin added a new error"),
         }

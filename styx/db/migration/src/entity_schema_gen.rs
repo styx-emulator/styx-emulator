@@ -38,7 +38,7 @@ impl MigrationScript {
         let mut stmts: Vec<TableScript> = vec![];
 
         macro_rules! table {
-            ($entity: expr) => {
+            ($entity: expr_2021) => {
                 let _tbl = TableScript::new(
                     $entity.as_str(),
                     &pg.build(&schema.create_table_from_entity($entity)).sql,

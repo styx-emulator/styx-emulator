@@ -492,7 +492,7 @@ impl CpuBackend for PcodeBackend {
 
             current_stop = state.increment_instruction_count();
             let stop_requested = self.stop_request_check_and_reset();
-            trace!("current stop bool: {}", stop_requested);
+            trace!("current stop bool: {stop_requested}");
             current_stop = current_stop.or({
                 if stop_requested {
                     Some(ExecutionReport::new(
@@ -1254,12 +1254,9 @@ mod arm_tests {
                   size: u32,
                   perms: MemoryPermissions,
                   fault_data: MemFaultData| {
-            println!(
-                "protection fault: 0x{:x} of size: {}, type: {:?}",
-                addr, size, fault_data
-            );
+            println!("protection fault: 0x{addr:x} of size: {size}, type: {fault_data:?}");
 
-            println!("region has permissions: {}", perms);
+            println!("region has permissions: {perms}");
 
             proc.cpu.write_register(ArmRegister::R2, 1u32).unwrap();
 
@@ -1286,8 +1283,7 @@ mod arm_tests {
         // basic assertions are correct
         assert_eq!(
             0x1004u64, end_pc,
-            "Stopped at incorrect instruction: {:#x}",
-            end_pc,
+            "Stopped at incorrect instruction: {end_pc:#x}",
         );
         assert_eq!(
             0x9999,
@@ -1323,12 +1319,9 @@ mod arm_tests {
                   size: u32,
                   perms: MemoryPermissions,
                   fault_data: MemFaultData| {
-            println!(
-                "protection fault: 0x{:x} of size: {}, type: {:?}",
-                addr, size, fault_data
-            );
+            println!("protection fault: 0x{addr:x} of size: {size}, type: {fault_data:?}");
 
-            println!("region has permissions: {}", perms);
+            println!("region has permissions: {perms}");
 
             proc.cpu.write_register(ArmRegister::R2, 1u32).unwrap();
 
@@ -1354,8 +1347,7 @@ mod arm_tests {
         // basic assertions are correct
         assert_eq!(
             0x1004u64, end_pc,
-            "Stopped at incorrect instruction: {:#x}",
-            end_pc,
+            "Stopped at incorrect instruction: {end_pc:#x}",
         );
         assert_eq!(
             0x9999,

@@ -86,8 +86,8 @@ pub async fn list_programs(cstr: &str, dump: bool) -> Result<ProgramWithData, Bo
             let pid = program.pid.to_owned().unwrap();
             let suffix = &format!("{}_{}.json", pid.source_id, pid.name,);
             let _ = join!(
-                json_util::dump_to_file(&symbols, format!("symbols_{}", suffix)),
-                json_util::dump_to_file(&data_types, format!("data_types_{}", suffix))
+                json_util::dump_to_file(&symbols, format!("symbols_{suffix}")),
+                json_util::dump_to_file(&data_types, format!("data_types_{suffix}"))
             );
         }
         alldata.push((program, symbols, data_types));
@@ -101,7 +101,7 @@ pub async fn list_all(cstr: &str, dump: bool) -> Result<(), Box<dyn Error>> {
     let data = list_programs(cstr, dump).await?;
     data.iter().for_each(|(p, s, d)| {
         let arch = if let Some(ref arch) = p.architecture {
-            format!("{:?}", arch)
+            format!("{arch:?}")
         } else {
             "Architecture: None".to_string()
         };
@@ -109,7 +109,7 @@ pub async fn list_all(cstr: &str, dump: bool) -> Result<(), Box<dyn Error>> {
         print!("{}, ", p.pid.as_ref().unwrap());
         print!("Symbol count: {}, ", s.len());
         println!("DataType count: {}", d.len());
-        println!("    {}", arch);
+        println!("    {arch}");
         if let Some(ref md) = p.metadata {
             println!("    Loader: {}", md.loader);
         }

@@ -74,8 +74,8 @@ macro_rules! styx_ffi_error_impl {
             #[allow(non_camel_case_types)]
             pub type [< $sname Msg_t >] = *mut core::ffi::c_char;
 
-            #[no_mangle]
-            pub unsafe extern "C" fn [< $sname Msg >](error: $sname) -> [< $sname Msg_t >] {
+            #[unsafe(no_mangle)]
+            pub unsafe extern "C" fn [< $sname Msg >](error: $sname) -> [< $sname Msg_t >] { unsafe {
                 if error.data.is_null() {
                     eprintln!("invalid error supplied!");
                     return std::ptr::null_mut();
@@ -124,10 +124,10 @@ macro_rules! styx_ffi_error_impl {
                 }
                 std::ptr::copy_nonoverlapping(cmsg.as_ptr(), out_ptr, msg_len);
                 out_ptr
-            }
+            }}
 
-            #[no_mangle]
-            pub unsafe extern "C" fn [< $sname Msg_free >](msg: [< $sname Msg_t >]) {
+            #[unsafe(no_mangle)]
+            pub unsafe extern "C" fn [< $sname Msg_free >](msg: [< $sname Msg_t >]) { unsafe {
                 let cstr = core::ffi::CStr::from_ptr(msg);
                 let len = cstr.count_bytes() + 1;
                 let layout = match std::alloc::Layout::array::<[< $sname Msg_t >]>(len) {
@@ -138,7 +138,7 @@ macro_rules! styx_ffi_error_impl {
                     }
                 };
                 std::alloc::dealloc(msg as *mut u8, layout);
-            }
+            }}
 
             $(
                 #[derive(Debug)]
@@ -284,7 +284,7 @@ impl From<StyxFFIError> for StyxFFIErrorPtr {
 }
 
 #[allow(non_snake_case)]
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn StyxFFIErrorPtr_free(result: *mut StyxFFIErrorPtr) {
     let Some(outer) = (unsafe { result.as_mut() }) else {
         return;

@@ -287,7 +287,7 @@ mod tests {
     #[cfg_attr(miri, ignore)] // uses a syscall
     fn test_test_bins_pathbuf() {
         let datapath = test_bins_pathbuf();
-        println!("{:?}", datapath);
+        println!("{datapath:?}");
         assert!(datapath.is_dir());
         assert!(datapath.is_absolute());
         assert!(datapath.exists());

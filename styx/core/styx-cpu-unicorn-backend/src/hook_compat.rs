@@ -93,10 +93,7 @@ pub fn code_hook_proxy(
 
     hook_proxy(hook, |proc, hook| {
         let StyxHook::Code(range, hook) = hook else {
-            panic!(
-                "Invalid hook type called on code_hook_proxy, got: {:?}",
-                hook
-            )
+            panic!("Invalid hook type called on code_hook_proxy, got: {hook:?}")
         };
 
         // check that the code hook is valid
@@ -121,10 +118,7 @@ pub fn mem_write_proxy(
 
     hook_proxy(hook, |proc, hook| {
         let StyxHook::MemoryWrite(range, hook) = hook else {
-            panic!(
-                "Invalid hook type called on mem_write_hook_proxy, got: {:?}",
-                hook
-            )
+            panic!("Invalid hook type called on mem_write_hook_proxy, got: {hook:?}")
         };
 
         debug_assert!(mem_type == unicorn_const::MemType::WRITE);
@@ -162,10 +156,7 @@ pub fn mem_read_proxy(
 
     hook_proxy(hook, |proc, hook| {
         let StyxHook::MemoryRead(range, hook) = hook else {
-            panic!(
-                "Invalid hook type called on mem_read_proxy, got: {:?}",
-                hook
-            )
+            panic!("Invalid hook type called on mem_read_proxy, got: {hook:?}")
         };
 
         debug_assert!(mem_type == unicorn_const::MemType::READ);
@@ -226,10 +217,7 @@ pub fn block_hook_proxy(
 ) {
     hook_proxy(hook, |proc, hook| {
         let StyxHook::Block(hook) = hook else {
-            panic!(
-                "Invalid hook type called on block_hook_proxy, got: {:?}",
-                hook
-            )
+            panic!("Invalid hook type called on block_hook_proxy, got: {hook:?}")
         };
 
         // call callback + propagate the return code
@@ -244,10 +232,7 @@ pub fn intr_hook_proxy(
 ) {
     hook_proxy(hook, |proc, hook| {
         let StyxHook::Interrupt(hook) = hook else {
-            panic!(
-                "Invalid hook type called on intr_hook_proxy, got: {:?}",
-                hook
-            )
+            panic!("Invalid hook type called on intr_hook_proxy, got: {hook:?}")
         };
 
         hook.call(proc, intno)
@@ -272,10 +257,7 @@ pub fn invalid_insn_hook_proxy(
             // `execute`.
             HandleExceptionAction::TargetHandle(_) => {
                 let StyxHook::InvalidInstruction(hook) = hook else {
-                    panic!(
-                        "Invalid hook type called on invalid_insn_proxy, got: {:?}",
-                        hook
-                    )
+                    panic!("Invalid hook type called on invalid_insn_proxy, got: {hook:?}")
                 };
 
                 // call callback + propagate the return code
@@ -324,10 +306,7 @@ pub fn protection_fault_hook_proxy(
             // `execute`.
             HandleExceptionAction::TargetHandle(_) => {
                 let StyxHook::ProtectionFault(range, hook) = hook else {
-                    panic!(
-                        "Invalid hook type called on protection_fault_hook_proxy, got: {:?}",
-                        hook
-                    )
+                    panic!("Invalid hook type called on protection_fault_hook_proxy, got: {hook:?}")
                 };
 
                 // validate
@@ -404,10 +383,7 @@ pub fn unmapped_fault_hook_proxy(
             // `execute`.
             HandleExceptionAction::TargetHandle(_) => {
                 let StyxHook::UnmappedFault(range, hook) = hook else {
-                    panic!(
-                        "Invalid hook type called on unmapped_fault_hook_proxy, got: {:?}",
-                        hook
-                    )
+                    panic!("Invalid hook type called on unmapped_fault_hook_proxy, got: {hook:?}")
                 };
 
                 // validate

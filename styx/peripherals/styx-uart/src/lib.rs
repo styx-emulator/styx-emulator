@@ -262,8 +262,7 @@ impl UartController {
 
         // no uart port matched
         Err(GenericUARTError::InvalidInterface(format!(
-            "No interface owns IRQ {}",
-            irq
+            "No interface owns IRQ {irq}"
         )))
     }
 

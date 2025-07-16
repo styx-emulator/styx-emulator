@@ -236,7 +236,7 @@ where
 {
     let mut map_ser = serializer.serialize_map(Some(map.len()))?;
     for (k, v) in map.iter() {
-        map_ser.serialize_entry(&format!("0x{:X}", k), &v)?;
+        map_ser.serialize_entry(&format!("0x{k:X}"), &v)?;
     }
     map_ser.end()
 }
@@ -264,7 +264,7 @@ where
         .filter_map(|rawbin| match Fdt::new(rawbin) {
             Ok(fdt) => Some(fdt),
             Err(e) => {
-                eprintln!("Failed to compile devicetree with err: {}", e);
+                eprintln!("Failed to compile devicetree with err: {e}");
                 None
             }
         })
@@ -390,7 +390,7 @@ fn make_binaries(opts: &Cli, meta_stats: &mut MetaStats) -> Box<[Box<[u8]>]> {
                 DTreeType::Dtb => match fs::read(file) {
                     Ok(data) => Some(data.into_boxed_slice()),
                     Err(e) => {
-                        eprintln!("Failed to read dtb. Err: {}", e);
+                        eprintln!("Failed to read dtb. Err: {e}");
                         None
                     }
                 },
@@ -407,8 +407,7 @@ fn make_binaries(opts: &Cli, meta_stats: &mut MetaStats) -> Box<[Box<[u8]>]> {
 
     eprintln!();
     eprintln!(
-        "Successfully compiled/found {} dtbs ({} failed)",
-        final_good_dtb_count, final_fail_count
+        "Successfully compiled/found {final_good_dtb_count} dtbs ({final_fail_count} failed)"
     );
 
     compiled_devtrees
@@ -472,7 +471,11 @@ mod tests {
 
         assert!(ExitStatus::success(&out.status), "dtc bad exit code");
         let stdout = std::str::from_utf8(out.stdout.as_slice()).unwrap();
-        let semver = stdout.split(' ').last().expect("dtc bad output").trim();
+        let semver = stdout
+            .split(' ')
+            .next_back()
+            .expect("dtc bad output")
+            .trim();
 
         let act_vers = semver.split('.').map(|n| n.parse::<usize>().unwrap());
         let exp_vers = MIN_DTC_VER.split('.').map(|n| n.parse::<usize>().unwrap());
@@ -481,13 +484,12 @@ mod tests {
         for (expected, actual) in exp_vers.zip(act_vers) {
             match actual.cmp(&expected) {
                 std::cmp::Ordering::Less => panic!(
-                    "Installed DTC version: {} is less than expected version: {}",
-                    semver, MIN_DTC_VER
+                    "Installed DTC version: {semver} is less than expected version: {MIN_DTC_VER}"
                 ),
                 std::cmp::Ordering::Equal => continue,
                 std::cmp::Ordering::Greater => break,
             }
         }
-        println!("Installed DTC version {} >= {}", semver, MIN_DTC_VER);
+        println!("Installed DTC version {semver} >= {MIN_DTC_VER}");
     }
 }

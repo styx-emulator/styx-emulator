@@ -3563,7 +3563,7 @@ pub const NVIC_BASE: u32 = 3758153984;
 pub const SCB_BASE: u32 = 3758157056;
 pub const FPU_BASE: u32 = 3758157616;
 pub const NVIC_USER_IRQ_OFFSET: u32 = 16;
-extern "C" {
+unsafe extern "C" {
     #[doc = "< External variable to receive characters."]
     pub static mut ITM_RxBuffer: i32;
 }
@@ -3574,7 +3574,7 @@ pub const CPU_INT_SLOW_CLK_HZ: u32 = 32768;
 pub const CPU_INT_FAST_CLK_HZ: u32 = 4000000;
 pub const SYSTEM_SMC_PMPROT_VALUE: u32 = 42;
 pub const DEFAULT_SYSTEM_CLOCK: u32 = 20971520;
-extern "C" {
+unsafe extern "C" {
     #[doc = " @brief System clock frequency (core clock)\n\n The system clock frequency supplied to the SysTick timer and the processor\n core clock. This variable can be used by the user application to setup the\n SysTick timer or configure other parameters. It may also be used by debugger to\n query the frequency of the debug timer or configure the trace clock speed\n SystemCoreClock is initialized with a correct predefined value."]
     pub static mut SystemCoreClock: u32;
 }

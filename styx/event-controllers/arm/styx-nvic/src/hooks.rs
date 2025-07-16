@@ -155,7 +155,7 @@ pub fn return_from_exception(proc: CoreHandle) -> Result<(), UnknownError> {
             flags.ctl_spsel = true;
         }
         _ => {
-            panic!("Invalid EXC_RETURN value: 0x{:X}", exc_return);
+            panic!("Invalid EXC_RETURN value: 0x{exc_return:X}");
         }
     }
 

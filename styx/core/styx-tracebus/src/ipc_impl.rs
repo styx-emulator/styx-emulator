@@ -62,7 +62,7 @@ impl IPCTracer {
         // this implementation uses a memory-mapped file as the trace buffer.
         // The key is the filename. Use it if provided, otherwise create it.
         let options_in = options.clone();
-        log::debug!("options_in:  {:?}", options_in);
+        log::debug!("options_in:  {options_in:?}");
 
         let mut options_out = options_in.clone();
         let filename = match options_in.key {
@@ -75,7 +75,7 @@ impl IPCTracer {
         let os_path = Path::new(&filename);
         let does_exist = os_path.exists();
 
-        log::debug!("options_out: {:?}", options_out);
+        log::debug!("options_out: {options_out:?}");
 
         if does_exist && !options.key_exists_ok {
             Err(TraceError::BufferKeyExists(filename))
@@ -110,7 +110,7 @@ impl TraceProvider for IPCTracer {
     {
         let bytes: &BinaryTraceEventType = unsafe { transmute(item) };
         match self.sender.send_timeout(bytes, self.options.send_timeout) {
-            Err(e) => Err(TraceError::WriteFailed(format!("{:?}", e))),
+            Err(e) => Err(TraceError::WriteFailed(format!("{e:?}"))),
             Ok(v) => Ok(v),
         }
     }
@@ -123,7 +123,7 @@ impl TraceProvider for IPCTracer {
         }
 
         match std::fs::remove_file(p) {
-            Err(e) => Err(TraceError::TeardownFailed(format!("{:?}", e))),
+            Err(e) => Err(TraceError::TeardownFailed(format!("{e:?}"))),
             _ => Ok(()),
         }
     }
@@ -323,7 +323,7 @@ mod tests {
 
         let didsend = match ipcimpl.sender.send_timeout(&tevent, DEFAULT_SEND_TIMEOUT) {
             Err(e) => {
-                panic!("Failed to send trace: {:?}", e);
+                panic!("Failed to send trace: {e:?}");
             }
             Ok(false) => {
                 log::warn!("Failed to send trace: buffer full");

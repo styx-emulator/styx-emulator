@@ -296,7 +296,7 @@ impl EmulationRegistryService for TraceRegistry {
                 .start(Request::new(nrequest))
                 .await
                 .map_err(|e| {
-                    tonic::Status::new(tonic::Code::Unknown, format!("connect failed: {}", e))
+                    tonic::Status::new(tonic::Code::Unknown, format!("connect failed: {e}"))
                 })?
                 .into_inner();
             debug!("Got response {:?}", resp);

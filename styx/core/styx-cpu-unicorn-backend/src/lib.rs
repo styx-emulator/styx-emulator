@@ -989,7 +989,7 @@ mod tests {
         let mut machine = TestMachine::with_code("movw r1, #0x400b;mov r8, r8;mov r8,r8;bx r1");
 
         let cb = |proc: CoreHandle, addr: u64, size: u32| {
-            println!("hit bb: 0x{:x} of size: {}", addr, size);
+            println!("hit bb: 0x{addr:x} of size: {size}");
 
             let r2 = proc.cpu.read_register::<u32>(ArmRegister::R2).unwrap() + 1;
             proc.cpu.write_register(ArmRegister::R2, r2).unwrap();
@@ -1082,7 +1082,7 @@ mod tests {
         let mut machine = TestMachine::with_code("movw r1, #0x400b;mov r8, r8;mov r8,r8;bx r1");
 
         let cb = |proc: CoreHandle, addr: u64, size: u32| {
-            println!("hit bb: 0x{:x} of size: {}", addr, size);
+            println!("hit bb: 0x{addr:x} of size: {size}");
 
             let r2 = proc.cpu.read_register::<u32>(ArmRegister::R2).unwrap() + 1;
             proc.cpu.write_register(ArmRegister::R2, r2).unwrap();
@@ -1110,10 +1110,7 @@ mod tests {
         let mut machine = TestMachine::with_code("movw r1, #0x9999;ldr r4, [r1];");
 
         let cb = |proc: CoreHandle, addr: u64, size: u32, fault_data: MemFaultData| {
-            println!(
-                "unmapped fault: 0x{:x} of size: {}, type: {:?}",
-                addr, size, fault_data
-            );
+            println!("unmapped fault: 0x{addr:x} of size: {size}, type: {fault_data:?}");
 
             proc.cpu.write_register(ArmRegister::R2, 1u32).unwrap();
 
@@ -1135,8 +1132,7 @@ mod tests {
         // basic assertions are correct
         assert_eq!(
             0x4004u64, end_pc,
-            "Stopped at incorrect instruction: {:#x}",
-            end_pc,
+            "Stopped at incorrect instruction: {end_pc:#x}",
         );
         assert_eq!(
             0x9999,
@@ -1163,10 +1159,7 @@ mod tests {
         let mut machine = TestMachine::with_code("movw r1, #0x9999;str r4, [r1];");
 
         let cb = |proc: CoreHandle, addr: u64, size: u32, fault_data: MemFaultData| {
-            println!(
-                "unmapped fault: 0x{:x} of size: {}, type: {:?}",
-                addr, size, fault_data
-            );
+            println!("unmapped fault: 0x{addr:x} of size: {size}, type: {fault_data:?}");
 
             proc.cpu.write_register(ArmRegister::R2, 1u32).unwrap();
 
@@ -1188,8 +1181,7 @@ mod tests {
         // basic assertions are correct
         assert_eq!(
             0x4004u64, end_pc,
-            "Stopped at incorrect instruction: {:#x}",
-            end_pc,
+            "Stopped at incorrect instruction: {end_pc:#x}",
         );
         assert_eq!(
             0x9999,
@@ -1226,12 +1218,9 @@ mod tests {
                   size: u32,
                   perms: MemoryPermissions,
                   fault_data: MemFaultData| {
-            println!(
-                "protection fault: 0x{:x} of size: {}, type: {:?}",
-                addr, size, fault_data
-            );
+            println!("protection fault: 0x{addr:x} of size: {size}, type: {fault_data:?}");
 
-            println!("region has permissions: {}", perms);
+            println!("region has permissions: {perms}");
 
             proc.cpu.write_register(ArmRegister::R2, 1u32).unwrap();
 
@@ -1253,8 +1242,7 @@ mod tests {
         // basic assertions are correct
         assert_eq!(
             0x4004u64, end_pc,
-            "Stopped at incorrect instruction: {:#x}",
-            end_pc,
+            "Stopped at incorrect instruction: {end_pc:#x}",
         );
         assert_eq!(
             0x9999,
@@ -1291,12 +1279,9 @@ mod tests {
                   size: u32,
                   perms: MemoryPermissions,
                   fault_data: MemFaultData| {
-            println!(
-                "protection fault: 0x{:x} of size: {}, type: {:?}",
-                addr, size, fault_data
-            );
+            println!("protection fault: 0x{addr:x} of size: {size}, type: {fault_data:?}");
 
-            println!("region has permissions: {}", perms);
+            println!("region has permissions: {perms}");
 
             proc.cpu.write_register(ArmRegister::R2, 1u32).unwrap();
 
@@ -1318,8 +1303,7 @@ mod tests {
         // basic assertions are correct
         assert_eq!(
             0x4004u64, end_pc,
-            "Stopped at incorrect instruction: {:#x}",
-            end_pc,
+            "Stopped at incorrect instruction: {end_pc:#x}",
         );
         assert_eq!(
             0x9999,
@@ -1374,27 +1358,21 @@ mod tests {
         };
 
         let mem_read_cb = |proc: CoreHandle, address: u64, size: u32, data: &mut [u8]| {
-            println!(
-                "Memory read from address: {:x}, with size: {} and data: {:?}",
-                address, size, data
-            );
+            println!("Memory read from address: {address:x}, with size: {size} and data: {data:?}");
             let new_r4 = proc.cpu.read_register::<u32>(ArmRegister::R4).unwrap() + 1;
             proc.cpu.write_register(ArmRegister::R4, new_r4).unwrap();
             Ok(())
         };
 
         let mem_write_cb = |proc: CoreHandle, address: u64, size: u32, data: &[u8]| {
-            println!(
-                "Memory write to address: {:x}, with size: {} and data: {:?}",
-                address, size, data
-            );
+            println!("Memory write to address: {address:x}, with size: {size} and data: {data:?}");
             let new_r4 = proc.cpu.read_register::<u32>(ArmRegister::R4).unwrap() + 1;
             proc.cpu.write_register(ArmRegister::R4, new_r4).unwrap();
             Ok(())
         };
 
         let intr_cb = |proc: CoreHandle, intno: i32| {
-            println!("caught interrupt: {}", intno);
+            println!("caught interrupt: {intno}");
             proc.cpu.stop();
             let new_r4 = proc.cpu.read_register::<u32>(ArmRegister::R4).unwrap() + 1;
             proc.cpu.write_register(ArmRegister::R4, new_r4).unwrap();
@@ -1436,7 +1414,7 @@ mod tests {
         let mut machine = TestMachine::with_bytes(&code, 1);
 
         let cb = |proc: CoreHandle, intno: i32| {
-            println!("caught interrupt: {}", intno);
+            println!("caught interrupt: {intno}");
             proc.cpu.stop();
             Ok(())
         };

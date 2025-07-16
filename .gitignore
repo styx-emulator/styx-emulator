@@ -50,6 +50,8 @@ ghidra-releases
 .local.env
 # local envoy config is generated
 extensions/trace-webapp/envoy/local-envoy.yaml
+# local scripts, config files, etc.
+.local/
 
 # fuzz cases
 corpus/

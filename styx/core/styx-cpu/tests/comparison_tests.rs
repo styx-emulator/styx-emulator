@@ -788,10 +788,7 @@ fn test_unmapped_read_hooks() {
                       size: u32,
                       fault_data: MemFaultData|
              -> Result<Resolution, UnknownError> {
-                println!(
-                    "unmapped fault: 0x{:x} of size: {}, type: {:?}",
-                    addr, size, fault_data
-                );
+                println!("unmapped fault: 0x{addr:x} of size: {size}, type: {fault_data:?}");
 
                 proc.cpu.write_register(ArmRegister::R2, 1u32).unwrap();
 
@@ -815,8 +812,7 @@ fn test_unmapped_read_hooks() {
             assert_eq!(
                 machine.start_address + 4,
                 end_pc,
-                "Stopped at incorrect instruction: {:#x}",
-                end_pc,
+                "Stopped at incorrect instruction: {end_pc:#x}",
             );
             assert_eq!(
                 0x9999,
@@ -865,10 +861,7 @@ fn test_unmapped_write_hooks() {
                       size: u32,
                       fault_data: MemFaultData|
              -> Result<Resolution, UnknownError> {
-                println!(
-                    "unmapped fault: 0x{:x} of size: {}, type: {:?}",
-                    addr, size, fault_data
-                );
+                println!("unmapped fault: 0x{addr:x} of size: {size}, type: {fault_data:?}");
 
                 proc.cpu.write_register(ArmRegister::R2, 1u32).unwrap();
 
@@ -892,8 +885,7 @@ fn test_unmapped_write_hooks() {
             assert_eq!(
                 machine.start_address + 4,
                 end_pc,
-                "Stopped at incorrect instruction: {:#x}",
-                end_pc,
+                "Stopped at incorrect instruction: {end_pc:#x}",
             );
             assert_eq!(
                 0x9999,
@@ -943,10 +935,7 @@ fn test_unmapped_read_hook_fixed() {
                       size: u32,
                       fault_data: MemFaultData|
              -> Result<Resolution, UnknownError> {
-                println!(
-                    "unmapped fault: 0x{:x} of size: {}, type: {:?}",
-                    addr, size, fault_data
-                );
+                println!("unmapped fault: 0x{addr:x} of size: {size}, type: {fault_data:?}");
 
                 proc.cpu.write_register(ArmRegister::R2, 1u32).unwrap();
 
@@ -1029,10 +1018,7 @@ fn test_unmapped_write_hook_fixed() {
                       size: u32,
                       fault_data: MemFaultData|
              -> Result<Resolution, UnknownError> {
-                println!(
-                    "unmapped fault: 0x{:x} of size: {}, type: {:?}",
-                    addr, size, fault_data
-                );
+                println!("unmapped fault: 0x{addr:x} of size: {size}, type: {fault_data:?}");
 
                 proc.cpu.write_register(ArmRegister::R2, 1u32).unwrap();
 
