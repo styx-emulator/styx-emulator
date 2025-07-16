@@ -45,7 +45,7 @@ use crate::{
 ///    [`ExecutorImpl::valid_emulation_conditions()`] is checked.
 /// 5. [`ExecutorImpl::emulate()`] is called. This should call `proc.cpu.execute()`.
 /// 6. [`ExecutorImpl::halt_emulation()`] is called with the cpu's [`TargetExitReason`] and the
-///     amount of [`Delta`] time spent emulating.
+///    amount of [`Delta`] time spent emulating.
 /// 7. [`ExecutorImpl::post_stride_processing()`] is called. This should call `tick()` and `next()`
 ///    methods.
 /// 8. Finally, the execution constraints are checked and emulation exits if either are met.

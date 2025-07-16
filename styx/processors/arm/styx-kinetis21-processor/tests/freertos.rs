@@ -22,14 +22,14 @@ fn test_freertos_hello() {
     println!("Trying to connect...");
 
     loop {
-        match TcpStream::connect(format!("127.0.0.1:{}", ipc_port)) {
+        match TcpStream::connect(format!("127.0.0.1:{ipc_port}")) {
             Ok(_) => break,
             Err(_) => continue,
         }
     }
 
     let uart_client = Arc::new(UartClient::new(
-        format!("http://127.0.0.1:{}", ipc_port),
+        format!("http://127.0.0.1:{ipc_port}"),
         Some(5),
     ));
     println!("Connected!");

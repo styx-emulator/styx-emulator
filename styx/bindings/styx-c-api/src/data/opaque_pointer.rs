@@ -36,12 +36,14 @@ where
     }
 
     pub(crate) unsafe fn new_uninit() -> Result<Self, StyxFFIError> {
-        let layout = Layout::new::<T::To>();
-        let ptr = std::alloc::alloc(layout) as *mut ();
-        if ptr.is_null() {
-            Err(StyxFFIError::allocation_error())
-        } else {
-            Ok(Self(ptr, PhantomData))
+        unsafe {
+            let layout = Layout::new::<T::To>();
+            let ptr = std::alloc::alloc(layout) as *mut ();
+            if ptr.is_null() {
+                Err(StyxFFIError::allocation_error())
+            } else {
+                Ok(Self(ptr, PhantomData))
+            }
         }
     }
 
@@ -91,9 +93,11 @@ where
     /// # Safety
     /// This can have issues if the pointer is not initialized
     unsafe fn free_impl(t: *mut T::To) {
-        let layout = Layout::new::<T::To>();
-        std::ptr::drop_in_place(t);
-        std::alloc::dealloc(t as *mut u8, layout);
+        unsafe {
+            let layout = Layout::new::<T::To>();
+            std::ptr::drop_in_place(t);
+            std::alloc::dealloc(t as *mut u8, layout);
+        }
     }
 
     /// Free a pointer created temporarily and not passed into styx

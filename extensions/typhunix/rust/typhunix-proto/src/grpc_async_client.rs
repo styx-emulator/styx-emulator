@@ -9,6 +9,7 @@ use styx_emulator::grpc::typhunix_interop::{
 use tonic::{transport::Channel, IntoRequest};
 
 type StdError = Box<dyn std::error::Error + Send + Sync + 'static>;
+// Boxed because tonic::Status is LARGE
 pub type GrpcStatus = tonic::Status;
 
 pub struct AsyncClient {
@@ -161,7 +162,7 @@ where
 {
     AsyncClient::connect(dst)
         .await
-        .map_err(|e| GrpcStatus::new(tonic::Code::Unknown, format!("connect failed: {}", e)))?
+        .map_err(|e| tonic::Status::new(tonic::Code::Unknown, format!("connect failed: {e}")))?
         .get_symbols_vec(program)
         .await
 }
@@ -185,7 +186,7 @@ where
 {
     AsyncClient::connect(dst)
         .await
-        .map_err(|e| GrpcStatus::new(tonic::Code::Unknown, format!("connect failed: {}", e)))?
+        .map_err(|e| tonic::Status::new(tonic::Code::Unknown, format!("connect failed: {e}")))?
         .get_data_types_vec(program)
         .await
 }
@@ -209,7 +210,7 @@ where
 {
     AsyncClient::connect(dst)
         .await
-        .map_err(|e| GrpcStatus::new(tonic::Code::Unknown, format!("connect failed: {}", e)))?
+        .map_err(|e| tonic::Status::new(tonic::Code::Unknown, format!("connect failed: {e}")))?
         .get_programs_vec(filter)
         .await
 }
@@ -232,7 +233,7 @@ where
 {
     AsyncClient::connect(dst)
         .await
-        .map_err(|e| GrpcStatus::new(tonic::Code::Unknown, format!("connect failed: {}", e)))?
+        .map_err(|e| tonic::Status::new(tonic::Code::Unknown, format!("connect failed: {e}")))?
         .get_program_id_vec()
         .await
 }

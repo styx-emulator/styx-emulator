@@ -360,7 +360,7 @@ impl LicenseChecker {
 
     fn report_bad_paths(&self) -> Result<(), std::io::Error> {
         let bad_paths = self.bad_paths.lock().unwrap();
-        if bad_paths.len() > 0 {
+        if !bad_paths.is_empty() {
             for path in bad_paths.iter() {
                 eprintln!("Missing License: {}", path.as_os_str().to_str().unwrap());
             }
@@ -467,13 +467,13 @@ mod tests {
         let mut checker = LicenseChecker::new(test_dir);
 
         // init the LICENSE data
-        let license = get_license_data().expect("BA LICENSE");
-        println!("{}", license);
+        let license = get_license_data().expect("BAD LICENSE");
+        println!("{license}");
         checker.set_license_data(get_license_data().expect("BAD LICENSE"));
 
         // Call + return check function
         let res = checker.check_files(true, Vec::new());
-        assert!(res.is_ok(), "Files failed LICENSE checks {:?}", res);
+        assert!(res.is_ok(), "Files failed LICENSE checks {res:?}");
     }
 
     #[test]
@@ -488,7 +488,7 @@ mod tests {
 
         // Call + return check function
         let res = checker.check_files(true, Vec::new());
-        assert!(res.is_ok(), "Files failed LICENSE checks {:?}", res);
+        assert!(res.is_ok(), "Files failed LICENSE checks {res:?}");
     }
 
     #[test]

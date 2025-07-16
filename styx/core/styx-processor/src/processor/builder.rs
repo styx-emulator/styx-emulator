@@ -420,12 +420,12 @@ fn start_ipc(routes: RoutesBuilder, runtime: Handle, port: IPCPort) -> Result<u1
     let tcp_listener = runtime
         .block_on(async move {
             // create the tcp listener
-            TcpListener::bind(format!("0.0.0.0:{}", port)).await
+            TcpListener::bind(format!("0.0.0.0:{port}")).await
         })
         .with_context(|| format!("could not bind to port {port}"))?;
     let port = tcp_listener.local_addr()?.port();
 
-    info!("Processor IPC server listening on port {}", port);
+    info!("Processor IPC server listening on port {port}");
 
     // spawn ipc on async runtime
     runtime.spawn(async move {

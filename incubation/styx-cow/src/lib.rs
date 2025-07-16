@@ -23,7 +23,7 @@ pub enum StyxCowError {
 
 impl From<std::io::Error> for StyxCowError {
     fn from(value: std::io::Error) -> Self {
-        StyxCowError::OSError(format!("{:?}", value))
+        StyxCowError::OSError(format!("{value:?}"))
     }
 }
 
@@ -85,7 +85,7 @@ impl Cow {
 
     #[inline]
     unsafe fn ptr_to_slice(&self) -> &[u8] {
-        slice::from_raw_parts(self.ptr as *mut u8, self.size)
+        unsafe { slice::from_raw_parts(self.ptr as *mut u8, self.size) }
     }
 
     /// returns an immutable view of the data
@@ -95,7 +95,7 @@ impl Cow {
 
     #[inline]
     unsafe fn ptr_to_mut_slice(&mut self) -> &mut [u8] {
-        slice::from_raw_parts_mut(self.ptr as *mut u8, self.size)
+        unsafe { slice::from_raw_parts_mut(self.ptr as *mut u8, self.size) }
     }
 
     /// returns a mutable view of the data

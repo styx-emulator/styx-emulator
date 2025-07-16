@@ -8,7 +8,7 @@
 /// - conversions to [`ArchRegister`](crate::arch::backends::ArchRegister)
 /// - conversions to [`BasicArchRegister`](crate::arch::backends::BasicArchRegister)
 macro_rules! create_basic_register_enums {
-    ($enum_name:ident, $(($reg_name:ident, $size:expr)),+ $(,)?) => {
+    ($enum_name:ident, $(($reg_name:ident, $size:expr_2021)),+ $(,)?) => {
         ::paste::paste! {
             #[derive(Debug,
                      PartialEq,

@@ -271,7 +271,7 @@ fn main() {
                     }
                 }
                 (err, false, None) => {
-                    eprintln!("Error: {}", err);
+                    eprintln!("Error: {err}");
                     break;
                 }
             }

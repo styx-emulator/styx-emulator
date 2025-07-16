@@ -29,7 +29,7 @@ impl Model {
         let final_model = self;
         let message = serde_json::to_value(final_model).unwrap();
         let mut message = serde_json::from_value::<Message>(message).unwrap();
-        if let Some(ref v) = new_emulation_args {
+        if let Some(v) = new_emulation_args {
             message.emulation_args = Some(
                 serde_json::from_value::<EmulationArgs>(serde_json::to_value(v).unwrap()).unwrap(),
             )

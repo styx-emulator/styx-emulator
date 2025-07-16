@@ -702,11 +702,12 @@ where
     ) -> TargetResult<usize, Self> {
         let addr: u64 = num_traits::ToPrimitive::to_u64(&start_addr).unwrap();
 
-        if let Err(e) = self.proc.mmu.read_data(addr, data) {
-            debug!("GdbExecutor::read_addrs(addr: `0x{:x}`): {}", addr, e);
-            Err(gdbstub::target::TargetError::NonFatal)
-        } else {
-            Ok(data.len())
+        match self.proc.mmu.read_data(addr, data) {
+            Err(e) => {
+                debug!("GdbExecutor::read_addrs(addr: `0x{:x}`): {}", addr, e);
+                Err(gdbstub::target::TargetError::NonFatal)
+            }
+            _ => Ok(data.len()),
         }
     }
 
@@ -719,11 +720,12 @@ where
     ) -> TargetResult<(), Self> {
         let addr: u64 = num_traits::ToPrimitive::to_u64(&start_addr).unwrap();
 
-        if let Err(e) = self.proc.mmu.write_data(addr, data) {
-            debug!("GdbExecutor::write_addrs(addr: `0x{:x}`): {}", addr, e);
-            Err(gdbstub::target::TargetError::NonFatal)
-        } else {
-            Ok(())
+        match self.proc.mmu.write_data(addr, data) {
+            Err(e) => {
+                debug!("GdbExecutor::write_addrs(addr: `0x{:x}`): {}", addr, e);
+                Err(gdbstub::target::TargetError::NonFatal)
+            }
+            _ => Ok(()),
         }
     }
 
@@ -1164,10 +1166,13 @@ where
                         WatchKind::Read => self.watchpoints.remove(pos),
                         WatchKind::ReadWrite => self.watchpoints.remove(pos),
                     };
-                    if let Ok(hook) = self.mem_hook_cache.remove_hook(addr) {
-                        self.target_cpu().delete_hook(hook).unwrap();
-                    } else {
-                        error!("Failed to remove memory watchpoint from CpuEngineBackend");
+                    match self.mem_hook_cache.remove_hook(addr) {
+                        Ok(hook) => {
+                            self.target_cpu().delete_hook(hook).unwrap();
+                        }
+                        _ => {
+                            error!("Failed to remove memory watchpoint from CpuEngineBackend");
+                        }
                     }
 
                     trace!("remove_hw_watchpoint: removed watchpoint");

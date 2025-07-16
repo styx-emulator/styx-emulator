@@ -65,7 +65,7 @@ impl Variable {
 
         let symbol = Symbol {
             id: addr,
-            name: format!("anon_var_{}", addr),
+            name: format!("anon_var_{addr}"),
             address: addr as i64,
             namespace: String::from("Global"),
             r#type: SymbolType::SymbolLabel.into(),
@@ -77,7 +77,7 @@ impl Variable {
 
         let datatype = DataType {
             id: addr,
-            name: format!("var_{}", addr),
+            name: format!("var_{addr}"),
             size: value.len() as i32,
             r#type: MetaType::TypeBasic.into(),
             alignment: u32::default(),
@@ -414,19 +414,19 @@ pub fn struct_mbr(dt: &DataType, mem: &[u8]) -> CStructMemberRepr {
     let repr = if is_ptr {
         if dt.size == 4 {
             let val = u32::from_ne_bytes(mem_slice.try_into().unwrap());
-            format!("-> {:#010x}", val)
+            format!("-> {val:#010x}")
         } else {
             compact_repr(mem, beg_mbr_mem, end_mbr_mem)
         }
     } else if dt.size == 1 && dt_typename.eq("byte") {
         let val = mem_slice[0];
-        format!("{:#08b} {:#01x}", val, val)
+        format!("{val:#08b} {val:#01x}")
     } else if dt.size == 2 && dt_typename.eq("byte") {
         let val = u16::from_ne_bytes(mem_slice.try_into().unwrap());
-        format!("{:#01x}", val)
+        format!("{val:#01x}")
     } else if dt.size == 4 && (dt_typename.eq("byte") || dt_typename.eq("uint32_t")) {
         let val = u32::from_ne_bytes(mem_slice.try_into().unwrap());
-        format!("{:#01x}", val)
+        format!("{val:#01x}")
     } else {
         compact_repr(mem, beg_mbr_mem, end_mbr_mem)
     };

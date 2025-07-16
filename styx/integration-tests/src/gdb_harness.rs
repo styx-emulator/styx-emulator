@@ -29,7 +29,7 @@ pub fn decode_hex(s: &str) -> Result<Vec<u8>, ParseIntError> {
 pub fn encode_hex(bytes: &[u8]) -> String {
     let mut s = String::with_capacity(bytes.len() * 2);
     for &b in bytes {
-        write!(&mut s, "{:02x}", b).unwrap();
+        write!(&mut s, "{b:02x}").unwrap();
     }
     s
 }
@@ -129,7 +129,7 @@ fn create_gdb_multiarch_process(port: u16, runtime: Runtime) -> BlockingGdbClien
             .arg("-nh")
             .arg("-nx")
             .arg("-ex")
-            .arg(format!("target remote :{}", port))
+            .arg(format!("target remote :{port}"))
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -163,10 +163,7 @@ impl BlockingGdbClient {
             .runtime
             .block_on(async {
                 inner
-                    .raw_cmd(&format!(
-                        "-data-read-memory-bytes {} {}",
-                        base_address, size
-                    ))
+                    .raw_cmd(&format!("-data-read-memory-bytes {base_address} {size}"))
                     .await
             })?
             .expect_result()?;
@@ -198,8 +195,7 @@ impl BlockingGdbClient {
             .block_on(async {
                 inner
                     .raw_cmd(&format!(
-                        "-data-write-memory-bytes {} {}",
-                        base_address, hex_data
+                        "-data-write-memory-bytes {base_address} {hex_data}"
                     ))
                     .await
             })?
@@ -242,7 +238,7 @@ impl BlockingGdbClient {
             .runtime
             .block_on(async {
                 inner
-                    .raw_console_cmd(&format!("set ${} = {}", register, value))
+                    .raw_console_cmd(&format!("set ${register} = {value}"))
                     .await
             })?
             .expect_result()?;
@@ -349,7 +345,7 @@ impl BlockingGdbClient {
         // remove the bp
         let resp: ResultResponse = self
             .runtime
-            .block_on(async { inner.raw_cmd(&format!("-break-delete {}", bp_id)).await })?
+            .block_on(async { inner.raw_cmd(&format!("-break-delete {bp_id}")).await })?
             .expect_result()?;
 
         // make sure it was a success

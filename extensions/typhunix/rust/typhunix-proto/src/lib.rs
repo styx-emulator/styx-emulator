@@ -91,7 +91,7 @@ pub fn fmt_address<T>(n: T) -> String
 where
     T: std::fmt::LowerHex,
 {
-    format!("{:#010x}", n)
+    format!("{n:#010x}")
 }
 
 /// Convert the hex string "0x00000000" to u64
@@ -243,8 +243,8 @@ mod tests {
             r#type: i32::from(SymbolType::SymbolLabel),
             ..Default::default()
         };
-        let sstr = format!("{}", s);
-        println!("{}", sstr);
+        let sstr = format!("{s}");
+        println!("{sstr}");
     }
 
     #[test]

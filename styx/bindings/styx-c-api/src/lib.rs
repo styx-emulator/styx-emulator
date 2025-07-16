@@ -28,11 +28,12 @@ mod util {
     use crate::data::{CStrPtr, StyxFFIErrorPtr};
 
     /// Initialize styx logging, this only has effect if you also add the StyxPlugin_StyxTracePlugin
-    #[no_mangle]
+    #[unsafe(no_mangle)]
     pub extern "C" fn Styx_init_logging(level_len: u32, level: CStrPtr) -> StyxFFIErrorPtr {
         let level = level.as_str(level_len)?;
         println!("log level: {level:?}");
-        std::env::set_var("RUST_LOG", level);
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { std::env::set_var("RUST_LOG", level) };
         StyxFFIErrorPtr::Ok
     }
 }

@@ -471,11 +471,7 @@ impl EventControllerImpl for Nvic {
         cpu.write_register(ArmRegister::Ipsr, (irqn + 16) as u32)
             .map_err(UnknownError::from)?;
 
-        debug!(
-            "Entering ISR for IRQ_{} @0x{:08x}",
-            irqn,
-            cpu.pc().map_err(UnknownError::from)?
-        );
+        debug!("Entering ISR for IRQ_{} @0x{:08x}", irqn, cpu.pc()?);
 
         // set pc to vector address
         cpu.write_register(ArmRegister::Pc, new_pc | 1)
@@ -487,7 +483,7 @@ impl EventControllerImpl for Nvic {
         // emit `styx_trace` interrupt ISR entry event
         strace!(InterruptEvent {
             etype: TraceEventType::INTERRUPT,
-            old_pc: cpu.pc().map_err(UnknownError::from)? as u32,
+            old_pc: cpu.pc()? as u32,
             new_pc,
             interrupt_num: irqn,
             interrupt_type: InterruptType::IsrEntry,

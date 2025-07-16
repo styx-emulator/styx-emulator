@@ -18,12 +18,14 @@
 //!
 //!     Ex:
 //!
+//!```text
 //!     address ranges: [0,10), [10,20), [20,30), [30,40)
 //!     address query = 25
 //!
 //!     low   = [ 0, 10, 20, 30]
 //!     high  = [10, 20, 30, 40]
 //!     query = [25, 25, 25, 25]
+//! ```
 //!
 //! 3. Do the operation query < high to find all of the high bounds that satisfy the query
 //!
@@ -49,7 +51,7 @@
 //!     which is actually implemented as `(low > query) ^ vec[1]` because 'not' also doesn't exist
 //!
 //! 2. To tell which address range an address belongs to we convert the resulting vector of 1s and 0s into a bit
-//!     mask and then use the trailing zero count intrinsic to quickly determine which index is a 1
+//!    k and then use the trailing zero count intrinsic to quickly determine which index is a 1
 //!
 use crate::tlb::cache::TlbCache32;
 
@@ -113,23 +115,27 @@ impl FastTlbCache4 {
     #[target_feature(enable = "avx2")]
     #[target_feature(enable = "bmi1")]
     unsafe fn tlb_lookup(&self, v_addr: u32) -> Option<usize> {
-        let low_vec = x86_64::_mm_load_si128(self.low_bounds.as_ptr() as *const x86_64::__m128i);
-        let high_vec = x86_64::_mm_load_si128(self.high_bounds.as_ptr() as *const x86_64::__m128i);
-        let query_vec = x86_64::_mm_set1_epi32(std::mem::transmute::<u32, i32>(v_addr));
+        unsafe {
+            let low_vec =
+                x86_64::_mm_load_si128(self.low_bounds.as_ptr() as *const x86_64::__m128i);
+            let high_vec =
+                x86_64::_mm_load_si128(self.high_bounds.as_ptr() as *const x86_64::__m128i);
+            let query_vec = x86_64::_mm_set1_epi32(u32::cast_signed(v_addr));
 
-        let lt_high = x86_64::_mm_cmplt_epi32(query_vec, high_vec);
-        let ge_low = x86_64::_mm_xor_si128(
-            x86_64::_mm_cmpgt_epi32(low_vec, query_vec),
-            x86_64::_mm_set1_epi32(-1),
-        );
+            let lt_high = x86_64::_mm_cmplt_epi32(query_vec, high_vec);
+            let ge_low = x86_64::_mm_xor_si128(
+                x86_64::_mm_cmpgt_epi32(low_vec, query_vec),
+                x86_64::_mm_set1_epi32(-1),
+            );
 
-        let in_bounds = x86_64::_mm_and_si128(lt_high, ge_low);
+            let in_bounds = x86_64::_mm_and_si128(lt_high, ge_low);
 
-        let mask = x86_64::_mm_movemask_ps(x86_64::_mm_castsi128_ps(in_bounds));
-        if mask > 0 {
-            Some(x86_64::_tzcnt_u32(core::mem::transmute::<i32, u32>(mask)) as usize & 0b11)
-        } else {
-            None
+            let mask = x86_64::_mm_movemask_ps(x86_64::_mm_castsi128_ps(in_bounds));
+            if mask > 0 {
+                Some(x86_64::_tzcnt_u32(i32::cast_unsigned(mask)) as usize & 0b11)
+            } else {
+                None
+            }
         }
     }
 }
@@ -192,24 +198,27 @@ impl FastTlbCache8 {
     #[target_feature(enable = "avx2")]
     #[target_feature(enable = "bmi1")]
     unsafe fn tlb_lookup(&self, v_addr: u32) -> Option<usize> {
-        let low_vec = x86_64::_mm256_load_si256(self.low_bounds.as_ptr() as *const x86_64::__m256i);
-        let high_vec =
-            x86_64::_mm256_load_si256(self.high_bounds.as_ptr() as *const x86_64::__m256i);
-        let query = x86_64::_mm256_set1_epi32(std::mem::transmute::<u32, i32>(v_addr));
+        unsafe {
+            let low_vec =
+                x86_64::_mm256_load_si256(self.low_bounds.as_ptr() as *const x86_64::__m256i);
+            let high_vec =
+                x86_64::_mm256_load_si256(self.high_bounds.as_ptr() as *const x86_64::__m256i);
+            let query = x86_64::_mm256_set1_epi32(u32::cast_signed(v_addr));
 
-        let lt_high = x86_64::_mm256_cmpgt_epi32(high_vec, query);
-        let ge_low = x86_64::_mm256_xor_si256(
-            x86_64::_mm256_cmpgt_epi32(low_vec, query),
-            x86_64::_mm256_set1_epi32(-1),
-        );
+            let lt_high = x86_64::_mm256_cmpgt_epi32(high_vec, query);
+            let ge_low = x86_64::_mm256_xor_si256(
+                x86_64::_mm256_cmpgt_epi32(low_vec, query),
+                x86_64::_mm256_set1_epi32(-1),
+            );
 
-        let in_bounds = x86_64::_mm256_and_si256(lt_high, ge_low);
+            let in_bounds = x86_64::_mm256_and_si256(lt_high, ge_low);
 
-        let mask = x86_64::_mm256_movemask_ps(x86_64::_mm256_castsi256_ps(in_bounds));
-        if mask > 0 {
-            Some(x86_64::_tzcnt_u32(core::mem::transmute::<i32, u32>(mask)) as usize & 0b111)
-        } else {
-            None
+            let mask = x86_64::_mm256_movemask_ps(x86_64::_mm256_castsi256_ps(in_bounds));
+            if mask > 0 {
+                Some(x86_64::_tzcnt_u32(i32::cast_unsigned(mask)) as usize & 0b111)
+            } else {
+                None
+            }
         }
     }
 }
@@ -264,32 +273,32 @@ impl FastTlbCache64 {
     #[target_feature(enable = "avx2")]
     #[target_feature(enable = "bmi1")]
     unsafe fn lookup(&self, v_addr: u32) -> Option<usize> {
-        // chunk our 64 entry array into 8 pieces and search each sequentially
-        for i in 0..8 {
-            let low_vec = x86_64::_mm256_load_si256(
-                self.low_bounds[(8 * i)..(8 * (i + 1))].as_ptr() as *const x86_64::__m256i,
-            );
-            let high_vec = x86_64::_mm256_load_si256(
-                self.high_bounds[(8 * i)..(8 * (i + 1))].as_ptr() as *const x86_64::__m256i,
-            );
-            let query = x86_64::_mm256_set1_epi32(std::mem::transmute::<u32, i32>(v_addr));
-
-            let lt_high = x86_64::_mm256_cmpgt_epi32(high_vec, query);
-            let ge_low = x86_64::_mm256_xor_si256(
-                x86_64::_mm256_cmpgt_epi32(low_vec, query),
-                x86_64::_mm256_set1_epi32(-1),
-            );
-
-            let in_bounds = x86_64::_mm256_and_si256(lt_high, ge_low);
-
-            let x = x86_64::_mm256_movemask_ps(x86_64::_mm256_castsi256_ps(in_bounds));
-            if x != 0 {
-                return Some(
-                    (8 * i) + x86_64::_tzcnt_u32(core::mem::transmute::<i32, u32>(x)) as usize,
+        unsafe {
+            // chunk our 64 entry array into 8 pieces and search each sequentially
+            for i in 0..8 {
+                let low_vec = x86_64::_mm256_load_si256(
+                    self.low_bounds[(8 * i)..(8 * (i + 1))].as_ptr() as *const x86_64::__m256i,
                 );
-            }
-        }
+                let high_vec = x86_64::_mm256_load_si256(
+                    self.high_bounds[(8 * i)..(8 * (i + 1))].as_ptr() as *const x86_64::__m256i,
+                );
+                let query = x86_64::_mm256_set1_epi32(u32::cast_signed(v_addr));
 
-        None
+                let lt_high = x86_64::_mm256_cmpgt_epi32(high_vec, query);
+                let ge_low = x86_64::_mm256_xor_si256(
+                    x86_64::_mm256_cmpgt_epi32(low_vec, query),
+                    x86_64::_mm256_set1_epi32(-1),
+                );
+
+                let in_bounds = x86_64::_mm256_and_si256(lt_high, ge_low);
+
+                let x = x86_64::_mm256_movemask_ps(x86_64::_mm256_castsi256_ps(in_bounds));
+                if x != 0 {
+                    return Some((8 * i) + x86_64::_tzcnt_u32(i32::cast_unsigned(x)) as usize);
+                }
+            }
+
+            None
+        }
     }
 }

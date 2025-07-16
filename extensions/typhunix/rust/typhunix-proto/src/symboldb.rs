@@ -365,7 +365,7 @@ impl Subscriber for SymbolsDB {
     ///
     /// # Returns
     /// - (true, uuid) if the subscriber was stored. The assigned `uuid` should
-    ///                be used on subsequent calls to get staged changes
+    ///   be used on subsequent calls to get staged changes
     /// - (false, "") otherwise
     ///
     /// # Arguments

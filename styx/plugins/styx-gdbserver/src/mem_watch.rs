@@ -115,7 +115,7 @@ impl std::fmt::Display for AccessKind {
             Self::Read => String::from("Read"),
             Self::Write => String::from("Write"),
         };
-        write!(f, "{}", x)
+        write!(f, "{x}")
     }
 }
 

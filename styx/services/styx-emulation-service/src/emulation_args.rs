@@ -5,7 +5,7 @@
 
 use std::fmt::Display;
 use std::fs::File;
-use std::io::{BufRead, BufReader, Error, ErrorKind};
+use std::io::{BufRead, BufReader, Error};
 use std::path::Path;
 use std::process::{Child, Command, Stdio};
 use styx_core::grpc::args::HasEmulationArgs;
@@ -153,7 +153,7 @@ impl SingleEmulationServiceExecutor {
             .map_err(|e| {
                 let msg = format!("Failed to launch {}: {}", self.command, e);
                 error!("{}", msg);
-                Error::new(ErrorKind::Other, msg)
+                Error::other(msg)
             })?;
 
         debug!("Child spawned, capture service info...");
@@ -174,10 +174,7 @@ impl SingleEmulationServiceExecutor {
                 return Ok(meta);
             }
         }
-        Err(Error::new(
-            ErrorKind::Other,
-            format!("{} {}", META_ERROR, command_string),
-        ))
+        Err(Error::other(format!("{META_ERROR} {command_string}")))
     }
 
     /// The [SINGLE_EMULATION_SERVICE_BINARY] should call
@@ -216,7 +213,7 @@ impl SingleEmulationServiceExecutor {
     /// - port is the port number
     /// - trace_path is the fullpath to the styx trace file
     pub fn broadcast_service_meta(host: &str, port: u16, trace_path: &str) {
-        eprintln!("SERVICE_INFO_LINE,{},{},{}", host, port, trace_path);
+        eprintln!("SERVICE_INFO_LINE,{host},{port},{trace_path}");
     }
 }
 

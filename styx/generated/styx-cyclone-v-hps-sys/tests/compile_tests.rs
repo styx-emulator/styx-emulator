@@ -6,7 +6,7 @@ use std::path::PathBuf;
 fn run_mode(mode: &'static str) {
     let mut config = compiletest::Config {
         mode: mode.parse().expect("Invalid mode"),
-        src_base: PathBuf::from(format!("tests/{}", mode)),
+        src_base: PathBuf::from(format!("tests/{mode}")),
         ..Default::default()
     };
 

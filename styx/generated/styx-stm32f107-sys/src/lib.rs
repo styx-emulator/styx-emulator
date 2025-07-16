@@ -7385,7 +7385,7 @@ pub use self::enum_FlagStatus as ITStatus;
 pub use self::enum_FunctionalState as FunctionalState;
 #[doc = " @brief STM32F10x Interrupt Number Definition, according to the selected device\n        in @ref Library_configuration_section"]
 pub use self::enum_IRQn as IRQn_Type;
-extern "C" {
+unsafe extern "C" {
     #[doc = "< variable to receive characters"]
     pub static mut ITM_RxBuffer: ::std::os::raw::c_int;
     #[doc = "< System Clock Frequency (Core Clock)"]

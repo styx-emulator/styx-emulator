@@ -46,7 +46,7 @@ use styx_memory::MemoryRegion;
 /// ```
 #[macro_export]
 macro_rules! hints_contain {
-    ($hint_map:ident, $hint_name:expr, $hint_type:ident) => {
+    ($hint_map:ident, $hint_name:expr_2021, $hint_type:ident) => {
         // check if the map even contains our key
         if let Some((_, value)) = $hint_map.get_key_value($hint_name) {
             // contains our key, now check if the type of the hint is correct

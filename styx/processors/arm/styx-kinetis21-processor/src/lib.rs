@@ -155,19 +155,22 @@ impl ProcessorImpl for Kinetis21Builder {
     /// need to set SP from address 0 and PC from address 4
     fn init(&self, proc: &mut BuildingProcessor) -> Result<(), UnknownError> {
         // first try to read from address 0
-        if let Ok(sp) = proc.core.mmu.read_u32_le_phys_data(0) {
-            proc.core.cpu.write_register(ArmRegister::Sp, sp)?;
-            if let Ok(pc) = proc.core.mmu.read_u32_le_phys_data(4) {
-                proc.core.cpu.write_register(ArmRegister::Pc, pc)?;
-                return Ok(());
+        match proc.core.mmu.read_u32_le_phys_data(0) {
+            Ok(sp) => {
+                proc.core.cpu.write_register(ArmRegister::Sp, sp)?;
+                if let Ok(pc) = proc.core.mmu.read_u32_le_phys_data(4) {
+                    proc.core.cpu.write_register(ArmRegister::Pc, pc)?;
+                    return Ok(());
+                }
             }
-        }
-        // failed to read from address 0, try 0x0800_0000
-        else if let Ok(sp) = proc.core.mmu.read_u32_le_phys_data(0x0800_0000) {
-            proc.core.cpu.write_register(ArmRegister::Sp, sp)?;
-            if let Ok(pc) = proc.core.mmu.read_u32_le_phys_data(0x0800_0004) {
-                proc.core.cpu.write_register(ArmRegister::Pc, pc)?;
-                return Ok(());
+            _ => {
+                if let Ok(sp) = proc.core.mmu.read_u32_le_phys_data(0x0800_0000) {
+                    proc.core.cpu.write_register(ArmRegister::Sp, sp)?;
+                    if let Ok(pc) = proc.core.mmu.read_u32_le_phys_data(0x0800_0004) {
+                        proc.core.cpu.write_register(ArmRegister::Pc, pc)?;
+                        return Ok(());
+                    }
+                }
             }
         }
 
