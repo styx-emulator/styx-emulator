@@ -776,7 +776,7 @@ crate::data::opaque_pointer! {
     pub struct StyxRegister_ArmCoProcessorDesc(styx_emulator::core::cpu::arch::arm::CoProcessor)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn StyxRegister_ArmCoProcessorDesc_new(
     coproc: u32,
     crn: u32,
@@ -804,7 +804,7 @@ pub unsafe extern "C" fn StyxRegister_ArmCoProcessorDesc_new(
     })
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn StyxRegister_ArmCoProcessorDesc_free(ptr: *mut StyxRegister_ArmCoProcessorDesc) {
     StyxRegister_ArmCoProcessorDesc::free(ptr)
 }
@@ -813,7 +813,7 @@ crate::data::opaque_pointer! {
     pub struct StyxRegister_Ppc32SprDesc(styx_emulator::core::cpu::arch::ppc32::SprRegister)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn StyxRegister_Ppc32SprDesc_new(
     index: u16,
     out: *mut StyxRegister_Ppc32SprDesc,
@@ -826,7 +826,7 @@ pub unsafe extern "C" fn StyxRegister_Ppc32SprDesc_new(
     })
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn StyxRegister_Ppc32SprDesc_free(ptr: *mut StyxRegister_Ppc32SprDesc) {
     StyxRegister_Ppc32SprDesc::free(ptr)
 }

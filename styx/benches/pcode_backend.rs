@@ -20,7 +20,7 @@
 //!     fibonacci-register`
 //!
 //! - `fibonacci-register` and `fibonacci-memory` run fibonacci computation code using
-//!    registers/memory for intermediate values.
+//!   registers/memory for intermediate values.
 //! - `fibonacci-code-hook-hit` runs `fibonacci-register` but with code hooks on every address.
 //!   - intends to measure the performance impact of executing code hooks.
 //!   - the code hooks are no-ops with a [`black_box()`] to measure the raw code hook call

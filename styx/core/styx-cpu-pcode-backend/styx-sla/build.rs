@@ -111,7 +111,7 @@ fn process(spec_path: &str, generated_code: &mut BufWriter<File>) {
     // e.g. ARMv7le
     let spec_name = spec_file.file_stem().unwrap().to_string_lossy();
     let out_dir = spec_dir;
-    let sla_file = out_dir.join(format!("{}.sla", spec_name));
+    let sla_file = out_dir.join(format!("{spec_name}.sla"));
 
     // compile the slaspec into sla
     styx_pcode_sleigh_backend::compile(&spec_file, &sla_file).unwrap();

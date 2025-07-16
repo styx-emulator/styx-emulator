@@ -236,7 +236,7 @@ fn populate_default_registers(cpu: &mut dyn CpuBackend, mmu: &mut Mmu) -> Result
 
 fn setup_address_space(mmu: &mut Mmu) -> Result<(), UnknownError> {
     macro_rules! debug_region {
-        ($name: expr, $base: expr, $size: expr, $init: expr, $alias_base: expr, $perms: expr) => {
+        ($name: expr_2021, $base: expr_2021, $size: expr_2021, $init: expr_2021, $alias_base: expr_2021, $perms: expr_2021) => {
             let __alias = match $alias_base {
                 Some(b) => format!("A({:#010x})", b),
                 None => String::from("-"),

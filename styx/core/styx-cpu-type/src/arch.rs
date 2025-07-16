@@ -1124,13 +1124,13 @@ pub trait ArchitectureDef: Send + Sync + 'static {
         let xml_version = format!("<?xml version={Q}1.0{Q}?>");
         let doc_type = r#"<!DOCTYPE target SYSTEM "gdb-target.dtd">"#;
         let target_tag = format!("<target version={Q}1.0{Q}>");
-        let arch_tag = format!("    <architecture>{}</architecture>", arch_str);
+        let arch_tag = format!("    <architecture>{arch_str}</architecture>");
 
         let mut xml = String::from("\n");
-        xml.push_str(&format!("{}\n", xml_version));
-        xml.push_str(&format!("{}\n", doc_type));
-        xml.push_str(&format!("{}\n", target_tag));
-        xml.push_str(&format!("{}\n", arch_tag));
+        xml.push_str(&format!("{xml_version}\n"));
+        xml.push_str(&format!("{doc_type}\n"));
+        xml.push_str(&format!("{target_tag}\n"));
+        xml.push_str(&format!("{arch_tag}\n"));
 
         // get the list of features for this specific variant
         xml.push_str(&self.gdb_target_description().feature_xml());
@@ -1141,7 +1141,7 @@ pub trait ArchitectureDef: Send + Sync + 'static {
             // b"extra.xml" => Ok(EXTRA_XML.trim().as_bytes()),
             b"target.xml" => Some(xml),
             name => {
-                warn!("Unexpected target XML request from gdbstub: {:?}", name);
+                warn!("Unexpected target XML request from gdbstub: {name:?}");
                 None
             }
         }

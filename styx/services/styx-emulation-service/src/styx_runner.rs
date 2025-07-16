@@ -29,7 +29,8 @@ pub struct MyEmuArgs {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     init_logging();
-    std::env::set_var(STRACE_ENV_VAR, "srb");
+    // TODO: Audit that the environment access only happens in single-threaded code.
+    unsafe { std::env::set_var(STRACE_ENV_VAR, "srb") };
 
     let args = MyEmuArgs::parse();
     println!("\nInput as yaml:");

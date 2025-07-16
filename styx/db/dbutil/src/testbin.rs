@@ -22,6 +22,6 @@ async fn upsert_default(url: &str) -> Result<(), Box<dyn Error>> {
     };
 
     let id = ws_svc_cli::upsert_workspace(url, &workspace).await?;
-    info!("upsert_workspace response:  {:?}", id);
+    info!("upsert_workspace response:  {id:?}");
     Ok(())
 }

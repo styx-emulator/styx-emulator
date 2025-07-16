@@ -526,18 +526,20 @@ impl MemoryRegion {
     /// This will overwrite an previously saved context; the caller MUST
     /// PAUSE the CPU to stop execution before calling.
     pub unsafe fn context_save(&mut self) -> Result<(), UnknownError> {
-        if self.effective_size > 0 {
-            self.saved_context = Some(
-                encode_all(
-                    self.read_data_unchecked(self.base, self.size)
-                        .with_context(|| "could not read data while saving")?
-                        .as_slice(),
-                    0,
-                )
-                .unwrap(),
-            );
+        unsafe {
+            if self.effective_size > 0 {
+                self.saved_context = Some(
+                    encode_all(
+                        self.read_data_unchecked(self.base, self.size)
+                            .with_context(|| "could not read data while saving")?
+                            .as_slice(),
+                        0,
+                    )
+                    .unwrap(),
+                );
+            }
+            Ok(())
         }
-        Ok(())
     }
 
     /// Overwrites contents of the [`MemoryRegion`] with the saved_context
@@ -547,18 +549,20 @@ impl MemoryRegion {
     /// This will overwrite the entire region; the caller MUST PAUSE the CPU to stop execution
     /// before calling.
     pub unsafe fn context_restore(&mut self) -> Result<(), UnknownError> {
-        if self.effective_size > 0 {
-            match &self.saved_context {
-                Some(contents) => {
-                    let data = decode_all(contents.as_slice())
-                        .with_context(|| "could not decode saved data")?;
-                    self.write_data_unchecked(self.base, data.as_slice())
-                        .with_context(|| "could not write data while restoring")?;
+        unsafe {
+            if self.effective_size > 0 {
+                match &self.saved_context {
+                    Some(contents) => {
+                        let data = decode_all(contents.as_slice())
+                            .with_context(|| "could not decode saved data")?;
+                        self.write_data_unchecked(self.base, data.as_slice())
+                            .with_context(|| "could not write data while restoring")?;
+                    }
+                    None => Err(anyhow!("no saved context to restore from"))?,
                 }
-                None => Err(anyhow!("no saved context to restore from"))?,
             }
+            Ok(())
         }
-        Ok(())
     }
 }
 
@@ -825,7 +829,7 @@ mod tests {
                 let start_idx = base as usize - 0x1000;
                 assert_eq!(validation[start_idx..start_idx + size as usize], value)
             } else {
-                panic!("Read size {} @  {:#08X} failed!", size, base);
+                panic!("Read size {size} @  {base:#08X} failed!");
             }
         }
     }
@@ -848,7 +852,7 @@ mod tests {
             let start_idx = base as usize - 0x1000;
             assert_eq!(validation[start_idx..start_idx + size as usize], value)
         } else {
-            panic!("Read size {} @  {:#08X} failed!", size, base);
+            panic!("Read size {size} @  {base:#08X} failed!");
         }
     }
 }

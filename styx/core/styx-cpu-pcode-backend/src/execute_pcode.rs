@@ -130,7 +130,7 @@ fn execute_pcode_inner<'a>(
                 .space_manager()
                 .read_mmu(mmu, pointer_offset_input)
                 .unwrap();
-            trace!("Loading from {:?}+0x{:08X}", load_space_name, ptr_offset);
+            trace!("Loading from {load_space_name:?}+0x{ptr_offset:08X}");
 
             let load_address = ptr_offset.to_u64().unwrap();
             let load_size = output_varnode.size;
@@ -214,7 +214,7 @@ fn execute_pcode_inner<'a>(
 
             match fixed_result {
                 Ok(ptr_value) => {
-                    trace!("Loaded 0x{:X}", ptr_value);
+                    trace!("Loaded 0x{ptr_value:X}");
 
                     cpu.space_manager()
                         .write_mmu(mmu, output_varnode, ptr_value)
@@ -251,12 +251,7 @@ fn execute_pcode_inner<'a>(
                 .space_manager()
                 .read_mmu(mmu, write_value_varnode)
                 .unwrap();
-            trace!(
-                "Storing 0x{:X} to {:?}+0x{:08X}",
-                value_to_write,
-                store_space_name,
-                ptr_offset
-            );
+            trace!("Storing 0x{value_to_write:X} to {store_space_name:?}+0x{ptr_offset:08X}");
 
             let store_address = ptr_offset.to_u64().unwrap();
             let store_size = write_value_varnode.size;
@@ -380,7 +375,7 @@ fn execute_pcode_inner<'a>(
             // pcode relative jump
             if dest.space == SpaceName::Constant {
                 let offset: SInt = cpu.space_manager().read_mmu(mmu, dest).unwrap().into();
-                trace!("Branch: pcode relative jump with offset {:?}", offset);
+                trace!("Branch: pcode relative jump with offset {offset:?}");
                 PCodeStateChange::PCodeRelative(offset.value() as i64).into()
             }
             // absolute instruction jump
@@ -408,7 +403,7 @@ fn execute_pcode_inner<'a>(
             // pcode relative jump
             if dest.space == SpaceName::Constant {
                 let offset: SInt = cpu.space_manager().read_mmu(mmu, dest).unwrap().into();
-                trace!("Branch: pcode relative jump with offset {:?}", offset);
+                trace!("Branch: pcode relative jump with offset {offset:?}");
                 PCodeStateChange::PCodeRelative(offset.value() as i64).into()
             }
             // absolute instruction jump
@@ -427,7 +422,7 @@ fn execute_pcode_inner<'a>(
                 .to_u128()
                 .unwrap();
 
-            trace!("Indirect jump to 0x{:x}", dest_addr);
+            trace!("Indirect jump to 0x{dest_addr:x}");
             PCodeStateChange::InstructionAbsolute(dest_addr as u64).into()
         }
         Opcode::CallOther => {

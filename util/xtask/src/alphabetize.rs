@@ -141,7 +141,7 @@ pub fn execute() -> anyhow::Result<()> {
                 .iter()
                 .any(|l| l.sort_key.contains("="));
             if has_eq {
-                eprintln!("skipping enum {} (has =)", name);
+                eprintln!("skipping enum {name} (has =)");
                 excluded_enums_count += 1;
                 line_idx = whole_enum_range.end.to_index() + 1;
                 continue;
@@ -165,16 +165,16 @@ pub fn execute() -> anyhow::Result<()> {
     eprintln!("I analyzed {} files", files.len());
     let mut problems = Vec::new();
     if empty_files_count > 0 {
-        problems.push(format!("{} empty files", empty_files_count));
+        problems.push(format!("{empty_files_count} empty files"));
     }
     if incomplete_files_count > 0 {
-        problems.push(format!("{} incomplete files", incomplete_files_count));
+        problems.push(format!("{incomplete_files_count} incomplete files"));
     }
     if invalid_files_count > 0 {
-        problems.push(format!("{} invalid files", invalid_files_count));
+        problems.push(format!("{invalid_files_count} invalid files"));
     }
     if problems.is_empty() {
-        eprintln!("All {} files were ok", ok_files_count);
+        eprintln!("All {ok_files_count} files were ok");
     } else {
         eprintln!(
             "{} files were OK but I encountered {}",
@@ -184,13 +184,9 @@ pub fn execute() -> anyhow::Result<()> {
     }
     if excluded_enums_count > 0 {
         eprintln!(
-            "I excluded {} enums whose annotation contained excluding keywords",
-            excluded_enums_count
+            "I excluded {excluded_enums_count} enums whose annotation contained excluding keywords"
         );
     }
-    eprintln!(
-        "I sorted {} enums in {} files",
-        sorted_enum_count, modified_files_count
-    );
+    eprintln!("I sorted {sorted_enum_count} enums in {modified_files_count} files");
     Ok(())
 }

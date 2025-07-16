@@ -46,7 +46,7 @@ impl TickSource {
         let secs = multiplier as f64 / (period * divisor as u64) as f64;
         let duration = Duration::from_secs_f64(secs);
 
-        println!("Constructing a duration of: {:?}", duration);
+        println!("Constructing a duration of: {duration:?}");
         duration
     }
 

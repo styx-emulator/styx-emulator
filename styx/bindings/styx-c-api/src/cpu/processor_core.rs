@@ -11,7 +11,7 @@ crate::data::opaque_pointer! {
     pub struct StyxProcessorCore(styx_emulator::prelude::CoreHandle<'static>)
 }
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn StyxProcessorCore_free(ptr: *mut StyxProcessorCore) {
     StyxProcessorCore::free(ptr)
 }
@@ -23,7 +23,7 @@ macro_rules! styx_processor_add_hook_impl {
         })? ;
     ) => {
         ::paste::paste! {
-            #[no_mangle]
+            #[unsafe(no_mangle)]
             pub extern "C" fn [< StyxProcessorCore_add_ $name:snake _hook>](
                 mut this: StyxProcessorCore,
                 hook: crate::cpu::[< StyxHook_ $name >],
@@ -36,7 +36,7 @@ macro_rules! styx_processor_add_hook_impl {
                 })
             }
 
-            #[no_mangle]
+            #[unsafe(no_mangle)]
             pub extern "C" fn [< StyxProcessorCore_add_ $name:snake _data_hook>](
                 mut this: StyxProcessorCore,
                 hook: crate::cpu::[< StyxHook_ $name Data>],
@@ -53,7 +53,7 @@ macro_rules! styx_processor_add_hook_impl {
 }
 hook_xmacro!(styx_processor_add_hook_impl);
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn StyxProcessorCore_pc(
     mut this: StyxProcessorCore,
     out: *mut u64,
@@ -67,7 +67,7 @@ pub extern "C" fn StyxProcessorCore_pc(
 ///
 /// # Parameters
 ///  - `bytes` must be of size >= `size`
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn StyxProcessorCore_write_data(
     mut this: StyxProcessorCore,
     address: u64,
@@ -84,7 +84,7 @@ pub extern "C" fn StyxProcessorCore_write_data(
 ///
 /// # Parameters
 ///  - `out` must be of size >= `size`
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn StyxProcessorCore_read_data(
     mut this: StyxProcessorCore,
     address: u64,
@@ -98,7 +98,7 @@ pub extern "C" fn StyxProcessorCore_read_data(
 }
 
 /// read an integer-based (no special registers) register, no matter what the size, to a u128
-#[no_mangle]
+#[unsafe(no_mangle)]
 // We use modern rust, so this lint is aiui OBE: <https://blog.rust-lang.org/2024/03/30/i128-layout-update.html>
 #[allow(improper_ctypes_definitions)]
 pub extern "C" fn StyxProcessorCore_read_register_any(
@@ -142,7 +142,7 @@ pub extern "C" fn StyxProcessorCore_read_register_any(
 }
 
 /// read an 8-bit register
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn StyxProcessorCore_read_register_u8(
     mut this: StyxProcessorCore,
     register: super::StyxRegister,
@@ -157,7 +157,7 @@ pub extern "C" fn StyxProcessorCore_read_register_u8(
 }
 
 /// read a 16-bit register
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn StyxProcessorCore_read_register_u16(
     mut this: StyxProcessorCore,
     register: super::StyxRegister,
@@ -172,7 +172,7 @@ pub extern "C" fn StyxProcessorCore_read_register_u16(
 }
 
 /// read a 32-bit register
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn StyxProcessorCore_read_register_u32(
     mut this: StyxProcessorCore,
     register: super::StyxRegister,
@@ -187,7 +187,7 @@ pub extern "C" fn StyxProcessorCore_read_register_u32(
 }
 
 /// read a 40-bit register
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn StyxProcessorCore_read_register_u40(
     mut this: StyxProcessorCore,
     register: super::StyxRegister,
@@ -202,7 +202,7 @@ pub extern "C" fn StyxProcessorCore_read_register_u40(
 }
 
 /// read a 64-bit register
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn StyxProcessorCore_read_register_u64(
     mut this: StyxProcessorCore,
     register: super::StyxRegister,
@@ -217,7 +217,7 @@ pub extern "C" fn StyxProcessorCore_read_register_u64(
 }
 
 /// read an 80-bit register
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn StyxProcessorCore_read_register_u80(
     mut this: StyxProcessorCore,
     register: super::StyxRegister,
@@ -232,7 +232,7 @@ pub extern "C" fn StyxProcessorCore_read_register_u80(
 }
 
 /// read a 128-bit register
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn StyxProcessorCore_read_register_u128(
     mut this: StyxProcessorCore,
     register: super::StyxRegister,
@@ -247,7 +247,7 @@ pub extern "C" fn StyxProcessorCore_read_register_u128(
 }
 
 /// write an integer-based (no special registers) register, no matter what the size, to a u128
-#[no_mangle]
+#[unsafe(no_mangle)]
 // We use modern rust, so this lint is aiui OBE: <https://blog.rust-lang.org/2024/03/30/i128-layout-update.html>
 #[allow(improper_ctypes_definitions)]
 pub extern "C" fn StyxProcessorCore_write_register_any(
@@ -307,7 +307,7 @@ pub extern "C" fn StyxProcessorCore_write_register_any(
 }
 
 /// read an 8-bit register
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn StyxProcessorCore_write_register_u8(
     mut this: StyxProcessorCore,
     register: super::StyxRegister,
@@ -321,7 +321,7 @@ pub extern "C" fn StyxProcessorCore_write_register_u8(
 }
 
 /// read a 16-bit register
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn StyxProcessorCore_write_register_u16(
     mut this: StyxProcessorCore,
     register: super::StyxRegister,
@@ -335,7 +335,7 @@ pub extern "C" fn StyxProcessorCore_write_register_u16(
 }
 
 /// read a 32-bit register
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn StyxProcessorCore_write_register_u32(
     mut this: StyxProcessorCore,
     register: super::StyxRegister,
@@ -349,7 +349,7 @@ pub extern "C" fn StyxProcessorCore_write_register_u32(
 }
 
 /// read a 40-bit register
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn StyxProcessorCore_write_register_u40(
     mut this: StyxProcessorCore,
     register: super::StyxRegister,
@@ -364,7 +364,7 @@ pub extern "C" fn StyxProcessorCore_write_register_u40(
 }
 
 /// read a 64-bit register
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn StyxProcessorCore_write_register_u64(
     mut this: StyxProcessorCore,
     register: super::StyxRegister,
@@ -378,7 +378,7 @@ pub extern "C" fn StyxProcessorCore_write_register_u64(
 }
 
 /// read an 80-bit register
-#[no_mangle]
+#[unsafe(no_mangle)]
 // We use modern rust, so this lint is aiui OBE: <https://blog.rust-lang.org/2024/03/30/i128-layout-update.html>
 #[allow(improper_ctypes_definitions)]
 pub extern "C" fn StyxProcessorCore_write_register_u80(
@@ -395,7 +395,7 @@ pub extern "C" fn StyxProcessorCore_write_register_u80(
 }
 
 /// read a 128-bit register
-#[no_mangle]
+#[unsafe(no_mangle)]
 // We use modern rust, so this lint is aiui OBE: <https://blog.rust-lang.org/2024/03/30/i128-layout-update.html>
 #[allow(improper_ctypes_definitions)]
 pub extern "C" fn StyxProcessorCore_write_register_u128(

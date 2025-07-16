@@ -23,7 +23,9 @@
 /// assert_eq!(16, unsafe { any_as_u8_slice(&my_instance).len() });
 /// ```
 pub const unsafe fn any_as_u8_slice<T: Sized>(p: &T) -> &[u8] {
-    ::core::slice::from_raw_parts((p as *const T) as *const u8, ::core::mem::size_of::<T>())
+    unsafe {
+        ::core::slice::from_raw_parts((p as *const T) as *const u8, ::core::mem::size_of::<T>())
+    }
 }
 
 /// Convert any mut `Sized` struct to a mut u8 slice
@@ -52,7 +54,9 @@ pub const unsafe fn any_as_u8_slice<T: Sized>(p: &T) -> &[u8] {
 /// assert_eq!(16, unsafe { any_as_u8_slice_mut(&mut my_instance).len() });
 /// ```
 pub unsafe fn any_as_u8_slice_mut<T: Sized>(p: &mut T) -> &mut [u8] {
-    ::core::slice::from_raw_parts_mut((p as *mut T) as *mut u8, ::core::mem::size_of::<T>())
+    unsafe {
+        ::core::slice::from_raw_parts_mut((p as *mut T) as *mut u8, ::core::mem::size_of::<T>())
+    }
 }
 
 #[cfg(test)]

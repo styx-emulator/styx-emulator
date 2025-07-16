@@ -105,7 +105,7 @@ impl From<uc_error> for StyxCpuBackendError {
             uc_error::OK => {
                 StyxCpuBackendError::ErrorOkay("Error state from unicorn passed OK".into())
             }
-            _ => StyxCpuBackendError::FFIFailure(format!("Unicorn Error: {:?}", value)),
+            _ => StyxCpuBackendError::FFIFailure(format!("Unicorn Error: {value:?}")),
         }
     }
 }

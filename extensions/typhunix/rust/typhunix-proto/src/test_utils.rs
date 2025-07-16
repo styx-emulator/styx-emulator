@@ -21,8 +21,8 @@ pub fn new_program(program_id: &str, name: &str) -> Program {
 pub fn random_program() -> Program {
     let mut rng = rand::thread_rng();
     let pgm_str = format!("{}", rng.gen_range(0..3));
-    let pid = format!("pid:{:0>8} ", pgm_str);
-    let pname = format!("pname:{}", pgm_str);
+    let pid = format!("pid:{pgm_str:0>8} ");
+    let pname = format!("pname:{pgm_str}");
     Program {
         pid: Some(ProgramIdentifier {
             source_id: pid,

@@ -754,7 +754,7 @@ impl CallOtherCallback for NeonCmtestCallother {
                         }
                     }
 
-                    unsafe { std::mem::transmute::<[u8; NUM_ELEMENTS], u128>(vd) }
+                    u128::from_ne_bytes(vd)
                 }
                 2 => {
                     const NUM_ELEMENTS: usize = 8;
@@ -876,7 +876,7 @@ impl CallOtherCallback for NeonRev64Callother {
                     output_vec[i ^ 0x7] = input_vec[i];
                 }
 
-                unsafe { std::mem::transmute::<[u8; NUM_ELEMENTS], u128>(output_vec) }
+                u128::from_ne_bytes(output_vec)
             }
             2 => {
                 const NUM_ELEMENTS: usize = 8;

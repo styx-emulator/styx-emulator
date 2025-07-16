@@ -43,7 +43,7 @@ use tracing::{trace, warn};
 ///
 /// [styx-trace]: styx_core::tracebus
 /// [EventController]: styx_core::event_controller::EventController
-/// [CpuEngine]: styx_core::cpu::CpuEngine
+/// [CpuBackend]: styx_core::cpu::CpuBackend
 #[derive(Debug)]
 pub struct StyxTracePlugin {
     pub pc_trace: bool,
@@ -263,7 +263,8 @@ impl StyxTracePlugin {
                 }
             }
             // Variable is not set, so set it to the proper provider
-            Err(_) => set_var(STRACE_ENV_VAR, "srb"),
+            // TODO: Audit that the environment access only happens in single-threaded code.
+            Err(_) => unsafe { set_var(STRACE_ENV_VAR, "srb") },
         }
 
         Ok(())

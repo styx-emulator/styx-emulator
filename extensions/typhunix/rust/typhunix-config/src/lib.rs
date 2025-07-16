@@ -77,10 +77,7 @@ pub fn server_host_port(default_url: &str) -> Result<(String, u16), String> {
 
 impl AppConfig {
     pub fn server_uri() -> String {
-        let home = match std::env::var("HOME") {
-            Ok(v) => Some(v),
-            Err(_) => None,
-        };
+        let home = std::env::var("HOME").ok();
 
         let mut builder = AppConfig::builder().env();
 
@@ -109,7 +106,7 @@ impl AppConfig {
         match std::env::var("TYPHUNIX_HOME") {
             Ok(v) => v,
             Err(_) => match std::env::var("HOME") {
-                Ok(v) => format!("{}/.typhunix", v),
+                Ok(v) => format!("{v}/.typhunix"),
                 Err(_) => ".typhunix".to_string(),
             },
         }

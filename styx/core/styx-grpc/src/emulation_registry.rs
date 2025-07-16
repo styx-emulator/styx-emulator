@@ -91,10 +91,10 @@ where
     T: Display,
 {
     let v = match item {
-        Some(ref v) => v.to_string(),
+        Some(v) => v.to_string(),
         _ => "None".to_string(),
     };
-    format!("{}{}", label, v)
+    format!("{label}{v}")
 }
 
 impl std::fmt::Display for Config {
@@ -108,13 +108,13 @@ impl std::fmt::Display for Config {
         ]
         .join("    \n");
 
-        writeln!(f, "{}", props)
+        writeln!(f, "{props}")
     }
 }
 impl std::fmt::Display for SupportedConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let cfg_str = if let Some(ref config) = self.config {
-            format!("{}", config).to_string()
+            format!("{config}").to_string()
         } else {
             "".to_string()
         };

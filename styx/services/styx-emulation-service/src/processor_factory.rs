@@ -53,7 +53,8 @@ impl ProcessorFactory {
         args: &T,
     ) -> Result<ProcessorProcess, StyxMachineError> {
         let trace_path = mkpath(None, SRB_TRACE_FILE_EXT);
-        std::env::set_var("STRACE_KEY", &trace_path);
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { std::env::set_var("STRACE_KEY", &trace_path) };
 
         let target = args.target();
 
@@ -77,7 +78,8 @@ impl ProcessorFactory {
         executor: impl ExecutorImpl + 'static,
     ) -> Result<Processor, UnknownError> {
         let trace_path = mkpath(None, SRB_TRACE_FILE_EXT);
-        std::env::set_var("STRACE_KEY", &trace_path);
+        // TODO: Audit that the environment access only happens in single-threaded code.
+        unsafe { std::env::set_var("STRACE_KEY", &trace_path) };
 
         let target = args.target();
 

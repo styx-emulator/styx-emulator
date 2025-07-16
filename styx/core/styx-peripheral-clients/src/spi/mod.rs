@@ -42,7 +42,7 @@ impl<T> SPIClient<T> {
         let _inner = runtime.block_on(async {
             SpiPortClient::connect(address.clone())
                 .await
-                .unwrap_or_else(|_| panic!("Could not connect to: {}", address))
+                .unwrap_or_else(|_| panic!("Could not connect to: {address}"))
         });
 
         debug!("Client Connected.");
@@ -88,13 +88,13 @@ impl<T> SPIClient<T> {
 
             while let Some(recv) = resp.next().await {
                 if let Err(e) = recv {
-                    error!("Server disconnected or other error occured: {:?}", e);
+                    error!("Server disconnected or other error occured: {e:?}");
                     break;
                 }
 
                 // packet is not an error, so we can unwrap
                 let packet = recv.unwrap();
-                debug!("[{}] received: {:?}", device_name, packet);
+                debug!("[{device_name}] received: {packet:?}");
 
                 match packet.contents.unwrap() {
                     spi::packet::Contents::ChipSelect(s) => {

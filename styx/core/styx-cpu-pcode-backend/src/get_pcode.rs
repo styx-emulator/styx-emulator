@@ -199,11 +199,12 @@ pub(crate) fn is_branching_instruction(
     mmu: &mut Mmu,
     ev: &mut EventController,
 ) -> (bool, u64) {
-    let bytes = if let Ok(success) = get_pcode_at_address(cpu, address, pcodes, mmu, ev) {
-        success
-    } else {
-        // Failed decompile, end of basic block
-        return (true, 0);
+    let bytes = match get_pcode_at_address(cpu, address, pcodes, mmu, ev) {
+        Ok(success) => success,
+        _ => {
+            // Failed decompile, end of basic block
+            return (true, 0);
+        }
     };
     (contains_branch_instruction(pcodes), bytes)
 }

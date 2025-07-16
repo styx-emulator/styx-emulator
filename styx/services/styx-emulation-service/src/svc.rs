@@ -193,13 +193,13 @@ impl SingleEmulationService for ProcessorProcess {
     ) -> std::result::Result<Response<ResponseStatus>, tonic::Status> {
         // delay to return the status before killing this process
         const DELAY_MS: u64 = 750;
-        let dmesg = format!("(schedule for {} milliseconds)", DELAY_MS);
+        let dmesg = format!("(schedule for {DELAY_MS} milliseconds)");
         info!("drop: {:?} {}", request.get_ref(), dmesg);
         let trace_path = self.trace_path();
         kill_task(&trace_path, DELAY_MS);
         *self.emu_state.write().unwrap() = EmulationState::Dropped;
         Ok(ResponseStatus::ok_resp(
-            &format!("drop {}", dmesg),
+            &format!("drop {dmesg}"),
             EmulationState::Dropped,
         ))
     }

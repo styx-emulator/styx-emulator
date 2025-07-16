@@ -514,7 +514,7 @@ fn handle_interrupts(proc: CoreHandle, intno: i32) -> Result<(), UnknownError> {
         }
         // XXX: How will we know the IRQn for Irq and Fiq exceptions?
         Some(UnicornException::Irq) | Some(UnicornException::Fiq) | None => {
-            panic!("Unhandled unicorn exception! {}", intno)
+            panic!("Unhandled unicorn exception! {intno}")
         }
     };
 

@@ -295,7 +295,7 @@ impl WorkspaceSvc for ServerImpl {
 }
 
 pub async fn start(dburl: String, port: u16) -> Result<(), Status> {
-    let addr = format!("0.0.0.0:{}", port)
+    let addr = format!("0.0.0.0:{port}")
         .parse()
         .map_err(|e| Status::new(Code::Unavailable, format!("{e}")))?;
 

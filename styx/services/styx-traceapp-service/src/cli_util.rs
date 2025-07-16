@@ -63,7 +63,7 @@ pub async fn start(
     const INTERVAL_MILLIS: u64 = 1000;
     let mut end_reason: StreamEndReason = StreamEndReason::Unknown;
     let mut cli = connect(url.to_string()).await.map_err(|e| {
-        let msg = format!("Failed connecting to {}: {:?}", url, e);
+        let msg = format!("Failed connecting to {url}: {e:?}");
         error!("{msg}");
         tonic::Status::new(tonic::Code::Unknown, msg)
     })?;
@@ -164,7 +164,7 @@ pub async fn initialize(
     const INTERVAL_MILLIS: u64 = 1000;
     let mut end_reason: StreamEndReason = StreamEndReason::Unknown;
     let mut cli = connect(url.to_string()).await.map_err(|e| {
-        let msg = format!("Failed connecting to {}: {:?}", url, e);
+        let msg = format!("Failed connecting to {url}: {e:?}");
         error!("{msg}");
         tonic::Status::new(tonic::Code::Unknown, msg)
     })?;
@@ -214,7 +214,7 @@ where
         .map_err(|transport_error| {
             tonic::Status::new(
                 tonic::Code::Unknown,
-                format!("Failed to connect: {}", transport_error),
+                format!("Failed to connect: {transport_error}"),
             )
         })?;
     Ok(cli)
@@ -226,7 +226,7 @@ pub async fn stop(url: &str, session_info: &SessionInfo) -> Result<(), tonic::St
         .stop(AppSession::new(&session_info.session_id).clone())
         .await?
         .into_inner();
-    println!("{:?}", x);
+    println!("{x:?}");
     Ok(())
 }
 
@@ -236,7 +236,7 @@ pub async fn disconnect(url: &str, session_info: &SessionInfo) -> Result<(), ton
         .disconnect(AppSession::new(&session_info.session_id).clone())
         .await?
         .into_inner();
-    println!("{:?}", x);
+    println!("{x:?}");
     if let Err(e) = std::fs::remove_file(session_info.trace_file_path()?) {
         warn!("could not remove tracefile: {}", e);
     }
@@ -257,7 +257,7 @@ pub async fn get_variable_snapshots(
         })
         .await?
         .into_inner();
-    println!("{:?}", x);
+    println!("{x:?}");
 
     Ok(())
 }
