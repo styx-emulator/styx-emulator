@@ -52,6 +52,9 @@ This xtask helps automate the ``workspace-hack`` pattern described in the
 documentation. Now its impossible to mess up |:smile:|, and will print user
 instructions when CI jobs fail.
 
+
+.. _xtask-feature-add:
+
 Feature Add
 ^^^^^^^^^^^
 

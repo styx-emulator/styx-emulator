@@ -73,11 +73,12 @@ Documentation Contents
    user/bindings
    user/unicorn_replacement
    user/processors
-   user/adding_a_processor
    user/styx_trace
    user/using_a_processor
+   user/adding_a_processor
    user/using_multiple_processors
    user/backends
+   user/new_architectures
    user/new_architectures_pcode
    user/adding_test_binaries
    user/migration
