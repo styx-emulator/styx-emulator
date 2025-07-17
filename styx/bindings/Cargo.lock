@@ -688,12 +688,12 @@ dependencies = [
 
 [[package]]
 name = "cbindgen"
-version = "0.27.0"
+version = "0.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3fce8dd7fcfcbf3a0a87d8f515194b49d6135acab73e18bd380d1d93bb1a15eb"
+checksum = "975982cdb7ad6a142be15bdf84aea7ec6a9e5d4d797c004d43185b24cfe4e684"
 dependencies = [
  "clap",
- "heck 0.4.1",
+ "heck 0.5.0",
  "indexmap 2.10.0",
  "log",
  "proc-macro2",
@@ -5700,13 +5700,13 @@ dependencies = [
  "rustix 1.0.7",
  "sea-orm",
  "sea-query",
+ "sea-query-binder",
  "serde",
  "serde_json",
  "signal-hook",
  "signal-hook-mio",
  "smallvec",
  "strum",
- "syn 1.0.109",
  "syn 2.0.104",
  "thiserror 2.0.12",
  "time",
