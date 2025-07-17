@@ -35,6 +35,87 @@ nearest CPU reference manual) should be able to add support for emulating a Proc
 turn, build that into a picture perfect emulated digital twin of their target machine.
 
 
+Quick Reference Frequently Asked Questions
+==========================================
+
+What files do I need to touch to add Gdb Support
+------------------------------------------------
+
+Create or modify ``styx/core/styx-cpu-type/src/arch/<arch>/gdb_targets.rs``.
+This provides the mapping from gdb register index to styx register. This is
+assuming you have the TargetDescription struct which includes the register map
+and gdb xml specification. You may need to add your gdb xml to
+``styx/core/styx-util/src/gdb_xml.rs``
+
+How do I add a Processor Variant
+--------------------------------
+
+Add your variant to ``styx/core/styx-cpu-type/src/arch/<arch>/variants.rs``.
+You may need to add your variant to the cpu backend you want to use. If a
+similar variant exists in Styx already then this will be easy. If your
+processor variant is not supported by Styx or Unicorn then you will have to do
+some work to add it to the pcode backend.
+
+Backend Support
+---------------
+
+Unicorn Support
+"""""""""""""""
+
+If unicorn supports your processor/variant then it should Just Work if you
+instantiate a UnicornBackend, but be sure to check
+``styx/core/styx-cpu-type/src/backend_compat/unicorn.rs`` to add the styx ->
+unicorn processor conversion.
+
+If unicorn does not support your processor variant you could use a similar
+supported one or add it to unicorn yourself. Your best bet is to instead use
+the pcode backend.
+
+Pcode Backend Support
+"""""""""""""""""""""
+
+If your processor has the same ISA as another processor already implemented in
+the pcode backend then just use the already supported variant or add your
+variant to ``styx/core/styx-cpu-pcode-backend/src/arch_spec/mod.rs``
+``build_arch_spec()`` and map to the correct arch spec.
+
+If you need to add a new ISA entirely then check out
+:ref:`_new_architecture_pcode` for detailed instructions on adding new
+architectures to the pcode backend.
+
+To modify architecture specific behavior in the pcode backend, check out its
+architecture specification in
+``styx/core/styx-cpu-pcode-backend/src/arch_spec/<arch>/mod.rs``. Here there is
+the PcManager, user op handlers, and register handlers that can be changed.
+
+Special Register vs Styx Abstraction
+------------------------------------
+
+Most CPU registers are easily represented as a simple data store that can be
+read or written to without side effects. The most challenging registers to
+model are ones with external state side effects or are not statically defined,
+also known as model specific registers.
+
+Examples of registers controlling external state include PowerPC MSR, ARM CPSR,
+and PowerQuicc IMMR registers. Writes to these register may change processor
+behavior.
+
+Examples of model specific registers are ARM's coprocessor registers and
+PowerPC's special registers (SPRs).
+
+External state registers should be modeled as normal cpu registers (i.e. in
+ArmRegister, Ppc32Register, etc) and external behavior should be modeled
+through Styx features. There are several ones to do this including register
+hooks (pcode backend only), register handlers (pcode backend internal),
+interrupt hooks (i.e. event controller sets a "saved machine state"
+register), and the PcManager (pcode backend internal, e.g. thumb mode state).
+
+Model specific registers should be modeled as a SpecialRegister variant in
+Styx. This allows them to be defined by variable parameters, i.e. for PowerPC
+the Special Registers can be modeled as a struct with a single integer
+representing the SPR number it is.
+
+
 The Complete Processor Checklist (ARM Example)
 ==============================================
 
