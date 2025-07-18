@@ -4,14 +4,19 @@ use styx_sleigh_bindings::{ffi, LoadImage, RustLoadImage};
 use crate::sleigh_obj::{DeriveParent, SleighObj};
 
 pub struct RustLoadImageProxy<L> {
-    pub obj: SleighObj<ffi::RustLoadImageProxy>,
-    pub _loader: Box<L>,
-    rust_loader_ptr: *mut RustLoadImage<'static>,
-}
+    /// The byte loader.
+    ///
+    /// We must keep this valid and at the same position in memory while RustLoadImage and the Rust LoadImageProxy exist.
+    pub(crate) loader: Box<L>,
 
-// I think this is good?
-// unsafe impl Send for RustLoadImageProxy {}
-// unsafe impl Sync for RustLoadImageProxy {}
+    /// Leaked Box of RustLoadImage.
+    ///
+    /// Contains an alias to `loader`.
+    rust_loader_ptr: *mut RustLoadImage<'static>,
+
+    /// Aliased to `rust_loader_ptr`
+    pub obj: SleighObj<ffi::RustLoadImageProxy>,
+}
 
 impl<L: LoadImage + 'static> RustLoadImageProxy<L> {
     pub fn new(loader: L) -> Self {
@@ -38,7 +43,7 @@ impl<L: LoadImage + 'static> RustLoadImageProxy<L> {
 
         Self {
             obj,
-            _loader: loader,
+            loader,
             rust_loader_ptr,
         }
     }
@@ -60,6 +65,7 @@ struct SliceLoader<'a> {
 }
 
 impl Loader for SliceLoader<'_> {
+    type LoadRequires<'a> = ();
     fn load(&mut self, ptr: &mut [u8], address: u64) {
         ptr.fill(0);
 
@@ -94,6 +100,7 @@ pub struct VectorLoader {
 }
 
 impl Loader for VectorLoader {
+    type LoadRequires<'a> = ();
     fn load(&mut self, ptr: &mut [u8], address: u64) {
         let mut s = SliceLoader {
             start: self.start,
@@ -103,20 +110,35 @@ impl Loader for VectorLoader {
     }
 }
 
-impl LoaderRequires for VectorLoader {
-    type LoadRequires<'a> = ();
-
-    fn set_data(&mut self, _data: Self::LoadRequires<'_>) {}
-}
-
 /// Needed to implement [styx_sleigh_bindings::LoadImage] for all [Loader]s.
 pub struct LoaderWrapper<L>(pub L);
 
+impl<L: Loader> LoaderWrapper<L> {
+    /// Set the Loader data before doing a load
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure that the mutable reference on `data` is kept through the load.
+    pub unsafe fn set_data(&mut self, data: &mut L::LoadRequires<'_>) {
+        // We are going to copy the required loader data and send it to the loader.
+        // The caller promises to respect the mutable reference so it's OKAY.
+
+        // SAFETY: the caller ensures that the mutable reference is respected.
+        let load_requires_copy: L::LoadRequires<'_> = unsafe { std::mem::transmute_copy(data) };
+        self.0.set_data(load_requires_copy);
+    }
+}
+
 /// Used to provide code bytes to the Sleigh.
 ///
-/// Implementora also implement [styx_sleigh_bindings::LoadImage] using
+/// Implementors also implement [styx_sleigh_bindings::LoadImage] using
 /// [LoaderWrapper]. This is to avoid [crate::Sleigh] users needing to use the ffi api.
 pub trait Loader {
+    type LoadRequires<'a>;
+
+    /// This will be called before every load.
+    fn set_data(&mut self, _data: Self::LoadRequires<'_>) {}
+
     fn load(&mut self, ptr: &mut [u8], address: u64);
 }
 
@@ -125,18 +147,4 @@ impl<L: Loader> styx_sleigh_bindings::LoadImage for LoaderWrapper<L> {
         let address_offset = address.getOffset();
         self.0.load(ptr, address_offset)
     }
-}
-
-impl<L: LoaderRequires> LoaderRequires for LoaderWrapper<L> {
-    type LoadRequires<'a> = L::LoadRequires<'a>;
-
-    fn set_data(&mut self, data: Self::LoadRequires<'_>) {
-        self.0.set_data(data);
-    }
-}
-
-pub trait LoaderRequires {
-    type LoadRequires<'a>;
-
-    fn set_data(&mut self, data: Self::LoadRequires<'_>);
 }

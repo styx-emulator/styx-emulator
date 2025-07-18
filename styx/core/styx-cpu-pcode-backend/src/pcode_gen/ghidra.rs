@@ -12,11 +12,11 @@ use styx_cpu_type::{
     ArchEndian,
 };
 use styx_pcode::{
-    pcode::{Pcode, SpaceInfo, SpaceName, VarnodeData},
+    pcode::{SpaceInfo, SpaceName, VarnodeData},
     sla::SlaSpec,
 };
 use styx_pcode_translator::{
-    sla::SlaRegisters, Loader, LoaderRequires, PcodeTranslator, PcodeTranslatorError,
+    sla::SlaRegisters, Loader, PcodeTranslator, PcodeTranslatorError, TranslatedPcode,
 };
 use styx_processor::{
     event_controller::EventController,
@@ -56,12 +56,11 @@ impl GhidraPcodeGenerator {
         self.translator.get_register_rev(register_varnode)
     }
 
-    pub(crate) fn get_pcode(
-        cpu: &mut PcodeBackend,
+    pub(crate) fn get_pcode<'a>(
+        cpu: &'a mut PcodeBackend,
         address: u64,
-        pcodes: &mut Vec<Pcode>,
-        data: MmuLoaderDependencies,
-    ) -> Result<u64, super::GeneratePcodeError> {
+        data: &mut MmuLoaderDependencies,
+    ) -> Result<TranslatedPcode<'a>, super::GeneratePcodeError> {
         // execute prefetch routine on generator helper
         let mut helper = cpu.pcode_generator.helper.take().unwrap();
         let context_options = helper.pre_fetch(cpu);
@@ -72,12 +71,7 @@ impl GhidraPcodeGenerator {
             cpu.pcode_generator.translator.set_context_option(option);
         }
 
-        let result = cpu
-            .pcode_generator
-            .translator
-            .get_pcode(address, pcodes, data)?;
-
-        Ok(result)
+        Ok(cpu.pcode_generator.translator.get_pcode2(address, data)?)
     }
 
     pub(crate) fn endian(&self) -> ArchEndian {
@@ -154,17 +148,6 @@ unsafe impl Send for MmuLoader {}
 unsafe impl Sync for MmuLoader {}
 #[derive(Debug)]
 pub(crate) struct MmuLoader(MmuLoaderRawDependencies);
-impl LoaderRequires for MmuLoader {
-    type LoadRequires<'a> = MmuLoaderDependencies<'a>;
-
-    fn set_data(&mut self, data: Self::LoadRequires<'_>) {
-        self.0 = MmuLoaderRawDependencies {
-            mmu: std::ptr::from_mut(data.mmu),
-            ev: std::ptr::from_mut(data.ev),
-            err: std::ptr::from_mut(data.err),
-        }
-    }
-}
 
 impl Default for MmuLoaderRawDependencies {
     fn default() -> Self {
@@ -181,6 +164,16 @@ impl MmuLoader {
     }
 }
 impl Loader for MmuLoader {
+    type LoadRequires<'a> = MmuLoaderDependencies<'a>;
+
+    fn set_data(&mut self, data: Self::LoadRequires<'_>) {
+        self.0 = MmuLoaderRawDependencies {
+            mmu: std::ptr::from_mut(data.mmu),
+            ev: std::ptr::from_mut(data.ev),
+            err: std::ptr::from_mut(data.err),
+        }
+    }
+
     fn load(&mut self, data_buffer: &mut [u8], addr: u64) {
         data_buffer.fill(0);
         trace!(

@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use log::{debug, trace};
+use polonius_the_crab::prelude::*;
 use styx_cpu_type::TargetExitReason;
 use styx_errors::{anyhow::Context, UnknownError};
 use styx_pcode::pcode::Pcode;
+use styx_pcode_translator::TranslatedPcode;
 use styx_processor::{
     core::{FetchException, HandleExceptionAction},
     cpu::CpuBackend,
@@ -70,37 +72,35 @@ impl TryFrom<GetPcodeError> for PcodeFetchException {
 }
 
 /// thin wrapper to [GhidraPcodeGenerator::get_pcode].
-fn get_pcode_at_address(
-    cpu: &mut PcodeBackend,
+fn get_pcode_at_address<'a>(
+    cpu: &'a mut PcodeBackend,
     addr: u64,
-    pcodes: &mut Vec<Pcode>,
     mmu: &mut Mmu,
     ev: &mut EventController,
-) -> Result<u64, GetPcodeError> {
+) -> Result<TranslatedPcode<'a>, GetPcodeError> {
     let mut err = None;
-    let data = MmuLoaderDependencies::new(mmu, ev, &mut err);
-    let pcode_res = GhidraPcodeGenerator::get_pcode(cpu, addr, pcodes, data);
+    let mut data = MmuLoaderDependencies::new(mmu, ev, &mut err);
+    let pcode_res = GhidraPcodeGenerator::get_pcode(cpu, addr, &mut data);
     if let Some(err) = err {
         Err(GetPcodeError::MmuOpErr(err))
     } else {
-        pcode_res.map_err(Into::into)
+        Ok(pcode_res?)
     }
 }
 
 /// Grab the pcodes at the current program counter
-fn get_pcode_at_pc(
-    cpu: &mut PcodeBackend,
+fn get_pcode_at_pc<'a>(
+    cpu: &'a mut PcodeBackend,
     mmu: &mut Mmu,
     ev: &mut EventController,
-    pcodes: &mut Vec<Pcode>,
-) -> Result<u64, GetPcodeError> {
+) -> Result<TranslatedPcode<'a>, GetPcodeError> {
     // pc in separate expression so pc_manager lock is dropped before executing code hook
     let pc = cpu
         .pc_manager
         .as_ref()
         .context("pc manager is None, this indicates a bug in the pcode backend")?
         .internal_pc();
-    get_pcode_at_address(cpu, pc, pcodes, mmu, ev)
+    get_pcode_at_address(cpu, pc, mmu, ev)
 }
 
 /// Fetches bytes from memory, translates into pcode, and digests into backend friendly errors.
@@ -113,19 +113,24 @@ fn get_pcode_at_pc(
 /// A Ok(Ok(u64)) indicates pcodes were successfully fetched and `n` bytes were read.
 ///
 /// On success, `pcodes` will have the translated pcodes appended to it.
-pub(crate) fn fetch_pcode(
-    cpu: &mut PcodeBackend,
-    pcodes: &mut Vec<Pcode>,
+pub(crate) fn fetch_pcode<'a>(
+    mut cpu: &'a mut PcodeBackend,
     mmu: &mut Mmu,
     ev: &mut EventController,
-) -> Result<Result<u64, TargetExitReason>, UnknownError> {
+) -> Result<Result<TranslatedPcode<'a>, TargetExitReason>, UnknownError> {
     // attempt to fetch and translate pcodes
-    let result = get_pcode_at_pc(cpu, mmu, ev, pcodes);
-    // if success, then return early
-    let result_err = match result {
-        Ok(success) => return Ok(Ok(success)),
-        Err(err) => err,
-    };
+    let result_err = polonius!(|cpu| -> Result<
+        Result<TranslatedPcode<'polonius>, TargetExitReason>,
+        UnknownError,
+    > {
+        let result = get_pcode_at_pc(cpu, mmu, ev);
+
+        // if success, then return early
+        match result {
+            Ok(success) => polonius_return!(Ok(Ok(success))),
+            Err(err) => err,
+        }
+    });
 
     // now we know we encountered an error.
     // this could be an exception that we have to handle or a fatal error
@@ -177,7 +182,7 @@ pub(crate) fn fetch_pcode(
     // if we fixed, try get pcodes again and error if another error occurs.
     trace!("did_fix: {did_fix:?}");
     if did_fix.fixed() {
-        let result = get_pcode_at_pc(cpu, mmu, ev, pcodes);
+        let result = get_pcode_at_pc(cpu, mmu, ev);
         match result {
             Ok(a) => Ok(Ok(a)),
             Err(b) => Ok(Err(b
@@ -194,18 +199,20 @@ pub(crate) fn fetch_pcode(
 /// unmapped memory).
 pub(crate) fn is_branching_instruction(
     cpu: &mut PcodeBackend,
-    pcodes: &mut Vec<Pcode>,
     address: u64,
     mmu: &mut Mmu,
     ev: &mut EventController,
 ) -> (bool, u64) {
-    let bytes = if let Ok(success) = get_pcode_at_address(cpu, address, pcodes, mmu, ev) {
+    let res = if let Ok(success) = get_pcode_at_address(cpu, address, mmu, ev) {
         success
     } else {
         // Failed decompile, end of basic block
         return (true, 0);
     };
-    (contains_branch_instruction(pcodes), bytes)
+    (
+        contains_branch_instruction(res.pcodes()),
+        res.bytes_consumed(),
+    )
 }
 
 /// Returns true if any op in the pcodes is a branching instruction.
