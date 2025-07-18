@@ -37,6 +37,8 @@ rustc-hash = { workspace = true }
 tap = { workspace = true }
 thiserror = { workspace = true }
 styx-util = { path = "../../styx-util" }
+polonius-the-crab = { workspace = true }
+quick_cache = { workspace = true }
 styx-workspace-hack = { version = "0.1", path = "../../../workspace-hack" }
 
 [dev-dependencies]

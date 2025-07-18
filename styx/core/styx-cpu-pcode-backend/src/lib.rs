@@ -40,7 +40,7 @@ use styx_errors::{
     styx_cpu::StyxCpuBackendError,
     UnknownError,
 };
-use styx_pcode::pcode::{Pcode, SpaceName, VarnodeData};
+use styx_pcode::pcode::{SpaceName, VarnodeData};
 use styx_processor::{
     core::{builder::BuildProcessorImplArgs, ExceptionBehavior},
     cpu::{CpuBackend, ExecutionReport, ReadRegisterError, WriteRegisterError},
@@ -107,8 +107,6 @@ fn handle_basic_block_hooks(
     let block_hook_count = cpu.hook_manager.block_hook_count()?;
     // Only run basic block hook finding if we have at least one block hook.
     if block_hook_count > 0 {
-        let mut pcodes = Vec::with_capacity(16);
-
         // Maximum amount of bytes to search for the next branch.
         // This is necessary because it can continue the search through the whole address space.
         let max_search = 1000;
@@ -116,13 +114,12 @@ fn handle_basic_block_hooks(
 
         // Does not matter if this is a branch instruction since it could be the beginning of
         // execution.
-        let (_, bytes) = is_branching_instruction(cpu, &mut pcodes, initial_pc, mmu, ev);
+        let (_, bytes) = is_branching_instruction(cpu, initial_pc, mmu, ev);
         instruction_pc += bytes;
 
         let mut stop_search = false;
         while !stop_search {
-            let (is_branch, bytes) =
-                is_branching_instruction(cpu, &mut pcodes, instruction_pc, mmu, ev);
+            let (is_branch, bytes) = is_branching_instruction(cpu, instruction_pc, mmu, ev);
 
             // Stop search if we found a branch OR we've gone over our max search
             stop_search = is_branch || (instruction_pc - initial_pc) > max_search;
@@ -287,7 +284,6 @@ impl PcodeBackend {
     /// Execute a single machine instruction.
     fn execute_single(
         &mut self,
-        pcodes: &mut Vec<Pcode>,
         mmu: &mut Mmu,
         ev: &mut EventController,
     ) -> Result<Result<u64, TargetExitReason>, UnknownError> {
@@ -301,10 +297,13 @@ impl PcodeBackend {
 
         // fetch_pcode handles triggering hooks based on exception handler
         // Err(exit_reason) indicates an exception makes us pause so we should honor that
-        let bytes_consumed = match fetch_pcode(self, pcodes, mmu, ev)? {
+        let translated = match fetch_pcode(self, mmu, ev)? {
             Ok(success) => success,
             Err(exit) => return Ok(Err(exit)),
         };
+
+        let pcodes = translated.pcodes().to_owned();
+        let bytes_consumed = translated.bytes_consumed();
 
         let mut pc_manager = self.pc_manager.take().unwrap();
         pc_manager.post_fetch(bytes_consumed, self);
@@ -457,7 +456,6 @@ impl CpuBackend for PcodeBackend {
         }
         self.stop_requested = false;
         let mut current_stop = state.check_done();
-        let mut pcodes = Vec::with_capacity(20);
 
         self.last_was_branch = false;
         while current_stop.is_none() {
@@ -482,8 +480,7 @@ impl CpuBackend for PcodeBackend {
                 self.last_was_branch = false;
             }
 
-            pcodes.clear();
-            if let Err(reason) = self.execute_single(&mut pcodes, mmu, event_controller)? {
+            if let Err(reason) = self.execute_single(mmu, event_controller)? {
                 return Ok(ExecutionReport::new(
                     reason,
                     state.current_instruction_count,
