@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: BSD-2-Clause
 // BSD 2-Clause License
 //
 // Copyright (c) 2024, Styx Emulator Project
@@ -40,7 +41,7 @@ fn test_cond_branching() {
     cpu.write_register(HexagonRegister::R0, 32u64).unwrap();
     cpu.write_register(HexagonRegister::R1, 32u64).unwrap();
 
-    let exit = cpu.execute(&mut mmu, &mut ev, 7).unwrap();
+    let exit = cpu.execute(&mut mmu, &mut ev, 3).unwrap();
     assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
     let r5 = cpu.read_register::<u32>(HexagonRegister::R5).unwrap();
@@ -59,6 +60,7 @@ fn test_cond_branching() {
 
 // TODO: jumpr branch (indirect), conditional branch,
 // and a branch that isn't at the end of the packet!
+// FIXME: come back to do this
 #[test]
 fn test_basic_branching() {
     const R1: u32 = 47;
@@ -96,7 +98,7 @@ lab:
 
     // There's an immext here
     trace!("starting initial multiply");
-    let exit = cpu.execute(&mut mmu, &mut ev, 2).unwrap();
+    let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
     assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
     let end_branch_isa_pc = get_isa_pc(&mut cpu);
@@ -114,6 +116,7 @@ lab:
     assert_eq!(r2, r0 + 2);
 }
 
+// FIXME: help
 #[test]
 fn test_basic_branching_single_insn_pkt() {
     const R1: u32 = 47;
@@ -139,7 +142,7 @@ fn test_basic_branching_single_insn_pkt() {
     let mid_isa_pc = get_isa_pc(&mut cpu);
     assert_eq!(mid_isa_pc - initial_isa_pc, 8);
 
-    trace!("starting initial multiply");
+    trace!("starting initial add");
     let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
     assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: BSD-2-Clause
 // BSD 2-Clause License
 //
 // Copyright (c) 2024, Styx Emulator Project
@@ -55,15 +56,6 @@ fn test_packet_instructions() {
     let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
     assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
-    // truncate
-    let mid_isa_pc = get_isa_pc(&mut cpu);
-    assert_eq!(mid_isa_pc, initial_isa_pc);
-
-    // let's now finish up. The no op is because styx internally only
-    // sets the pc manager's isa pc at the start of the next instruction.
-    let exit = cpu.execute(&mut mmu, &mut ev, 2).unwrap();
-    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
-
     let r1 = cpu.read_register::<u32>(HexagonRegister::R1).unwrap();
     let r2 = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
     let r3 = cpu.read_register::<u32>(HexagonRegister::R3).unwrap();
@@ -86,7 +78,6 @@ struct PacketTestMetadata {
     asm: String,
     verify_fn: Box<dyn Fn(u32, u32, Vec<u32>)>,
     expected_length: usize,
-    no_insns_to_exec: u64,
 }
 
 // TODO: want to also be able to check context options here, to make sure pktstart is set correctly
@@ -110,7 +101,6 @@ fn test_all_packet_adjacent() {
     // all combinations
 
     // tuples are: no of regs, asm, verify, and expected length in bytes, and no insns to exec
-    // TODO: structify
 
     let init_pc = 0x1000u64;
     let ks = Keystone::new(
@@ -130,7 +120,6 @@ fn test_all_packet_adjacent() {
                 assert_eq!(regvec[3], 21);
             }) as Box<dyn Fn(u32, u32, Vec<u32>)>,
             expected_length: 12,
-            no_insns_to_exec: 4,
         },
         // packet ID
         PacketTestMetadata {
@@ -142,7 +131,6 @@ fn test_all_packet_adjacent() {
                 assert_eq!(regvec[2], 21);
             }),
             expected_length: 8,
-            no_insns_to_exec: 3,
         },
         // packet D
         PacketTestMetadata {
@@ -155,7 +143,6 @@ fn test_all_packet_adjacent() {
                 assert_eq!(regvec[1], 14);
             }),
             expected_length: 4,
-            no_insns_to_exec: 2,
         },
         // length 1, no duplex
         PacketTestMetadata {
@@ -165,7 +152,6 @@ fn test_all_packet_adjacent() {
                 assert_eq!(regvec[0], 1552);
             }),
             expected_length: 4,
-            no_insns_to_exec: 1,
         },
         // length 2, no duplex
         PacketTestMetadata {
@@ -176,7 +162,6 @@ fn test_all_packet_adjacent() {
                 assert_eq!(regvec[1], r20 | r21);
             }),
             expected_length: 8,
-            no_insns_to_exec: 2,
         },
         // length 3, no duplex
         PacketTestMetadata {
@@ -188,7 +173,6 @@ fn test_all_packet_adjacent() {
                 assert_eq!(regvec[2], r21 * r20);
             }),
             expected_length: 12,
-            no_insns_to_exec: 3,
         },
         // length 4, no duplex
         PacketTestMetadata {
@@ -202,7 +186,6 @@ fn test_all_packet_adjacent() {
                 assert_eq!(regvec[3], r21 * r20);
             }),
             expected_length: 16,
-            no_insns_to_exec: 4,
         },
     ];
     let mut tot_assembled = 0;
@@ -265,28 +248,9 @@ fn test_all_packet_adjacent() {
                 cpu.write_register(HexagonRegister::R20, 32u32).unwrap();
                 cpu.write_register(HexagonRegister::R21, 991u32).unwrap();
 
-                let mut expected_pkt_start = init_pc;
                 if has_sets {
                     let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
                     assert_eq!(TargetExitReason::InstructionCountComplete, exit.exit_reason);
-                    let pkt_start = cpu
-                        .shared_state
-                        .get(&crate::SharedStateKey::HexagonPktStart)
-                        .unwrap();
-                    // ok to truncate here
-                    assert_eq!(*pkt_start as u64, expected_pkt_start);
-
-                    // again
-                    let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
-                    assert_eq!(TargetExitReason::InstructionCountComplete, exit.exit_reason);
-                    let pkt_start = cpu
-                        .shared_state
-                        .get(&crate::SharedStateKey::HexagonPktStart)
-                        .unwrap();
-
-                    // two sets
-                    expected_pkt_start += 8;
-                    assert_eq!(*pkt_start as u64, expected_pkt_start);
 
                     let r22 = cpu.read_register::<u32>(HexagonRegister::R22).unwrap();
                     let r23 = cpu.read_register::<u32>(HexagonRegister::R23).unwrap();
@@ -295,39 +259,10 @@ fn test_all_packet_adjacent() {
                     assert_eq!(r23, 123);
                 }
 
-                for ins in [ins0, ins1] {
+                for _ in [ins0, ins1] {
                     // go ahead and run the first insn, then verify pkt start, then check that shared state is set right
-                    if ins.no_insns_to_exec > 1 {
-                        for k in 0..(ins.no_insns_to_exec - 1) {
-                            trace!("k is {}", k);
-                            let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
-                            assert_eq!(
-                                TargetExitReason::InstructionCountComplete,
-                                exit.exit_reason
-                            );
-                            let pkt_start = cpu
-                                .shared_state
-                                .get(&crate::SharedStateKey::HexagonPktStart)
-                                .unwrap();
-                            // ok to truncate here
-                            assert_eq!(*pkt_start as u64, expected_pkt_start);
-                        }
-                    }
-
                     let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
                     assert_eq!(TargetExitReason::InstructionCountComplete, exit.exit_reason);
-                    let pkt_start = cpu
-                        .shared_state
-                        .get(&crate::SharedStateKey::HexagonPktStart)
-                        .unwrap();
-
-                    expected_pkt_start += ins.expected_length as u64;
-                    trace!(
-                        "asserting that {} == {}",
-                        *pkt_start as u64,
-                        expected_pkt_start
-                    );
-                    assert_eq!(*pkt_start as u64, expected_pkt_start);
 
                     trace!("pkt finished successfully");
                 }

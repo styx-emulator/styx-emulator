@@ -29,7 +29,7 @@ use styx_cpu_type::{
     },
     ArchEndian,
 };
-use styx_pcode::sla::SlaUserOps;
+use styx_pcode::{pcode::VarnodeData, sla::SlaUserOps};
 use styx_pcode_translator::{sla::Arm7LeUserOps, ContextOption};
 use styx_processor::{cpu::CpuBackendExt, memory::Mmu};
 use styx_sync::sync::Arc;
@@ -229,7 +229,7 @@ impl ArchPcManager for ThumbPcManager {
         &mut self,
         bytes_consumed: u64,
         _backend: &mut PcodeBackend,
-        _regs_written: &mut SmallVec<[u64; DEFAULT_REG_ALLOCATION]>,
+        _regs_written: &mut SmallVec<[VarnodeData; DEFAULT_REG_ALLOCATION]>,
         _total_pcodes: usize,
     ) -> Result<(), PcOverflow> {
         self.internal_pc = self
@@ -313,7 +313,7 @@ impl ArchPcManager for StandardPcManager {
         &mut self,
         bytes_consumed: u64,
         backend: &mut PcodeBackend,
-        _regs_written: &mut SmallVec<[u64; DEFAULT_REG_ALLOCATION]>,
+        _regs_written: &mut SmallVec<[VarnodeData; DEFAULT_REG_ALLOCATION]>,
         _total_pcodes: usize,
     ) -> Result<(), PcOverflow> {
         self.internal_pc = self

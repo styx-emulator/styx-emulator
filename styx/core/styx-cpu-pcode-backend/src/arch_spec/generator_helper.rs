@@ -49,7 +49,7 @@ pub enum GeneratorHelper {
     #[cfg(feature = "arch_superh")]
     SuperH(superh::StandardGeneratorHelper),
     #[cfg(feature = "arch_hexagon")]
-    Hexagon(hexagon::HexagonGeneratorHelper),
+    Hexagon(hexagon::backend::HexagonGeneratorHelper),
 }
 
 impl Default for GeneratorHelper {

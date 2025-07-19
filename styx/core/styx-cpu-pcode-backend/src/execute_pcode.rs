@@ -28,7 +28,7 @@ use styx_processor::{
     memory::{MemoryOperationError, Mmu, MmuOpError},
 };
 
-trait PcodeHelpers {
+pub(crate) trait PcodeHelpers {
     fn get_input(&self, input: usize) -> &VarnodeData;
     fn get_output(&self) -> &VarnodeData;
     fn get_input_constant(&self, input: usize) -> &VarnodeData;
@@ -74,7 +74,7 @@ pub fn execute_pcode(
     cpu: &mut PcodeBackend,
     mmu: &mut Mmu,
     ev: &mut EventController,
-    regs_written: &mut SmallVec<[u64; DEFAULT_REG_ALLOCATION]>,
+    regs_written: &mut SmallVec<[VarnodeData; DEFAULT_REG_ALLOCATION]>,
 ) -> PCodeStateChange {
     let s = execute_pcode_inner(pcode, cpu, mmu, ev);
 
@@ -82,7 +82,9 @@ pub fn execute_pcode(
     {
         let outvar = &pcode.output;
         if let Some(outvar_unwrap) = outvar {
-            regs_written.push(outvar_unwrap.offset)
+            if outvar_unwrap.space == SpaceName::Register {
+                regs_written.push(outvar_unwrap.clone())
+            }
         }
     }
 

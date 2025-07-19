@@ -36,6 +36,7 @@ zstd = { workspace = true }
 replace_with = { workspace = true }
 tap = { workspace = true }
 nix = { workspace = true, features = ["signal"] }
+smallvec = { workspace = true }
 styx-workspace-hack = { version = "0.1", path = "../../workspace-hack" }
 
 [dev-dependencies]

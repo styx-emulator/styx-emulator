@@ -165,6 +165,8 @@ pub enum SharedStateKey {
     HexagonInsnRegDest(usize),
     // Is the current instruction immext?
     HexagonCurrentInsnImmext,
+    // Keep track of the regs that currently are written
+    HexagonWrittenRegs,
 }
 
 #[derive(Derivative)]
@@ -376,7 +378,7 @@ impl PcodeBackend {
         let total_pcodes = pcodes.len();
 
         let mut delayed_irqn: Option<i32> = None;
-        let mut regs_written: SmallVec<[u64; DEFAULT_REG_ALLOCATION]> = smallvec![];
+        let mut regs_written = smallvec![];
 
         while i < total_pcodes {
             let current_pcode = &pcodes[i];

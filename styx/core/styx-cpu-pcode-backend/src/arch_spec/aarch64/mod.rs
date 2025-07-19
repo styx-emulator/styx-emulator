@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use crate::{pcode_gen::GeneratePcodeError, Mmu};
+use styx_pcode::pcode::VarnodeData;
 use styx_pcode_translator::ContextOption;
 
 use crate::{arch_spec::pc_manager::PcOverflow, PcodeBackend};
@@ -62,7 +63,7 @@ impl ArchPcManager for StandardPcManager {
         &mut self,
         bytes_consumed: u64,
         _backend: &mut PcodeBackend,
-        _regs_written: &mut SmallVec<[u64; 3]>,
+        _regs_written: &mut SmallVec<[VarnodeData; 3]>,
         _total_pcodes: usize,
     ) -> Result<(), PcOverflow> {
         self.internal_pc += bytes_consumed;

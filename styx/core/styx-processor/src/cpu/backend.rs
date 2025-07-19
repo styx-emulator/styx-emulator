@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use std::fmt::Debug;
 
+use smallvec::SmallVec;
 use static_assertions::assert_obj_safe;
 use styx_cpu_type::{
     arch::{backends::ArchRegister, ArchitectureDef, RegisterValue},
@@ -39,6 +40,10 @@ pub struct ExecutionReport {
     /// Indicates the number of instructions executed, if available. A value of None means that the
     /// backend did not report the amount of instructions it executed.
     pub instructions_executed: Option<u64>,
+
+    /// Used for VLIW architectures to indicate instruction reordering.
+    /// This is only really used for testing at the moment.
+    pub last_packet_order: Option<SmallVec<[usize; 4]>>,
 }
 
 impl ExecutionReport {
@@ -46,6 +51,7 @@ impl ExecutionReport {
         Self {
             exit_reason: TargetExitReason::InstructionCountComplete,
             instructions_executed: Some(count),
+            last_packet_order: None,
         }
     }
 
@@ -53,6 +59,7 @@ impl ExecutionReport {
         Self {
             exit_reason,
             instructions_executed: Some(instructions_executed),
+            last_packet_order: None,
         }
     }
 
@@ -60,6 +67,7 @@ impl ExecutionReport {
         Self {
             exit_reason,
             instructions_executed: None,
+            last_packet_order: None,
         }
     }
 

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: BSD-2-Clause
 // BSD 2-Clause License
 //
 // Copyright (c) 2024, Styx Emulator Project
@@ -22,38 +23,48 @@
 // CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+pub use crate::arch_spec::arch::hexagon::HexagonRegister;
 pub use keystone_engine::Keystone;
 pub use log::trace;
 pub use regex::Regex;
-pub use styx_cpu_type::{
-    arch::hexagon::{HexagonRegister, HexagonVariants},
-    Arch, ArchEndian, TargetExitReason,
-};
+use styx_cpu_type::arch::backends::ArchRegister;
+pub use styx_cpu_type::{arch::hexagon::HexagonVariants, Arch, ArchEndian, TargetExitReason};
+use styx_errors::anyhow::Context;
 pub use styx_pcode_translator::sla::hexagon_reg_to_str;
 pub use styx_processor::{
+    cpu::CpuBackend,
     event_controller::EventController,
     memory::{helpers::WriteExt, Mmu},
 };
 
-pub(crate) use crate::PcodeBackend;
 pub(crate) use crate::RegisterManager;
-pub use styx_processor::cpu::{CpuBackend, CpuBackendExt};
+use crate::{
+    memory::sized_value::SizedValue, pcode_gen::RegisterTranslator,
+    register_manager::RegisterHandleError,
+};
+pub use styx_processor::cpu::CpuBackendExt;
 
+use super::{backend::HexagonPcodeBackend, pkt_semantics::DEST_REG_OFFSET};
+
+mod banking;
 mod branching;
 mod compound;
 mod dotnew;
+mod dual_jumps;
 mod duplex;
 mod general;
 mod hwloop;
 mod immediate;
 mod packet;
+mod programs;
 mod reg_postfix;
 mod regpair;
+mod sequencing;
 
 pub fn setup_asm(
     asm_str: &str,
     expected_asm: Option<Vec<u8>>,
-) -> (PcodeBackend, Mmu, EventController) {
+) -> (HexagonPcodeBackend, Mmu, EventController) {
     styx_util::logging::init_logging();
     // objdump from example ppc program
     // notably load/store operations are omitted because sleigh uses dynamic pointers
@@ -83,8 +94,8 @@ pub fn setup_asm(
     setup_cpu(init_pc, code)
 }
 
-pub fn setup_cpu(init_pc: u64, code: Vec<u8>) -> (PcodeBackend, Mmu, EventController) {
-    let mut cpu = PcodeBackend::new_engine(
+pub fn setup_cpu(init_pc: u64, code: Vec<u8>) -> (HexagonPcodeBackend, Mmu, EventController) {
+    let mut cpu = HexagonPcodeBackend::new_engine(
         Arch::Hexagon,
         HexagonVariants::QDSP6V66,
         ArchEndian::BigEndian,
@@ -95,11 +106,12 @@ pub fn setup_cpu(init_pc: u64, code: Vec<u8>) -> (PcodeBackend, Mmu, EventContro
     let mut mmu = Mmu::default();
     let ev = EventController::default();
     mmu.code().write(init_pc).bytes(&code).unwrap();
+    trace!("wrote code to mmu");
 
     (cpu, mmu, ev)
 }
 
-pub fn setup_objdump(objdump: &str) -> (PcodeBackend, Mmu, EventController) {
+pub fn setup_objdump(objdump: &str) -> (HexagonPcodeBackend, Mmu, EventController) {
     styx_util::logging::init_logging();
 
     const START: u64 = 0x1000u64;
@@ -110,11 +122,38 @@ pub fn setup_objdump(objdump: &str) -> (PcodeBackend, Mmu, EventController) {
     )
 }
 
-pub fn get_isa_pc(cpu: &mut PcodeBackend) -> u32 {
-    RegisterManager::read_register(cpu, HexagonRegister::Pc.into())
+pub fn get_isa_pc(cpu: &mut HexagonPcodeBackend) -> u32 {
+    let pc = RegisterManager::read_register(&mut cpu.internal_backend, HexagonRegister::Pc.into())
         .unwrap()
         .to_u64()
-        .unwrap() as u32
+        .unwrap() as u32;
+    trace!("get_isa_pc returns {:x}", pc);
+    pc
+}
+
+// this probably shouldn't ever be used other than in tests
+
+pub fn read_dst_reg(
+    backend: &mut HexagonPcodeBackend,
+    reg: HexagonRegister,
+) -> Result<SizedValue, RegisterHandleError> {
+    let arch_reg: ArchRegister = reg.into();
+    let spc = &backend.internal_backend.space_manager;
+    let gen = &backend.internal_backend.pcode_generator;
+
+    let vnode = gen.get_register(&arch_reg).map(|i| {
+        // Have to clone bc we modify
+        let mut i = i.clone();
+        i.offset += DEST_REG_OFFSET;
+        i
+    });
+
+    match vnode {
+        Some(ref varnode) => Ok(spc
+            .read(&varnode)
+            .with_context(|| format!("error reading {reg:?} @ {vnode:?} from space"))?),
+        None => Err(RegisterHandleError::CannotHandleRegister(arch_reg)),
+    }
 }
 
 // TODO:

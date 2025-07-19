@@ -23,8 +23,21 @@
 // CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-pub mod dcache;
-pub mod icache;
-pub mod interrupt;
-pub mod l2;
-pub mod tlb;
+use crate::arch_spec::hexagon::tests::*;
+
+// The holy grail of packet semantics
+#[test]
+pub fn test_swap() {
+    let (mut cpu, mut mmu, mut ev) = setup_asm("{ R1 = R2; R2 = R1; }; ", None);
+
+    cpu.write_register(HexagonRegister::R1, 18u32).unwrap();
+    cpu.write_register(HexagonRegister::R2, 81u32).unwrap();
+
+    let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
+
+    let r1 = cpu.read_register::<u32>(HexagonRegister::R1).unwrap();
+    let r2 = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
+    assert_eq!(r1, 81);
+    assert_eq!(r2, 18);
+}

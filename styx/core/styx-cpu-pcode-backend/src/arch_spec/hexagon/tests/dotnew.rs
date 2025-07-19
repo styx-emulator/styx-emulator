@@ -1,52 +1,26 @@
-// BSD 2-Clause License
-//
-// Copyright (c) 2024, Styx Emulator Project
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-//
-// 1. Redistributions of source code must retain the above copyright notice, this
-//    list of conditions and the following disclaimer.
-//
-// 2. Redistributions in binary form must reproduce the above copyright notice,
-//    this list of conditions and the following disclaimer in the documentation
-//    and/or other materials provided with the distribution.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// SPDX-License-Identifier: BSD-2-Clause
 use crate::arch_spec::hexagon::{parse_iclass, tests::*};
 use log::info;
 use test_case::test_case;
 
 // need a separate conditional too
 #[test_case(
-    "{ r2 = memh(r4+#0x8); r3 = #2; p0 = cmp.eq(r3, #2); if (p0) memh(r5+#0x0) = r2.new }",
+    "{ r3 = #2; } { r2 = memh(r4+#0x8); p0 = cmp.eq(r3, #2); if (p0.new) memh(r5+#0x0) = r2.new }",
     None,
-    3,
-    1,
+    2,
     0x1020,
     0x1020; "conditional dotnew load halfword branch taken"
 )]
 #[test_case(
-    "{ r2 = memw(r4+#0x8); r3 = #3; p0 = cmp.eq(r3, #2); if (p0) memh(r5+#0x0) = r2.new }",
+    "{ r3 = #3; } { r2 = memw(r4+#0x8); p0 = cmp.eq(r3, #2); if (p0.new) memh(r5+#0x0) = r2.new }",
     None,
-    3,
-    1,
+    2,
     0xf0991020,
     0; "conditional dotnew load word branch not taken"
 )]
 #[test_case(
     "{ r2 = memh(r4+#0x8); memb(r5+#0x0) = r2.new }",
     None,
-    1,
     1,
     0x1020,
     0x20; "store halfword, load byte; +0x0"
@@ -55,7 +29,6 @@ use test_case::test_case;
     "{ r2 = memh(r4+#0x8); memh(r5+#0x0) = r2.new }",
     None,
     1,
-    1,
     0x1020,
     0x1020; "store halfword, load halfword; +0x0"
 )]
@@ -63,14 +36,12 @@ use test_case::test_case;
     "{ r2 = memw(r4+#0x8); memw(r5+#0x0) = r2.new }",
     None,
     1,
-    1,
     0x10202020,
     0x10202020; "store word, load word; +0x0"
 )]
 #[test_case(
     "{ r2 = memb(r4+#0x8); nop; memb(r5) = r2.new }",
     None,
-    2,
     1,
     0x18,
     0x18; "store byte, load byte, with no op; +0x0"
@@ -78,19 +49,11 @@ use test_case::test_case;
 fn test_dotnew_basic_cases(
     insn: &str,
     verify_insn: Option<Vec<u8>>,
-    insn_count_1: u64,
-    insn_count_2: u64,
+    pkt_count: u64,
     write_value: u32,
     read_value: u32,
 ) {
-    test_dotnew_basic(
-        insn,
-        verify_insn,
-        insn_count_1,
-        insn_count_2,
-        write_value,
-        read_value,
-    );
+    test_dotnew_basic(insn, verify_insn, pkt_count, write_value, read_value);
 }
 
 #[test]
@@ -103,7 +66,6 @@ fn test_store_dotnew_halfword_add() {
     let (mut cpu, _mmu, _ev) = test_dotnew_basic(
         "{ r2 = memh(r4+#0x8); r0 = add(r0, #40); r10 = add(r10, #30); memh(r5) = r0.new }",
         None,
-        3,
         1,
         0x1020,
         40,
@@ -122,7 +84,6 @@ fn test_store_dotnew_halfword_add_immext() {
     let (mut cpu, _mmu, _ev) = test_dotnew_basic(
         "{ r2 = memh(r4+#0x8); r10 = add(r10, #269492265); memh(r5) = r2.new }",
         None,
-        3,
         1,
         0x1020,
         0x1020,
@@ -149,7 +110,7 @@ fn test_predicate_dotnew() {
     // 5 instructions
     // TODO: does immext need to be set to 0xffffffff every cycle?
     // it doesn't seem like it..
-    let exit = cpu.execute(&mut mmu, &mut ev, 3).unwrap();
+    let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
 
     assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
@@ -165,11 +126,10 @@ fn test_predicate_dotnew() {
 fn test_dotnew_basic(
     insn: &str,
     verify_insn: Option<Vec<u8>>,
-    insn_count_1: u64,
-    insn_count_2: u64,
+    pkt_count: u64,
     write_value: u32,
     read_value: u32,
-) -> (PcodeBackend, Mmu, EventController) {
+) -> (HexagonPcodeBackend, Mmu, EventController) {
     // I copied this from the manual
     let (mut cpu, mut mmu, mut ev) = setup_asm(insn, verify_insn);
     const SRC_MEMLOC: u64 = 20;
@@ -185,14 +145,7 @@ fn test_dotnew_basic(
         .unwrap();
 
     // Load
-    let exit = cpu.execute(&mut mmu, &mut ev, insn_count_1).unwrap();
-    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
-
-    let r2 = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
-    assert_eq!(r2, write_value);
-
-    // Store
-    let exit = cpu.execute(&mut mmu, &mut ev, insn_count_2).unwrap();
+    let exit = cpu.execute(&mut mmu, &mut ev, pkt_count).unwrap();
     assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
     let data = mmu.read_u32_le_virt_data(DST_MEMLOC).unwrap();
@@ -201,11 +154,11 @@ fn test_dotnew_basic(
     (cpu, mmu, ev)
 }
 
-type ExtraCheckHandlerFn = Box<dyn Fn(&mut PcodeBackend, bool)>;
+type ExtraCheckHandlerFn = Box<dyn Fn(&mut HexagonPcodeBackend, bool)>;
 
 struct DotnewGenericTestCase {
     asm: String,
-    insns_to_exec: u64,
+    pkts_to_exec: u64,
     extra_check_handler: ExtraCheckHandlerFn,
     iclass: u8,
     expected_bytes: usize,
@@ -217,9 +170,6 @@ struct DotnewGenericTestCase {
 // the instruction whose output is the dotnew.
 //
 // The offset ignores nops and immexts.
-//
-// I hope there aren't instructions that produce
-// zero pcodes other than nop or immext
 //
 // We basically want to try all combinations of instructions
 // in terms of offsets and such
@@ -690,19 +640,18 @@ fn test_dotnew_offset() {
         cpu.write_register(HexagonRegister::R10, mem_start as u32)
             .unwrap();
 
-        let mut total_real_insns = 0;
-        for typ in test.types {
-            let report = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
-            assert_eq!(
-                report.exit_reason,
-                TargetExitReason::InstructionCountComplete
-            );
+        let report = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+        assert_eq!(
+            report.exit_reason,
+            TargetExitReason::InstructionCountComplete
+        );
+        /*for typ in test.types {
 
             if typ != DotnewOffsetItype::Immext {
                 total_real_insns += 1;
             }
 
-            let read_real_insns = cpu
+            /*let read_real_insns = cpu.
                 .shared_state
                 .get(&crate::SharedStateKey::HexagonTrueInsnCount)
                 .unwrap_or(&0);
@@ -725,27 +674,19 @@ fn test_dotnew_offset() {
                     DotnewOffsetItype::Dinsn => assert_eq!(*dest_reg.unwrap(), 9),
                     _ => assert_eq!(dest_reg, None),
                 }
-            }
-        }
+            }*/
+        }*/
 
         // Run the generic tackon test
         // With immext, we expect to start at 0 but won't be set in map
         // till we get a real instruction. Same applies for checking is_some
         // We could check the output every time, but it is highly dependent on the previous run,
         // and is thus complex.
-        let tackon_totals_results = [total_real_insns, 1, 2, 1];
-        for result in tackon_totals_results.iter() {
-            let report = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
-            assert_eq!(
-                report.exit_reason,
-                TargetExitReason::InstructionCountComplete
-            );
-            let total_insns = cpu
-                .shared_state
-                .get(&crate::SharedStateKey::HexagonTrueInsnCount)
-                .unwrap();
-            assert_eq!(*total_insns, *result);
-        }
+        let report = cpu.execute(&mut mmu, &mut ev, 2).unwrap();
+        assert_eq!(
+            report.exit_reason,
+            TargetExitReason::InstructionCountComplete
+        );
 
         let val = mmu.read_u32_le_virt_data(mem_start).unwrap();
         let val4 = mmu.read_u32_le_virt_data(mem_start + 4u64).unwrap();
@@ -819,9 +760,10 @@ fn test_all_dotnew_class() {
             asm:
                 "{ P2 = cmp.eq(R4, #4); } { R0 = memw(R3 + #0x0); if (P2)	mem%0(R3+R2<<#2)=R0.new }"
                     .to_owned(),
-            insns_to_exec: 3,
-            extra_check_handler: Box::new(|_backend: &mut PcodeBackend, _branch_taken: bool| {})
-                as ExtraCheckHandlerFn,
+            pkts_to_exec: 2,
+            extra_check_handler: Box::new(
+                |_backend: &mut HexagonPcodeBackend, _branch_taken: bool| {},
+            ) as ExtraCheckHandlerFn,
             iclass: 0b0011,
             expected_bytes: 12,
             predicate_type: PredicateType::Predicate,
@@ -829,8 +771,10 @@ fn test_all_dotnew_class() {
         DotnewGenericTestCase {
             asm: "{ P2 = cmp.eq(R4, #4);  R0 = memw(R3 + #0x0); if (P2.new)	mem%0(R3+#4)=R0.new }"
                 .to_owned(),
-            insns_to_exec: 3,
-            extra_check_handler: Box::new(|_backend: &mut PcodeBackend, _branch_taken: bool| {}),
+            pkts_to_exec: 1,
+            extra_check_handler: Box::new(
+                |_backend: &mut HexagonPcodeBackend, _branch_taken: bool| {},
+            ),
             iclass: 0b0100,
             expected_bytes: 12,
             predicate_type: PredicateType::Predicate,
@@ -839,8 +783,8 @@ fn test_all_dotnew_class() {
             asm:
                 "{ P2 = cmp.eq(R4, #4); } { R0 = memw(R3 + #0x0); if (!P2)	mem%0(R10++#4)=R0.new }"
                     .to_owned(),
-            insns_to_exec: 3,
-            extra_check_handler: Box::new(|backend: &mut PcodeBackend, branch_taken| {
+            pkts_to_exec: 2,
+            extra_check_handler: Box::new(|backend: &mut HexagonPcodeBackend, branch_taken| {
                 let r10 = backend.read_register::<u32>(HexagonRegister::R10).unwrap();
                 if branch_taken {
                     assert_eq!(0x108, r10);
@@ -855,35 +799,43 @@ fn test_all_dotnew_class() {
         DotnewGenericTestCase {
             asm: "{ P2 = cmp.eq(R4, #4); R0 = memw(R3 + #0x0); if (!P2.new)	mem%0(#0x104)=R0.new }"
                 .to_owned(),
-            insns_to_exec: 4,
-            extra_check_handler: Box::new(|_backend: &mut PcodeBackend, _branch_taken: bool| {}),
+            pkts_to_exec: 1,
+            extra_check_handler: Box::new(
+                |_backend: &mut HexagonPcodeBackend, _branch_taken: bool| {},
+            ),
             iclass: 0b1010,
             expected_bytes: 16,
             predicate_type: PredicateType::NegatedPredicate,
         },
         DotnewGenericTestCase {
             asm: "{ R0 = memw(R3 + #0x0); mem%0(r5=#0x104)=R0.new }".to_owned(),
-            insns_to_exec: 3,
-            extra_check_handler: Box::new(|backend: &mut PcodeBackend, _branch_taken: bool| {
-                let r5 = backend.read_register::<u32>(HexagonRegister::R5).unwrap();
-                assert_eq!(0x104, r5);
-            }),
+            pkts_to_exec: 1,
+            extra_check_handler: Box::new(
+                |backend: &mut HexagonPcodeBackend, _branch_taken: bool| {
+                    let r5 = backend.read_register::<u32>(HexagonRegister::R5).unwrap();
+                    assert_eq!(0x104, r5);
+                },
+            ),
             iclass: 0b1010,
             expected_bytes: 12,
             predicate_type: PredicateType::None,
         },
         DotnewGenericTestCase {
             asm: "{ R0 = memw(R3 + #0x0); mem%0(gp+#4)=R0.new }".to_owned(),
-            insns_to_exec: 2,
-            extra_check_handler: Box::new(|_backend: &mut PcodeBackend, _branch_taken: bool| {}),
+            pkts_to_exec: 1,
+            extra_check_handler: Box::new(
+                |_backend: &mut HexagonPcodeBackend, _branch_taken: bool| {},
+            ),
             iclass: 0b0100,
             expected_bytes: 8,
             predicate_type: PredicateType::None,
         },
         DotnewGenericTestCase {
             asm: "{ R0 = memw(R3 + #0x0); mem%0(r3+r2<<#2)=R0.new }".to_owned(),
-            insns_to_exec: 2,
-            extra_check_handler: Box::new(|_backend: &mut PcodeBackend, _branch_taken: bool| {}),
+            pkts_to_exec: 1,
+            extra_check_handler: Box::new(
+                |_backend: &mut HexagonPcodeBackend, _branch_taken: bool| {},
+            ),
             iclass: 0b0011,
             expected_bytes: 8,
             predicate_type: PredicateType::None,
@@ -967,7 +919,7 @@ fn test_all_dotnew_class() {
                     .unwrap();
 
                 // Run
-                let exit = cpu.execute(&mut mmu, &mut ev, case.insns_to_exec).unwrap();
+                let exit = cpu.execute(&mut mmu, &mut ev, case.pkts_to_exec).unwrap();
                 assert_eq!(TargetExitReason::InstructionCountComplete, exit.exit_reason);
 
                 // Read from memory
