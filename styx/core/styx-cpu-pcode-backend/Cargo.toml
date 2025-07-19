@@ -60,6 +60,7 @@ styx-workspace-hack = { version = "0.1", path = "../../workspace-hack" }
 derive_more = { workspace = true }
 smallvec = { workspace = true }
 rustc-hash = { workspace = true }
+as-any = { workspace = true }
 
 [dev-dependencies]
 keystone-engine = { workspace = true }

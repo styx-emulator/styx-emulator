@@ -93,6 +93,7 @@ fn get_pcode_at_pc(
         .as_ref()
         .context("pc manager is None, this indicates a bug in the pcode backend")?
         .internal_pc();
+
     get_pcode_at_address(cpu, pc, pcodes, mmu, ev)
 }
 

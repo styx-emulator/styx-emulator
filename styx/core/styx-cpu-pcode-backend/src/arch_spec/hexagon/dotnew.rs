@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: BSD-2-Clause
 // BSD 2-Clause License
 //
 // Copyright (c) 2024, Styx Emulator Project
@@ -53,7 +54,15 @@ pub fn parse_dotnew(insn: u32) -> Option<u32> {
     match iclass {
         0b1010 if insn_1010_type == 0b110 => Some(bits_910),
         0b0100 if insn_0100_type == 0b101 => Some(bits_910),
-        0b0011 if insn_0011_type == 0b1011101 || insn_0011_type == 0b0100101 => Some(bits_12),
+        0b0011
+            if insn_0011_type == 0b1011101
+                || insn_0011_type == 0b0100101
+                || insn_0011_type == 0b0101101
+                || insn_0011_type == 0b0110101
+                || insn_0011_type == 0b0111101 =>
+        {
+            Some(bits_12)
+        }
         _ => None,
     }
 }

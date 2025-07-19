@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: BSD-2-Clause
 // BSD 2-Clause License
 //
 // Copyright (c) 2024, Styx Emulator Project
@@ -46,7 +47,7 @@ fn test_immediates() {
     // 5 instructions
     // TODO: does immext need to be set to 0xffffffff every cycle?
     // it doesn't seem like it..
-    let exit = cpu.execute(&mut mmu, &mut ev, 5).unwrap();
+    let exit = cpu.execute(&mut mmu, &mut ev, 4).unwrap();
 
     assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
@@ -73,7 +74,7 @@ fn test_immediate_instruction() {
     // TODO: how should the ISA PC respond to immext?
 
     // We'll have two instructions for immext
-    let exit = cpu.execute(&mut mmu, &mut ev, 2).unwrap();
+    let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
 
     assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 

@@ -26,7 +26,7 @@ use call_other::CallOtherManager;
 use derivative::Derivative;
 use log::trace;
 use memory::{mmu_store::MmuSpace, space_manager::VarnodeError};
-use pcode_gen::{GeneratePcodeError, MmuLoaderDependencies};
+use pcode_gen::GeneratePcodeError;
 use rustc_hash::FxHashMap;
 use std::collections::{BTreeMap, HashMap};
 use styx_cpu_type::{
@@ -165,6 +165,8 @@ pub enum SharedStateKey {
     HexagonInsnRegDest(usize),
     // Is the current instruction immext?
     HexagonCurrentInsnImmext,
+    // Keep track of the regs that currently are written
+    HexagonWrittenRegs,
 }
 
 #[derive(Derivative)]
@@ -376,7 +378,7 @@ impl PcodeBackend {
         let total_pcodes = pcodes.len();
 
         let mut delayed_irqn: Option<i32> = None;
-        let mut regs_written: SmallVec<[u64; DEFAULT_REG_ALLOCATION]> = smallvec![];
+        let mut regs_written = smallvec![];
 
         while i < total_pcodes {
             let current_pcode = &pcodes[i];

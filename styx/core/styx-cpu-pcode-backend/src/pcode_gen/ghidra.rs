@@ -82,7 +82,7 @@ impl GhidraPcodeGenerator {
     ) -> Result<u64, GetPcodeError> {
         // execute prefetch routine on generator helper
         let mut helper = cpu.pcode_generator.helper.take().unwrap();
-        let context_options = helper.pre_fetch(cpu, data.mmu)?;
+        let context_options = helper.pre_fetch(cpu)?;
         cpu.pcode_generator.helper = Some(helper);
 
         let mut err = None;

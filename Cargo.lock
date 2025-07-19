@@ -5935,6 +5935,7 @@ name = "styx-cpu-pcode-backend"
 version = "1.2.0"
 dependencies = [
  "arbitrary-int",
+ "as-any",
  "bitfield-struct",
  "derivative",
  "derive_more 1.0.0",
@@ -6608,6 +6609,7 @@ dependencies = [
  "rustc-hash 2.1.1",
  "serde",
  "serde_yaml",
+ "smallvec",
  "static_assertions",
  "styx-cpu-type",
  "styx-errors",

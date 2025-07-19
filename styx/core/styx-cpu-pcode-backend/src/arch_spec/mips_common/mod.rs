@@ -2,6 +2,7 @@
 use crate::PcodeBackend;
 
 use smallvec::SmallVec;
+use styx_pcode::pcode::VarnodeData;
 
 use super::{
     pc_manager::{apply_difference, PcOverflow},
@@ -50,7 +51,7 @@ impl ArchPcManager for StandardMipsPcManager {
         &mut self,
         bytes_consumed: u64,
         _backend: &mut PcodeBackend,
-        _regs_written: &mut SmallVec<[u64; 3]>,
+        _regs_written: &mut SmallVec<[VarnodeData; 3]>,
         _total_pcodes: usize,
     ) -> Result<(), PcOverflow> {
         self.internal_pc = self
