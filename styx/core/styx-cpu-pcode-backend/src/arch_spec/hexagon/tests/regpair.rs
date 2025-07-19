@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: BSD-2-Clause
 // BSD 2-Clause License
 //
 // Copyright (c) 2024, Styx Emulator Project
@@ -82,7 +83,7 @@ fn test_all_regpairs() {
 }
 
 fn test_regpair_helper(
-    cpu: &mut PcodeBackend,
+    cpu: &mut HexagonPcodeBackend,
     hex_regpair: HexagonRegister,
     hex_hi_reg: HexagonRegister,
     hex_lo_reg: HexagonRegister,
@@ -91,12 +92,6 @@ fn test_regpair_helper(
     // pretty sure this has to be a byte unless you want to copy from another
     // register
     const HI: u64 = 100;
-    /*let assembly = format!("{{ {} = combine(#{}, #{}) }}", regpair_str, HI, LO);
-    trace!("assembling {}", assembly);
-    let (mut cpu, mut mmu, mut ev) = setup_asm(&assembly, None);
-
-    let exit = cpu.execute(&mut mmu, &mut ev, 2).unwrap();
-    assert_eq!(exit.exit_exit_reason, TargetExitReason::InstructionCountComplete);*/
 
     cpu.write_register(hex_regpair, (HI << 32) | LO).unwrap();
 

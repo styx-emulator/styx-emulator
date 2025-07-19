@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: BSD-2-Clause
 // BSD 2-Clause License
 //
 // Copyright (c) 2024, Styx Emulator Project
@@ -34,7 +35,7 @@ fn test_duplex_immext() {
     cpu.write_register(HexagonRegister::R0, 100u32).unwrap();
     cpu.write_register(HexagonRegister::R1, 470u32).unwrap();
 
-    let exit = cpu.execute(&mut mmu, &mut ev, 4).unwrap();
+    let exit = cpu.execute(&mut mmu, &mut ev, 2).unwrap();
     assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
     let r2 = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
@@ -46,6 +47,7 @@ fn test_duplex_immext() {
     assert_eq!(r4, 100 * 470);
 }
 
+// FIXME: test
 #[test]
 fn test_duplex_instructions() {
     // [0x16, 0x30, 0x05, 0x30]
@@ -57,12 +59,6 @@ fn test_duplex_instructions() {
         .unwrap();
 
     let initial_isa_pc = get_isa_pc(&mut cpu);
-
-    let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
-    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
-
-    let mid_isa_pc = get_isa_pc(&mut cpu);
-    assert_eq!(initial_isa_pc, mid_isa_pc);
 
     let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
     assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);

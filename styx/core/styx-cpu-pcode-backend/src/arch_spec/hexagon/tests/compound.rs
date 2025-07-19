@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: BSD-2-Clause
 // BSD 2-Clause License
 //
 // Copyright (c) 2024, Styx Emulator Project
@@ -53,7 +54,7 @@ fn test_compound() {
     cpu.write_register(HexagonRegister::R12, 0xf8f8f8f8u32)
         .unwrap();
 
-    let exit = cpu.execute(&mut mmu, &mut ev, 3).unwrap();
+    let exit = cpu.execute(&mut mmu, &mut ev, 2).unwrap();
     assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
     let r2 = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();

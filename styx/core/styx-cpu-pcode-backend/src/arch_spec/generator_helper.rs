@@ -28,7 +28,6 @@ pub trait GeneratorHelp: Debug {
     fn pre_fetch(
         &mut self,
         backend: &mut PcodeBackend,
-        mmu: &mut Mmu,
     ) -> Result<SmallVec<[ContextOption; CONTEXT_OPTION_LEN]>, GeneratePcodeError>;
 }
 
@@ -49,7 +48,7 @@ pub enum GeneratorHelper {
     #[cfg(feature = "arch_superh")]
     SuperH(superh::StandardGeneratorHelper),
     #[cfg(feature = "arch_hexagon")]
-    Hexagon(hexagon::HexagonGeneratorHelper),
+    Hexagon(hexagon::backend::HexagonGeneratorHelper),
 }
 
 impl Default for GeneratorHelper {
@@ -65,7 +64,6 @@ impl GeneratorHelp for EmptyGeneratorHelper {
     fn pre_fetch(
         &mut self,
         _backend: &mut PcodeBackend,
-        _mmu: &mut Mmu,
     ) -> Result<SmallVec<[ContextOption; CONTEXT_OPTION_LEN]>, GeneratePcodeError> {
         Ok(smallvec![])
     }

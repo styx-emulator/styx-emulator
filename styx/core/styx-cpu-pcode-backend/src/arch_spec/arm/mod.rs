@@ -29,7 +29,7 @@ use styx_cpu_type::{
     },
     ArchEndian,
 };
-use styx_pcode::sla::SlaUserOps;
+use styx_pcode::{pcode::VarnodeData, sla::SlaUserOps};
 use styx_pcode_translator::{sla::Arm7LeUserOps, ContextOption};
 use styx_processor::{cpu::CpuBackendExt, memory::Mmu};
 use styx_sync::sync::Arc;
@@ -229,7 +229,7 @@ impl ArchPcManager for ThumbPcManager {
         &mut self,
         bytes_consumed: u64,
         _backend: &mut PcodeBackend,
-        _regs_written: &mut SmallVec<[u64; DEFAULT_REG_ALLOCATION]>,
+        _regs_written: &mut SmallVec<[VarnodeData; DEFAULT_REG_ALLOCATION]>,
         _total_pcodes: usize,
     ) -> Result<(), PcOverflow> {
         self.internal_pc = self
@@ -313,7 +313,7 @@ impl ArchPcManager for StandardPcManager {
         &mut self,
         bytes_consumed: u64,
         backend: &mut PcodeBackend,
-        _regs_written: &mut SmallVec<[u64; DEFAULT_REG_ALLOCATION]>,
+        _regs_written: &mut SmallVec<[VarnodeData; DEFAULT_REG_ALLOCATION]>,
         _total_pcodes: usize,
     ) -> Result<(), PcOverflow> {
         self.internal_pc = self
@@ -380,7 +380,6 @@ impl GeneratorHelp for StandardGeneratorHelper {
     fn pre_fetch(
         &mut self,
         backend: &mut PcodeBackend,
-        _mmu: &mut Mmu,
     ) -> Result<SmallVec<[ContextOption; CONTEXT_OPTION_LEN]>, GeneratePcodeError> {
         let mut ret = SmallVec::new();
         let cpsr = backend.read_register::<u32>(ArmRegister::Cpsr).unwrap();
@@ -417,7 +416,6 @@ impl GeneratorHelp for ThumbOnlyGeneratorHelper {
     fn pre_fetch(
         &mut self,
         _backend: &mut PcodeBackend,
-        _mmu: &mut Mmu,
     ) -> Result<SmallVec<[ContextOption; CONTEXT_OPTION_LEN]>, GeneratePcodeError> {
         if !self.thumb_already_set {
             self.thumb_already_set = true;

@@ -3,6 +3,7 @@ use crate::PcodeBackend;
 use enum_dispatch::enum_dispatch;
 use smallvec::SmallVec;
 use std::fmt::Debug;
+use styx_pcode::pcode::VarnodeData;
 
 #[cfg(feature = "arch_aarch64")]
 use super::aarch64;
@@ -54,7 +55,7 @@ pub enum PcManager {
     #[cfg(any(feature = "arch_mips32", feature = "arch_mips64"))]
     Mips(mips_common::StandardMipsPcManager),
     #[cfg(feature = "arch_hexagon")]
-    Hexagon(hexagon::StandardPcManager),
+    Hexagon(hexagon::backend::HexagonPcManager),
 }
 
 /// Implemented for structs that can manager the pcode machine program counters.
@@ -113,7 +114,7 @@ pub(crate) trait ArchPcManager: Debug {
         &mut self,
         _bytes_consumed: u64,
         _backend: &mut PcodeBackend,
-        _regs_written: &mut SmallVec<[u64; 3]>,
+        _regs_written: &mut SmallVec<[VarnodeData; 3]>,
         _total_pcodes: usize,
     ) -> Result<(), PcOverflow> {
         Ok(())

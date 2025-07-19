@@ -165,7 +165,9 @@ impl<L: Loader + LoaderRequires + 'static> PcodeTranslator<L> {
     }
 }
 
-#[derive(Debug)]
+// Clone is required to allow context options to be
+// copied around in the hexagon pcode helper.
+#[derive(Debug, Copy, Clone)]
 pub enum ContextOption {
     ThumbMode(bool),
     HexagonPktStart(u32),
@@ -179,6 +181,9 @@ pub enum ContextOption {
     HexagonDuplexNext(u32),
     HexagonPart1(u32),
     HexagonPart2(u32),
+    HexagonFlushRegs(u32),
+    HexagonSetupRegs(u32),
+    HexagonSetupRegsStandalone(u32),
 }
 
 impl ContextOption {
@@ -196,6 +201,9 @@ impl ContextOption {
             ContextOption::HexagonDuplexNext(value) => ("duplex_next", *value),
             ContextOption::HexagonPart1(value) => ("part1", *value),
             ContextOption::HexagonPart2(value) => ("part2", *value),
+            ContextOption::HexagonFlushRegs(value) => ("flush_regs", *value),
+            ContextOption::HexagonSetupRegs(value) => ("setup_regs", *value),
+            ContextOption::HexagonSetupRegsStandalone(value) => ("setup_regs_standalone", *value),
         }
     }
 }

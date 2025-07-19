@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: BSD-2-Clause
 // BSD 2-Clause License
 //
 // Copyright (c) 2024, Styx Emulator Project
@@ -31,6 +32,8 @@ use crate::{
     PCodeStateChange, PcodeBackend,
 };
 
+pub const DEST_REG_OFFSET: u64 = 0x600;
+
 // For dotnew
 #[derive(Debug)]
 pub struct NewReg {}
@@ -48,8 +51,10 @@ impl CallOtherCallback for NewReg {
         debug_assert!(output.is_some());
 
         // Should I be unwrapping?
-        let input = &inputs[0];
-        let reg_val = backend.read(input).unwrap();
+        // Not happy about clones
+        let mut input = inputs[0].clone();
+        input.offset = input.offset + DEST_REG_OFFSET;
+        let reg_val = backend.read(&input).unwrap();
 
         // For now, since there are no packet semantics, we should just
         // use the previously set value.

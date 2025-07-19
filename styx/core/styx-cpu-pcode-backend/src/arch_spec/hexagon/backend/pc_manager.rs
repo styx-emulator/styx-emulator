@@ -23,8 +23,41 @@
 // CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 // OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-pub mod dcache;
-pub mod icache;
-pub mod interrupt;
-pub mod l2;
-pub mod tlb;
+use std::sync::{Arc, Mutex};
+
+use crate::{arch_spec::ArchPcManager, PcodeBackend};
+
+use super::HexagonExecutionHelper;
+
+#[derive(Default, Debug, Clone)]
+pub struct HexagonPcManager {
+    helper: Option<Arc<Mutex<Box<dyn HexagonExecutionHelper>>>>,
+}
+
+impl HexagonPcManager {
+    pub fn set_helper(&mut self, helper: Arc<Mutex<Box<dyn HexagonExecutionHelper>>>) {
+        self.helper = Some(helper);
+    }
+}
+
+impl ArchPcManager for HexagonPcManager {
+    fn isa_pc(&self) -> u64 {
+        let helper = self.helper.as_ref().unwrap().lock().unwrap();
+        helper.isa_pc()
+    }
+
+    fn set_isa_pc(&mut self, value: u64, backend: &mut PcodeBackend) {
+        let mut helper = self.helper.as_mut().unwrap().lock().unwrap();
+        helper.set_isa_pc(value, backend)
+    }
+
+    fn internal_pc(&self) -> u64 {
+        let helper = self.helper.as_ref().unwrap().lock().unwrap();
+        helper.internal_pc()
+    }
+
+    fn set_internal_pc(&mut self, value: u64, backend: &mut PcodeBackend, _from_branch: bool) {
+        let mut helper = self.helper.as_mut().unwrap().lock().unwrap();
+        helper.set_internal_pc(value, backend)
+    }
+}

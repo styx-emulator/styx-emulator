@@ -15,6 +15,7 @@ use super::{
 };
 use crate::{pcode_gen::GeneratePcodeError, PcodeBackend, DEFAULT_REG_ALLOCATION};
 use smallvec::{smallvec, SmallVec};
+use styx_pcode::pcode::VarnodeData;
 use styx_pcode_translator::ContextOption;
 use styx_processor::memory::Mmu;
 
@@ -56,7 +57,7 @@ impl ArchPcManager for StandardPcManager {
         &mut self,
         bytes_consumed: u64,
         _backend: &mut PcodeBackend,
-        _regs_written: &mut SmallVec<[u64; DEFAULT_REG_ALLOCATION]>,
+        _regs_written: &mut SmallVec<[VarnodeData; DEFAULT_REG_ALLOCATION]>,
         _total_pcodes: usize,
     ) -> Result<(), PcOverflow> {
         self.internal_pc = self
@@ -75,7 +76,6 @@ impl GeneratorHelp for StandardGeneratorHelper {
     fn pre_fetch(
         &mut self,
         _backend: &mut PcodeBackend,
-        _mmu: &mut Mmu,
     ) -> Result<SmallVec<[ContextOption; CONTEXT_OPTION_LEN]>, GeneratePcodeError> {
         Ok(smallvec![])
     }

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: BSD-2-Clause
 // BSD 2-Clause License
 //
 // Copyright (c) 2024, Styx Emulator Project
@@ -26,8 +27,7 @@ use super::ArchSpecBuilder;
 use super::GeneratorHelper;
 use super::PcManager;
 
-mod helpers;
-mod pc_manager;
+pub mod backend;
 // Anything related to packet semantics
 mod dotnew;
 mod pkt_semantics;
@@ -38,8 +38,8 @@ mod system;
 #[cfg(test)]
 pub mod tests;
 
-pub use helpers::HexagonGeneratorHelper;
-pub use pc_manager::StandardPcManager;
+use backend::HexagonGeneratorHelper;
+use backend::HexagonPcManager;
 
 use pkt_semantics::NewReg;
 use styx_pcode_translator::sla::{self, HexagonUserOps};
@@ -54,7 +54,7 @@ pub fn build() -> ArchSpecBuilder<sla::Hexagon> {
 
     // Generator + pc manager. For now use the default pc manager
     spec.set_generator(GeneratorHelper::Hexagon(HexagonGeneratorHelper::default()));
-    spec.set_pc_manager(PcManager::Hexagon(StandardPcManager::default()));
+    spec.set_pc_manager(PcManager::Hexagon(HexagonPcManager::default()));
 
     // TODO: callother manager for system instructions, reg manager
 
