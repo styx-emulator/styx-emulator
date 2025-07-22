@@ -2,9 +2,7 @@
 mod ghidra;
 mod pcode_generator;
 
-pub(crate) use ghidra::{
-    GhidraPcodeGenerator, MmuLoader, MmuLoaderDependencies, RegisterTranslator,
-};
+pub(crate) use ghidra::{GhidraPcodeGenerator, MmuLoader, RegisterTranslator};
 pub(crate) use pcode_generator::GeneratePcodeError;
 
 use crate::PcodeBackend;

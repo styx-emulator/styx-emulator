@@ -18,7 +18,7 @@ use crate::{
     cpu::{CpuBackend, DummyBackend, ExecutionReport, ReadRegisterError, WriteRegisterError},
     event_controller::{ActivateIRQnError, DummyEventController, EventController, ExceptionNumber},
     hooks::CoreHandle,
-    memory::{DummyTlb, Mmu, MmuOpError},
+    memory::{DummyTlb, MemoryOperationError, Mmu},
 };
 
 pub mod builder;
@@ -61,14 +61,14 @@ impl ProcessorCore {
         }
 
         to self.mmu {
-            pub fn write_data(&mut self, addr: u64, bytes: &[u8]) -> Result<(), MmuOpError>;
-            pub fn read_data(&mut self, addr: u64, bytes: &mut [u8]) -> Result<(), MmuOpError>;
-            pub fn write_code(&mut self, addr: u64, bytes: &[u8]) -> Result<(), MmuOpError>;
-            pub fn read_code(&mut self, addr: u64, bytes: &mut [u8]) -> Result<(), MmuOpError>;
-            pub fn sudo_write_data(&mut self, addr: u64, bytes: &[u8]) -> Result<(), MmuOpError>;
-            pub fn sudo_read_data(&mut self, addr: u64, bytes: &mut [u8]) -> Result<(), MmuOpError>;
-            pub fn sudo_write_code(&mut self, addr: u64, bytes: &[u8]) -> Result<(), MmuOpError>;
-            pub fn sudo_read_code(&mut self, addr: u64, bytes: &mut [u8]) -> Result<(), MmuOpError>;
+            pub fn write_data(&mut self, addr: u64, bytes: &[u8]) -> Result<(), MemoryOperationError>;
+            pub fn read_data(&mut self, addr: u64, bytes: &mut [u8]) -> Result<(), MemoryOperationError>;
+            pub fn write_code(&mut self, addr: u64, bytes: &[u8]) -> Result<(), MemoryOperationError>;
+            pub fn read_code(&mut self, addr: u64, bytes: &mut [u8]) -> Result<(), MemoryOperationError>;
+            pub fn sudo_write_data(&mut self, addr: u64, bytes: &[u8]) -> Result<(), MemoryOperationError>;
+            pub fn sudo_read_data(&mut self, addr: u64, bytes: &mut [u8]) -> Result<(), MemoryOperationError>;
+            pub fn sudo_write_code(&mut self, addr: u64, bytes: &[u8]) -> Result<(), MemoryOperationError>;
+            pub fn sudo_read_code(&mut self, addr: u64, bytes: &mut [u8]) -> Result<(), MemoryOperationError>;
         }
 
         to self.event_controller {

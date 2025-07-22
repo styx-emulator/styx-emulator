@@ -25,7 +25,7 @@ use call_other::CallOtherManager;
 use derivative::Derivative;
 use log::trace;
 use memory::{mmu_store::MmuSpace, space_manager::VarnodeError};
-use pcode_gen::{GeneratePcodeError, MmuLoaderDependencies};
+use pcode_gen::GeneratePcodeError;
 use std::collections::{BTreeMap, HashMap};
 use styx_cpu_type::{
     arch::{
@@ -44,7 +44,7 @@ use styx_pcode::pcode::{Pcode, SpaceName, VarnodeData};
 use styx_processor::{
     core::{builder::BuildProcessorImplArgs, ExceptionBehavior},
     cpu::{CpuBackend, ExecutionReport, ReadRegisterError, WriteRegisterError},
-    event_controller::EventController,
+    event_controller::{EventController, ExceptionNumber},
     memory::Mmu,
 };
 use types::*;
@@ -58,7 +58,7 @@ const REGISTER_SPACE_SIZE: usize = 80000;
 pub(crate) enum PCodeStateChange {
     /// Trigger interrupt at end of instruction execution. This is the proper method of triggering a
     /// synchronous interrupt e.g. `raise` or `svc`.
-    DelayedInterrupt(i32),
+    DelayedInterrupt(ExceptionNumber),
     /// normal next instruction
     Fallthrough,
     /// a jump to a machine address

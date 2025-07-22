@@ -60,7 +60,7 @@ impl<L: Loader + LoaderRequires + 'static> PcodeTranslator<L> {
         // must be a reference to the NamedTempFile, otherwise it gets dropped before initializing
         let mut sleigh = Sleigh::new(loader, &spec_file)?;
 
-        let registers = Self::get_registers::<S>(arch_def.as_ref(), &mut sleigh);
+        let registers = Self::generate_registers::<S>(arch_def.as_ref(), &mut sleigh);
         let registers_rev = reverse_hash(&registers).into_iter().collect();
         let register_offset_map = sleigh.get_register_offset_map();
 
@@ -112,7 +112,7 @@ impl<L: Loader + LoaderRequires + 'static> PcodeTranslator<L> {
         strings.map(move |(register, name)| (register, sleigh.get_register(&name)))
     }
 
-    fn get_registers<Sla: SlaRegisters>(
+    fn generate_registers<Sla: SlaRegisters>(
         arch_def: &dyn ArchitectureDef,
         sleigh: &mut Sleigh<L>,
     ) -> HashMap<ArchRegister, VarnodeData> {
@@ -128,6 +128,7 @@ impl<L: Loader + LoaderRequires + 'static> PcodeTranslator<L> {
 
         register_map
     }
+
     /// Gets the [VarnodeData] of register if it exists.
     pub fn get_register(&self, register: &ArchRegister) -> Option<&VarnodeData> {
         self.registers.get(register)
@@ -135,6 +136,10 @@ impl<L: Loader + LoaderRequires + 'static> PcodeTranslator<L> {
 
     pub fn get_register_rev(&self, register: &VarnodeData) -> Option<&[ArchRegister]> {
         self.registers_rev.get(register).map(|list| list.as_ref())
+    }
+
+    pub fn get_registers(&self) -> impl Iterator<Item = (&ArchRegister, &VarnodeData)> {
+        self.registers.iter()
     }
 
     pub fn get_register_from_offset(&self, offset: u64) -> Option<&String> {

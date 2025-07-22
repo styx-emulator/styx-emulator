@@ -125,16 +125,19 @@ impl SpaceManager {
             .get_mut(name)
             .ok_or(SpaceNotFoundError(name.clone()))
     }
-    fn get_mmu_space(&self, name: &SpaceName) -> Result<&MmuSpace, SpaceNotFoundError> {
+    fn peek_mmu_space(&self, name: &SpaceName) -> Result<&MmuSpace, SpaceNotFoundError> {
         self.mmu_spaces
             .get(name)
             .ok_or(SpaceNotFoundError(name.clone()))
     }
-
-    fn get_mmu_space_mut(&mut self, name: &SpaceName) -> Result<&mut MmuSpace, SpaceNotFoundError> {
+    fn get_mmu_space(&mut self, name: &SpaceName) -> Result<MmuSpace, SpaceNotFoundError> {
         self.mmu_spaces
-            .get_mut(name)
+            .remove(name)
             .ok_or(SpaceNotFoundError(name.clone()))
+    }
+
+    fn put_mmu_space(&mut self, name: SpaceName, mmu_space: MmuSpace) {
+        self.mmu_spaces.insert(name, mmu_space);
     }
 
     /// Get reference to the default space.
@@ -248,50 +251,6 @@ impl SpaceManager {
         Ok(space.set_value(varnode.offset, data)?)
     }
 
-    pub fn read_mmu(
-        &self,
-        mmu: &mut Mmu,
-        varnode: &VarnodeData,
-    ) -> Result<SizedValue, VarnodeError> {
-        Ok(if let Ok(space) = self.get_space(&varnode.space) {
-            space.get_value(varnode.offset, varnode.size as u8)?
-        } else {
-            let space = self.get_mmu_space(&varnode.space)?;
-            space.get_value(mmu, varnode.offset, varnode.size as u8)?
-        })
-    }
-
-    pub fn write_mmu(
-        &mut self,
-        mmu: &mut Mmu,
-        varnode: &VarnodeData,
-        data: SizedValue,
-    ) -> Result<(), VarnodeError> {
-        if let Ok(space) = self.get_space_mut(&varnode.space) {
-            space.set_value(varnode.offset, data)?
-        } else {
-            let space = self.get_mmu_space_mut(&varnode.space)?;
-            space.set_value(mmu, varnode.offset, data)?
-        };
-        Ok(())
-    }
-
-    pub fn read_chunk_mmu(
-        &self,
-        mmu: &mut Mmu,
-        space_name: &SpaceName,
-        offset: u64,
-        buf: &mut [u8],
-    ) -> Result<(), ChunkError> {
-        if let Ok(space) = self.get_space(space_name) {
-            space.get_chunk(offset, buf)?
-        } else {
-            let space = self.get_mmu_space(space_name)?;
-            space.get_chunk(mmu, offset, buf)?
-        };
-        Ok(())
-    }
-
     /// Reads a chunk from a space.
     pub fn read_chunk(
         &self,
@@ -349,8 +308,11 @@ impl SpaceManager {
     /// hook) to memory. It would be nice to not have to do this but the Unicorn read hook
     /// implementation commits the modified bytes to memory so this is required to mock that
     /// behavior.
+    ///
+    /// TODO: make this return `HookedError` with an UnknownError type to properly propagate errors
+    /// from hooks.
     pub fn read_hooked(
-        cpu: &mut (impl CpuBackend + HasSpaceManager + HasHookManager),
+        cpu: &mut (impl CpuBackend + MmuSpaceOps + HasSpaceManager + HasHookManager),
         mmu: &mut Mmu,
         ev: &mut EventController,
         varnode: &VarnodeData,
@@ -358,20 +320,10 @@ impl SpaceManager {
         trace!("read_hooked({varnode:?})");
         let endian = cpu
             .space_manager()
-            .get_mmu_space(&varnode.space)?
+            .peek_mmu_space(&varnode.space)?
             .info
             .endian;
-        let mut data = {
-            let space = cpu.space_manager().get_mmu_space_mut(&varnode.space)?;
-            // Space is RamSpace (aka processor memory)
-
-            // Trigger read memory hook
-
-            // If we got an invalid region error, trigger memory protection fault
-            let read_result = space.get_value(mmu, varnode.offset, varnode.size as u8);
-
-            read_result?.to_bytes(space.info.endian)
-        };
+        let mut data = cpu.get_value_mmu(mmu, varnode)?.to_bytes(endian);
 
         let original_data = data.clone();
         HookManager::trigger_memory_read_hook(
@@ -386,18 +338,14 @@ impl SpaceManager {
 
         if original_data != data {
             // Write data changed in memory read hooks back to memory.
-            cpu.space_manager()
-                .write_mmu(mmu, varnode, SizedValue::from_bytes(&data, endian))?;
+            cpu.set_value_mmu(mmu, varnode, SizedValue::from_bytes(&data, endian))?;
         } // Don't write if not changed to match unicorn behavior.
 
         // finally... read value from memory
-        let final_result = cpu
-            .space_manager()
-            .get_mmu_space_mut(&varnode.space)?
-            .get_value(mmu, varnode.offset, varnode.size as u8);
+        let final_result = cpu.get_value_mmu(mmu, varnode);
 
         trace!("read hooked {varnode} -> {final_result:?}");
-        Ok(final_result?)
+        final_result
     }
 
     /// Writes a varnode to memory and triggers WriteMemoryHooks.
@@ -405,7 +353,7 @@ impl SpaceManager {
     /// To mimic the Unicorn backend's behavior, we always give a slice of 8 bytes to the memory
     /// write hook with the `size` parameter being the actual size of the write.
     pub fn write_hooked(
-        cpu: &mut (impl CpuBackend + HasSpaceManager + HasHookManager),
+        cpu: &mut (impl CpuBackend + MmuSpaceOps + HasSpaceManager + HasHookManager),
         mmu: &mut Mmu,
         ev: &mut EventController,
         varnode: &VarnodeData,
@@ -413,7 +361,7 @@ impl SpaceManager {
     ) -> Result<(), VarnodeError> {
         let endian = cpu
             .space_manager()
-            .get_mmu_space_mut(&varnode.space)?
+            .peek_mmu_space(&varnode.space)?
             .info
             .endian;
 
@@ -431,17 +379,17 @@ impl SpaceManager {
         .unwrap();
         trace!("write hooked at {varnode:?}");
 
-        let read_result = cpu
-            .space_manager()
-            .get_mmu_space_mut(&varnode.space)?
-            .set_value(mmu, varnode.offset, data);
-
-        Ok(read_result?)
+        cpu.set_value_mmu(mmu, varnode, data)
     }
 
     /// Reads a varnode from the mmu spaces and triggers RegisterRead hooks.
     pub fn read_hooked_register(
-        cpu: &mut (impl CpuBackend + HasSpaceManager + HasHookManager + HasPcodeGenerator + HasConfig),
+        cpu: &mut (impl CpuBackend
+                  + HasSpaceManager
+                  + MmuSpaceOps
+                  + HasHookManager
+                  + HasPcodeGenerator
+                  + HasConfig),
         mmu: &mut Mmu,
         ev: &mut EventController,
         varnode: &VarnodeData,
@@ -449,7 +397,7 @@ impl SpaceManager {
         if cpu.config().register_read_hooks {
             SpaceManager::read_hooked_register_inner(cpu, mmu, ev, varnode)
         } else {
-            cpu.space_manager().read_mmu(mmu, varnode)
+            cpu.get_value_mmu(mmu, varnode)
         }
     }
     /// Reads a varnode from the mmu spaces and triggers RegisterRead hooks.
@@ -500,7 +448,12 @@ impl SpaceManager {
 
     /// Reads a varnode from the mmu spaces and triggers RegisterRead hooks.
     pub fn write_hooked_register(
-        cpu: &mut (impl CpuBackend + HasSpaceManager + HasHookManager + HasPcodeGenerator + HasConfig),
+        cpu: &mut (impl CpuBackend
+                  + HasSpaceManager
+                  + MmuSpaceOps
+                  + HasHookManager
+                  + HasPcodeGenerator
+                  + HasConfig),
         mmu: &mut Mmu,
         ev: &mut EventController,
         varnode: &VarnodeData,
@@ -509,7 +462,7 @@ impl SpaceManager {
         if cpu.config().register_write_hooks {
             SpaceManager::write_hooked_register_inner(cpu, mmu, ev, varnode, value_to_write)
         } else {
-            cpu.space_manager().write_mmu(mmu, varnode, value_to_write)
+            cpu.set_value_mmu(mmu, varnode, value_to_write)
         }
     }
 
@@ -589,6 +542,86 @@ impl SpaceManager {
             .unwrap();
 
         space_manager
+    }
+}
+
+/// Performs get/set value operations including Mmu spaces.
+pub(crate) trait MmuSpaceOps {
+    fn get_value_mmu(
+        &mut self,
+        mmu: &mut Mmu,
+        varnode: &VarnodeData,
+    ) -> Result<SizedValue, VarnodeError>;
+
+    fn set_value_mmu(
+        &mut self,
+        mmu: &mut Mmu,
+        varnode: &VarnodeData,
+        data: SizedValue,
+    ) -> Result<(), VarnodeError>;
+
+    fn read_chunk_mmu(
+        &mut self,
+        mmu: &mut Mmu,
+        space_name: &SpaceName,
+        offset: u64,
+        buf: &mut [u8],
+    ) -> Result<(), ChunkError>;
+}
+
+impl MmuSpaceOps for PcodeBackend {
+    fn get_value_mmu(
+        &mut self,
+        mmu: &mut Mmu,
+        varnode: &VarnodeData,
+    ) -> Result<SizedValue, VarnodeError> {
+        Ok(
+            if let Ok(space) = self.space_manager.get_space(&varnode.space) {
+                space.get_value(varnode.offset, varnode.size as u8)?
+            } else {
+                let space = self.space_manager.get_mmu_space(&varnode.space)?;
+                let res = space.get_value(mmu, self, varnode.offset, varnode.size as u8);
+                self.space_manager
+                    .put_mmu_space(varnode.space.clone(), space);
+                res?
+            },
+        )
+    }
+
+    fn set_value_mmu(
+        &mut self,
+        mmu: &mut Mmu,
+        varnode: &VarnodeData,
+        data: SizedValue,
+    ) -> Result<(), VarnodeError> {
+        if let Ok(space) = self.space_manager.get_space_mut(&varnode.space) {
+            space.set_value(varnode.offset, data)?
+        } else {
+            let space = self.space_manager.get_mmu_space(&varnode.space)?;
+            let res = space.set_value(mmu, self, varnode.offset, data);
+            self.space_manager
+                .put_mmu_space(varnode.space.clone(), space);
+            res?;
+        };
+        Ok(())
+    }
+
+    fn read_chunk_mmu(
+        &mut self,
+        mmu: &mut Mmu,
+        space_name: &SpaceName,
+        offset: u64,
+        buf: &mut [u8],
+    ) -> Result<(), ChunkError> {
+        if let Ok(space) = self.space_manager.get_space(space_name) {
+            space.get_chunk(offset, buf)?
+        } else {
+            let space = self.space_manager.get_mmu_space(space_name)?;
+            let res = space.get_chunk(mmu, self, offset, buf);
+            self.space_manager.put_mmu_space(space_name.clone(), space);
+            res?;
+        };
+        Ok(())
     }
 }
 
