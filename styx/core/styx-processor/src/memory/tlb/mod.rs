@@ -1,18 +1,49 @@
 // SPDX-License-Identifier: BSD-2-Clause
+
+mod dummy;
+pub use dummy::DummyTlb;
+
+mod closure;
+pub use closure::ClosureTlb;
+
 use styx_errors::UnknownError;
 use thiserror::Error;
 
+use crate::memory::mmu::MemoryType;
+use crate::memory::physical::MemoryBackend;
 use crate::memory::MemoryOperation;
 use crate::{cpu::CpuBackend, event_controller::ExceptionNumber};
 
 #[derive(Error, Debug)]
-pub enum TLBError {
+pub enum TlbTranslateError {
     #[error(transparent)]
     Other(#[from] UnknownError),
     /// Indicates a TLB error with an associated exception to synchronously execute.
     #[error("TLB error with exception {0:?}")]
     TlbException(Option<ExceptionNumber>),
 }
+
+/// Processor components for a TLB translate.
+///
+/// The MMU will construct this before calling [`TlbImpl::translate_va()`].
+///
+/// Construct with [`Self::new()`].
+pub struct TlbProcessor<'a> {
+    pub physical_memory: &'a mut MemoryBackend,
+    pub cpu: &'a mut dyn CpuBackend,
+}
+
+impl<'a> TlbProcessor<'a> {
+    pub fn new(physical_memory: &'a mut MemoryBackend, cpu: &'a mut dyn CpuBackend) -> Self {
+        Self {
+            physical_memory,
+            cpu,
+        }
+    }
+}
+
+/// Returns the translated physical address or error.
+pub type TlbTranslateResult = Result<u64, TlbTranslateError>;
 
 /// The common interface for TLB implementations.  It defines methods for
 /// performing address translations, reading/writing the TLB, updating TLB
@@ -35,21 +66,19 @@ pub trait TlbImpl: Send {
     /// Disable translation for code addresses
     fn disable_code_address_translation(&mut self) -> Result<(), UnknownError>;
 
-    /// Translate a virtual code address into a physical address
-    fn translate_va_code(&mut self, virt_addr: u64) -> Result<u64, TLBError>;
-
-    /// Translate a virtual data address into a physical address
-    fn translate_va_data(
+    fn translate_va(
         &mut self,
         virt_addr: u64,
         access_type: MemoryOperation,
-    ) -> Result<u64, TLBError>;
+        memory_type: MemoryType,
+        processor: &mut TlbProcessor,
+    ) -> TlbTranslateResult;
 
     /// Write to the TLB, it is up to the implementation to interpret the idx, data, and flags arguments
-    fn tlb_write(&mut self, idx: usize, data: u64, flags: u32) -> Result<(), TLBError>;
+    fn tlb_write(&mut self, idx: usize, data: u64, flags: u32) -> Result<(), TlbTranslateError>;
 
     /// Read from the TLB, it is up to the implementation to interpret the idx and flags arguments
-    fn tlb_read(&self, idx: usize, flags: u32) -> Result<u64, TLBError>;
+    fn tlb_read(&self, idx: usize, flags: u32) -> Result<u64, TlbTranslateError>;
 
     /// Invalidate all tlb entries, implementation specific flags are passed to control behaviour
     fn invalidate_all(&mut self, flags: u32) -> Result<(), UnknownError>;
@@ -58,53 +87,4 @@ pub trait TlbImpl: Send {
     ///
     /// The implementation decides how to interpret the idx value.
     fn invalidate(&mut self, idx: usize) -> Result<(), UnknownError>;
-}
-
-/// TLB implementation that has no address translation.
-#[derive(Debug, Default)]
-pub struct DummyTlb;
-impl TlbImpl for DummyTlb {
-    fn translate_va_code(&mut self, virt_addr: u64) -> Result<u64, TLBError> {
-        Ok(virt_addr)
-    }
-
-    fn translate_va_data(
-        &mut self,
-        virt_addr: u64,
-        _access_type: MemoryOperation,
-    ) -> Result<u64, TLBError> {
-        Ok(virt_addr)
-    }
-
-    fn invalidate_all(&mut self, _flags: u32) -> Result<(), UnknownError> {
-        Ok(())
-    }
-
-    fn invalidate(&mut self, _idx: usize) -> Result<(), UnknownError> {
-        Ok(())
-    }
-
-    fn tlb_write(&mut self, _idx: usize, _data: u64, _flags: u32) -> Result<(), TLBError> {
-        Ok(())
-    }
-
-    fn tlb_read(&self, _idx: usize, _flags: u32) -> Result<u64, TLBError> {
-        Ok(0)
-    }
-
-    fn enable_data_address_translation(&mut self) -> Result<(), UnknownError> {
-        Ok(())
-    }
-
-    fn disable_data_address_translation(&mut self) -> Result<(), UnknownError> {
-        Ok(())
-    }
-
-    fn enable_code_address_translation(&mut self) -> Result<(), UnknownError> {
-        Ok(())
-    }
-
-    fn disable_code_address_translation(&mut self) -> Result<(), UnknownError> {
-        Ok(())
-    }
 }

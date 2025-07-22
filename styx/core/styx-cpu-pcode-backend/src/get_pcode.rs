@@ -15,11 +15,11 @@ use thiserror::Error;
 
 use crate::{
     hooks::HookManager, ArchPcManager, GeneratePcodeError, GhidraPcodeGenerator, HasConfig,
-    MmuLoaderDependencies, PcodeBackend,
+    PcodeBackend,
 };
 
 #[derive(Error, Debug)]
-enum GetPcodeError {
+pub(crate) enum GetPcodeError {
     #[error(transparent)]
     GeneratePcodeError(#[from] GeneratePcodeError),
     #[error("mmu error while translating pcode {0:?}")]
@@ -77,14 +77,7 @@ fn get_pcode_at_address(
     mmu: &mut Mmu,
     ev: &mut EventController,
 ) -> Result<u64, GetPcodeError> {
-    let mut err = None;
-    let data = MmuLoaderDependencies::new(mmu, ev, &mut err);
-    let pcode_res = GhidraPcodeGenerator::get_pcode(cpu, addr, pcodes, data);
-    if let Some(err) = err {
-        Err(GetPcodeError::MmuOpErr(err))
-    } else {
-        pcode_res.map_err(Into::into)
-    }
+    GhidraPcodeGenerator::get_pcode(cpu, addr, pcodes, mmu, ev)
 }
 
 /// Grab the pcodes at the current program counter

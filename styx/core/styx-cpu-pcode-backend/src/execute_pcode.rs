@@ -11,7 +11,7 @@ use crate::{
     memory::{
         sized_value::SizedValue,
         space::SpaceError,
-        space_manager::{HasSpaceManager, VarnodeError},
+        space_manager::{HasSpaceManager, MmuSpaceOps, VarnodeError},
     },
     pcode_gen::HasPcodeGenerator,
     HasConfig, PcodeBackend, FALSE,
@@ -99,7 +99,12 @@ pub fn execute_pcode(
 
 fn execute_pcode_inner<'a>(
     pcode: &'a Pcode,
-    cpu: &mut (impl CpuBackend + HasSpaceManager + HasHookManager + HasPcodeGenerator + HasConfig),
+    cpu: &mut (impl CpuBackend
+              + HasSpaceManager
+              + HasHookManager
+              + HasPcodeGenerator
+              + HasConfig
+              + MmuSpaceOps),
     mmu: &mut Mmu,
     ev: &mut EventController,
 ) -> PCodeStateChangeInner<'a> {
@@ -115,8 +120,7 @@ fn execute_pcode_inner<'a>(
             let output_varnode = pcode.get_output();
 
             let space_id = cpu
-                .space_manager()
-                .read_mmu(mmu, space_input)
+                .get_value_mmu(mmu, space_input)
                 .unwrap()
                 .to_u64()
                 .unwrap();
@@ -126,10 +130,8 @@ fn execute_pcode_inner<'a>(
                 .get_space_name(&SpaceId::from(space_id))
                 .unwrap()
                 .clone();
-            let ptr_offset = cpu
-                .space_manager()
-                .read_mmu(mmu, pointer_offset_input)
-                .unwrap();
+
+            let ptr_offset = cpu.get_value_mmu(mmu, pointer_offset_input).unwrap();
             trace!("Loading from {load_space_name:?}+0x{ptr_offset:08X}");
 
             let load_address = ptr_offset.to_u64().unwrap();
@@ -216,9 +218,7 @@ fn execute_pcode_inner<'a>(
                 Ok(ptr_value) => {
                     trace!("Loaded 0x{ptr_value:X}");
 
-                    cpu.space_manager()
-                        .write_mmu(mmu, output_varnode, ptr_value)
-                        .unwrap();
+                    cpu.set_value_mmu(mmu, output_varnode, ptr_value).unwrap();
                     PCodeStateChange::Fallthrough.into()
                 }
                 Err(state_change) => state_change.into(),
@@ -242,15 +242,9 @@ fn execute_pcode_inner<'a>(
                 .ok_or(anyhow!("bad"))
                 .unwrap()
                 .clone();
-            let ptr_offset = cpu
-                .space_manager()
-                .read_mmu(mmu, pointer_offset_varnode)
-                .unwrap();
+            let ptr_offset = cpu.get_value_mmu(mmu, pointer_offset_varnode).unwrap();
 
-            let value_to_write = cpu
-                .space_manager()
-                .read_mmu(mmu, write_value_varnode)
-                .unwrap();
+            let value_to_write = cpu.get_value_mmu(mmu, write_value_varnode).unwrap();
             trace!("Storing 0x{value_to_write:X} to {store_space_name:?}+0x{ptr_offset:08X}");
 
             let store_address = ptr_offset.to_u64().unwrap();
@@ -279,14 +273,13 @@ fn execute_pcode_inner<'a>(
                         }
                         HandleExceptionAction::TargetHandle(target_exit_reason) => {
                             let mut buf = vec![0u8; write_value_varnode.size as usize];
-                            cpu.space_manager()
-                                .read_chunk_mmu(
-                                    mmu,
-                                    &write_value_varnode.space,
-                                    write_value_varnode.offset,
-                                    &mut buf,
-                                )
-                                .unwrap();
+                            cpu.read_chunk_mmu(
+                                mmu,
+                                &write_value_varnode.space,
+                                write_value_varnode.offset,
+                                &mut buf,
+                            )
+                            .unwrap();
                             let is_fixed = HookManager::trigger_protection_fault_hook(
                                 cpu,
                                 mmu,
@@ -329,14 +322,13 @@ fn execute_pcode_inner<'a>(
                         }
                         HandleExceptionAction::TargetHandle(target_exit_reason) => {
                             let mut buf = vec![0u8; write_value_varnode.size as usize];
-                            cpu.space_manager()
-                                .read_chunk_mmu(
-                                    mmu,
-                                    &write_value_varnode.space,
-                                    write_value_varnode.offset,
-                                    &mut buf,
-                                )
-                                .unwrap();
+                            cpu.read_chunk_mmu(
+                                mmu,
+                                &write_value_varnode.space,
+                                write_value_varnode.offset,
+                                &mut buf,
+                            )
+                            .unwrap();
                             let is_fixed = HookManager::trigger_unmapped_fault_hook(
                                 cpu,
                                 mmu,
@@ -374,7 +366,7 @@ fn execute_pcode_inner<'a>(
             let dest = pcode.get_input(0);
             // pcode relative jump
             if dest.space == SpaceName::Constant {
-                let offset: SInt = cpu.space_manager().read_mmu(mmu, dest).unwrap().into();
+                let offset: SInt = cpu.get_value_mmu(mmu, dest).unwrap().into();
                 trace!("Branch: pcode relative jump with offset {offset:?}");
                 PCodeStateChange::PCodeRelative(offset.value() as i64).into()
             }
@@ -388,8 +380,7 @@ fn execute_pcode_inner<'a>(
             let condition = pcode.get_input(1);
 
             if cpu
-                .space_manager()
-                .read_mmu(mmu, condition)
+                .get_value_mmu(mmu, condition)
                 .unwrap()
                 .to_u128()
                 .unwrap()
@@ -402,7 +393,7 @@ fn execute_pcode_inner<'a>(
             let dest = pcode.get_input(0);
             // pcode relative jump
             if dest.space == SpaceName::Constant {
-                let offset: SInt = cpu.space_manager().read_mmu(mmu, dest).unwrap().into();
+                let offset: SInt = cpu.get_value_mmu(mmu, dest).unwrap().into();
                 trace!("Branch: pcode relative jump with offset {offset:?}");
                 PCodeStateChange::PCodeRelative(offset.value() as i64).into()
             }
@@ -415,12 +406,7 @@ fn execute_pcode_inner<'a>(
         Opcode::BranchInd | Opcode::CallInd | Opcode::Return => {
             let dest = pcode.get_input(0);
 
-            let dest_addr = cpu
-                .space_manager()
-                .read_mmu(mmu, dest)
-                .unwrap()
-                .to_u128()
-                .unwrap();
+            let dest_addr = cpu.get_value_mmu(mmu, dest).unwrap().to_u128().unwrap();
 
             trace!("Indirect jump to 0x{dest_addr:x}");
             PCodeStateChange::InstructionAbsolute(dest_addr as u64).into()
@@ -863,39 +849,16 @@ fn execute_pcode_inner<'a>(
 
             debug_assert_eq!(v0.size, out.size);
 
-            let bit_pos = cpu
-                .space_manager()
-                .read_mmu(mmu, position)
-                .unwrap()
-                .to_u128()
-                .unwrap();
-            let num_bits = cpu
-                .space_manager()
-                .read_mmu(mmu, size)
-                .unwrap()
-                .to_u128()
-                .unwrap();
+            let bit_pos = cpu.get_value_mmu(mmu, position).unwrap().to_u128().unwrap();
+            let num_bits = cpu.get_value_mmu(mmu, size).unwrap().to_u128().unwrap();
 
             let mask = 2_u128.pow(num_bits as u32) - 1;
 
-            let to_insert = (cpu
-                .space_manager()
-                .read_mmu(mmu, v1)
-                .unwrap()
-                .to_u128()
-                .unwrap()
-                & mask)
-                << num_bits;
+            let to_insert =
+                (cpu.get_value_mmu(mmu, v1).unwrap().to_u128().unwrap() & mask) << num_bits;
             let mask = !(mask << bit_pos);
 
-            let res = (cpu
-                .space_manager()
-                .read_mmu(mmu, v0)
-                .unwrap()
-                .to_u128()
-                .unwrap()
-                & mask)
-                | to_insert;
+            let res = (cpu.get_value_mmu(mmu, v0).unwrap().to_u128().unwrap() & mask) | to_insert;
 
             cpu.space_manager()
                 .write(out, SizedValue::from_u128(res, out.size as u8))
@@ -909,26 +872,11 @@ fn execute_pcode_inner<'a>(
             let size = pcode.get_input_constant(2);
             let out = pcode.get_output();
 
-            let mut res = cpu
-                .space_manager()
-                .read_mmu(mmu, v0)
-                .unwrap()
-                .to_u128()
-                .unwrap();
+            let mut res = cpu.get_value_mmu(mmu, v0).unwrap().to_u128().unwrap();
 
-            res >>= cpu
-                .space_manager()
-                .read_mmu(mmu, position)
-                .unwrap()
-                .to_u128()
-                .unwrap();
-            let mask = 2_u128.pow(
-                cpu.space_manager()
-                    .read_mmu(mmu, size)
-                    .unwrap()
-                    .to_u128()
-                    .unwrap() as u32,
-            ) - 1;
+            res >>= cpu.get_value_mmu(mmu, position).unwrap().to_u128().unwrap();
+            let mask =
+                2_u128.pow(cpu.get_value_mmu(mmu, size).unwrap().to_u128().unwrap() as u32) - 1;
 
             res &= mask;
 
@@ -961,7 +909,7 @@ fn execute_pcode_inner<'a>(
 fn unary_typed_inner<
     V0: PcodeType,
     O: PcodeType,
-    C: CpuBackend + HasSpaceManager + HasHookManager + HasPcodeGenerator + HasConfig,
+    C: CpuBackend + HasSpaceManager + HasHookManager + HasPcodeGenerator + HasConfig + MmuSpaceOps,
 >(
     pcode: &Pcode,
     cpu: &mut C,
@@ -987,7 +935,7 @@ fn unary_typed<
     'a,
     V0: PcodeType,
     O: PcodeType,
-    C: CpuBackend + HasSpaceManager + HasHookManager + HasPcodeGenerator + HasConfig,
+    C: CpuBackend + HasSpaceManager + HasHookManager + HasPcodeGenerator + HasConfig + MmuSpaceOps,
 >(
     pcode: &'a Pcode,
     cpu: &mut C,
@@ -1002,7 +950,7 @@ fn binary_typed_inner<
     V0: PcodeType,
     V1: PcodeType,
     O: PcodeType,
-    C: CpuBackend + HasSpaceManager + HasHookManager + HasPcodeGenerator + HasConfig,
+    C: CpuBackend + HasSpaceManager + HasHookManager + HasPcodeGenerator + HasConfig + MmuSpaceOps,
 >(
     pcode: &Pcode,
     cpu: &mut C,
@@ -1035,7 +983,7 @@ fn binary_typed<
     V0: PcodeType,
     V1: PcodeType,
     O: PcodeType,
-    C: CpuBackend + HasSpaceManager + HasHookManager + HasPcodeGenerator + HasConfig,
+    C: CpuBackend + HasSpaceManager + HasHookManager + HasPcodeGenerator + HasConfig + MmuSpaceOps,
 >(
     pcode: &'a Pcode,
     cpu: &mut C,
@@ -1255,10 +1203,7 @@ mod tests {
 
         execute_pcode_inner(&pcode, &mut cpu, &mut mmu, &mut evt);
 
-        let result = cpu
-            .space_manager
-            .read_mmu(&mut mmu, pcode.get_output())
-            .unwrap();
+        let result = cpu.get_value_mmu(&mut mmu, pcode.get_output()).unwrap();
         assert_eq!(result, expected_output);
     }
 
@@ -1544,10 +1489,7 @@ mod tests {
 
         execute_pcode_inner(&pcode, &mut cpu, &mut mmu, &mut evt);
 
-        let result = cpu
-            .space_manager
-            .read_mmu(&mut mmu, pcode.get_output())
-            .unwrap();
+        let result = cpu.get_value_mmu(&mut mmu, pcode.get_output()).unwrap();
         assert_eq!(result, expected_output);
     }
 
@@ -1596,10 +1538,7 @@ mod tests {
 
         execute_pcode_inner(&inst, &mut cpu, &mut mmu, &mut evt);
 
-        let result = cpu
-            .space_manager
-            .read_mmu(&mut mmu, inst.get_output())
-            .unwrap();
+        let result = cpu.get_value_mmu(&mut mmu, inst.get_output()).unwrap();
         assert_eq!(result.to_u128().unwrap(), 0xBABE);
     }
 
@@ -1657,10 +1596,7 @@ mod tests {
 
         execute_pcode_inner(&inst, &mut cpu, &mut mmu, &mut evt);
 
-        let result = cpu
-            .space_manager
-            .read_mmu(&mut mmu, inst.get_output())
-            .unwrap();
+        let result = cpu.get_value_mmu(&mut mmu, inst.get_output()).unwrap();
         assert_eq!(result.to_u128().unwrap(), 0xFFFFBABEFFFF);
     }
 
