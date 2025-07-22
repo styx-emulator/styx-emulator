@@ -54,6 +54,7 @@ typedef enum StyxFFIErrorKind {
   STYX_FFI_ERROR_KIND_INVALID_STRING,
   STYX_FFI_ERROR_KIND_ADD_HOOK,
   STYX_FFI_ERROR_KIND_MMU_OP,
+  STYX_FFI_ERROR_KIND_MEMORY_OP,
   STYX_FFI_ERROR_KIND_READ_REGISTER,
   STYX_FFI_ERROR_KIND_WRITE_REGISTER,
   STYX_FFI_ERROR_KIND_TRY_FROM_INT,
@@ -758,8 +759,11 @@ typedef struct StyxHook_InvalidInstructionData {
  * standard section memory permissions
  */
 typedef struct MemoryPermissions {
-  Internal _0;
+  uint32_t bits;
 } MemoryPermissions;
+#define MemoryPermissions_READ (MemoryPermissions){ .bits = 1 }
+#define MemoryPermissions_WRITE (MemoryPermissions){ .bits = 2 }
+#define MemoryPermissions_EXEC (MemoryPermissions){ .bits = 4 }
 
 /**
  * memory fault information

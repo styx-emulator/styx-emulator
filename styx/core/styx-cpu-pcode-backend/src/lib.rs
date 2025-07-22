@@ -25,7 +25,7 @@ use call_other::CallOtherManager;
 use derivative::Derivative;
 use log::trace;
 use memory::{mmu_store::MmuSpace, space_manager::VarnodeError};
-use pcode_gen::{GeneratePcodeError, MmuLoaderDependencies};
+use pcode_gen::GeneratePcodeError;
 use std::collections::{BTreeMap, HashMap};
 use styx_cpu_type::{
     arch::{

@@ -57,7 +57,8 @@ pub mod prelude {
     pub use super::loader::*;
     pub use super::macros::*;
     pub use super::memory::{
-        MemoryOperationError, MemoryPermissions, MemoryRegionSize, Mmu, MmuOpError,
+        MemoryOperation, MemoryOperationError, MemoryPermissions, MemoryRegionSize, MemoryType,
+        Mmu, MmuOpError,
     };
     pub use super::plugins::{Plugin, UninitPlugin};
     pub use super::processor::*;
@@ -66,7 +67,7 @@ pub mod prelude {
     pub use super::tracebus::*;
     pub use super::util::*;
     pub use styx_processor::cpu::{
-        CpuBackend, CpuBackendExt, ReadRegisterError, WriteRegisterError,
+        CpuBackend, CpuBackendExt, DummyBackend, ReadRegisterError, WriteRegisterError,
     };
     pub use styx_processor::hooks::{AddressRange, CoreHandle, Hookable, MemFaultData, StyxHook};
     pub use styx_processor::memory::helpers::{ReadExt, WriteExt};

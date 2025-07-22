@@ -15,9 +15,11 @@ pub mod physical;
 mod tlb;
 
 pub use memory_region::{MemoryRegionData, MemoryRegionSize};
-pub use mmu::{CodeMemoryOp, DataMemoryOp, Mmu, MmuOpError, SudoCodeMemoryOp, SudoDataMemoryOp};
+pub use mmu::{
+    CodeMemoryOp, DataMemoryOp, MemoryType, Mmu, MmuOpError, SudoCodeMemoryOp, SudoDataMemoryOp,
+};
 pub use physical::{AddRegionError, FromConfigError, MemoryOperationError, UnmappedMemoryError};
-pub use tlb::{DummyTlb, TLBError, TlbImpl};
+pub use tlb::{ClosureTlb, DummyTlb, TlbImpl, TlbProcessor, TlbTranslateError, TlbTranslateResult};
 
 /// Enum that is used to be explicit in error handling
 /// of current memory operations

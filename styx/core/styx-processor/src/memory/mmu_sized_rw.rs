@@ -2,9 +2,9 @@
 use paste;
 use styx_errors::UnknownError;
 
-use super::Mmu;
+use super::{MemoryOperation, MemoryType, Mmu, TlbProcessor};
+use crate::cpu::CpuBackend;
 use crate::memory::physical::address_space::MemoryImpl;
-use crate::memory::MemoryOperation;
 
 /// For some input type `T`, this macro generates functions for reading and
 /// writing memory as type `T`.
@@ -35,17 +35,19 @@ macro_rules! mmu_sized_rw {
             }
 
             #[doc = "Read from data as little endian bytes using a virtual address"]
-            pub fn [<read_ $type _le_virt_data>](&mut self, addr: u64) -> Result<$type, UnknownError> {
+            pub fn [<read_ $type _le_virt_data>](&mut self, addr: u64, cpu: &mut dyn CpuBackend) -> Result<$type, UnknownError> {
+                let mut proc = TlbProcessor::new(&mut self.memory, cpu);
                 let mut data = [0_u8;std::mem::size_of::<$type>()];
-                let phys_addr = self.tlb.translate_va_data(addr, MemoryOperation::Read)?;
+                let phys_addr = self.tlb.translate_va(addr, MemoryOperation::Read, MemoryType::Data, &mut proc)?;
                 self.memory.read_data(phys_addr, data.as_mut_slice())?;
                 Ok($type::from_le_bytes(data))
             }
 
             #[doc = "Read from data as big endian bytes using a virtual address"]
-            pub fn [<read_ $type _be_virt_data>](&mut self, addr: u64) -> Result<$type, UnknownError> {
+            pub fn [<read_ $type _be_virt_data>](&mut self, addr: u64, cpu: &mut dyn CpuBackend) -> Result<$type, UnknownError> {
+                let mut proc = TlbProcessor::new(&mut self.memory, cpu);
                 let mut data = [0_u8;std::mem::size_of::<$type>()];
-                let phys_addr = self.tlb.translate_va_data(addr, MemoryOperation::Read)?;
+                let phys_addr = self.tlb.translate_va(addr, MemoryOperation::Read, MemoryType::Data, &mut proc)?;
                 self.memory.read_data(phys_addr, data.as_mut_slice())?;
                 Ok($type::from_be_bytes(data))
             }
@@ -65,17 +67,19 @@ macro_rules! mmu_sized_rw {
             }
 
             #[doc = "Read from code as little endian bytes using a virtual address"]
-            pub fn [<read_ $type _le_virt_code>](&mut self, addr: u64) -> Result<$type, UnknownError> {
+            pub fn [<read_ $type _le_virt_code>](&mut self, addr: u64, cpu: &mut dyn CpuBackend) -> Result<$type, UnknownError> {
+                let mut proc = TlbProcessor::new(&mut self.memory, cpu);
                 let mut data = [0_u8;std::mem::size_of::<$type>()];
-                let phys_addr = self.tlb.translate_va_code(addr)?;
+                let phys_addr = self.tlb.translate_va(addr, MemoryOperation::Read, MemoryType::Code, &mut proc)?;
                 self.memory.read_code(phys_addr, data.as_mut_slice())?;
                 Ok($type::from_le_bytes(data))
             }
 
             #[doc = "Read from code as big endian bytes using a virtual address"]
-            pub fn [<read_ $type _be_virt_code>](&mut self, addr: u64) -> Result<$type, UnknownError> {
+            pub fn [<read_ $type _be_virt_code>](&mut self, addr: u64, cpu: &mut dyn CpuBackend) -> Result<$type, UnknownError> {
+                let mut proc = TlbProcessor::new(&mut self.memory, cpu);
                 let mut data = [0_u8;std::mem::size_of::<$type>()];
-                let phys_addr = self.tlb.translate_va_code(addr)?;
+                let phys_addr = self.tlb.translate_va(addr, MemoryOperation::Read, MemoryType::Code, &mut proc)?;
                 self.memory.read_code(phys_addr, data.as_mut_slice())?;
                 Ok($type::from_be_bytes(data))
             }
@@ -92,16 +96,18 @@ macro_rules! mmu_sized_rw {
                 Ok(())
             }
 
-            pub fn [<write_ $type _le_virt_data>](&mut self, addr: u64, val: $type) -> Result<(), UnknownError> {
+            pub fn [<write_ $type _le_virt_data>](&mut self, addr: u64, val: $type, cpu: &mut dyn CpuBackend) -> Result<(), UnknownError> {
+                let mut proc = TlbProcessor::new(&mut self.memory, cpu);
                 let data = $type::to_le_bytes(val);
-                let phys_addr = self.tlb.translate_va_data(addr, MemoryOperation::Write)?;
+                let phys_addr = self.tlb.translate_va(addr, MemoryOperation::Write, MemoryType::Data, &mut proc)?;
                 self.memory.write_data(phys_addr, &data)?;
                 Ok(())
             }
 
-            pub fn [<write_ $type _be_virt_data>](&mut self, addr: u64, val: $type) -> Result<(), UnknownError> {
+            pub fn [<write_ $type _be_virt_data>](&mut self, addr: u64, val: $type, cpu: &mut dyn CpuBackend) -> Result<(), UnknownError> {
+                let mut proc = TlbProcessor::new(&mut self.memory, cpu);
                 let data = $type::to_be_bytes(val);
-                let phys_addr = self.tlb.translate_va_data(addr, MemoryOperation::Write)?;
+                let phys_addr = self.tlb.translate_va(addr, MemoryOperation::Write, MemoryType::Data, &mut proc)?;
                 self.memory.write_data(phys_addr, &data)?;
                 Ok(())
             }
@@ -118,16 +124,18 @@ macro_rules! mmu_sized_rw {
                 Ok(())
             }
 
-            pub fn [<write_ $type _le_virt_code>](&mut self, addr: u64, val: $type) -> Result<(), UnknownError> {
+            pub fn [<write_ $type _le_virt_code>](&mut self, addr: u64, val: $type, cpu: &mut dyn CpuBackend) -> Result<(), UnknownError> {
+                let mut proc = TlbProcessor::new(&mut self.memory, cpu);
                 let data = $type::to_le_bytes(val);
-                let phys_addr = self.tlb.translate_va_code(addr)?;
+                let phys_addr = self.tlb.translate_va(addr, MemoryOperation::Write, MemoryType::Code, &mut proc)?;
                 self.memory.write_code(phys_addr, &data)?;
                 Ok(())
             }
 
-            pub fn [<write_ $type _be_virt_code>](&mut self, addr: u64, val: $type) -> Result<(), UnknownError> {
+            pub fn [<write_ $type _be_virt_code>](&mut self, addr: u64, val: $type, cpu: &mut dyn CpuBackend) -> Result<(), UnknownError> {
+                let mut proc = TlbProcessor::new(&mut self.memory, cpu);
                 let data = $type::to_be_bytes(val);
-                let phys_addr = self.tlb.translate_va_code(addr)?;
+                let phys_addr = self.tlb.translate_va(addr, MemoryOperation::Write, MemoryType::Code, &mut proc)?;
                 self.memory.write_code(phys_addr, &data)?;
                 Ok(())
             }

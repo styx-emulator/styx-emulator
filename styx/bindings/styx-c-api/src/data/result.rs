@@ -7,7 +7,9 @@ use std::{
 };
 
 use styx_emulator::core::hooks::AddHookError;
-use styx_emulator::prelude::{MmuOpError, ReadRegisterError, UnknownError, WriteRegisterError};
+use styx_emulator::prelude::{
+    MemoryOperationError, MmuOpError, ReadRegisterError, UnknownError, WriteRegisterError,
+};
 
 macro_rules! styx_ffi_error_impl {
     (
@@ -231,6 +233,11 @@ styx_ffi_error_impl! {
                     inner: MmuOpError
                 }
             ),
+            MemoryOp(
+                struct {
+                    inner: MemoryOperationError
+                }
+            ),
             ReadRegister(
                 struct {
                     inner: ReadRegisterError
@@ -356,5 +363,6 @@ from_error_impl!(impl From<styx_emulator::prelude::TryNewIntError as try_new_arb
 from_error_impl!(impl From<UnknownError as unknown>);
 from_error_impl!(impl From<AddHookError as add_hook>);
 from_error_impl!(impl From<MmuOpError as mmu_op>);
+from_error_impl!(impl From<MemoryOperationError as memory_op>);
 from_error_impl!(impl From<ReadRegisterError as read_register>);
 from_error_impl!(impl From<WriteRegisterError as write_register>);

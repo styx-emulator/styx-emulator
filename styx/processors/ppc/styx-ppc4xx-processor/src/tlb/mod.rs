@@ -54,7 +54,9 @@ use cache::{SortedTlbCache, TlbCache32, UnsortedRoundRobinTlbCache};
 use record::TlbRecord;
 use styx_core::errors::UnknownError;
 
-use styx_core::memory::{MemoryOperation, TLBError, TlbImpl};
+use styx_core::memory::{
+    MemoryOperation, TlbImpl, TlbProcessor, TlbTranslateError, TlbTranslateResult,
+};
 use styx_core::prelude::log::warn;
 use styx_core::prelude::*;
 
@@ -201,7 +203,7 @@ impl Ppc405Tlb {
     }
 
     /// Implements the behaviour of the 'tlbwe' instruction for the high portion
-    pub fn tlbwe_high(&mut self, idx: usize, data: u32) -> Result<(), TLBError> {
+    pub fn tlbwe_high(&mut self, idx: usize, data: u32) -> Result<(), TlbTranslateError> {
         debug_assert!(idx < UNIFIED_TLB_CAPACITY);
 
         let record = &mut self.tlb_data[idx];
@@ -218,7 +220,7 @@ impl Ppc405Tlb {
     }
 
     /// Implements the behaviour of the 'tlbwe' instruction for the low portion
-    pub fn tlbwe_low(&mut self, idx: usize, data: u32) -> Result<(), TLBError> {
+    pub fn tlbwe_low(&mut self, idx: usize, data: u32) -> Result<(), TlbTranslateError> {
         debug_assert!(idx < UNIFIED_TLB_CAPACITY);
 
         self.tlb_data[idx].write_low(data);
@@ -287,51 +289,60 @@ impl TlbImpl for Ppc405Tlb {
         Ok(())
     }
 
-    fn translate_va_code(&mut self, v_address: u64) -> Result<u64, TLBError> {
-        if self.inst_relocate_enabled {
-            let current_pid = self.current_pid;
-            if let Some(record) = self.instruction_tlb_lookup(v_address) {
-                if (record.pid == 0 || record.pid == current_pid) && record.exec_enabled {
-                    Ok(record.translate_v_addr(v_address))
-                } else {
-                    Err(TLBError::TlbException(Some(
-                        Event::InstructionStorage.into(),
-                    )))
-                }
-            } else {
-                Err(TLBError::TlbException(Some(
-                    Event::InstructionTLBError.into(),
-                )))
-            }
-        } else {
-            Ok(v_address)
-        }
-    }
-
-    fn translate_va_data(
+    fn translate_va(
         &mut self,
         v_address: u64,
         access_type: MemoryOperation,
-    ) -> Result<u64, TLBError> {
-        if self.data_relocate_enabled {
-            let current_pid = self.current_pid;
-            if let Some(record) = self.data_tlb_lookup(v_address) {
-                if (record.pid != 0 && record.pid != current_pid)
-                    || (access_type == MemoryOperation::Write && !record.write_enabled)
-                {
-                    Err(TLBError::TlbException(Some(Event::DataStorage.into())))
+        memory_type: MemoryType,
+        _processor: &mut TlbProcessor,
+    ) -> TlbTranslateResult {
+        match memory_type {
+            MemoryType::Data => {
+                if self.data_relocate_enabled {
+                    let current_pid = self.current_pid;
+                    if let Some(record) = self.data_tlb_lookup(v_address) {
+                        if (record.pid != 0 && record.pid != current_pid)
+                            || (access_type == MemoryOperation::Write && !record.write_enabled)
+                        {
+                            Err(TlbTranslateError::TlbException(Some(
+                                Event::DataStorage.into(),
+                            )))
+                        } else {
+                            Ok(record.translate_v_addr(v_address))
+                        }
+                    } else {
+                        Err(TlbTranslateError::TlbException(Some(
+                            Event::DataTLBError.into(),
+                        )))
+                    }
                 } else {
-                    Ok(record.translate_v_addr(v_address))
+                    Ok(v_address)
                 }
-            } else {
-                Err(TLBError::TlbException(Some(Event::DataTLBError.into())))
             }
-        } else {
-            Ok(v_address)
+            MemoryType::Code => {
+                if self.inst_relocate_enabled {
+                    let current_pid = self.current_pid;
+                    if let Some(record) = self.instruction_tlb_lookup(v_address) {
+                        if (record.pid == 0 || record.pid == current_pid) && record.exec_enabled {
+                            Ok(record.translate_v_addr(v_address))
+                        } else {
+                            Err(TlbTranslateError::TlbException(Some(
+                                Event::InstructionStorage.into(),
+                            )))
+                        }
+                    } else {
+                        Err(TlbTranslateError::TlbException(Some(
+                            Event::InstructionTLBError.into(),
+                        )))
+                    }
+                } else {
+                    Ok(v_address)
+                }
+            }
         }
     }
 
-    fn tlb_write(&mut self, idx: usize, data: u64, flags: u32) -> Result<(), TLBError> {
+    fn tlb_write(&mut self, idx: usize, data: u64, flags: u32) -> Result<(), TlbTranslateError> {
         match flags {
             PPC405_TLB_HI => self.tlbwe_high(idx, data as u32),
             PPC405_TLB_LO => self.tlbwe_low(idx, data as u32),
@@ -342,7 +353,7 @@ impl TlbImpl for Ppc405Tlb {
         }
     }
 
-    fn tlb_read(&self, idx: usize, flags: u32) -> Result<u64, TLBError> {
+    fn tlb_read(&self, idx: usize, flags: u32) -> Result<u64, TlbTranslateError> {
         match flags {
             PPC405_TLB_HI => Ok(self.tlbre_high(idx).unwrap() as u64),
             PPC405_TLB_LO => Ok(self.tlbre_low(idx).unwrap() as u64),

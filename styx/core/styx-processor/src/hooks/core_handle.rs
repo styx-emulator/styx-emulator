@@ -3,7 +3,7 @@ use crate::{
     cpu::{CpuBackend, ExecutionReport, ReadRegisterError, WriteRegisterError},
     event_controller::{ActivateIRQnError, EventController, ExceptionNumber},
     hooks::{AddHookError, DeleteHookError, HookToken, StyxHook},
-    memory::{Mmu, MmuOpError},
+    memory::{MemoryOperationError, Mmu},
 };
 
 use delegate::delegate;
@@ -71,21 +71,21 @@ impl<'a> CoreHandle<'a> {
 
         to self.mmu {
             /// See [`Mmu::write_data()`]
-            pub fn write_data(&mut self, addr: u64, bytes: &[u8]) -> Result<(), MmuOpError>;
+            pub fn write_data(&mut self, addr: u64, bytes: &[u8]) -> Result<(), MemoryOperationError>;
             /// See [`Mmu::read_data()`]
-            pub fn read_data(&mut self, addr: u64, bytes: &mut [u8]) -> Result<(), MmuOpError>;
+            pub fn read_data(&mut self, addr: u64, bytes: &mut [u8]) -> Result<(), MemoryOperationError>;
             /// See [`Mmu::write_code()`]
-            pub fn write_code(&mut self, addr: u64, bytes: &[u8]) -> Result<(), MmuOpError>;
+            pub fn write_code(&mut self, addr: u64, bytes: &[u8]) -> Result<(), MemoryOperationError>;
             /// See [`Mmu::read_code()`]
-            pub fn read_code(&mut self, addr: u64, bytes: &mut [u8]) -> Result<(), MmuOpError>;
+            pub fn read_code(&mut self, addr: u64, bytes: &mut [u8]) -> Result<(), MemoryOperationError>;
             /// See [`Mmu::sudo_write_data()`]
-            pub fn sudo_write_data(&mut self, addr: u64, bytes: &[u8]) -> Result<(), MmuOpError>;
+            pub fn sudo_write_data(&mut self, addr: u64, bytes: &[u8]) -> Result<(), MemoryOperationError>;
             /// See [`Mmu::sudo_read_data()`]
-            pub fn sudo_read_data(&mut self, addr: u64, bytes: &mut [u8]) -> Result<(), MmuOpError>;
+            pub fn sudo_read_data(&mut self, addr: u64, bytes: &mut [u8]) -> Result<(), MemoryOperationError>;
             /// See [`Mmu::sudo_write_code()`]
-            pub fn sudo_write_code(&mut self, addr: u64, bytes: &[u8]) -> Result<(), MmuOpError>;
+            pub fn sudo_write_code(&mut self, addr: u64, bytes: &[u8]) -> Result<(), MemoryOperationError>;
             /// See [`Mmu::sudo_read_code()`]
-            pub fn sudo_read_code(&mut self, addr: u64, bytes: &mut [u8]) -> Result<(), MmuOpError>;
+            pub fn sudo_read_code(&mut self, addr: u64, bytes: &mut [u8]) -> Result<(), MemoryOperationError>;
             /// See [`Mmu::code()`]
             pub fn code(&mut self) -> crate::memory::CodeMemoryOp;
             /// See [`Mmu::data()`]

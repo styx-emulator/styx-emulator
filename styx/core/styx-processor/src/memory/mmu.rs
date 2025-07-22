@@ -4,10 +4,14 @@ use super::{
     memory_region::{MemoryRegion, MemoryRegionView},
     physical::{MemoryBackend, PhysicalMemoryVariant},
     tlb::DummyTlb,
-    AddRegionError, MemoryOperation, MemoryOperationError, MemoryPermissions, TLBError, TlbImpl,
+    AddRegionError, MemoryOperation, MemoryOperationError, MemoryPermissions, TlbImpl,
+    TlbTranslateError,
 };
-use crate::memory::physical::address_space::MemoryImpl;
-use crate::{cpu::CpuBackend, event_controller::ExceptionNumber};
+use crate::{
+    cpu::CpuBackend,
+    event_controller::ExceptionNumber,
+    memory::{physical::address_space::MemoryImpl, tlb::TlbProcessor},
+};
 use std::ops::Range;
 use styx_errors::UnknownError;
 use thiserror::Error;
@@ -22,13 +26,19 @@ pub enum MmuOpError {
     TlbException(Option<ExceptionNumber>),
 }
 
-impl From<TLBError> for MmuOpError {
-    fn from(value: TLBError) -> Self {
+impl From<TlbTranslateError> for MmuOpError {
+    fn from(value: TlbTranslateError) -> Self {
         match value {
-            TLBError::TlbException(exception) => Self::TlbException(exception),
-            TLBError::Other(error) => Self::Other(error),
+            TlbTranslateError::TlbException(exception) => Self::TlbException(exception),
+            TlbTranslateError::Other(error) => Self::Other(error),
         }
     }
+}
+
+/// A memory operation is either on Code or Data. Allows representing Harvard memory architectures.
+pub enum MemoryType {
+    Data,
+    Code,
 }
 
 /// The MMU owns the processor specific TLB implementation and the physical memory backend. It is
@@ -41,7 +51,7 @@ impl From<TLBError> for MmuOpError {
 ///
 /// Access physical memory using [`Mmu::memory()`].
 pub struct Mmu {
-    pub(crate) tlb: Box<dyn TlbImpl>,
+    pub tlb: Box<dyn TlbImpl>,
     pub(crate) memory: MemoryBackend,
 }
 
@@ -132,60 +142,142 @@ impl Mmu {
         rtn
     }
 
-    /// Write an array of bytes to data memory, the address will be interpreted as a virtual address.
-    pub fn write_data(&mut self, addr: u64, bytes: &[u8]) -> Result<(), MmuOpError> {
-        let phys_addr = self.tlb.translate_va_data(addr, MemoryOperation::Write)?;
-        self.memory.write_data(phys_addr, bytes).map_err(Into::into) // map phys memory error to mmu memory error
+    // PHYSICAL METHODS
+
+    /// Write an array of bytes to data memory, the address will be interpreted as a physical address.
+    pub fn write_data(&mut self, phys_addr: u64, bytes: &[u8]) -> Result<(), MemoryOperationError> {
+        self.memory.write_data(phys_addr, bytes).map_err(Into::into)
     }
 
-    /// Read an array of bytes from data memory, the address will be interpreted as a virtual address.
-    pub fn read_data(&mut self, addr: u64, bytes: &mut [u8]) -> Result<(), MmuOpError> {
-        let phys_addr = self.tlb.translate_va_data(addr, MemoryOperation::Read)?;
-        self.memory.read_data(phys_addr, bytes).map_err(Into::into) // map phys memory error to mmu memory error
+    /// Read an array of bytes from data memory, the address will be interpreted as a physical address.
+    pub fn read_data(
+        &mut self,
+        phys_addr: u64,
+        bytes: &mut [u8],
+    ) -> Result<(), MemoryOperationError> {
+        self.memory.read_data(phys_addr, bytes).map_err(Into::into)
     }
 
-    /// Write an array of bytes to code memory, the address will be interpreted as a virtual address.
-    pub fn write_code(&mut self, addr: u64, bytes: &[u8]) -> Result<(), MmuOpError> {
-        let phys_addr = self.tlb.translate_va_code(addr)?;
-        self.memory.write_code(phys_addr, bytes).map_err(Into::into) // map phys memory error to mmu memory error
+    /// Write an array of bytes to code memory, the address will be interpreted as a physical address.
+    pub fn write_code(&mut self, phys_addr: u64, bytes: &[u8]) -> Result<(), MemoryOperationError> {
+        self.memory.write_code(phys_addr, bytes).map_err(Into::into)
     }
 
-    /// Read an array of bytes from code memory, the address will be interpreted as a virtual address.
-    pub fn read_code(&mut self, addr: u64, bytes: &mut [u8]) -> Result<(), MmuOpError> {
-        let phys_addr = self.tlb.translate_va_code(addr)?;
-        self.memory.read_code(phys_addr, bytes).map_err(Into::into) // map phys memory error to mmu memory error
+    /// Read an array of bytes from code memory, the address will be interpreted as a physical address.
+    pub fn read_code(
+        &mut self,
+        phys_addr: u64,
+        bytes: &mut [u8],
+    ) -> Result<(), MemoryOperationError> {
+        self.memory.read_code(phys_addr, bytes).map_err(Into::into)
     }
+
+    // VIRTUAL METHODS
+
+    /// Write an array of bytes to data memory, the address will be interpreted as a physical address.
+    pub fn virt_write_data(
+        &mut self,
+        addr: u64,
+        bytes: &[u8],
+        cpu: &mut dyn CpuBackend,
+    ) -> Result<(), MmuOpError> {
+        let mut processor = TlbProcessor::new(&mut self.memory, cpu);
+        let phys_addr = self.tlb.translate_va(
+            addr,
+            MemoryOperation::Write,
+            MemoryType::Data,
+            &mut processor,
+        )?;
+        self.memory.write_data(phys_addr, bytes).map_err(Into::into)
+    }
+
+    /// Read an array of bytes from data memory, the address will be interpreted as a physical address.
+    pub fn virt_read_data(
+        &mut self,
+        addr: u64,
+        bytes: &mut [u8],
+        cpu: &mut dyn CpuBackend,
+    ) -> Result<(), MmuOpError> {
+        let mut processor = TlbProcessor::new(&mut self.memory, cpu);
+        let phys_addr = self.tlb.translate_va(
+            addr,
+            MemoryOperation::Read,
+            MemoryType::Data,
+            &mut processor,
+        )?;
+        self.memory.read_data(phys_addr, bytes).map_err(Into::into)
+    }
+
+    /// Write an array of bytes to code memory, the address will be interpreted as a physical address.
+    pub fn virt_write_code(
+        &mut self,
+        addr: u64,
+        bytes: &[u8],
+        cpu: &mut dyn CpuBackend,
+    ) -> Result<(), MmuOpError> {
+        let mut processor = TlbProcessor::new(&mut self.memory, cpu);
+        let phys_addr = self.tlb.translate_va(
+            addr,
+            MemoryOperation::Write,
+            MemoryType::Code,
+            &mut processor,
+        )?;
+        self.memory.write_code(phys_addr, bytes).map_err(Into::into)
+    }
+
+    /// Read an array of bytes from code memory, the address will be interpreted as a physical address.
+    pub fn virt_read_code(
+        &mut self,
+        addr: u64,
+        bytes: &mut [u8],
+        cpu: &mut dyn CpuBackend,
+    ) -> Result<(), MmuOpError> {
+        let mut processor = TlbProcessor::new(&mut self.memory, cpu);
+        let phys_addr = self.tlb.translate_va(
+            addr,
+            MemoryOperation::Read,
+            MemoryType::Code,
+            &mut processor,
+        )?;
+        self.memory.read_code(phys_addr, bytes).map_err(Into::into)
+    }
+
+    // SUDO METHODS
 
     /// Write to data without checking permissions
-    pub fn sudo_write_data(&mut self, addr: u64, bytes: &[u8]) -> Result<(), MmuOpError> {
-        let phys_addr = self.tlb.translate_va_data(addr, MemoryOperation::Write)?;
-        self.memory
-            .unchecked_write_data(phys_addr, bytes)
-            .map_err(Into::into) // map phys memory error to mmu memory error
+    pub fn sudo_write_data(
+        &mut self,
+        phys_addr: u64,
+        bytes: &[u8],
+    ) -> Result<(), MemoryOperationError> {
+        self.memory.unchecked_write_data(phys_addr, bytes)
     }
 
     /// Read from data without checking permissions
-    pub fn sudo_read_data(&mut self, addr: u64, bytes: &mut [u8]) -> Result<(), MmuOpError> {
-        let phys_addr = self.tlb.translate_va_data(addr, MemoryOperation::Read)?;
-        self.memory
-            .unchecked_read_data(phys_addr, bytes)
-            .map_err(Into::into) // map phys memory error to mmu memory error
+    pub fn sudo_read_data(
+        &mut self,
+        phys_addr: u64,
+        bytes: &mut [u8],
+    ) -> Result<(), MemoryOperationError> {
+        self.memory.unchecked_read_data(phys_addr, bytes)
     }
 
     /// Write to code without checking permissions
-    pub fn sudo_write_code(&mut self, addr: u64, bytes: &[u8]) -> Result<(), MmuOpError> {
-        let phys_addr = self.tlb.translate_va_code(addr)?;
-        self.memory
-            .unchecked_write_code(phys_addr, bytes)
-            .map_err(Into::into) // map phys memory error to mmu memory error
+    pub fn sudo_write_code(
+        &mut self,
+        phys_addr: u64,
+        bytes: &[u8],
+    ) -> Result<(), MemoryOperationError> {
+        self.memory.unchecked_write_code(phys_addr, bytes)
     }
 
     /// Read from code without checking permissions
-    pub fn sudo_read_code(&mut self, addr: u64, bytes: &mut [u8]) -> Result<(), MmuOpError> {
-        let phys_addr = self.tlb.translate_va_code(addr)?;
-        self.memory
-            .unchecked_read_code(phys_addr, bytes)
-            .map_err(Into::into) // map phys memory error to mmu memory error
+    pub fn sudo_read_code(
+        &mut self,
+        phys_addr: u64,
+        bytes: &mut [u8],
+    ) -> Result<(), MemoryOperationError> {
+        self.memory.unchecked_read_code(phys_addr, bytes)
     }
 
     /// Access data memory using the [memory helper api](crate::memory::helpers).
@@ -196,6 +288,16 @@ impl Mmu {
     /// Access code memory using the [memory helper api](crate::memory::helpers).
     pub fn code(&mut self) -> CodeMemoryOp {
         CodeMemoryOp(self)
+    }
+
+    /// Access code memory using the [memory helper api](crate::memory::helpers).
+    pub fn virt_code<'a>(&'a mut self, cpu: &'a mut dyn CpuBackend) -> VirtualCodeMemoryOp {
+        VirtualCodeMemoryOp { cpu, mmu: self }
+    }
+
+    /// Access code memory using the [memory helper api](crate::memory::helpers).
+    pub fn virt_data<'a>(&'a mut self, cpu: &'a mut dyn CpuBackend) -> VirtualDataMemoryOp {
+        VirtualDataMemoryOp { cpu, mmu: self }
     }
 
     /// Access data memory without permission checks using the [memory helper api](crate::memory::helpers).
@@ -213,8 +315,7 @@ pub struct DataMemoryOp<'a>(&'a mut Mmu);
 impl Readable for DataMemoryOp<'_> {
     type Error = MmuOpError;
 
-    fn read_raw(&mut self, addr: u64, bytes: &mut [u8]) -> Result<(), Self::Error> {
-        let phys_addr = self.0.tlb.translate_va_data(addr, MemoryOperation::Read)?;
+    fn read_raw(&mut self, phys_addr: u64, bytes: &mut [u8]) -> Result<(), Self::Error> {
         self.0
             .memory
             .read_data(phys_addr, bytes)
@@ -224,8 +325,7 @@ impl Readable for DataMemoryOp<'_> {
 impl Writable for DataMemoryOp<'_> {
     type Error = MmuOpError;
 
-    fn write_raw(&mut self, addr: u64, bytes: &[u8]) -> Result<(), Self::Error> {
-        let phys_addr = self.0.tlb.translate_va_data(addr, MemoryOperation::Write)?;
+    fn write_raw(&mut self, phys_addr: u64, bytes: &[u8]) -> Result<(), Self::Error> {
         self.0
             .memory
             .write_data(phys_addr, bytes)
@@ -237,8 +337,7 @@ pub struct CodeMemoryOp<'a>(&'a mut Mmu);
 impl Readable for CodeMemoryOp<'_> {
     type Error = MmuOpError;
 
-    fn read_raw(&mut self, addr: u64, bytes: &mut [u8]) -> Result<(), Self::Error> {
-        let phys_addr = self.0.tlb.translate_va_code(addr)?;
+    fn read_raw(&mut self, phys_addr: u64, bytes: &mut [u8]) -> Result<(), Self::Error> {
         self.0
             .memory
             .read_code(phys_addr, bytes)
@@ -248,11 +347,88 @@ impl Readable for CodeMemoryOp<'_> {
 impl Writable for CodeMemoryOp<'_> {
     type Error = MmuOpError;
 
-    fn write_raw(&mut self, addr: u64, bytes: &[u8]) -> Result<(), Self::Error> {
-        let phys_addr = self.0.tlb.translate_va_code(addr)?;
+    fn write_raw(&mut self, phys_addr: u64, bytes: &[u8]) -> Result<(), Self::Error> {
         self.0
             .memory
             .write_code(phys_addr, bytes)
+            .map_err(Into::into) // map phys memory error to mmu memory error
+    }
+}
+
+pub struct VirtualCodeMemoryOp<'a> {
+    mmu: &'a mut Mmu,
+    cpu: &'a mut dyn CpuBackend,
+}
+impl Readable for VirtualCodeMemoryOp<'_> {
+    type Error = MmuOpError;
+
+    fn read_raw(&mut self, virtual_addr: u64, bytes: &mut [u8]) -> Result<(), Self::Error> {
+        let mut processor = TlbProcessor::new(&mut self.mmu.memory, self.cpu);
+        let phys_addr = self.mmu.tlb.translate_va(
+            virtual_addr,
+            MemoryOperation::Read,
+            MemoryType::Code,
+            &mut processor,
+        )?;
+        self.mmu
+            .memory
+            .read_code(phys_addr, bytes)
+            .map_err(Into::into) // map phys memory error to mmu memory error
+    }
+}
+impl Writable for VirtualCodeMemoryOp<'_> {
+    type Error = MmuOpError;
+
+    fn write_raw(&mut self, virtual_addr: u64, bytes: &[u8]) -> Result<(), Self::Error> {
+        let mut processor = TlbProcessor::new(&mut self.mmu.memory, self.cpu);
+        let phys_addr = self.mmu.tlb.translate_va(
+            virtual_addr,
+            MemoryOperation::Write,
+            MemoryType::Code,
+            &mut processor,
+        )?;
+        self.mmu
+            .memory
+            .write_code(phys_addr, bytes)
+            .map_err(Into::into) // map phys memory error to mmu memory error
+    }
+}
+
+pub struct VirtualDataMemoryOp<'a> {
+    mmu: &'a mut Mmu,
+    cpu: &'a mut dyn CpuBackend,
+}
+impl Readable for VirtualDataMemoryOp<'_> {
+    type Error = MmuOpError;
+
+    fn read_raw(&mut self, virtual_addr: u64, bytes: &mut [u8]) -> Result<(), Self::Error> {
+        let mut processor = TlbProcessor::new(&mut self.mmu.memory, self.cpu);
+        let phys_addr = self.mmu.tlb.translate_va(
+            virtual_addr,
+            MemoryOperation::Read,
+            MemoryType::Data,
+            &mut processor,
+        )?;
+        self.mmu
+            .memory
+            .read_data(phys_addr, bytes)
+            .map_err(Into::into) // map phys memory error to mmu memory error
+    }
+}
+impl Writable for VirtualDataMemoryOp<'_> {
+    type Error = MmuOpError;
+
+    fn write_raw(&mut self, virtual_addr: u64, bytes: &[u8]) -> Result<(), Self::Error> {
+        let mut processor = TlbProcessor::new(&mut self.mmu.memory, self.cpu);
+        let phys_addr = self.mmu.tlb.translate_va(
+            virtual_addr,
+            MemoryOperation::Write,
+            MemoryType::Data,
+            &mut processor,
+        )?;
+        self.mmu
+            .memory
+            .write_data(phys_addr, bytes)
             .map_err(Into::into) // map phys memory error to mmu memory error
     }
 }
@@ -261,8 +437,7 @@ pub struct SudoDataMemoryOp<'a>(&'a mut Mmu);
 impl Readable for SudoDataMemoryOp<'_> {
     type Error = MmuOpError;
 
-    fn read_raw(&mut self, addr: u64, bytes: &mut [u8]) -> Result<(), Self::Error> {
-        let phys_addr = self.0.tlb.translate_va_data(addr, MemoryOperation::Read)?;
+    fn read_raw(&mut self, phys_addr: u64, bytes: &mut [u8]) -> Result<(), Self::Error> {
         self.0
             .memory
             .unchecked_read_data(phys_addr, bytes)
@@ -272,8 +447,7 @@ impl Readable for SudoDataMemoryOp<'_> {
 impl Writable for SudoDataMemoryOp<'_> {
     type Error = MmuOpError;
 
-    fn write_raw(&mut self, addr: u64, bytes: &[u8]) -> Result<(), Self::Error> {
-        let phys_addr = self.0.tlb.translate_va_data(addr, MemoryOperation::Write)?;
+    fn write_raw(&mut self, phys_addr: u64, bytes: &[u8]) -> Result<(), Self::Error> {
         self.0
             .memory
             .unchecked_write_data(phys_addr, bytes)
@@ -285,8 +459,7 @@ pub struct SudoCodeMemoryOp<'a>(&'a mut Mmu);
 impl Readable for SudoCodeMemoryOp<'_> {
     type Error = MmuOpError;
 
-    fn read_raw(&mut self, addr: u64, bytes: &mut [u8]) -> Result<(), Self::Error> {
-        let phys_addr = self.0.tlb.translate_va_code(addr)?;
+    fn read_raw(&mut self, phys_addr: u64, bytes: &mut [u8]) -> Result<(), Self::Error> {
         self.0
             .memory
             .unchecked_read_code(phys_addr, bytes)
@@ -296,8 +469,7 @@ impl Readable for SudoCodeMemoryOp<'_> {
 impl Writable for SudoCodeMemoryOp<'_> {
     type Error = MmuOpError;
 
-    fn write_raw(&mut self, addr: u64, bytes: &[u8]) -> Result<(), Self::Error> {
-        let phys_addr = self.0.tlb.translate_va_code(addr)?;
+    fn write_raw(&mut self, phys_addr: u64, bytes: &[u8]) -> Result<(), Self::Error> {
         self.0
             .memory
             .unchecked_write_code(phys_addr, bytes)
@@ -313,7 +485,7 @@ mod tests {
     #[test]
     fn test_simple() {
         let mut mmu = Mmu::default();
-        mmu.write_u32_le_virt_data(0x100, 0xdeadbeef).unwrap();
+        mmu.write_u32_le_phys_data(0x100, 0xdeadbeef).unwrap();
         let data = mmu.data().read(0x100).le().u32().unwrap();
         assert_eq!(data, 0xdeadbeef)
     }
@@ -321,7 +493,7 @@ mod tests {
     #[test]
     fn test_big_endian() {
         let mut mmu = Mmu::default();
-        mmu.write_u32_be_virt_data(0x100, 0xdeadbeef).unwrap();
+        mmu.write_u32_be_phys_data(0x100, 0xdeadbeef).unwrap();
         let data = mmu.data().read(0x100).be().u32().unwrap();
         assert_eq!(data, 0xdeadbeef)
     }
