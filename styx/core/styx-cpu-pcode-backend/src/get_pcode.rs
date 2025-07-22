@@ -6,7 +6,7 @@ use styx_pcode::pcode::Pcode;
 use styx_processor::{
     core::{FetchException, HandleExceptionAction},
     cpu::CpuBackend,
-    event_controller::EventController,
+    event_controller::{EventController, ExceptionNumber},
     hooks::MemFaultData,
     memory::{MemoryOperationError, MemoryPermissions, Mmu, MmuOpError},
 };
@@ -96,6 +96,16 @@ fn get_pcode_at_pc(
     get_pcode_at_address(cpu, pc, pcodes, mmu, ev)
 }
 
+#[derive(Error, Debug)]
+pub(crate) enum FetchPcodeError {
+    #[error("target exit reason encountered while fetching")]
+    TargetExit(TargetExitReason),
+    #[error("TLB indicated exception")]
+    TlbException(ExceptionNumber),
+    #[error(transparent)]
+    Other(#[from] UnknownError),
+}
+
 /// Fetches bytes from memory, translates into pcode, and digests into backend friendly errors.
 ///
 /// A top level `Err(UnknownError)` indicates a fatal error.
@@ -111,18 +121,22 @@ pub(crate) fn fetch_pcode(
     pcodes: &mut Vec<Pcode>,
     mmu: &mut Mmu,
     ev: &mut EventController,
-) -> Result<Result<u64, TargetExitReason>, UnknownError> {
+) -> Result<u64, FetchPcodeError> {
     // attempt to fetch and translate pcodes
     let result = get_pcode_at_pc(cpu, mmu, ev, pcodes);
     // if success, then return early
     let result_err = match result {
-        Ok(success) => return Ok(Ok(success)),
+        Ok(success) => return Ok(success),
         Err(err) => err,
     };
 
     // now we know we encountered an error.
     // this could be an exception that we have to handle or a fatal error
     debug!("try_get_pcode error/exception occurred, attempting to recover. Error: {result_err:?}");
+    if let GetPcodeError::MmuOpErr(MmuOpError::TlbException(irqn)) = &result_err {
+        // tlb exception yahoo!
+        return Err(FetchPcodeError::TlbException(*irqn));
+    }
     let exception: PcodeFetchException = result_err
         .try_into()
         .context("unknown error while translating pcode")?; // return early if fatal
@@ -136,7 +150,7 @@ pub(crate) fn fetch_pcode(
     debug!("exception behavior determined them following action: {action:?}");
     let target_exit_reason = match action {
         // requested action is to pause emulation, DO NOT try to handle. thus, we return early
-        HandleExceptionAction::Pause(target_exit_reason) => return Ok(Err(target_exit_reason)),
+        HandleExceptionAction::Pause(reason) => return Err(FetchPcodeError::TargetExit(reason)),
         // otherwise, try to handle with hooks
         HandleExceptionAction::TargetHandle(target_exit_reason) => target_exit_reason,
     };
@@ -172,14 +186,17 @@ pub(crate) fn fetch_pcode(
     if did_fix.fixed() {
         let result = get_pcode_at_pc(cpu, mmu, ev, pcodes);
         match result {
-            Ok(a) => Ok(Ok(a)),
-            Err(b) => Ok(Err(b
-                .try_conv::<PcodeFetchException>()?
-                .fetch_exception()
-                .exit_reason())),
+            Ok(bytes_consumed) => Ok(bytes_consumed),
+            Err(get_pcode_err) => {
+                let exit_reason = get_pcode_err
+                    .try_conv::<PcodeFetchException>()?
+                    .fetch_exception()
+                    .exit_reason();
+                Err(FetchPcodeError::TargetExit(exit_reason))
+            }
         }
     } else {
-        Ok(Err(target_exit_reason))
+        Err(FetchPcodeError::TargetExit(target_exit_reason))
     }
 }
 

@@ -22,14 +22,14 @@ pub enum MmuOpError {
     Other(#[from] UnknownError),
     #[error("encountered physical memory error")]
     PhysicalMemoryError(#[from] MemoryOperationError),
-    #[error("tlb exception")]
-    TlbException(Option<ExceptionNumber>),
+    #[error("TLB exception irq: {0:?}")]
+    TlbException(ExceptionNumber),
 }
 
 impl From<TlbTranslateError> for MmuOpError {
     fn from(value: TlbTranslateError) -> Self {
         match value {
-            TlbTranslateError::TlbException(exception) => Self::TlbException(exception),
+            TlbTranslateError::Exception(exception) => Self::TlbException(exception),
             TlbTranslateError::Other(error) => Self::Other(error),
         }
     }

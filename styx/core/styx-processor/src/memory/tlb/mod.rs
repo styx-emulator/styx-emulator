@@ -19,8 +19,10 @@ pub enum TlbTranslateError {
     #[error(transparent)]
     Other(#[from] UnknownError),
     /// Indicates a TLB error with an associated exception to synchronously execute.
-    #[error("TLB error with exception {0:?}")]
-    TlbException(Option<ExceptionNumber>),
+    ///
+    /// The CPU will through an interrupt hook with this exception number.
+    #[error("TLB exception irqn: {0:?}")]
+    Exception(ExceptionNumber),
 }
 
 /// Processor components for a TLB translate.
@@ -66,6 +68,14 @@ pub trait TlbImpl: Send {
     /// Disable translation for code addresses
     fn disable_code_address_translation(&mut self) -> Result<(), UnknownError>;
 
+    /// Translate a virtual address to a physical address.
+    ///
+    /// This is called from [`Mmu::virt_code()`](crate::memory::Mmu::virt_code()) and related
+    /// virtual memory access functions. It is also used for all loads, stores, and fetches inside
+    /// the pcode cpu backend.
+    ///
+    /// Implementors can return [`TlbTranslateError::Exception`] to instruct the CPU to trigger an
+    /// interrupt hook with a designed exception number.
     fn translate_va(
         &mut self,
         virt_addr: u64,
