@@ -130,7 +130,7 @@ impl SpaceManager {
             .get(name)
             .ok_or(SpaceNotFoundError(name.clone()))
     }
-    fn get_mmu_space(&mut self, name: &SpaceName) -> Result<MmuSpace, SpaceNotFoundError> {
+    fn take_mmu_space(&mut self, name: &SpaceName) -> Result<MmuSpace, SpaceNotFoundError> {
         self.mmu_spaces
             .remove(name)
             .ok_or(SpaceNotFoundError(name.clone()))
@@ -579,7 +579,7 @@ impl MmuSpaceOps for PcodeBackend {
             if let Ok(space) = self.space_manager.get_space(&varnode.space) {
                 space.get_value(varnode.offset, varnode.size as u8)?
             } else {
-                let space = self.space_manager.get_mmu_space(&varnode.space)?;
+                let space = self.space_manager.take_mmu_space(&varnode.space)?;
                 let res = space.get_value(mmu, self, varnode.offset, varnode.size as u8);
                 self.space_manager
                     .put_mmu_space(varnode.space.clone(), space);
@@ -597,7 +597,7 @@ impl MmuSpaceOps for PcodeBackend {
         if let Ok(space) = self.space_manager.get_space_mut(&varnode.space) {
             space.set_value(varnode.offset, data)?
         } else {
-            let space = self.space_manager.get_mmu_space(&varnode.space)?;
+            let space = self.space_manager.take_mmu_space(&varnode.space)?;
             let res = space.set_value(mmu, self, varnode.offset, data);
             self.space_manager
                 .put_mmu_space(varnode.space.clone(), space);
@@ -616,7 +616,7 @@ impl MmuSpaceOps for PcodeBackend {
         if let Ok(space) = self.space_manager.get_space(space_name) {
             space.get_chunk(offset, buf)?
         } else {
-            let space = self.space_manager.get_mmu_space(space_name)?;
+            let space = self.space_manager.take_mmu_space(space_name)?;
             let res = space.get_chunk(mmu, self, offset, buf);
             self.space_manager.put_mmu_space(space_name.clone(), space);
             res?;

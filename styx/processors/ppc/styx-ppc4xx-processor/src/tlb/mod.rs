@@ -304,16 +304,12 @@ impl TlbImpl for Ppc405Tlb {
                         if (record.pid != 0 && record.pid != current_pid)
                             || (access_type == MemoryOperation::Write && !record.write_enabled)
                         {
-                            Err(TlbTranslateError::TlbException(Some(
-                                Event::DataStorage.into(),
-                            )))
+                            Err(TlbTranslateError::Exception(Event::DataStorage.into()))
                         } else {
                             Ok(record.translate_v_addr(v_address))
                         }
                     } else {
-                        Err(TlbTranslateError::TlbException(Some(
-                            Event::DataTLBError.into(),
-                        )))
+                        Err(TlbTranslateError::Exception(Event::DataTLBError.into()))
                     }
                 } else {
                     Ok(v_address)
@@ -326,14 +322,14 @@ impl TlbImpl for Ppc405Tlb {
                         if (record.pid == 0 || record.pid == current_pid) && record.exec_enabled {
                             Ok(record.translate_v_addr(v_address))
                         } else {
-                            Err(TlbTranslateError::TlbException(Some(
+                            Err(TlbTranslateError::Exception(
                                 Event::InstructionStorage.into(),
-                            )))
+                            ))
                         }
                     } else {
-                        Err(TlbTranslateError::TlbException(Some(
+                        Err(TlbTranslateError::Exception(
                             Event::InstructionTLBError.into(),
-                        )))
+                        ))
                     }
                 } else {
                     Ok(v_address)

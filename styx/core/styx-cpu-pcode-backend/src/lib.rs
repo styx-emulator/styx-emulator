@@ -65,6 +65,8 @@ pub(crate) enum PCodeStateChange {
     InstructionAbsolute(u64),
     /// a relative jump to a pcode op within the current translation
     PCodeRelative(i64),
+    /// Trigger interrupt as soon as possible. This is used for a TLB exception.
+    Exception(i32),
     Exit(TargetExitReason),
 }
 
@@ -135,6 +137,21 @@ fn handle_basic_block_hooks(
     Ok(())
 }
 
+/// The Pcode Cpu Backend
+///
+/// # Behaviors
+///
+/// ## Exceptions
+///
+/// Currently, the only exceptions implemented are the ones thrown by the
+/// [TLB](styx_processor::memory::TlbImpl) (see
+/// [TlbTranslateError::Exception](styx_processor::memory::TlbTranslateError::Exception)). When the
+/// TLB indicates an exception, the rest of the pcodes in the instruction are not run and an
+/// interrupt hook is triggered with the exception number given by the TLB. The Pc is not
+/// incremented. It is expected that the interrupt hook handles the TLB exception as required by the
+/// processor manual. With no intervention, the instruction will be run again, possibly throwing the
+/// same TLB exception.
+///
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct PcodeBackend {
@@ -301,9 +318,18 @@ impl PcodeBackend {
 
         // fetch_pcode handles triggering hooks based on exception handler
         // Err(exit_reason) indicates an exception makes us pause so we should honor that
-        let bytes_consumed = match fetch_pcode(self, pcodes, mmu, ev)? {
+        let bytes_consumed = match fetch_pcode(self, pcodes, mmu, ev) {
             Ok(success) => success,
-            Err(exit) => return Ok(Err(exit)),
+            Err(err) => match err {
+                get_pcode::FetchPcodeError::TargetExit(target_exit_reason) => {
+                    return Ok(Err(target_exit_reason))
+                }
+                get_pcode::FetchPcodeError::TlbException(irqn) => {
+                    HookManager::trigger_interrupt_hook(self, mmu, ev, irqn)?;
+                    return Ok(Ok(0));
+                }
+                get_pcode::FetchPcodeError::Other(error) => return Err(error),
+            },
         };
 
         let mut pc_manager = self.pc_manager.take().unwrap();
@@ -349,6 +375,12 @@ impl PcodeBackend {
                     pc_manager.set_internal_pc(new_pc, self);
                     self.pc_manager = Some(pc_manager);
                     return Ok(Ok(bytes_consumed)); // Don't increment PC, jump to next instruction
+                }
+                PCodeStateChange::Exception(irqn) => {
+                    // exception occurred
+                    // we should interrupt hook and rerun instruction
+                    HookManager::trigger_interrupt_hook(self, mmu, ev, irqn)?;
+                    return Ok(Ok(bytes_consumed)); // Don't increment PC
                 }
                 PCodeStateChange::Exit(reason) => return Ok(Err(reason)),
             }

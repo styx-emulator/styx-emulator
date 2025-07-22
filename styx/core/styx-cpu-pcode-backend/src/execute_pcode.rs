@@ -210,6 +210,9 @@ fn execute_pcode_inner<'a>(
                         }
                     }
                 }
+                Err(VarnodeError::SpaceError(SpaceError::MemoryError(
+                    MmuOpError::TlbException(exception_number),
+                ))) => Err(PCodeStateChange::Exception(exception_number)),
 
                 Err(e) => panic!("unexpected varnode error \n{e:?}"),
             };
@@ -357,6 +360,9 @@ fn execute_pcode_inner<'a>(
                         }
                     }
                 }
+                Err(VarnodeError::SpaceError(SpaceError::MemoryError(
+                    MmuOpError::TlbException(exception_number),
+                ))) => PCodeStateChange::Exception(exception_number).into(),
 
                 Err(e) => panic!("unexpected varnode error \n{e:?}"),
             }
