@@ -2,7 +2,7 @@
 use crate::{
     context_internal::ContextInternal,
     dom::DocumentStorage,
-    load_image::{Loader, LoaderRequires, LoaderWrapper, RustLoadImageProxy},
+    load_image::{Loader, LoaderWrapper, RustLoadImageProxy},
     pcode_emit::{FromFfiVarnode, PCodeEmitRef},
     sleigh_obj::{DeriveParent, SleighObj},
 };
@@ -56,7 +56,7 @@ impl Sleigh<()> {
         }
     }
 }
-impl<L: Loader + LoaderRequires + 'static> Sleigh<L> {
+impl<L: Loader + 'static> Sleigh<L> {
     /// Creates a Sleigh from a [Loader] and sla file path.
     pub fn new(load_image: L, sla_file: impl AsRef<Path>) -> Result<Self, NewSleighError> {
         let sla_file = sla_file.as_ref();
@@ -93,7 +93,7 @@ impl<L: Loader + LoaderRequires + 'static> Sleigh<L> {
     }
 }
 
-impl<L: Loader + LoaderRequires + 'static> Sleigh<L> {
+impl<L: Loader + 'static> Sleigh<L> {
     /// Translate a single machine instruction at `addr` to list of p-code operations.
     ///
     /// Returns the number of bytes consumed and vector of generated p-code operations.
@@ -101,9 +101,9 @@ impl<L: Loader + LoaderRequires + 'static> Sleigh<L> {
         &mut self,
         addr: u64,
         pcodes: &mut Vec<Pcode>,
-        data: L::LoadRequires<'_>,
+        data: &mut L::LoadRequires<'_>,
     ) -> Result<usize, SleighTranslateError> {
-        self._load_image.as_mut().unwrap()._loader.set_data(data);
+        unsafe { self._load_image.as_mut().unwrap().loader.set_data(data) };
         let mut emit = PCodeEmitRef::new(&mut self.space_cached, pcodes);
         let mut rust_emit = RustPCodeEmit::from_internal(&mut emit);
         let n = unsafe {
@@ -111,6 +111,17 @@ impl<L: Loader + LoaderRequires + 'static> Sleigh<L> {
         }?;
 
         Ok(n as usize)
+    }
+
+    /// A safe way to load data from this sleigh's loader.
+    pub fn load(&mut self, addr: u64, data: &mut L::LoadRequires<'_>) -> [u8; 16] {
+        let mut data_bytes = [0u8; 16];
+        // SAFETY: we hold the LoadRequires mut ref through the load
+        unsafe { self._load_image.as_mut().unwrap().loader.set_data(data) };
+        let loader = &mut self._load_image.as_mut().unwrap().loader.as_mut().0;
+        // mut ref to loader still held
+        loader.load(&mut data_bytes, addr);
+        data_bytes
     }
 }
 

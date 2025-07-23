@@ -15,5 +15,5 @@ mod sleigh_obj;
 
 pub use compile::compile;
 pub use dom::DocumentStorage;
-pub use load_image::{Loader, LoaderRequires, VectorLoader};
+pub use load_image::{Loader, VectorLoader};
 pub use sleigh::{NewSleighError, Sleigh, SleighTranslateError, UserOpInfo};
