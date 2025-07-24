@@ -55,11 +55,14 @@ enter-guix
 
 ### Docker container based
 
-Build the `docker` container at `./utils/docker/ci.Dockerfile`
+You can pull the `docker` container used for devcontainers + CI from
+`ghcr.io/styx-emulator/styx-emulator/styx-ci:main`, or you could build
+build the `docker` container yourself at `./utils/docker/ci.Dockerfile`.
 
 ``` bash
-# make sure to use the same rust version that is in the `.rust-version` file
-docker build -t styx-dev -f ./utils/docker/ci.Dockerfile --build-arg RUST_VERSION=1.82.0 ./utils/docker/
+# NOTE: the build context should be the root of the styx-emulator working directory
+#       (the trailing `.`)
+docker build -t styx-ci -f ./utils/docker/ci.Dockerfile --build-arg RUST_VERSION=$(cat .rust-version) .
 ```
 
 ### Host / Native development
