@@ -9,7 +9,7 @@
 import os
 
 project = "styx"
-copyright = "2024-2025, The Styx-Emulator Project"
+copyright = "2025, Kudu Dynamics LLC, a Leidos Company"
 author = "Styx Emulator Contributors"
 
 repository_url = os.environ.get(
