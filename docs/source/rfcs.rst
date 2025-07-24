@@ -124,3 +124,4 @@ RFC List
 
    rfcs/1-repository-automation
    rfcs/2-mmu
+   rfcs/3-unified-configuration
