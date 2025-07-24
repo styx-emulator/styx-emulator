@@ -48,6 +48,7 @@ fn rust_toolchain_path() -> String {
     }
 }
 
+#[allow(unused)] // still tested
 fn devcontainer_path() -> String {
     #[cfg(test)]
     {
@@ -80,11 +81,6 @@ pub fn update(target: String, check: bool) -> anyhow::Result<()> {
 
     // ensure the `.rust-vesion` file is up to date
     if update_rust_version(&target, check, rust_version_path())? {
-        changed_files = true;
-    }
-
-    // ensure the `devcontainer.json`
-    if update_devcontainer_json(&target, check, devcontainer_path())? {
         changed_files = true;
     }
 
@@ -155,6 +151,7 @@ fn update_rust_toolchain_toml(
 }
 
 /// Writes the `target` to the devcontainer["build"]["args"]["RUST_VERSION"] json object
+#[allow(unused)] // still tested, and we might use it again
 fn update_devcontainer_json(target: &str, check: bool, file_path: String) -> anyhow::Result<bool> {
     // read the file at `path` into json
     let contents = std::fs::read_to_string(&file_path)?;
