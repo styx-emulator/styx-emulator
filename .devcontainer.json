@@ -1,14 +1,11 @@
 {
-  "build": {
-    "args": {
-      "RUST_VERSION": "1.88.0"
-    },
-    "context": ".",
-    "dockerfile": "util/docker/ci.Dockerfile"
-  },
+  "image": "ghcr.io/styx-emulator/styx-emulator/styx-ci:main",
   "mounts": [
     "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
   ],
+  "containerEnv": {
+    "IN_CONTAINER": "1"
+  },
   "name": "Styx Environment",
-  "onCreateCommand": "cd ${containerWorkspaceFolder} && rm -rf venv && direnv allow . && just container-setup"
+  "onCreateCommand": "cd ${containerWorkspaceFolder} && direnv allow . && just container-setup"
 }

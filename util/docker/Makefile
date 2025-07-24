@@ -2,7 +2,7 @@
 TAG := $(or $(or $(or $(CI_COMMIT_BRANCH),$(CI_MERGE_REQUEST_SOURCE_BRANCH_NAME)),$(TAG)),dev) # default to dev tag
 
 PACKAGE := $(or $(PACKAGE), styx-ci)
-BUILD_CONTEXT := .
+BUILD_CONTEXT := $(CI_PROJECT_DIR)
 DOCKERFILE := $(shell pwd)/ci.Dockerfile
 BRANCH_IMAGE_NAME := $(CI_REGISTRY_IMAGE)/$(PACKAGE):$(TAG)
 MAIN_IMAGE_NAME := $(CI_REGISTRY_IMAGE)/$(PACKAGE):main
