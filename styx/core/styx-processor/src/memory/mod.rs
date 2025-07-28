@@ -19,7 +19,7 @@ pub use mmu::{
     CodeMemoryOp, DataMemoryOp, MemoryType, Mmu, MmuOpError, SudoCodeMemoryOp, SudoDataMemoryOp,
 };
 pub use physical::{AddRegionError, FromConfigError, MemoryOperationError, UnmappedMemoryError};
-pub use tlb::{ClosureTlb, DummyTlb, TlbImpl, TlbProcessor, TlbTranslateError, TlbTranslateResult};
+pub use tlb::{DummyTlb, FnTlb, TlbImpl, TlbProcessor, TlbTranslateError, TlbTranslateResult};
 
 /// Enum that is used to be explicit in error handling
 /// of current memory operations

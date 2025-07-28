@@ -4,7 +4,7 @@ mod dummy;
 pub use dummy::DummyTlb;
 
 mod closure;
-pub use closure::ClosureTlb;
+pub use closure::FnTlb;
 
 use styx_errors::UnknownError;
 use thiserror::Error;

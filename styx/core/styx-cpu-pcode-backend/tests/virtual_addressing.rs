@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use log::info;
-use std::sync::{Arc, Mutex};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc, Mutex,
+};
 use styx_cpu_pcode_backend::PcodeBackend;
 use styx_cpu_type::{
     arch::ppc32::{Ppc32Register, Ppc32Variants},
@@ -15,7 +18,7 @@ use styx_processor::{
         helpers::{ReadExt, WriteExt},
         memory_region::MemoryRegion,
         physical::PhysicalMemoryVariant,
-        ClosureTlb, MemoryOperation, MemoryPermissions, MemoryType, Mmu, TlbProcessor,
+        FnTlb, MemoryOperation, MemoryPermissions, MemoryType, Mmu, TlbProcessor,
         TlbTranslateError, TlbTranslateResult,
     },
 };
@@ -39,34 +42,52 @@ fn tlb_translate_plus_0x1000(
     Ok(virtual_addr + 0x1000)
 }
 
+const LOAD_OBJECT_DUMP: &str = "
+       0:	3c 60 00 00 	lis     r3,0
+       4:	60 63 20 00 	ori     r3,r3,8192
+       8:	80 83 00 00 	lwz     r4,0(r3)
+   ";
+const STORE_OBJECT_DUMP: &str = "
+        0:	3c 60 00 00 	lis     r3,0
+        4:	60 63 20 00 	ori     r3,r3,8192
+        8:	3c 80 00 00 	lis     r4,0
+        c:	60 84 13 37 	ori     r4,r4,4919
+        10:	90 83 00 00 	stw     r4,0(r3)
+   ";
+
+type TranslateFn = fn(u64, MemoryOperation, MemoryType, &mut TlbProcessor) -> TlbTranslateResult;
 /// Test reading from a virtual address while executing at a virtual address.
-#[test]
-fn test_virtual_read() -> Result<(), UnknownError> {
+fn test_proc(
+    translate_fn: TranslateFn,
+    program_objdump: &str,
+) -> Result<(PcodeBackend, Mmu, EventController), UnknownError> {
     init_logging();
 
     let mut cpu =
         PcodeBackend::new_engine(Arch::Ppc32, Ppc32Variants::Ppc405, ArchEndian::BigEndian);
     let physical_memory = PhysicalMemoryVariant::RegionStore;
-    let tlb = ClosureTlb::new(Box::new(tlb_translate_plus_0x1000));
+    let tlb = FnTlb::new(translate_fn);
     let mut mmu = Mmu::new(Box::new(tlb), physical_memory, &mut cpu)?;
-    let mut ev = EventController::default();
+    let ev = EventController::default();
 
-    let objdump = "
-       0:	3c 60 00 00 	lis     r3,0
-       4:	60 63 10 00 	ori     r3,r3,4096
-       8:	80 83 00 00 	lwz     r4,0(r3)
-   ";
-    let code_bytes = styx_util::parse_objdump(objdump)?;
+    let code_bytes = styx_util::parse_objdump(program_objdump)?;
 
-    mmu.add_memory_region(MemoryRegion::new(0, 0x3000, MemoryPermissions::all())?)
+    mmu.add_memory_region(MemoryRegion::new(0, 0x4000, MemoryPermissions::all())?)
         .unwrap();
-    // this is 0x1000 in virtual address space
-    mmu.data().write(0x2000).be().value(0xcafebabeu32)?;
 
     // this is 0x0 in virtual
     mmu.write_code(0x1000, &code_bytes)?;
     cpu.set_pc(0)?;
 
+    Ok((cpu, mmu, ev))
+}
+
+/// Test reading from a virtual address while executing at a virtual address.
+#[test]
+fn test_virtual_read() -> Result<(), UnknownError> {
+    let (mut cpu, mut mmu, mut ev) = test_proc(tlb_translate_plus_0x1000, LOAD_OBJECT_DUMP)?;
+
+    mmu.data().write(0x3000).be().value(0xcafebabeu32)?;
     cpu.execute(&mut mmu, &mut ev, 3)?;
 
     let r4 = cpu.read_register::<u32>(Ppc32Register::R4)?;
@@ -78,35 +99,14 @@ fn test_virtual_read() -> Result<(), UnknownError> {
 /// Test writing to a virtual address while executing at a virtual address.
 #[test]
 fn test_virtual_write() -> Result<(), UnknownError> {
-    init_logging();
-
-    let objdump = "
-        0:	3c 60 00 00 	lis     r3,0
-        4:	60 63 10 00 	ori     r3,r3,4096
-        8:	3c 80 00 00 	lis     r4,0
-        c:	60 84 13 37 	ori     r4,r4,4919
-        10:	90 83 00 00 	stw     r4,0(r3)
-   ";
-    let code_bytes = styx_util::parse_objdump(objdump)?;
-
-    let mut cpu =
-        PcodeBackend::new_engine(Arch::Ppc32, Ppc32Variants::Ppc405, ArchEndian::BigEndian);
-    let physical_memory = PhysicalMemoryVariant::RegionStore;
-    let tlb = ClosureTlb::new(Box::new(tlb_translate_plus_0x1000));
-    let mut mmu = Mmu::new(Box::new(tlb), physical_memory, &mut cpu)?;
-    let mut ev = EventController::default();
-
-    // code region
-    mmu.add_memory_region(MemoryRegion::new(0, 0x3000, MemoryPermissions::all())?)?;
-    // this is 0x0 in virtual
-    mmu.write_code(0x1000, &code_bytes).unwrap();
+    let (mut cpu, mut mmu, mut ev) = test_proc(tlb_translate_plus_0x1000, STORE_OBJECT_DUMP)?;
 
     cpu.execute(&mut mmu, &mut ev, 5)?;
 
-    let written_value = mmu.data().read(0x2000).be().u32()?;
+    let written_value = mmu.data().read(0x3000).be().u32()?;
     assert_eq!(4919, written_value);
 
-    let written_value = mmu.virt_data(&mut cpu).read(0x1000).be().u32()?;
+    let written_value = mmu.virt_data(&mut cpu).read(0x2000).be().u32()?;
     assert_eq!(4919, written_value);
 
     Ok(())
@@ -133,17 +133,7 @@ fn tlb_translate_exception(
 /// Test hitting a tlb exception.
 #[test]
 fn test_virtual_fetch_exception() -> Result<(), UnknownError> {
-    init_logging();
-
-    let mut cpu =
-        PcodeBackend::new_engine(Arch::Ppc32, Ppc32Variants::Ppc405, ArchEndian::BigEndian);
-    let physical_memory = PhysicalMemoryVariant::RegionStore;
-    let tlb = ClosureTlb::new(Box::new(tlb_translate_exception));
-    let mut mmu = Mmu::new(Box::new(tlb), physical_memory, &mut cpu)?;
-    let mut ev = EventController::default();
-
-    mmu.add_memory_region(MemoryRegion::new(0, 0x3000, MemoryPermissions::all())?)
-        .unwrap();
+    let (mut cpu, mut mmu, mut ev) = test_proc(tlb_translate_exception, LOAD_OBJECT_DUMP)?;
 
     let last_irq: Arc<Mutex<Option<ExceptionNumber>>> = Arc::new(Mutex::new(None));
     {
@@ -177,10 +167,10 @@ fn tlb_translate_exception_over_0x2000(
         .unwrap();
     info!("got reg value {reg_value}");
 
-    if virtual_addr >= 0x1000 {
+    if virtual_addr >= 0x2000 {
         Err(TlbTranslateError::Exception(0x1337))
     } else {
-        Ok(virtual_addr)
+        Ok(virtual_addr + 0x1000)
     }
 }
 
@@ -189,21 +179,8 @@ fn tlb_translate_exception_over_0x2000(
 /// The pc is checked to make sure it did not increment.
 #[test]
 fn test_virtual_read_exception() -> Result<(), UnknownError> {
-    init_logging();
-
-    let mut cpu =
-        PcodeBackend::new_engine(Arch::Ppc32, Ppc32Variants::Ppc405, ArchEndian::BigEndian);
-    let physical_memory = PhysicalMemoryVariant::RegionStore;
-    let tlb = ClosureTlb::new(Box::new(tlb_translate_exception_over_0x2000));
-    let mut mmu = Mmu::new(Box::new(tlb), physical_memory, &mut cpu)?;
-    let mut ev = EventController::default();
-
-    let objdump = "
-       0:	3c 60 00 00 	lis     r3,0
-       4:	60 63 10 00 	ori     r3,r3,4096
-       8:	80 83 00 00 	lwz     r4,0(r3)
-   ";
-    let code_bytes = styx_util::parse_objdump(objdump)?;
+    let (mut cpu, mut mmu, mut ev) =
+        test_proc(tlb_translate_exception_over_0x2000, LOAD_OBJECT_DUMP)?;
 
     let last_irq: Arc<Mutex<Option<ExceptionNumber>>> = Arc::new(Mutex::new(None));
     {
@@ -214,12 +191,6 @@ fn test_virtual_read_exception() -> Result<(), UnknownError> {
         }))?;
     }
 
-    mmu.add_memory_region(MemoryRegion::new(0, 0x3000, MemoryPermissions::all())?)
-        .unwrap();
-
-    mmu.write_code(0x0, &code_bytes)?;
-    cpu.set_pc(0)?;
-
     cpu.execute(&mut mmu, &mut ev, 3)?;
 
     let irq = last_irq.lock().unwrap().unwrap();
@@ -227,7 +198,7 @@ fn test_virtual_read_exception() -> Result<(), UnknownError> {
 
     let pc = cpu.pc()?;
     // exceptions require instruction to re-execute
-    assert_eq!(pc, 8);
+    assert_eq!(pc, 0x8);
 
     Ok(())
 }
@@ -237,23 +208,8 @@ fn test_virtual_read_exception() -> Result<(), UnknownError> {
 /// The pc is checked to make sure it did not increment.
 #[test]
 fn test_virtual_write_exception() -> Result<(), UnknownError> {
-    init_logging();
-
-    let mut cpu =
-        PcodeBackend::new_engine(Arch::Ppc32, Ppc32Variants::Ppc405, ArchEndian::BigEndian);
-    let physical_memory = PhysicalMemoryVariant::RegionStore;
-    let tlb = ClosureTlb::new(Box::new(tlb_translate_exception_over_0x2000));
-    let mut mmu = Mmu::new(Box::new(tlb), physical_memory, &mut cpu)?;
-    let mut ev = EventController::default();
-
-    let objdump = "
-        0:	3c 60 00 00 	lis     r3,0
-        4:	60 63 10 00 	ori     r3,r3,4096
-        8:	3c 80 00 00 	lis     r4,0
-        c:	60 84 13 37 	ori     r4,r4,4919
-        10:	90 83 00 00 	stw     r4,0(r3)
-   ";
-    let code_bytes = styx_util::parse_objdump(objdump)?;
+    let (mut cpu, mut mmu, mut ev) =
+        test_proc(tlb_translate_exception_over_0x2000, STORE_OBJECT_DUMP)?;
 
     let last_irq: Arc<Mutex<Option<ExceptionNumber>>> = Arc::new(Mutex::new(None));
     {
@@ -264,12 +220,6 @@ fn test_virtual_write_exception() -> Result<(), UnknownError> {
         }))?;
     }
 
-    mmu.add_memory_region(MemoryRegion::new(0, 0x3000, MemoryPermissions::all())?)
-        .unwrap();
-
-    mmu.write_code(0x0, &code_bytes)?;
-    cpu.set_pc(0)?;
-
     cpu.execute(&mut mmu, &mut ev, 5)?;
 
     let irq = last_irq.lock().unwrap().unwrap();
@@ -278,6 +228,105 @@ fn test_virtual_write_exception() -> Result<(), UnknownError> {
     let pc = cpu.pc()?;
     // exceptions require instruction to re-execute
     assert_eq!(pc, 0x10);
+
+    Ok(())
+}
+
+/// Test that a code hook triggers on the physical address.
+#[test]
+fn test_virtual_code_hook() -> Result<(), UnknownError> {
+    let (mut cpu, mut mmu, mut ev) = test_proc(tlb_translate_plus_0x1000, LOAD_OBJECT_DUMP)?;
+
+    mmu.data().write(0x3000).be().value(0xcafebabeu32)?;
+
+    let should_trigger = Box::leak(Box::new(AtomicBool::new(false)));
+    let should_not_trigger = Box::leak(Box::new(AtomicBool::new(false)));
+
+    // code on physical address should trigger
+    cpu.add_hook(StyxHook::code(0x1000, |_proc: CoreHandle| {
+        should_trigger.store(true, Ordering::SeqCst);
+        Ok(())
+    }))?;
+    // code on virtual address should not trigger
+    cpu.add_hook(StyxHook::code(0x0, |_proc: CoreHandle| {
+        should_not_trigger.store(true, Ordering::SeqCst);
+        Ok(())
+    }))?;
+
+    cpu.execute(&mut mmu, &mut ev, 3)?;
+
+    assert!(should_trigger.load(Ordering::SeqCst));
+    assert!(!should_not_trigger.load(Ordering::SeqCst));
+
+    Ok(())
+}
+
+/// Test that a memory read hook triggers on the physical address.
+#[test]
+fn test_virtual_memory_read_hook() -> Result<(), UnknownError> {
+    let (mut cpu, mut mmu, mut ev) = test_proc(tlb_translate_plus_0x1000, LOAD_OBJECT_DUMP)?;
+
+    mmu.data().write(0x3000).be().value(0xcafebabeu32)?;
+
+    let should_trigger = Box::leak(Box::new(AtomicBool::new(false)));
+    let should_not_trigger = Box::leak(Box::new(AtomicBool::new(false)));
+
+    // code on physical address should trigger
+    cpu.add_hook(StyxHook::memory_read(
+        0x3000,
+        |_proc: CoreHandle, _addr, _size, _data: &mut [u8]| {
+            should_trigger.store(true, Ordering::SeqCst);
+            Ok(())
+        },
+    ))?;
+    // code on virtual address should not trigger
+    cpu.add_hook(StyxHook::memory_read(
+        0x2000,
+        |_proc: CoreHandle, _addr, _size, _data: &mut [u8]| {
+            should_not_trigger.store(true, Ordering::SeqCst);
+            Ok(())
+        },
+    ))?;
+
+    cpu.execute(&mut mmu, &mut ev, 3)?;
+
+    assert!(should_trigger.load(Ordering::SeqCst));
+    assert!(!should_not_trigger.load(Ordering::SeqCst));
+
+    Ok(())
+}
+
+/// Test that a memory write hook triggers on the physical address.
+#[test]
+fn test_virtual_memory_write_hook() -> Result<(), UnknownError> {
+    let (mut cpu, mut mmu, mut ev) = test_proc(tlb_translate_plus_0x1000, STORE_OBJECT_DUMP)?;
+
+    mmu.data().write(0x3000).be().value(0xcafebabeu32)?;
+
+    let should_trigger = Box::leak(Box::new(AtomicBool::new(false)));
+    let should_not_trigger = Box::leak(Box::new(AtomicBool::new(false)));
+
+    // code on physical address should trigger
+    cpu.add_hook(StyxHook::memory_write(
+        0x3000,
+        |_proc: CoreHandle, _addr, _size, _data: &[u8]| {
+            should_trigger.store(true, Ordering::SeqCst);
+            Ok(())
+        },
+    ))?;
+    // code on virtual address should not trigger
+    cpu.add_hook(StyxHook::memory_write(
+        0x2000,
+        |_proc: CoreHandle, _addr, _size, _data: &[u8]| {
+            should_not_trigger.store(true, Ordering::SeqCst);
+            Ok(())
+        },
+    ))?;
+
+    cpu.execute(&mut mmu, &mut ev, 5)?;
+
+    assert!(should_trigger.load(Ordering::SeqCst));
+    assert!(!should_not_trigger.load(Ordering::SeqCst));
 
     Ok(())
 }

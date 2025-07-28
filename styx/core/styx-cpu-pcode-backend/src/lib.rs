@@ -45,7 +45,7 @@ use styx_processor::{
     core::{builder::BuildProcessorImplArgs, ExceptionBehavior},
     cpu::{CpuBackend, ExecutionReport, ReadRegisterError, WriteRegisterError},
     event_controller::{EventController, ExceptionNumber},
-    memory::Mmu,
+    memory::{MemoryOperation, MemoryType, Mmu},
 };
 use types::*;
 
@@ -411,7 +411,11 @@ impl PcodeBackend {
         self.pc_manager = Some(pc_manager);
 
         let pc = self.pc_manager.as_mut().unwrap().internal_pc();
-        HookManager::trigger_code_hook(self, mmu, ev, pc)
+        let physical_pc = mmu.translate_va(pc, MemoryOperation::Read, MemoryType::Code, self);
+        if let Ok(physical_pc) = physical_pc {
+            HookManager::trigger_code_hook(self, mmu, ev, physical_pc)?;
+        } // no code hook if translate errors, we will catch then on instruction fetch
+        Ok(())
     }
 
     fn pc_register(&self) -> styx_cpu_type::arch::CpuRegister {
