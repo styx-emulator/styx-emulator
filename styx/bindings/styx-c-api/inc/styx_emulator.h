@@ -759,11 +759,8 @@ typedef struct StyxHook_InvalidInstructionData {
  * standard section memory permissions
  */
 typedef struct MemoryPermissions {
-  uint32_t bits;
+  Internal _0;
 } MemoryPermissions;
-#define MemoryPermissions_READ (MemoryPermissions){ .bits = 1 }
-#define MemoryPermissions_WRITE (MemoryPermissions){ .bits = 2 }
-#define MemoryPermissions_EXEC (MemoryPermissions){ .bits = 4 }
 
 /**
  * memory fault information

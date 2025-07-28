@@ -8,26 +8,25 @@ use crate::memory::{
     MemoryOperation, TlbImpl, TlbTranslateError,
 };
 
-/// TLB implementation that takes a closure to calculate virtual addressing.
+/// TLB implementation that takes a function pointer to calculate virtual addressing.
 ///
 /// This is a useful [TlbImpl] for TLB's to test virtual address, i.e. by just passing a function to
 /// perform a simple translation. Proper processor implementations should not use this and instead
 /// implement [TlbImpl].
-pub struct ClosureTlb {
-    pub closure: TranslateClosure,
+pub struct FnTlb {
+    function: TranslateFn,
 }
 
-type TranslateClosure = Box<
-    dyn FnMut(u64, MemoryOperation, MemoryType, &mut TlbProcessor) -> TlbTranslateResult + Send,
->;
+pub type TranslateFn =
+    fn(u64, MemoryOperation, MemoryType, &mut TlbProcessor) -> TlbTranslateResult;
 
-impl ClosureTlb {
-    pub fn new(closure: TranslateClosure) -> Self {
-        Self { closure }
+impl FnTlb {
+    pub fn new(function: TranslateFn) -> Self {
+        Self { function }
     }
 }
 
-impl TlbImpl for ClosureTlb {
+impl TlbImpl for FnTlb {
     fn translate_va(
         &mut self,
         virt_addr: u64,
@@ -35,7 +34,7 @@ impl TlbImpl for ClosureTlb {
         memory_type: MemoryType,
         processor: &mut TlbProcessor,
     ) -> TlbTranslateResult {
-        (self.closure)(virt_addr, access_type, memory_type, processor)
+        (self.function)(virt_addr, access_type, memory_type, processor)
     }
 
     fn invalidate_all(&mut self, _flags: u32) -> Result<(), UnknownError> {

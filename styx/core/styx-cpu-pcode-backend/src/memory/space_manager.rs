@@ -7,7 +7,7 @@ use crate::hooks::{HasHookManager, HookManager};
 use crate::pcode_gen::HasPcodeGenerator;
 use crate::{HasConfig, PcodeBackend};
 use core::panic;
-use log::{info, trace};
+use log::{info, trace, warn};
 use smallvec::SmallVec;
 use styx_cpu_type::arch::backends::ArchRegister;
 use styx_cpu_type::arch::RegisterValue;
@@ -15,7 +15,7 @@ use styx_cpu_type::ArchEndian;
 use styx_pcode::pcode::{SpaceId, SpaceName, VarnodeData};
 use styx_processor::cpu::CpuBackend;
 use styx_processor::event_controller::EventController;
-use styx_processor::memory::{Mmu, MmuOpError};
+use styx_processor::memory::{MemoryOperation, MemoryType, Mmu, MmuOpError};
 use thiserror::Error;
 use vector_map::VecMap;
 
@@ -324,17 +324,29 @@ impl SpaceManager {
             .info
             .endian;
         let mut data = cpu.get_value_mmu(mmu, varnode)?.to_bytes(endian);
+        let virtual_address = varnode.offset;
+        let physical_address = mmu.translate_va(
+            virtual_address,
+            MemoryOperation::Read,
+            MemoryType::Data,
+            cpu,
+        );
 
         let original_data = data.clone();
-        HookManager::trigger_memory_read_hook(
-            cpu,
-            mmu,
-            ev,
-            varnode.offset,
-            varnode.size,
-            &mut data,
-        )
-        .unwrap();
+        if let Ok(physical_address) = physical_address {
+            HookManager::trigger_memory_read_hook(
+                cpu,
+                mmu,
+                ev,
+                physical_address,
+                varnode.size,
+                &mut data,
+            )
+            .unwrap();
+        } else {
+            // this should not get hit because get_value_mmu will error first
+            warn!("unexpected error while translating memory read address")
+        }
 
         if original_data != data {
             // Write data changed in memory read hooks back to memory.
@@ -366,17 +378,30 @@ impl SpaceManager {
             .endian;
 
         let data_bytes = data.to_bytes(endian);
-
-        // write_data as bytes for the hook
-        HookManager::trigger_memory_write_hook(
+        let virtual_address = varnode.offset;
+        let physical_address = mmu.translate_va(
+            virtual_address,
+            MemoryOperation::Write,
+            MemoryType::Data,
             cpu,
-            mmu,
-            ev,
-            varnode.offset,
-            varnode.size,
-            &data_bytes,
-        )
-        .unwrap();
+        );
+
+        if let Ok(physical_address) = physical_address {
+            // write_data as bytes for the hook
+            HookManager::trigger_memory_write_hook(
+                cpu,
+                mmu,
+                ev,
+                physical_address,
+                varnode.size,
+                &data_bytes,
+            )
+            .unwrap();
+        } else {
+            // this should not get hit because set_value_mmu will error first
+            warn!("unexpected error while translating memory write address")
+        }
+
         trace!("write hooked at {varnode:?}");
 
         cpu.set_value_mmu(mmu, varnode, data)
