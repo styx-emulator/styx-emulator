@@ -1,11 +1,46 @@
 // SPDX-License-Identifier: BSD-2-Clause
-bitflags::bitflags! {
-    /// standard section memory permissions
-    #[repr(C)]
-    pub struct MemoryPermissions : u32 {
-        const READ = 1;
-        const WRITE = 2;
-        const EXEC = 4;
+
+// This is a poor man's bitflags implementation.
+// Basically, cbindgen expands macros (configured by `parse.expand.crates` in cbindgen.toml) before
+// parsing causing the bitflags macro call to be expanded. Usually cbindgen parses bindgen macro
+// calls and parses them to be nice like this but when the expanded form is put through cbindgen
+// it is not user friendly.
+//
+// So until we can exclude certain macros from expanding in cbindgen's macro set, this will have to
+// do.
+/// standard section memory permissions
+#[repr(C)]
+pub struct MemoryPermissions {
+    bits: u32,
+}
+
+impl MemoryPermissions {
+    pub const READ: MemoryPermissions = MemoryPermissions { bits: 1 };
+    pub const WRITE: MemoryPermissions = MemoryPermissions { bits: 2 };
+    pub const EXEC: MemoryPermissions = MemoryPermissions { bits: 4 };
+
+    pub const fn bits(&self) -> u32 {
+        self.bits
+    }
+
+    pub const fn all() -> Self {
+        let bits = Self::READ.bits() | Self::WRITE.bits() | Self::EXEC.bits();
+        MemoryPermissions { bits }
+    }
+
+    pub const fn from_bits_truncate(bits: u32) -> Self {
+        Self {
+            bits: bits & Self::all().bits(),
+        }
+    }
+
+    pub const fn from_bits(bits: u32) -> Option<Self> {
+        let truncated = Self::from_bits_truncate(bits).bits;
+        if truncated == bits {
+            Some(Self { bits })
+        } else {
+            None
+        }
     }
 }
 
