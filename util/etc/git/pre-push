@@ -1,0 +1,257 @@
+#!/usr/bin/env bash
+
+# Usage:
+# Simply run in your desired git repo.
+#
+# The install script will add the check-dirty-words script to .local/
+# and install the pre-push hook in .git/hooks
+#
+#
+
+# Exit on any error
+set -e
+
+LOCAL_DIR="${STYX_ROOT}/.local"
+mkdir -p "${LOCAL_DIR}"
+if git check-ignore -q "${LOCAL_DIR}" ; then
+    echo "Installing pre-push hook"
+else
+    echo ".local/ not ignored, fix that"
+    exit 1
+fi
+
+DIRTY_WORDS_OUT="${LOCAL_DIR}/check-dirty-words"
+echo "writing dirty words script to '${DIRTY_WORDS_OUT}'"
+cat <<'END' > "${DIRTY_WORDS_OUT}"
+#!/bin/bash
+#
+# Git pre-push hook for the styx-emulator.
+#
+#
+# Variables:
+# - STYX_DIRTY_WORDS:
+#   - settable by `.local.env`, automatically picked up by direnv
+#   - comma delimited list
+# - STYX_PRE_PUSH_BYPASS:
+#   - pushes code even when the pre-push check fails
+#   - if this var is set it will bypass
+# - STYX_PRE_PUSH_DEBUG:
+#   - extremely verbose logging of the pre-push checks
+#   - if this var is set it will emit debug logs
+
+# Exit on any error
+set -e
+
+# Redirect output to stderr.
+exec 1>&2
+
+ZERO_COMMIT="0000000000000000000000000000000000000000"
+
+function DEBUG_LOG() {
+    if [ -v STYX_PRE_PUSH_DEBUG ]; then
+        echo "${1}"
+    fi
+}
+
+# Function to escape special regex characters
+escape_regex() {
+    local word="$1"
+    # Escape special regex characters: . ^ $ * + ? { } [ ] \ | ( )
+    echo "$word" | sed 's/[[\.*^$()+?{|\\]/\\&/g'
+}
+
+# Determine which search tool to use
+if command -v rg >/dev/null 2>&1; then
+    SEARCH_TOOL="rg"
+    DEBUG_LOG "Using ripgrep for search..."
+else
+    SEARCH_TOOL="grep"
+    DEBUG_LOG "Using grep for search..."
+fi
+
+# ugly global variable to catch the stderr of the checkers
+OUTPUT=""
+
+# Function to check for dirty words using chosen search tool
+check_pattern() {
+    local pattern="$1"
+    local search_text="$2"
+
+    DEBUG_LOG "checking text: \"$search_text\""
+
+    if [ "$SEARCH_TOOL" = "rg" ]; then
+        # Use ripgrep with:
+        # -i: case insensitive
+        # -n: show line numbers
+        # -e: specify pattern
+        OUTPUT="$(echo "$search_text" | rg -i -n --color always -e "$pattern")"
+    else
+        # Use grep with:
+        # -i: case insensitive
+        # -n: show line numbers
+        # --color=auto: colorize output
+        # -E: extended regex
+        OUTPUT="$(echo "$search_text" | grep -i -n --color=always -E "$pattern")"
+    fi
+}
+
+
+# Main script starts here
+
+DEBUG_LOG "======= Dirty Words Check ======="
+DEBUG_LOG " ~ Where dirty words go to die ~ "
+
+# Check if STYX_DIRTY_WORDS is set and not empty
+if [ -z "${STYX_DIRTY_WORDS:-}" ]; then
+    echo "Warning: STYX_DIRTY_WORDS environment variable is not set or empty"
+    echo "This should be sourced from .local.env"
+
+    # it is not fatal to not have this set
+    exit 0
+fi
+
+# Parse comma-separated dirty words and build regex pattern
+IFS=',' read -ra words_array <<< "$STYX_DIRTY_WORDS"
+
+# Build array of escaped patterns
+patterns=()
+for word in "${words_array[@]}"; do
+    # Trim leading/trailing whitespace
+    trimmed_word=$(echo "$word" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+
+    # Skip empty entries
+    if [ -n "$trimmed_word" ]; then
+        # Escape special regex characters
+        escaped_word=$(escape_regex "$trimmed_word")
+        patterns+=("$escaped_word")
+    fi
+done
+
+# Check if we have any valid patterns
+if [ ${#patterns[@]} -eq 0 ]; then
+    echo "Warning: No valid dirty words found in STYX_DIRTY_WORDS"
+    exit 1
+fi
+
+# Build the regex pattern (OR of all patterns)
+# Join patterns with | for alternation
+pattern=$(IFS='|'; echo "${patterns[*]}")
+
+
+# Perform the search
+DEBUG_LOG "Checking for dirty words in staged changes..."
+DEBUG_LOG "Dirty words pattern: $pattern"
+DEBUG_LOG "----------------------------------------"
+
+
+found=0
+while read local_ref local_oid remote_ref remote_oid
+do
+    DEBUG_LOG "checking reference local_ref=$local_ref local_old=$local_old remote_ref=$remote_ref remote_old=$remote_old"
+    if test "$local_oid" = "$ZERO_COMMIT"; then
+        # deleting branch, do nothing
+        :
+    else
+        # Here we set `range` to specify the range
+        # to pass to `git show` so that we can search the contents
+        # of each commit + message + header content for
+        # any dirty word
+        if test "$remote_oid" = "$ZERO_COMMIT"; then
+            # New branch, examine all commits
+            range="$local_oid"
+        else
+            # Update to existing branch, examine new commits
+            range="$remote_oid..$local_oid"
+        fi
+
+        if [[ "$local_ref" == refs/tags/* ]]; then
+            # reference is a tag, check the tag message
+            tag_msg=$(git show --no-patch $local_ref)
+            if check_pattern $pattern "$tag_msg"; then
+               echo "Dirty word found in message of $local_ref:"
+               echo "${OUTPUT}"
+               found=1
+            fi
+        else
+            # pushed reference is a branch
+            DEBUG_LOG "checking commits in $range"
+            commits=$(git rev-list --reverse "$range" )
+
+            # do this cursed <<< because piping to while loop creates a new
+            # subshell and then we couldn't set `found`
+            while read -r commit; do
+                commit_abbrev=$(echo $commit | head -c 7)
+                # commit hash and summary
+                commit_summary=$(git show --no-patch --pretty="format:%h %s" $commit)
+                if check_pattern $pattern "$commit_summary"; then
+                    echo "Dirty word found in summary $commit:"
+                    echo "${OUTPUT}"
+                    found=1
+                fi
+
+                # get diff of commit, but only the added lines
+                commit_diff=$(git show -U0 "$range" | grep "^+[^+]" | sed 's/^+//' || true)
+                if check_pattern $pattern "$commit_diff"; then
+                    echo "Dirty word found in diff of $commit:"
+                    echo "${OUTPUT}"
+                    found=1
+                fi
+
+                # get message and subject of commit only
+                commit_msg=$(git show --pretty="%s%n%n%b" -s)
+                if check_pattern $pattern "$commit_msg"; then
+                    echo "Dirty word found in message of $commit:"
+                    echo "${OUTPUT}"
+                    found=1
+                fi
+            done <<< "$commits"
+        fi # check if commit is for a branch or a tag
+    fi # if commit is not a branch delete
+done # while read local_ref local_oid remote_ref remote_oid
+
+
+DEBUG_LOG "----------------------------------------"
+
+# Exit with appropriate code
+if [ $found -eq 1 ]; then
+    echo ""
+    echo "ERROR: Dirty words found in local changes!"
+    if [ -v STYX_PRE_PUSH_BYPASS ]; then
+        echo "BYPASSING PREPUSH FAILURE"
+        exit 0
+    fi
+    exit 1
+else
+    DEBUG_LOG "No dirty words found in local changes."
+    exit 0
+fi
+END
+
+chmod u+x "${DIRTY_WORDS_OUT}"
+
+
+# we must use `git-common-dir` here so that both clones +
+# worktrees get the same treatment, eg. if we did "git-dir"
+# then that would return the worktree private git dir, and
+# any hooks installed would be obviated when the worktree
+# is no longer in use
+GIT_HOOK_DIR="$(cd "${STYX_ROOT}" && git rev-parse --git-common-dir)/hooks"
+mkdir -p "${GIT_HOOK_DIR}"
+hook="${GIT_HOOK_DIR}/pre-push"
+
+# NOTE: when we update this we need to compare against the hash of the old
+# file and then remove it if it is outdated
+echo "writing ${hook}"
+if [ -f "${hook}" ] ; then
+    echo "${hook} already exists, plz delete then run again"
+    exit 1
+fi
+cat <<'END' > "${hook}"
+#!/usr/bin/sh
+
+STYX_REPO="$(git rev-parse --show-toplevel)"
+"${STYX_REPO}/.local/check-dirty-words"
+END
+chmod u+x "${hook}"
+
+echo "done, all clean from now on :)"
