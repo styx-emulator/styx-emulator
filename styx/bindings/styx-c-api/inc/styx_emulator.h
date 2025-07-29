@@ -13,11 +13,6 @@ typedef unsigned __int128 u128;
 typedef __int128 i128;
 #endif /* i128 */
 
-/* This tracks `styx_core::memory::MemoryPermissions`
- * XXX: add `styx_core::memory` to get exported by the bindings
- */
-typedef uint32_t Internal;
-
 
 /**
  * All of the supported emulator backends
@@ -759,8 +754,11 @@ typedef struct StyxHook_InvalidInstructionData {
  * standard section memory permissions
  */
 typedef struct MemoryPermissions {
-  Internal _0;
+  uint32_t bits;
 } MemoryPermissions;
+#define MemoryPermissions_READ (MemoryPermissions){ .bits = 1 }
+#define MemoryPermissions_WRITE (MemoryPermissions){ .bits = 2 }
+#define MemoryPermissions_EXEC (MemoryPermissions){ .bits = 4 }
 
 /**
  * memory fault information
