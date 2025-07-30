@@ -2,28 +2,79 @@ syntax = "proto3";
 
 package styx.peripherals.spi;
 
+// SPIPort
+//
+// The SPI Port service supports multiple SPI ports, a master/slave architecture
+// and chip select selection. Implementors implement both master and slave rpcs
+// but can ignore calls if it doesn't agree with their runtime state (e.g.
+// getting SlaveChipSelectReceive called when configured as a master).
+//
+// chip_select_id
+//
+// The chip_select_id basically an ID of a pin used as a chip select wire. The
+// mapping of chip_select_id -> pin is defined by the SPIPort implementor (aka
+// the peripheral implementation). A sensible mapping for chip select pins that
+// are GPIO would be to have the same number i.e. GPIO7 = chip_select_id 7, but
+// this is up to the SPI peripheral.enum
+//
+// A slave peripheral does not know its chip_select_id.
+//
+// Communication can be done entirely with the MISO/MOSI wire rpcs. However, in
+// the event that a slave needs to know the chip select status, the ChipSelect
+// rpcs are available.
+//
+// A notable limitation is that communication is complete asynchronous.
+// Synchronous communication can be attempted by adhering to the chip select
+// logic using SlaveChipSelectReceive and MasterChipSelectSubscribe.
 service SPIPort {
-    rpc Receive(Packet) returns (Empty) {};
-    rpc Subscribe(PortRequest) returns (stream Packet) {};
+  // update the chip select state
+  rpc SlaveChipSelectReceive(SlaveChipSelectPacket) returns (Empty) {};
+  // stream updates of chip select state
+  rpc MasterChipSelectSubscribe(PortRequest)
+      returns (stream MasterChipSelectPacket) {};
+
+  // these two are MOSI wire
+  rpc SlaveReceive(SlavePacket) returns (Empty) {};
+  rpc MasterSubscribe(PortRequest) returns (stream MasterPacket) {};
+
+  // these two are MISO wire
+  rpc SlaveSubscribe(PortRequest) returns (stream SlavePacket) {};
+  rpc MasterReceive(MasterPacket) returns (Empty) {};
 }
 
-message Packet {
-    uint32 port = 1;
-    oneof contents {
-        ChipSelect chip_select = 2;
-        Data data = 3;
-    }
+// chip select packets to slaves
+message SlaveChipSelectPacket {
+  uint32 port = 1;
+  // new value of chip_select for this slave
+  bool chip_select = 2;
 }
-message Data {
-    bytes data = 1;
+
+// chip select packets from master
+message MasterChipSelectPacket {
+  uint32 port = 1;
+  // see chip_select_id documentation at top of file
+  uint32 chip_select_id = 2;
+  // new value of chip_select for this port/chip_select_id
+  bool chip_select = 3;
 }
-message ChipSelect {
-    bool state = 1;
+
+message SlavePacket {
+  uint32 port = 1;
+  bytes data = 2;
+  // assumed that chip select is true as the data has arrived at the slave
+}
+
+message MasterPacket {
+  uint32 port = 1;
+  // see chip_select_id documentation at top of file
+  uint32 chip_select_id = 2;
+  bytes data = 3;
 }
 
 message PortRequest {
-    uint32 port = 1;
-    string device_name = 2;
+  // port on device, required for multiple spi interfaces on single device
+  uint32 port = 1;
+  string device_name = 3;
 }
 
 message Empty {}
