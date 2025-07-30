@@ -156,3 +156,62 @@ This is roughly the mental calulus that is performed while performing code revie
 - **Iterative Improvement**: Encourage iterative improvements rather than demanding perfection in a single review cycle, balancing thoroughness with the need to make progress. If quality is not up to standards but the functionality is there, make sure that gets communicated so it doesn't seem like the merge criteria keep changing. A positive "you did a good job implementing ___, now we just need to clean up the code + docs to get this merged in" goes a long way to validating contributions.
 - **Communication**: Foster clear and constructive communication, providing specific examples and suggestions for improvement, if you have a hard time articulating your thoughts, that is something you are allowed to admit, and can request assistance with.
 - **Empathy**: Remember that code reviews are not just about the code but also about the people writing it. Approach reviews with empathy and a focus on mentorship and growth.
+
+## Becoming a Committer/Maintainer
+
+The current repo and project infrastructure is managed by Kudu Dynamics LLC, a Leidos Company.
+So the end decision on access resides with the Kudu Dynamics development team. After a regular
+and effective history of good contributions an outsider may be nominated and approached to
+have commit access on a case by case basis. In some large projects there is a distinction
+between a committer and a maintainer, Styx is not large enough to warrant that. For the time
+being they are the one and the same.
+
+Note that Kudu Dynamics reserves the right to revoke maintainer / committer access to individuals with poor
+behavior, or become unreachable for an extended period of time (eg. individual did not provide
+ahead of time notice of vacation, and the development team was unable to contact the maintainer
+for a couple weeks). When this happens the maintainer status will be updated in the following
+section for the reasoning behind the loss of access. Access can be restored on a case by case
+basis.
+
+### Maintainer List
+
+- @lockbox (active)
+- @yurboirene (active)
+
+## Becoming a Social Media Manager
+
+The current repo and project infrastructure is managed by Kudu Dynamics LLC, a Leidos Company.
+So the end decision on access resides with the Kudu Dynamics development team. At some point
+the team may be looking for a Social Media Manager to assist with releasing updates and maintaining
+the social media accounts.
+
+Note that Kudu Dynamics reserves the right to revoke access to individuals with poor
+behavior, or become unreachable for an extended period of time (eg. individual did not provide
+ahead of time notice of vacation, and the development team was unable to contact the individual
+for a couple weeks). When this happens the access will be updated in the following
+section for the reasoning behind the loss of access. Access can be restored on a case by case
+basis.
+
+### Social Media Manager List
+
+- @lockbox (active)
+
+## Becoming a Discord Moderator
+
+The current repo and project infrastructure is managed by Kudu Dynamics LLC, a Leidos Company.
+So the end decision on access resides with the Kudu Dynamics development team. There is an
+official discord server hosted at <https://discord.gg/styx-emulator>, individuals may be approached
+to assist in managing the discord comunity on a case by case basis.
+
+Note that Kudu Dynamics reserves the right to revoke access to individuals with poor
+behavior, or become unreachable for an extended period of time (eg. individual did not provide
+ahead of time notice of vacation, and the development team was unable to contact the individual
+for a couple weeks). When this happens the access will be updated in the following
+section for the reasoning behind the loss of access. Access can be restored on a case by case
+basis.
+
+### Discord Moderator List
+
+- @lockbox (active)
+- @rene (active)
+- @qiaxxi (active)
