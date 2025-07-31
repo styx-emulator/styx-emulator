@@ -10,9 +10,9 @@ post a question to the repo's github `discussions`.
 Before starting work on a feature, it'd be good to coordinate with the maintainers
 to make sure that:
 
-- what you want to do is possible
-- what you want to do is not already done
-- what you want to do should not wait for some other feature to land that would
+- What you want to do is possible
+- What you want to do is not already done
+- What you want to do should not wait for some other feature to land that would
   invalidate your work or make it have to be immediately re-written
 
 additionally they can then provide a helpful hint or two to make sure you're
@@ -32,6 +32,28 @@ please comment +1 on the issue so we can track interest in things and adjust pri
 
 ## Code Contributions
 
+### General Contribution Workflow
+
+Styx uses a `rebase` workflow. This is a middle ground between a proper merge based workflow,
+and the usual insanity that ensues unless the maintenance team has the bandwidth to enforce
+proper hygiene. The Styx team is currently small, so we use a `rebase` workflow.
+
+The rough steps:
+- Clone the code (eg. `git pull origin` if you already have a source code checkout)
+- Checkout your branch off of the `main` (or your target) branch
+- Commit your changes
+- Get the latest changes `git fetch origin`
+- Rebase onto the target branch (eg. `main`) `git rebase origin/main`
+- See something like [this](https://www.atlassian.com/git/tutorials/rewriting-history/git-rebase) for help on the rebase process.
+- When rebase is complete, push it with `git push --force-with-lease` to update your old merge request is you already had one. else a `git push -u origin <your branch name>` to push your branch for the first time.
+  - **NOTE**: all the commits will be present when merged into the `main` branch, so please rebase your commits into a somewhat tidy set of commits following the conventional commit format discussed in `CONVENTIONS.md`
+
+
+**Some Advice**:
+
+- An easy workflow is to commit for each small change with a message that tells you which commit to squash it into later, and `git rebase -i` to `fixup` those commits into a source commit later, this makes the git history significantly cleaner. A workflow like [this](https://andrewlock.net/smoother-rebases-with-auto-squashing-git-commits/) is a smooth path for development.
+- Additionally, [jj](https://jj-vcs.github.io/jj/latest/) is a new tool whose ideal workflow is exactly compatible with the reccommended development workflow and is an honorable mention to try out at your leisure
+
 ### Incubation
 
 In order to provide less friction getting **something** working and in the source
@@ -41,6 +63,28 @@ flux the majority of those `incubation` members have to do with `styx-trace`.
 
 If you have a cool idea, extra tool etc that doesn't currently have a place,
 `incubation` is your friend.
+
+### git hooks
+
+#### pre-commit
+
+By default you should have the `pre-commit` hooks setup (running `pip install pre-commit && pre-commit install`). This will locally check the main lint step in CI.
+
+#### pre-push
+
+If your organization has `pre-push` "safety" checks to ensure you don't push certain things, you can take advantage of our pre-packaged hook.
+
+On a posix-ish system run `./util/etc/git/pre-push`, and it will install the git hook for you. The pre-push hook is controlled by the following environment variables:
+
+- `STYX_DIRTY_WORDS`:
+  - Settable by `.local.env`, automatically picked up by `direnv`
+  - Comma delimited list
+- `STYX_PRE_PUSH_BYPASS`:
+  - Pushes code even when the pre-push check fails
+  - If this var is set it will ignore any dirty word violations
+- `STYX_PRE_PUSH_DEBUG`:
+  - Extremely verbose logging of the pre-push checks
+  - If this var is set it will emit debug logs
 
 ### Remote Development Containers
 
@@ -138,7 +182,7 @@ This is roughly the mental calulus that is performed while performing code revie
 
 ### 6. Error Handling
 
-- **Graceful Degradation**: Verify that the code handles errors gracefully, providing meaningful error messages without exposing sensitive information.
+- **Graceful**: Verify that the code handles errors gracefully, providing meaningful error messages without exposing sensitive information.
 - **Consistency**: Ensure error handling is consistent across the codebase, using standardized approaches for logging, exceptions, and user feedback, see [./CONVENTIONS.md](./CONVENTIONS.md) for more information.
 
 ### 7. Logging
@@ -149,13 +193,13 @@ This is roughly the mental calulus that is performed while performing code revie
 ### 8. Performance
 
 - **Efficiency**: Look for any inefficient code patterns that could impact performance, such as runtime hooks, excessive memory usage/resource contention, or unoptimized algorithms. If the default target runtime is getting modified, be sure to test the code on representative + *real* workloads that would be affected by this change.
-- **Profiling**: Recommend profiling critical sections of the code to identify and address performance bottlenecks.
+- **Profiling**: Recommend profiling critical sections of the code to identify and address performance bottlenecks. This is especially important in core changes or updates to an instruction execution backend.
 
 ### General Tips for Maintainers
 
 - **Iterative Improvement**: Encourage iterative improvements rather than demanding perfection in a single review cycle, balancing thoroughness with the need to make progress. If quality is not up to standards but the functionality is there, make sure that gets communicated so it doesn't seem like the merge criteria keep changing. A positive "you did a good job implementing ___, now we just need to clean up the code + docs to get this merged in" goes a long way to validating contributions.
 - **Communication**: Foster clear and constructive communication, providing specific examples and suggestions for improvement, if you have a hard time articulating your thoughts, that is something you are allowed to admit, and can request assistance with.
-- **Empathy**: Remember that code reviews are not just about the code but also about the people writing it. Approach reviews with empathy and a focus on mentorship and growth.
+- **Empathy**: Remember that code reviews are not just about the code but also about the people writing it. Approach reviews with empathy and a focus on mentorship and growth, please remember to explain *why* decisions are made and *how* conclusions were reached.
 
 ## Becoming a Committer/Maintainer
 
