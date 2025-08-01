@@ -10,26 +10,21 @@ use bilge::prelude::*;
 use derivative::Derivative;
 use getset::Getters;
 use std::collections::VecDeque;
-use std::pin::Pin;
 use styx_core::grpc::io;
+use styx_core::grpc::io::spi::{MasterChipSelectPacket, MasterPacket};
 use styx_core::prelude::*;
-use thiserror::Error;
+use styx_spi::{IntoSpiImp, SpiImpl};
 use tokio::sync::broadcast;
-use tokio_stream::Stream;
-use tonic::async_trait;
-use tracing::{debug, error, warn};
+use tokio::sync::broadcast::error::TryRecvError;
 
 mod hooks;
 
 const SPI2_END: u64 = 0x4000_3BFF;
 const SPI3_END: u64 = 0x4000_3FFF;
 
-type SPIOutboundSend = broadcast::Sender<SPIData>;
-type SPIOutboundRecv = broadcast::Receiver<SPIData>;
-
 /// Converts an address into the SPI port that it belongs to, as zero-indexed number.
 /// SPI1 has a higher address block compared to SPI2 and SPI3 which is why this function looks wrong.
-fn addr_to_spi_port(addr: u64) -> usize {
+fn addr_to_spi_port(addr: u64) -> u32 {
     if addr <= SPI2_END {
         1
     } else if addr <= SPI3_END {
@@ -39,38 +34,56 @@ fn addr_to_spi_port(addr: u64) -> usize {
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct SPIData {
-    port: usize,
-    contents: SPIPacketContents,
+pub struct StmSpiPrecursor {
+    pub base_addr: u64,
+    pub event_irqn: ExceptionNumber,
 }
 
-#[derive(Clone, Debug)]
-enum SPIPacketContents {
-    ChipSelect(bool),
-    Data(Box<[u8]>),
-}
-
-impl From<SPIData> for io::spi::Packet {
-    fn from(value: SPIData) -> Self {
+impl StmSpiPrecursor {
+    pub fn new(base_addr: u64, event_irqn: ExceptionNumber) -> Self {
         Self {
-            port: value.port as u32,
-            contents: Some(match value.contents {
-                SPIPacketContents::ChipSelect(state) => {
-                    io::spi::packet::Contents::ChipSelect(io::spi::ChipSelect { state })
-                }
-                SPIPacketContents::Data(data) => io::spi::packet::Contents::Data(io::spi::Data {
-                    data: data.to_vec(),
-                }),
-            }),
+            base_addr,
+            event_irqn,
         }
+    }
+}
+
+impl IntoSpiImp for StmSpiPrecursor {
+    fn new_spi_impl(
+        self,
+
+        as_master_csel: broadcast::Sender<io::spi::MasterChipSelectPacket>,
+        as_master_mosi: broadcast::Sender<io::spi::MasterPacket>,
+        as_master_miso: broadcast::Receiver<io::spi::MasterPacket>,
+
+        _as_slave_csel: broadcast::Receiver<io::spi::SlaveChipSelectPacket>,
+        _as_slave_mosi: broadcast::Receiver<io::spi::SlavePacket>,
+        _as_slave_miso: broadcast::Sender<io::spi::SlavePacket>,
+
+        port_id: u32,
+    ) -> Result<Box<dyn styx_spi::SpiImpl>, UnknownError> {
+        Ok(Box::new(SPIPortInner {
+            port_num: port_id,
+            base_addr: self.base_addr,
+            inner_hal: Default::default(),
+            event_irqn: self.event_irqn,
+            byte_frame_size: true,
+            rx_fifo: VecDeque::with_capacity(RX_TX_FIFO_SIZE),
+            inbound_data: as_master_miso,
+            outbound_data: as_master_mosi,
+            outbound_csel: as_master_csel,
+            txeie: false,
+            rxneie: false,
+            errie: false,
+            selected: false,
+        }))
     }
 }
 
 #[derive(Derivative)]
 pub struct SPIPortInner {
     /// port number identifier
-    num: u32,
+    port_num: u32,
     /// the base address for this port's register block
     base_addr: u64,
     /// the stored SPI register state
@@ -80,11 +93,11 @@ pub struct SPIPortInner {
     /// supports 8 bit or 16 bit data frame size
     byte_frame_size: bool,
     /// a queue for received data
-    rx_fifo: Arc<Mutex<VecDeque<u8>>>,
-    /// the sent data stream
-    outbound_spi: SPIOutboundSend,
-    /// held to keep the stream open, not actually used anywhere
-    _data_stream_reader: SPIOutboundRecv,
+    rx_fifo: VecDeque<u8>,
+
+    inbound_data: broadcast::Receiver<MasterPacket>,
+    outbound_data: broadcast::Sender<MasterPacket>,
+    outbound_csel: broadcast::Sender<MasterChipSelectPacket>,
 
     /// transmit buffer empty interrupt enable
     txeie: bool,
@@ -98,125 +111,21 @@ pub struct SPIPortInner {
 
 const RX_TX_FIFO_SIZE: usize = 32;
 
-impl SPIPortInner {
-    pub fn new(num: u32, base_addr: u64, event_irqn: ExceptionNumber) -> Self {
-        let (tx, rx) = broadcast::channel(16);
-        Self {
-            num,
-            base_addr,
-            inner_hal: Default::default(),
-            event_irqn,
-            byte_frame_size: true,
-            rx_fifo: Arc::new(Mutex::new(VecDeque::with_capacity(RX_TX_FIFO_SIZE))),
-            outbound_spi: tx,
-            _data_stream_reader: rx,
-            txeie: false,
-            rxneie: false,
-            errie: false,
-            selected: false,
-        }
-    }
-
-    pub fn slave_select(&mut self, state: bool) {
-        warn!("[SPI{}] slave select: {state}", self.num);
-
-        if self.selected != state {
-            self.selected = state;
-            // state changed, send signal and clear buffer
-            self.rx_fifo.lock().unwrap().clear();
-            self.outbound_spi
-                .send(SPIData {
-                    port: self.num as usize,
-                    contents: SPIPacketContents::ChipSelect(state),
-                })
-                .unwrap();
-        }
-    }
-
-    pub fn transmit_data(&mut self, ev: &mut dyn EventControllerImpl, value: u8) {
-        debug!("[SPI{}] sending data: {value:08b}", self.num);
-        self.outbound_spi
-            .send(SPIData {
-                contents: SPIPacketContents::Data(Box::new([value])),
-                port: self.num as usize,
-            })
-            .unwrap();
-
-        // trigger a TX buffer empty interrupt event, if enabled
-        if self.txeie {
-            ev.latch(self.event_irqn).unwrap();
-        }
-
-        // set TXE flag
-        self.inner_hal.sr.set_txe(true.into());
-    }
-
-    pub fn receive_data(
-        &mut self,
-        event_controller: &mut dyn EventControllerImpl,
-    ) -> Result<(), UnknownError> {
-        let q = self.rx_fifo.lock().unwrap();
-        if q.is_empty() {
-            return Ok(());
-        }
-        if !self.selected {
-            // ignore data from device if we haven't selected it
-            self.inner_hal.sr.set_rxne(false.into());
-            return Ok(());
-        }
-
-        // trigger a RX buffer full interrupt event, if enabled
-        if self.rxneie {
-            event_controller.latch(self.event_irqn).unwrap();
-        }
-        // set RXNE flag
-        self.inner_hal.sr.set_rxne(true.into());
-        Ok(())
-    }
-
-    pub fn read_data(&mut self) -> u8 {
-        let mut q = self.rx_fifo.lock().unwrap();
-        // if no data is available, then return 0
-        let d = q.pop_front().unwrap_or(0);
-
-        if q.is_empty() {
-            // clear RXNE flag if we just pulled the last value from the queue
-            self.inner_hal.sr.set_rxne(false.into());
-        }
-        d
-    }
-
-    fn tick(
-        &mut self,
-        _cpu: &mut dyn CpuBackend,
-        _mmu: &mut Mmu,
-        event_controller: &mut dyn EventControllerImpl,
-    ) -> Result<(), UnknownError> {
-        self.receive_data(event_controller)?;
-        Ok(())
-    }
-}
-
 // register offsets within each SPI port memory block
 const SPI_CR1_OFFSET: u64 = 0x0;
 const SPI_CR2_OFFSET: u64 = 0x4;
 const SPI_SR_OFFSET: u64 = 0x8;
 const SPI_DR_OFFSET: u64 = 0xC;
 
-impl SPIPortInner {
-    /// set initial register state
-    fn reset_state(
-        &mut self,
-        _cpu: &mut dyn CpuBackend,
-        _mmu: &mut Mmu,
-    ) -> Result<(), UnknownError> {
+impl SpiImpl for SPIPortInner {
+    fn reset(&mut self, _cpu: &mut dyn CpuBackend, _mmu: &mut Mmu) -> Result<(), UnknownError> {
         // reset the inner register state
         self.inner_hal.reset();
         Ok(())
     }
 
     /// sets up the required memory hooks
-    fn init(&self, proc: &mut BuildingProcessor) -> Result<(), UnknownError> {
+    fn init(&mut self, proc: &mut BuildingProcessor) -> Result<(), UnknownError> {
         let cpu = proc.core.cpu.as_mut();
 
         cpu.add_hook(StyxHook::memory_write(
@@ -247,193 +156,127 @@ impl SPIPortInner {
     fn irqs(&self) -> Vec<ExceptionNumber> {
         vec![self.event_irqn]
     }
-}
-
-#[derive(Debug, Error)]
-#[error("port {0} does not exist")]
-pub struct InvalidPortError(u32);
-
-pub struct SPIController {
-    pub(crate) spi_ports: Vec<SPIPortInner>,
-}
-
-// base address of each SPI port memory region
-const SPI1_BASE_ADDR: u64 = 0x4001_3000;
-const SPI2_BASE_ADDR: u64 = 0x4000_3800;
-const SPI3_BASE_ADDR: u64 = 0x4000_3C00;
-
-// IRQn for each SPI port
-const SPI1_EVENT_IRQN: ExceptionNumber = 35;
-const SPI2_EVENT_IRQN: ExceptionNumber = 36;
-const SPI3_EVENT_IRQN: ExceptionNumber = 51;
-
-impl SPIController {
-    pub fn new() -> Self {
-        SPIController {
-            spi_ports: vec![
-                SPIPortInner::new(1, SPI2_BASE_ADDR, SPI2_EVENT_IRQN),
-                SPIPortInner::new(2, SPI3_BASE_ADDR, SPI3_EVENT_IRQN),
-                SPIPortInner::new(0, SPI1_BASE_ADDR, SPI1_EVENT_IRQN),
-            ],
-        }
-    }
-}
-
-impl Peripheral for SPIController {
-    fn init(&mut self, proc: &mut BuildingProcessor) -> Result<(), UnknownError> {
-        for spi in self.spi_ports.iter() {
-            spi.init(proc)?;
-        }
-
-        let async_spis = self
-            .spi_ports
-            .iter_mut()
-            .map(SpiPortAsync::from_inner)
-            .collect::<Result<Vec<_>, UnknownError>>()?;
-        // create inner wrapper struct that implements the service
-        let service = io::spi::spi_port_server::SpiPortServer::new(SPIControllerService {
-            spi_ports: async_spis,
-        });
-        proc.routes.add_service(service);
-
-        Ok(())
-    }
-
-    fn reset(&mut self, cpu: &mut dyn CpuBackend, mmu: &mut Mmu) -> Result<(), UnknownError> {
-        for spi in self.spi_ports.iter_mut() {
-            spi.reset_state(cpu, mmu)?;
-        }
-
-        Ok(())
-    }
-
-    fn irqs(&self) -> Vec<ExceptionNumber> {
-        self.spi_ports.iter().flat_map(|x| x.irqs()).collect()
-    }
-
-    fn name(&self) -> &str {
-        "stm32 spi controller"
-    }
 
     fn tick(
         &mut self,
-        cpu: &mut dyn CpuBackend,
-        mmu: &mut Mmu,
+        _cpu: &mut dyn CpuBackend,
+        _mmu: &mut Mmu,
         event_controller: &mut dyn EventControllerImpl,
-        _delta: &styx_core::executor::Delta,
     ) -> Result<(), UnknownError> {
-        for spi in self.spi_ports.iter_mut() {
-            spi.tick(cpu, mmu, event_controller)?;
-        }
+        self.receive_data(event_controller)?;
+        Ok(())
+    }
+
+    fn pre_event_hook(
+        &mut self,
+        _cpu: &mut dyn CpuBackend,
+        _mmu: &mut Mmu,
+        _event_controller: &mut dyn EventControllerImpl,
+    ) -> Result<(), UnknownError> {
+        Ok(())
+    }
+
+    fn post_event_hook(
+        &mut self,
+        _cpu: &mut dyn CpuBackend,
+        _mmu: &mut Mmu,
+        _event_controller: &mut dyn EventControllerImpl,
+    ) -> Result<(), UnknownError> {
         Ok(())
     }
 }
 
-/// Created from a [SPIPortInner] and given to the [SPIControllerService] for async communication.
-pub struct SpiPortAsync {
-    inbound_send: Arc<Mutex<VecDeque<u8>>>,
-    outbound_send: SPIOutboundSend,
-}
-impl SpiPortAsync {
-    fn from_inner(inner: &mut SPIPortInner) -> Result<Self, UnknownError> {
-        Ok(Self {
-            inbound_send: inner.rx_fifo.clone(),
-            outbound_send: inner.outbound_spi.clone(),
-        })
+impl SPIPortInner {
+    pub fn slave_select(&mut self, state: bool) {
+        log::trace!("[SPI{}] slave select: {state}", self.port_num);
+
+        if self.selected != state {
+            self.selected = state;
+            // state changed, send signal and clear buffer
+            self.rx_fifo.clear();
+            self.outbound_csel
+                .send(MasterChipSelectPacket {
+                    port: self.port_num,
+                    chip_select_id: 0,
+                    chip_select: state,
+                })
+                .unwrap();
+        }
     }
 
-    fn receive_data(&self, data: Vec<u8>) -> Result<(), UnknownError> {
-        for d in data {
-            self.inbound_send.lock().unwrap().push_back(d);
+    pub fn transmit_data(&mut self, ev: &mut dyn EventControllerImpl, value: u8) {
+        log::debug!("[SPI{}] sending data: {value:08b}", self.port_num);
+        self.outbound_data
+            .send(MasterPacket {
+                port: self.port_num,
+                chip_select_id: 0,
+                data: Vec::from([value]),
+            })
+            .unwrap();
+
+        // trigger a TX buffer empty interrupt event, if enabled
+        if self.txeie {
+            ev.latch(self.event_irqn).unwrap();
         }
 
-        Ok(())
+        // set TXE flag
+        self.inner_hal.sr.set_txe(true.into());
     }
-}
 
-pub struct SPIControllerService {
-    spi_ports: Vec<SpiPortAsync>,
-}
-
-impl SPIControllerService {
-    /// Returns the corresponding spi port
-    fn grpc_port_to_inner_port(&self, port: u32) -> Result<&SpiPortAsync, InvalidPortError> {
-        self.spi_ports
-            .get(port as usize)
-            .ok_or(InvalidPortError(port))
-    }
-}
-
-#[async_trait]
-impl io::spi::spi_port_server::SpiPort for SPIControllerService {
-    type SubscribeStream =
-        Pin<Box<dyn Stream<Item = Result<io::spi::Packet, tonic::Status>> + Send + 'static>>;
-
-    async fn subscribe(
-        &self,
-        request: tonic::Request<io::spi::PortRequest>,
-    ) -> Result<tonic::Response<Self::SubscribeStream>, tonic::Status> {
-        let (_, _, subscribe_request) = request.into_parts();
-        let port = subscribe_request.port;
-        let dev_name = subscribe_request.device_name;
-
-        debug!(
-            "<gRPC> SPI port {} is being subscribed to by {}",
-            port, dev_name,
-        );
-
-        match self.grpc_port_to_inner_port(port) {
-            // Error case, return failure
-            Err(_) => Err(tonic::Status::invalid_argument("Invalid SPI port")),
-
-            Ok(p) => {
-                let mut stream = p.outbound_send.subscribe();
-
-                let output = async_stream::try_stream! {
-                    // get the next `SPIData` and convert it into a
-                    // `io::spi::Data`
-                    while let Ok(spi_data) = stream.recv().await {
-                        // send the data
-                        yield spi_data.into()
-                    }
-                };
-
-                // the final pinned stream that will service
-                // the requested subscription
-                Ok(tonic::Response::new(
-                    Box::pin(output) as Self::SubscribeStream
-                ))
+    pub fn receive_data(
+        &mut self,
+        event_controller: &mut dyn EventControllerImpl,
+    ) -> Result<(), UnknownError> {
+        let rx_fifo = &mut self.rx_fifo;
+        while let Some(data) = try_recv(&mut self.inbound_data) {
+            for data_byte in data {
+                rx_fifo.push_back(data_byte);
             }
         }
+        if rx_fifo.is_empty() {
+            return Ok(());
+        }
+        if !self.selected {
+            // ignore data from device if we haven't selected it
+            self.inner_hal.sr.set_rxne(false.into());
+            return Ok(());
+        }
+        log::debug!("processing!!!! ");
+
+        // trigger a RX buffer full interrupt event, if enabled
+        if self.rxneie {
+            event_controller.latch(self.event_irqn).unwrap();
+        }
+        // set RXNE flag
+        self.inner_hal.sr.set_rxne(true.into());
+        Ok(())
     }
 
-    async fn receive(
-        &self,
-        request: tonic::Request<io::spi::Packet>,
-    ) -> tonic::Result<tonic::Response<io::spi::Empty>> {
-        let (_, _, req) = request.into_parts();
-        let port = req.port;
-        let contents = req.contents.unwrap();
+    pub fn read_data(&mut self) -> u8 {
+        let q = &mut self.rx_fifo;
+        // if no data is available, then return 0
+        let d = q.pop_front().unwrap_or(0);
 
-        warn!("<gRPC> SPI port {} received data: {:?}", port, contents,);
+        if q.is_empty() {
+            // clear RXNE flag if we just pulled the last value from the queue
+            self.inner_hal.sr.set_rxne(false.into());
+        }
+        d
+    }
+}
 
-        // pass the data through to the inner port
-        match self.grpc_port_to_inner_port(port) {
-            // Error case, return failure
-            Err(_) => Err(tonic::Status::invalid_argument("Invalid SPI port")),
-            // we were able to find the port they wanted to subscribe to,
-            // so now we're going to send the bytes to the desired UART port
-            Ok(p) => {
-                match contents {
-                    io::spi::packet::Contents::ChipSelect(_) => {
-                        // this isn't needed until we have slave mode implemented for the SPI interface.
-                        // slave devices can't pull the select line high or low
-                    }
-                    io::spi::packet::Contents::Data(d) => {
-                        p.receive_data(d.data).unwrap();
-                    }
+fn try_recv(inbound_data: &mut broadcast::Receiver<MasterPacket>) -> Option<Vec<u8>> {
+    loop {
+        let res = inbound_data.try_recv();
+        match res {
+            Ok(value) => break Some(value.data),
+            Err(e) => {
+                if let TryRecvError::Lagged(n) = e {
+                    log::warn!("spi receive lagged {n} values");
+                    continue;
+                } else {
+                    break None;
                 }
-                Ok(tonic::Response::new(io::spi::Empty {}))
             }
         }
     }

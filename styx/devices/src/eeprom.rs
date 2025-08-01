@@ -11,7 +11,12 @@
 //! READ             | 0000 X011          | Read Data from Memory Array
 //! WRITE            | 0000 X010          | Write Data to Memory Array
 //!
-use styx_core::peripheral_clients::spi::SPIDevice;
+use std::borrow::Cow;
+
+use styx_core::{
+    peripheral_clients::spi::SPIDevice,
+    prelude::{log::trace, *},
+};
 use thiserror::Error;
 use tracing::{error, warn};
 
@@ -126,7 +131,7 @@ enum DeviceState {
 /// pagesize: 128 bytes
 pub struct AT25HP512 {
     status: Status,
-    memory: [u8; 0x10000],
+    pub memory: MemoryRegion,
     device_state: DeviceState,
     address_pointer_msb: u8,
     address_pointer_lsb: u8,
@@ -140,8 +145,8 @@ impl Default for AT25HP512 {
 }
 
 impl SPIDevice for AT25HP512 {
-    fn get_name(&self) -> &str {
-        "EEPROM"
+    fn get_name(&self) -> Cow<'static, str> {
+        "EEPROM".into()
     }
 
     fn write_data(&mut self, data: u8) {
@@ -158,7 +163,7 @@ impl SPIDevice for AT25HP512 {
             DeviceState::Read => {
                 let ap =
                     ((self.address_pointer_msb as usize) << 8) | self.address_pointer_lsb as usize;
-                let d = self.memory[ap];
+                let d = self.memory.read(ap).u8().unwrap();
 
                 let (new_lsb, overflow) = self.address_pointer_lsb.overflowing_add(1);
                 if overflow {
@@ -170,13 +175,21 @@ impl SPIDevice for AT25HP512 {
             _ => None,
         }
     }
+
+    fn set_cs(&mut self, chip_select: bool) {
+        if !chip_select {
+            // reset write state when chip select goes low
+            self.address_count = 0;
+            self.device_state = DeviceState::Idle;
+        }
+    }
 }
 
 impl AT25HP512 {
     pub fn new() -> Self {
         Self {
             status: Status::default(),
-            memory: [0_u8; 0x10000],
+            memory: MemoryRegion::new(0, 0x100000, MemoryPermissions::all()).unwrap(),
             device_state: DeviceState::Idle,
             address_pointer_msb: 0,
             address_pointer_lsb: 0,
@@ -198,11 +211,13 @@ impl AT25HP512 {
                     return;
                 }
 
-                let ap =
-                    ((self.address_pointer_msb as usize) << 8) | self.address_pointer_lsb as usize;
+                let address = self.address() as usize;
 
-                if !self.status.write_prot_en && !self.status.write_prot.is_protected(ap as u16) {
-                    self.memory[ap] = data;
+                if !self.status.write_prot_en
+                    && !self.status.write_prot.is_protected(address as u16)
+                {
+                    trace!("<EEPROM> writing 0x{data:X} to 0x{address:X}");
+                    self.memory.write(address).be().value(data).unwrap();
                 }
                 self.address_pointer_lsb = self.address_pointer_lsb.overflowing_add(1).0;
             }
@@ -221,9 +236,14 @@ impl AT25HP512 {
         }
     }
 
+    pub fn address(&self) -> u16 {
+        ((self.address_pointer_msb as u16) << 8) | self.address_pointer_lsb as u16
+    }
+
     fn eval_cmd(&mut self, inst: u8) {
         let cmd: Result<Command, EepromError> = inst.try_into();
 
+        trace!("<EEPROM> command received: {cmd:?}");
         match cmd {
             Ok(c) => match c {
                 Command::Wren => self.status.write_enabled = true,

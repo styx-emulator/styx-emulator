@@ -6,7 +6,7 @@ use std::thread;
 use std::time::Duration;
 
 use styx_emulator::devices::{adc::ADS7866, dac::RHRDAC121, eeprom::AT25HP512};
-use styx_emulator::peripheral_clients::spi::SPIClient;
+use styx_emulator::peripheral_clients::spi::SPISimpleClient;
 
 #[derive(Debug, Parser)]
 #[command(name="emulator", version, about, long_about = None)]
@@ -148,13 +148,13 @@ fn main() {
     let adc = ADS7866::new();
     let dac = RHRDAC121::new(None);
 
-    let client0 = SPIClient::new(args.to_string(), 0);
+    let client0 = SPISimpleClient::new(args.to_string(), 0);
     client0.connect_device(eeprom);
 
-    let client1 = SPIClient::new(args.to_string(), 1);
+    let client1 = SPISimpleClient::new(args.to_string(), 1);
     client1.connect_device(adc);
 
-    let client2 = SPIClient::new(args.to_string(), 2);
+    let client2 = SPISimpleClient::new(args.to_string(), 2);
     client2.connect_device(dac);
 
     /*

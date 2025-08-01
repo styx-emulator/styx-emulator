@@ -3,7 +3,6 @@
 
 use anyhow::Context;
 use derivative::Derivative;
-use spi::SPIController;
 use styx_core::{
     core::{
         builder::{BuildProcessorImplArgs, ProcessorImpl},
@@ -16,6 +15,7 @@ use styx_core::{
     prelude::*,
 };
 use styx_nvic::Nvic;
+use styx_spi::{SPIController, SpiPort};
 use thiserror::Error;
 use tracing::{debug, info};
 
@@ -27,6 +27,8 @@ mod i2c;
 
 use example_gpio::Gpio;
 use i2c::I2CController;
+
+use crate::spi::StmSpiPrecursor;
 mod spi;
 
 #[derive(Derivative)]
@@ -34,6 +36,15 @@ mod spi;
 pub struct Stm32f107Builder {
     pub exception_behavior: ExceptionBehavior,
 }
+// base address of each SPI port memory region
+const SPI1_BASE_ADDR: u64 = 0x4001_3000;
+const SPI2_BASE_ADDR: u64 = 0x4000_3800;
+const SPI3_BASE_ADDR: u64 = 0x4000_3C00;
+
+// IRQn for each SPI port
+const SPI1_EVENT_IRQN: ExceptionNumber = 35;
+const SPI2_EVENT_IRQN: ExceptionNumber = 36;
+const SPI3_EVENT_IRQN: ExceptionNumber = 51;
 
 impl ProcessorImpl for Stm32f107Builder {
     fn build(&self, args: &BuildProcessorImplArgs) -> Result<ProcessorBundle, UnknownError> {
@@ -66,7 +77,11 @@ impl ProcessorImpl for Stm32f107Builder {
         peripherals.push(Box::new(gpio));
         let i2c = I2CController::new();
         peripherals.push(Box::new(i2c));
-        let spi = SPIController::new();
+        let spi = SPIController::new(vec![
+            SpiPort::new(0, StmSpiPrecursor::new(SPI1_BASE_ADDR, SPI1_EVENT_IRQN)),
+            SpiPort::new(1, StmSpiPrecursor::new(SPI2_BASE_ADDR, SPI2_EVENT_IRQN)),
+            SpiPort::new(2, StmSpiPrecursor::new(SPI3_BASE_ADDR, SPI3_EVENT_IRQN)),
+        ]);
         peripherals.push(Box::new(spi));
 
         Ok(ProcessorBundle {
