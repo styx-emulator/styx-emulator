@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use styx_core::prelude::*;
-use tracing::debug;
+use styx_core::prelude::{log::debug, *};
+use styx_spi::SPIController;
 
-use super::{addr_to_spi_port, SPIController};
+use crate::spi::SPIPortInner;
+
+use super::addr_to_spi_port;
 
 pub(crate) fn spi_dr_w_hook(
     proc: CoreHandle,
@@ -14,11 +16,11 @@ pub(crate) fn spi_dr_w_hook(
         .event_controller
         .peripherals
         .get_expect::<SPIController>()?;
-    let inner = &mut controller.spi_ports[addr_to_spi_port(address)];
+    let inner: &mut SPIPortInner = controller.try_get(addr_to_spi_port(address)).unwrap();
 
     debug!(
         "[SPI{}] write to DR: {:?} of size: {}",
-        inner.num, data, size
+        inner.port_num, data, size
     );
 
     // clear TXE flag
@@ -46,9 +48,9 @@ pub(crate) fn spi_dr_r_hook(
         .event_controller
         .peripherals
         .get_expect::<SPIController>()?;
-    let inner = &mut controller.spi_ports[addr_to_spi_port(address)];
+    let inner: &mut SPIPortInner = controller.try_get(addr_to_spi_port(address)).unwrap();
 
-    debug!("[SPI{}] read from DR of size: {}", inner.num, size);
+    debug!("[SPI{}] read from DR of size: {}", inner.port_num, size);
 
     // get the data at the front of the queue and write it into the data register
     let value = inner.read_data();
@@ -70,11 +72,11 @@ pub(crate) fn spi_cr1_w_hook(
         .event_controller
         .peripherals
         .get_expect::<SPIController>()?;
-    let inner = &mut controller.spi_ports[addr_to_spi_port(address)];
+    let inner: &mut SPIPortInner = controller.try_get(addr_to_spi_port(address)).unwrap();
 
     debug!(
         "[SPI{}] write to CR1: {:?} of size: {}",
-        inner.num, data, size
+        inner.port_num, data, size
     );
 
     let val = u16::from_le_bytes(data[..2].try_into().unwrap());
@@ -99,11 +101,11 @@ pub(crate) fn spi_cr2_w_hook(
         .event_controller
         .peripherals
         .get_expect::<SPIController>()?;
-    let inner = &mut controller.spi_ports[addr_to_spi_port(address)];
+    let inner: &mut SPIPortInner = controller.try_get(addr_to_spi_port(address))?;
 
     debug!(
         "[SPI{}] write to CR2: {:?} of size: {}",
-        inner.num, data, size
+        inner.port_num, data, size
     );
 
     let val = u16::from_le_bytes(data[..2].try_into().unwrap());
@@ -125,7 +127,7 @@ pub(crate) fn spi_sr_r_hook(
         .event_controller
         .peripherals
         .get_expect::<SPIController>()?;
-    let inner = &controller.spi_ports[addr_to_spi_port(address)];
+    let inner: &mut SPIPortInner = controller.try_get(addr_to_spi_port(address))?;
 
     let sr = inner.inner_hal.sr.value.to_le_bytes();
 

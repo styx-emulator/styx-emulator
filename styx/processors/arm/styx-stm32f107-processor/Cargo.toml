@@ -13,6 +13,7 @@ workspace = true
 styx-core = { workspace = true }
 styx-stm32f107-sys = { path = "../../../generated/styx-stm32f107-sys" }
 styx-nvic = { path = "../../../event-controllers/arm/styx-nvic" }
+styx-spi = { path = "../../../peripherals/styx-spi/" }
 
 async-stream = { workspace = true }
 tokio = { workspace = true }
@@ -28,6 +29,7 @@ styx-workspace-hack = { version = "0.1", path = "../../../workspace-hack" }
 [dev-dependencies]
 styx-plugins = { path = "../../../plugins" }
 styx-integration-tests = { path = "../../../integration-tests" }
+styx-devices = { path = "../../../devices" }
 gdbmi = { workspace = true }
 tap = { workspace = true }
 

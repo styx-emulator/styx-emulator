@@ -99,8 +99,6 @@ void write_eeprom(uint16_t data, uint16_t* address) {
 }
 
 int main() {
-    sleep(200000);
-
     spi_init();
 
     uint16_t signal_val = 0;

@@ -12,4 +12,5 @@ workspace = true
 [dependencies]
 styx-base-clock = { path = "./styx-base-clock" }
 styx-uart = { path = "./styx-uart" }
+styx-spi = { path = "./styx-spi" }
 styx-workspace-hack = { version = "0.1", path = "../workspace-hack" }

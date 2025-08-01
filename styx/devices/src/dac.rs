@@ -2,6 +2,8 @@
 //! implementation of the RHRDAC121 DAC
 //! datasheet: <https://www.st.com/resource/en/datasheet/rhrdac121.pdf>
 //!
+use std::borrow::Cow;
+
 use styx_core::peripheral_clients::spi::SPIDevice;
 
 pub struct RHRDAC121 {
@@ -41,8 +43,8 @@ impl RHRDAC121 {
 }
 
 impl SPIDevice for RHRDAC121 {
-    fn get_name(&self) -> &str {
-        "RHRDAC121"
+    fn get_name(&self) -> Cow<'static, str> {
+        "RHRDAC121".into()
     }
 
     fn write_data(&mut self, data: u8) {
