@@ -21,6 +21,10 @@ class EmulationReport:
     exit_reason: TargetExitReason
     is_fatal: builtins.bool
     is_stop_request: builtins.bool
+    wall_time: builtins.float
+    r"""
+    Total wall clock time spent in emulation, in seconds.
+    """
 
 class Processor:
     processor_state: ProcessorState
