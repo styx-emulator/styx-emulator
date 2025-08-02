@@ -86,6 +86,7 @@ impl Executor {
             .map(|timeout_duration| Instant::now() + timeout_duration);
         let mut remaining_instructions = conditions.inst_count;
         let mut total_instructions = InstructionReport::default();
+        let mut total_wall_time = std::time::Duration::ZERO;
         let exit_reason = loop {
             if !self.inner.valid_emulation_conditions(proc) {
                 break TargetExitReason::HostStopRequest;
@@ -96,6 +97,7 @@ impl Executor {
             let report = self.inner.emulate(proc, stride_constraint)?;
             let emulate_time = Instant::now() - emulate_start;
 
+            // update bookeeping for emulation statistics
             let instruction_report =
                 InstructionReport::from_execution_report(&report, stride_constraint);
             total_instructions += instruction_report;
@@ -103,6 +105,7 @@ impl Executor {
                 time: emulate_time,
                 count: instruction_report.instructions(),
             };
+            total_wall_time += delta.time;
 
             // check if inner wants to halt
             if self.inner.halt_emulation(&report.exit_reason, &delta) {
@@ -138,6 +141,7 @@ impl Executor {
         Ok(EmulationReport {
             exit_reason,
             instructions: total_instructions,
+            wall_time: total_wall_time,
         })
     }
 }

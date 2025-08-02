@@ -231,11 +231,16 @@ mod test {
             let exit_report = self.proc.run(self.instruction_count).unwrap();
 
             assert_eq!(
-                EmulationReport::new(
-                    TargetExitReason::InstructionCountComplete,
-                    InstructionReport::Exact(self.instruction_count)
-                ),
-                exit_report
+                exit_report.exit_reason,
+                TargetExitReason::InstructionCountComplete
+            );
+            assert_eq!(
+                exit_report.instructions,
+                InstructionReport::Exact(self.instruction_count)
+            );
+            assert!(
+                exit_report.wall_time > std::time::Duration::ZERO,
+                "wall_time should be greater than zero"
             );
         }
 

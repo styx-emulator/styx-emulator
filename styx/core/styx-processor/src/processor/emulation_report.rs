@@ -92,13 +92,20 @@ pub struct EmulationReport {
     /// is used if the CpuBackend did not report exact instruction counts. The approximate
     /// instruction count will be an upper bound on the amount of executed instructions.
     pub instructions: InstructionReport,
+    /// Total wall clock time spent in emulation.
+    pub wall_time: std::time::Duration,
 }
 
 impl EmulationReport {
-    pub fn new(exit_reason: TargetExitReason, instructions: InstructionReport) -> Self {
+    pub fn new(
+        exit_reason: TargetExitReason,
+        instructions: InstructionReport,
+        wall_time: std::time::Duration,
+    ) -> Self {
         Self {
             exit_reason,
             instructions,
+            wall_time,
         }
     }
 

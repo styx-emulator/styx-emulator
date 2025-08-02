@@ -31,4 +31,10 @@ impl EmulationReport {
     pub fn is_stop_request(&self) -> bool {
         self.0.is_stop_request()
     }
+
+    /// Total wall clock time spent in emulation, in seconds.
+    #[getter]
+    pub fn wall_time(&self) -> f64 {
+        self.0.wall_time.as_secs_f64()
+    }
 }
