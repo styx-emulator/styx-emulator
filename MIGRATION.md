@@ -1,5 +1,32 @@
 # Migration Guide
 
+## 1.0.0 to 1.2.0
+
+### Emulation API Changes
+
+The API for `Executor`, `CpuBackend` and `Processor` emulation has been updated to provide more detailed execution information. The return type for emulation methods has changed from `Result<TargetExitReason, ...>` to `Result<EmulationReport, ...>`.
+
+#### Before
+
+```rust
+let exit_reason: TargetExitReason = processor.run(constraint)?;
+// exit_reason is a TargetExitReason enum
+```
+
+#### After
+
+```rust
+let report: EmulationReport = processor.run(constraint)?;
+// report is an EmulationReport containing:
+// - exit_reason: TargetExitReason
+// - instruction_count: u64
+// - etc.
+```
+
+This change allows users to access additional execution information like instruction counts and other metrics without requiring separate API calls.
+
+**NOTE**: this also propagated to the python and C bindings accordingly
+
 ## 0.53.0 to 1.0.0
 
 At a very high level, this refactor reorganized the major processor components and improved interactions between them.  See (TODO: add link to diagram) to get an idea of how components now fit together.  
