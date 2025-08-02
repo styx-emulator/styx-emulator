@@ -316,9 +316,6 @@ bitflags! {
         const REG_WRITE =   0x0040;
         const BRANCH =      0x0080;
         const INTERRUPT =   0x0100;
-        const STM32 =       0x0200;
-        const KINETIS21  =  0x0400;
-        const POWERQUICC =  0x0800;
         const BLOCK =       0x1000;
         // const TET_RESERVED_2 =  0x2000;
         // const TET_RESERVED_3 =  0x4000;
@@ -511,13 +508,10 @@ pub enum TraceableItem {
     InsnExecEvent(TraceEventType::INST_EXEC),
     InsnFetchEvent(TraceEventType::INST_FETCH),
     InterruptEvent(TraceEventType::INTERRUPT),
-    Kinetis21Event(TraceEventType::KINETIS21),
     MemReadEvent(TraceEventType::MEM_READ),
     MemWriteEvent(TraceEventType::MEM_WRT),
-    PowerQuiccEvent(TraceEventType::POWERQUICC),
     RegReadEvent(TraceEventType::REG_READ),
     RegWriteEvent(TraceEventType::REG_WRITE),
-    Stm32Event(TraceEventType::STM32),
 }
 
 /// Event representing entering a basic block.
@@ -636,33 +630,6 @@ pub struct InterruptEvent {
     pub interrupt_num: i32,
     pub old_pc: u32,
     pub new_pc: u32,
-}
-
-/// Stm32 ...
-#[styx_event(etype=TraceEventType::STM32)]
-pub struct Stm32Event {
-    pub reserved_u16: u16,
-    pub reserved_1: u32,
-    pub reserved_2: u32,
-    pub reserved_3: u32,
-}
-
-/// Kinetis21 ...
-#[styx_event(etype=TraceEventType::KINETIS21)]
-pub struct Kinetis21Event {
-    pub reserved_u16: u16,
-    pub reserved_1: u32,
-    pub reserved_2: u32,
-    pub reserved_3: u32,
-}
-
-/// Stm32 ...
-#[styx_event(etype=TraceEventType::POWERQUICC)]
-pub struct PowerQuiccEvent {
-    pub reserved_u16: u16,
-    pub reserved_1: u32,
-    pub reserved_2: u32,
-    pub reserved_3: u32,
 }
 
 #[cfg(test)]

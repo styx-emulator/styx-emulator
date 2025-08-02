@@ -8,18 +8,15 @@ use super::{
 };
 use std::{collections::BTreeMap, ops::RangeInclusive};
 use styx_core::prelude::*;
-use styx_core::tracebus::{strace, Kinetis21Event, TraceProvider};
 use tracing::{trace, warn};
 
 /// Helper function for tracing GPIO register writes.
 fn trace_reg_write(gpio_name: &str, reg_name: &str, regval: u32) {
-    strace!(Kinetis21Event::new());
     trace!("GPIO_{} write to {} = {:#08x}", gpio_name, reg_name, regval);
 }
 
 /// Helper function for tracing GPIO register reads.
 fn trace_reg_read(gpio_name: &str, reg: GpioRegister) {
-    strace!(Kinetis21Event::new());
     trace!("GPIO_{} read from {}", gpio_name, reg);
 }
 
@@ -282,7 +279,6 @@ impl GPIOPort {
             trace_reg_read(self.name, GpioRegister::PDDR);
         } else if self.addr_range.contains(&address) {
             // All other registers (PSOR, PCOR and PTOR) return zero when read.
-            strace!(Kinetis21Event::new());
             trace!(
                 "GPIO_{} read from PSOR, PCOR or PTOR register ({:#08x}) - always read as zero.",
                 self.name,
