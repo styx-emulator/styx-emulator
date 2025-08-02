@@ -16,13 +16,13 @@ use styx_stm32f107_processor::Stm32f107Builder;
 use tap::Conv;
 
 /// expect at least this many events
-const MIN_EVENTS: usize = 1;
+const MIN_EVENTS: usize = 1000;
 /// expect no more than this main events
-const MAX_EVENTS: usize = 1;
+const MAX_EVENTS: usize = usize::MAX;
 /// How long to run the test before stoping the `Processor`
 const TEST_DURATION: Duration = Duration::from_millis(1000);
 /// The test event type (mask) we are looking for
-const EVENT_MASK: TraceEventType = TraceEventType::STM32;
+const EVENT_MASK: TraceEventType = TraceEventType::MEM_WRT;
 
 /// test blink_flash with `EmulationArgs`. All the assertions are
 /// performed in [run_blink_flash](fn@common::run_blink_flash)

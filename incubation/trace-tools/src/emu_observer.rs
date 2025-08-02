@@ -689,18 +689,6 @@ impl EmulationObserver {
                 debug!("ignore {}", e.text());
                 vec![]
             }
-            TraceableItem::Stm32Event(e) => {
-                debug!("ignore {}", e.text());
-                vec![]
-            }
-            TraceableItem::Kinetis21Event(e) => {
-                debug!("ignore {}", e.text());
-                vec![]
-            }
-            TraceableItem::PowerQuiccEvent(e) => {
-                debug!("ignore {}", e.text());
-                vec![]
-            }
         }
     }
 }

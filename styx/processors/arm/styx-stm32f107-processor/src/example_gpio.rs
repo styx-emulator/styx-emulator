@@ -556,7 +556,7 @@ pub mod port {
     use styx_core::{
         hooks::StyxHook,
         prelude::*,
-        tracebus::{strace, MemWriteEvent, Stm32Event, TraceEventType},
+        tracebus::{strace, MemWriteEvent, TraceEventType},
     };
     use tracing::{debug, info, warn};
 
@@ -674,10 +674,8 @@ pub mod port {
                 let (br, bs) = pin.bsrr(regval);
                 if bs {
                     info!("    => BSSR: Sets port {} pin {}", self.name, pin.pno);
-                    strace!(Stm32Event::new());
                 } else if br {
                     info!("    => BSSR: Resets port {} pin {}", self.name, pin.pno);
-                    strace!(Stm32Event::new());
                 }
             }
         }
