@@ -49,6 +49,8 @@ jobs:
         components: ''
 
     - uses: Swatinem/rust-cache@v2
+      with:
+        cache-bin: "false"
 
     - name: Enter Virtual Environment
       shell: bash
