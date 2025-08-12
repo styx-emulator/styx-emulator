@@ -485,6 +485,7 @@ impl SpaceManager {
         value_to_write: SizedValue,
     ) -> Result<(), VarnodeError> {
         if cpu.config().register_write_hooks {
+            trace!("writing hooked register");
             SpaceManager::write_hooked_register_inner(cpu, mmu, ev, varnode, value_to_write)
         } else {
             cpu.set_value_mmu(mmu, varnode, value_to_write)
@@ -501,6 +502,7 @@ impl SpaceManager {
     ) -> Result<(), VarnodeError> {
         let registers = cpu.pcode_generator().get_register_rev(varnode);
 
+        trace!("in write hooked register inner");
         let Some(registers) = registers else {
             // varnode is not a register
             cpu.space_manager()

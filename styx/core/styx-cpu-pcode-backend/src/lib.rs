@@ -10,7 +10,7 @@ mod register_manager;
 mod types;
 
 use crate::get_pcode::{fetch_pcode, is_branching_instruction};
-use smallvec::{smallvec, SmallVec};
+use smallvec::smallvec;
 
 use self::{
     hooks::HookManager,

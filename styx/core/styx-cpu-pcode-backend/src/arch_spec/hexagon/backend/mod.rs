@@ -11,6 +11,7 @@ use smallvec::{smallvec, SmallVec};
 use styx_cpu_type::{
     arch::{
         backends::{ArchRegister, ArchVariant},
+        hexagon::HexagonRegister,
         ArchitectureDef, RegisterValue,
     },
     Arch, ArchEndian, TargetExitReason,
@@ -37,6 +38,8 @@ use crate::{
     PcodeBackend, PcodeBackendConfiguration,
 };
 use crate::{PCodeStateChange, DEFAULT_REG_ALLOCATION};
+
+use super::pkt_semantics::PredicateAnd;
 
 mod decode_info;
 mod execution_helper;
