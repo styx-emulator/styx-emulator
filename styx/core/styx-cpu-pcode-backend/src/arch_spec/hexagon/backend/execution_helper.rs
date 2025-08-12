@@ -57,9 +57,10 @@ impl DefaultHexagonExecutionHelper {
         match dotnew::parse_dotnew(insn_data) {
             Some(referenced_dotnew_pkt) => {
                 trace!(
-                    "dotnew: this is a dotnew packet, finding register at {} - {}",
+                    "dotnew: this is a dotnew packet, finding register at {} - {} within {:?}",
                     dotnew_instructions,
-                    referenced_dotnew_pkt
+                    referenced_dotnew_pkt,
+                    dotnew_regs_written
                 );
                 let location = dotnew_instructions - referenced_dotnew_pkt;
                 let register_num = dotnew_regs_written[location as usize].unwrap();

@@ -57,6 +57,42 @@ fn test_dotnew_basic_cases(
 }
 
 #[test]
+fn test_dotnew_two_outputs() {
+    const SRC_MEMLOC: u64 = 20;
+    const DST_MEMLOC: u64 = 40;
+
+    let (mut cpu, mut mmu, mut ev) = setup_asm(
+        "{ r0 = add(r0, #0x18894031); r2 = memh(r4++#0x8); memh(r5) = r2.new }",
+        None,
+    );
+
+    cpu.write_register(HexagonRegister::R2, 0xf001u32).unwrap();
+    cpu.write_register(HexagonRegister::R4, SRC_MEMLOC as u32)
+        .unwrap();
+    cpu.write_register(HexagonRegister::R5, DST_MEMLOC as u32)
+        .unwrap();
+
+    // byte layout 0x20 0x10
+    mmu.write_u32_le_virt_data(SRC_MEMLOC, 0x90807060, &mut cpu)
+        .unwrap();
+
+    // Load
+    let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
+
+    let data = mmu.read_u32_le_virt_data(DST_MEMLOC, &mut cpu).unwrap();
+
+    let r4 = cpu.read_register::<u32>(HexagonRegister::R4).unwrap();
+    let r2 = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
+    let r0 = cpu.read_register::<u32>(HexagonRegister::R0).unwrap();
+
+    assert_eq!(data, 0x7060);
+    assert_eq!(r0, 0x18894031);
+    assert_eq!(r2, 0x7060);
+    assert_eq!(r4, 28);
+}
+
+#[test]
 fn test_store_dotnew_halfword_add() {
     // This gets reordered.
     // the r0 add is first

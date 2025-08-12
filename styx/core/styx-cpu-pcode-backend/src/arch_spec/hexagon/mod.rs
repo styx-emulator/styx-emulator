@@ -42,6 +42,8 @@ use backend::HexagonGeneratorHelper;
 use backend::HexagonPcManager;
 
 use pkt_semantics::NewReg;
+use pkt_semantics::PredicateAnd;
+use styx_cpu_type::arch::hexagon::HexagonRegister;
 use styx_pcode_translator::sla::{self, HexagonUserOps};
 
 fn parse_iclass(insn: u32) -> u32 {

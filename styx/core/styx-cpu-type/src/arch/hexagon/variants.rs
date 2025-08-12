@@ -153,6 +153,14 @@ lazy_static! {
         HexagonRegister::G30.register(),
         HexagonRegister::G31.register(),
     ];
+
+    pub static ref HEXAGON_DESTINATION_PREDICATES: [CpuRegister; 4] = [
+        HexagonRegister::DestP0.register(),
+        HexagonRegister::DestP1.register(),
+        HexagonRegister::DestP2.register(),
+        HexagonRegister::DestP3.register(),
+    ];
+
 }
 
 // TODO: macroize?
@@ -174,6 +182,7 @@ impl CpuRegisterBank for HexagonGeneralRegisters {
             .cloned()
             .collect::<Vec<_>>();
         regs.extend_from_slice(HEXAGON_SYSTEM_GUEST_REGS.as_slice());
+        regs.extend_from_slice(HEXAGON_DESTINATION_PREDICATES.as_slice());
         regs
     }
 }
@@ -198,6 +207,7 @@ impl CpuRegisterBank for HexagonGeneralRegistersWithHvx {
             .cloned()
             .collect::<Vec<_>>();
         regs.extend_from_slice(HEXAGON_SYSTEM_GUEST_REGS.as_slice());
+        regs.extend_from_slice(HEXAGON_DESTINATION_PREDICATES.as_slice());
         regs
     }
 }

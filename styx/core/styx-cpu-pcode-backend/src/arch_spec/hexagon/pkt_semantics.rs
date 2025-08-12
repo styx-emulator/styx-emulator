@@ -1,34 +1,23 @@
 // SPDX-License-Identifier: BSD-2-Clause
-// BSD 2-Clause License
-//
-// Copyright (c) 2024, Styx Emulator Project
-//
-// Redistribution and use in source and binary forms, with or without
-// modification, are permitted provided that the following conditions are met:
-//
-// 1. Redistributions of source code must retain the above copyright notice, this
-//    list of conditions and the following disclaimer.
-//
-// 2. Redistributions in binary form must reproduce the above copyright notice,
-//    this list of conditions and the following disclaimer in the documentation
-//    and/or other materials provided with the distribution.
-//
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 use log::trace;
+use styx_cpu_type::arch::{
+    backends::{ArchRegister, BasicArchRegister},
+    hexagon::HexagonRegister,
+    RegisterValue,
+};
+use styx_errors::UnknownError;
 use styx_pcode::pcode::VarnodeData;
-use styx_processor::{event_controller::EventController, memory::Mmu};
+use styx_processor::{
+    cpu::{CpuBackend, CpuBackendExt},
+    event_controller::EventController,
+    hooks::{CoreHandle, RegisterReadHook, RegisterWriteHook},
+    memory::Mmu,
+};
 
 use crate::{
     call_other::{CallOtherCallback, CallOtherHandleError},
+    memory::sized_value::SizedValue,
+    register_manager::{RegisterCallback, RegisterHandleError},
     PCodeStateChange, PcodeBackend,
 };
 
@@ -66,4 +55,87 @@ impl CallOtherCallback for NewReg {
 
         Ok(PCodeStateChange::Fallthrough)
     }
+}
+
+// For now the backing storage will be here
+#[derive(Debug, Default)]
+pub struct PredicateAnd {
+    // Number of times the predicate register was set in the packet
+    no_sets_in_pkt: usize,
+}
+
+impl PredicateAnd {
+    pub fn new() -> Self {
+        Self { no_sets_in_pkt: 0 }
+    }
+}
+
+impl RegisterReadHook for PredicateAnd {
+    // We should only ever trap this for destination predicate regs
+    // meaning that this *should* only be called at the end of a packet
+    // when flushing registers.
+    fn call(
+        &mut self,
+        proc: CoreHandle,
+        register: ArchRegister,
+        data: &mut RegisterValue,
+    ) -> Result<(), UnknownError> {
+        Ok(())
+    }
+    /*fn call(
+        &mut self,
+        register: ArchRegister,
+        cpu: &mut PcodeBackend,
+    ) -> Result<SizedValue, RegisterHandleError> {
+        // Now that we are at the end of a packet, we should clear out the packet sets
+        self.no_sets_in_pkt = 0;
+
+        Ok(SizedValue::from(
+            cpu.read_register::<u8>(register)
+                .map_err(|e| RegisterHandleError::Other(e.into()))?,
+        ))
+    }*/
+}
+
+impl RegisterWriteHook for PredicateAnd {
+    fn call(
+        &mut self,
+        proc: CoreHandle,
+        register: ArchRegister,
+        data: &RegisterValue,
+    ) -> Result<(), UnknownError> {
+        Ok(())
+    }
+    /*fn write(
+        &mut self,
+        register: ArchRegister,
+        value: SizedValue,
+        cpu: &mut PcodeBackend,
+    ) -> Result<(), RegisterHandleError> {
+        trace!("writing a predicate destination register...");
+
+        let value_unwrap = value.to_u64().unwrap() as u8;
+
+        let write_value = if self.no_sets_in_pkt > 0 {
+            trace!("Predicate was written more than once in a packet, ANDing");
+
+            let p_n = cpu
+                .read_register::<u8>(register)
+                .map_err(|e| RegisterHandleError::Other(e.into()))?;
+
+            // AND logically, but true is 0xff
+            if p_n & value_unwrap == 0xff {
+                0xff
+            } else {
+                0x0
+            }
+        } else {
+            value_unwrap
+        };
+
+        cpu.write_register(register, write_value).unwrap();
+        self.no_sets_in_pkt += 1;
+
+        Ok(())
+    }*/
 }
