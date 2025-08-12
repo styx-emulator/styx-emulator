@@ -98,6 +98,11 @@ create_basic_register_enums!(
     (P1, 8),
     (P2, 8),
     (P3, 8),
+    // Destination predicate registers, need to delineate these for predicate ANDing
+    (DestP0, 8),
+    (DestP1, 8),
+    (DestP2, 8),
+    (DestP3, 8),
     // Control registers
     (Sa0, 32),  // Alias to C0
     (Lc0, 32),  // Alias to C1
@@ -404,7 +409,7 @@ create_basic_register_enums!(
     (Q0, 128),
     (Q1, 128),
     (Q2, 128),
-    (Q3, 128)
+    (Q3, 128),
 );
 
 lazy_static::lazy_static! {

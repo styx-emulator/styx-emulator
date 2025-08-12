@@ -496,6 +496,8 @@ impl RegisterCallback for RegpairHandler {
 
         trace!("regpair write_pair: lo {} hi {}", lo, hi);
 
+        // NOTE: would this not cause a bug because write_register just calls this method
+        // infinitely and recurisvely?
         cpu.write_register(reg_lo, lo)
             .map_err(|e| RegisterHandleError::Other(e.into()))?;
         cpu.write_register(reg_hi, hi)
