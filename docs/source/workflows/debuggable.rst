@@ -107,10 +107,11 @@ Using `gdb-multiarch`, connect to the remote server at 0.0.0.0:9999.  The follow
     (gdb)
 
 
-After Connecting to Gdb
+After Connecting to GDB
 =======================
 
-After Styx connects with GDB you should see a log message stating that GDB was connected.
+After Styx connects with GDB you should see a log message stating that GDB was
+connected.
 
 .. code-block:: console
 
@@ -121,7 +122,22 @@ After Styx connects with GDB you should see a log message stating that GDB was c
     Debugger connected from 127.0.0.1:40408
 
 
-Use `monitor` to access custom Styx functionality at the GDB command line. Use this to interact with the emulator during debugging.
+Most GDB functionality works. The following functionality is proven working.
+Open an issue if it is not working as expected.
+
+- Read/write registers
+- Read/write memory
+- Breakpoints
+- Watch points
+- Watch registers
+
+  - This known to have a significant performance impact
+
+- Interrupt execution with ctrl-c
+- Stop execution in Styx hooks via ``cpu.stop()``
+
+Additionally, use `monitor` to access custom Styx functionality at the GDB command line. Use
+this to interact with the emulator during debugging.
 
 .. code-block:: console
 
