@@ -174,6 +174,45 @@ macro_rules! gdb_core_test_suite {
                 assert_eq!((breakpoint.number, address), *output.first().unwrap());
             }
 
+            // test can stop in a code hook and gdb stopped with SIGINT
+            #[test]
+            #[cfg_attr(miri, ignore)]
+            #[cfg_attr(asan, ignore)]
+            fn test_gdb_code_hook() {
+                let builder = $gdb_test_processor().add_hook(::styx_core::hooks::StyxHook::code(
+                    BP_ONE,
+                    |mut cpu: CoreHandle| {
+                        cpu.stop();
+                        Ok(())
+                    },
+                ));
+                let harness =
+                    ::styx_integration_tests::gdb_harness::GdbHarness::from_processor_builder::<
+                        GdbTestTargetDescriptionType,
+                    >(builder);
+                let registers = harness.list_registers().unwrap();
+
+                let address = BP_ONE;
+                assert_ne!(address, *registers.get(PC_REGISTER).unwrap());
+
+                // now continue into the breakpoint
+                harness.gdb_continue().unwrap();
+                // get the stop reason from gdb
+                let stop_reason = harness.wait_for_stop_reason().unwrap();
+
+                // assert that:
+                // - stop reason is breakpoint we created
+                // - current address is our breakpoint's address
+                assert!(
+                    matches!(stop_reason, ::gdbmi::status::StopReason::SignalReceived,),
+                    "Did not stop due to SignalReceived"
+                );
+                let registers = harness.list_registers().unwrap();
+                let current_pc = *registers.get(PC_REGISTER).unwrap();
+
+                assert_eq!(address, current_pc);
+            }
+
             // test can add breakpoint and run into it
             #[test]
             #[cfg_attr(miri, ignore)]
