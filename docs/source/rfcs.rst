@@ -30,7 +30,7 @@ In general the process should follow a simple state machine:
 * Review
 
   The RFC is now in review, a new merge request should be opened that
-  contains a new :ref:`ADR <adrs>` referencing the initial RFC, and populated
+  contains a new :ref:`RFC <rfcs>` referencing the initial RFC, and populated
   with the current context and overview. Contributors can add any notes,
   context and additions to the decision until a final decision is reached.
 
@@ -124,3 +124,4 @@ RFC List
 
    rfcs/1-repository-automation
    rfcs/2-mmu
+   rfcs/3-parallel-execution-backend
