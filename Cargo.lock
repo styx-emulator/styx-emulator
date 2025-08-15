@@ -5947,6 +5947,7 @@ dependencies = [
  "styx-blackfin-testdata",
  "styx-cpu-type",
  "styx-errors",
+ "styx-hexagon-testdata",
  "styx-loader",
  "styx-macros",
  "styx-memory",
@@ -6249,6 +6250,17 @@ dependencies = [
  "tonic",
  "tonic-build",
  "typhunix-macros",
+]
+
+[[package]]
+name = "styx-hexagon-testdata"
+version = "1.2.0"
+dependencies = [
+ "anyhow",
+ "heck 0.5.0",
+ "quote",
+ "styx-workspace-hack",
+ "thiserror 2.0.12",
 ]
 
 [[package]]
@@ -6817,6 +6829,7 @@ name = "styx-test-binaries"
 version = "1.2.0"
 dependencies = [
  "styx-blackfin-testdata",
+ "styx-hexagon-testdata",
  "styx-workspace-hack",
 ]
 

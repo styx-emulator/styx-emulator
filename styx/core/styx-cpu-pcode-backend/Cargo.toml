@@ -16,6 +16,7 @@ default = [
   "arch_superh",
 ]
 blackfin-binutils-tests = ["dep:styx-blackfin-testdata", "dep:styx-loader"]
+hexagon-binutils-tests = ["dep:styx-hexagon-testdata", "dep:styx-loader"]
 # This is a hack to disable the blackfin tests in the CI
 # when passing `--all-features` to cargo
 disable-blackfin-tests = []
@@ -40,6 +41,9 @@ styx-cpu-type = { path = "../styx-cpu-type" }
 styx-pcode = { path = "./styx-pcode" }
 styx-pcode-translator = { path = "./styx-pcode-translator" }
 styx-blackfin-testdata = { path = "../../../data/test-binaries/styx-blackfin-testdata", features = [
+  "binutils-tests",
+], optional = true }
+styx-hexagon-testdata = { path = "../../../data/test-binaries/styx-hexagon-testdata", features = [
   "binutils-tests",
 ], optional = true }
 styx-loader = { path = "../styx-loader", optional = true }

@@ -10,7 +10,8 @@ workspace = true
 
 [dependencies]
 styx-blackfin-testdata = { path = "./styx-blackfin-testdata" }
+styx-hexagon-testdata = { path = "./styx-hexagon-testdata" }
 styx-workspace-hack = { version = "0.1", path = "../../styx/workspace-hack" }
 
 [package.metadata.cargo-udeps.ignore]
-normal = ["styx-blackfin-testdata"]
+normal = ["styx-blackfin-testdata", "styx-hexagon-testdata"]
