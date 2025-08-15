@@ -1,0 +1,24 @@
+[package]
+name = "styx-hexagon-testdata"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+license = "GPL-2.0-or-later"
+
+[lints]
+workspace = true
+
+[features]
+binutils-tests = []
+# This is a hack to disable the hexagon tests in the CI
+# when passing `--all-features` to cargo
+disable-hexagon-tests = []
+
+[dependencies]
+styx-workspace-hack = { version = "0.1", path = "../../../styx/workspace-hack" }
+
+[build-dependencies]
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+quote = { workspace = true }
+heck = { workspace = true }

@@ -27,6 +27,7 @@ members = [
   "./data/test-binaries",
   "./data/test-binaries/arm/big_endian_generic",
   "./data/test-binaries/styx-blackfin-testdata",
+  "./data/test-binaries/styx-hexagon-testdata",
   "./styx",
   "./styx/core/",
   "./styx/core/macrolib",
