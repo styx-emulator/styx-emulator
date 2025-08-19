@@ -2,6 +2,7 @@
 name = "styx-peripheral-clients"
 edition.workspace = true
 rust-version.workspace = true
+license.workspace = true
 version.workspace = true
 
 [lints]

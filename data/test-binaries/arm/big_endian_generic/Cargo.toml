@@ -2,6 +2,7 @@
 name = "big_endian_generic"
 edition.workspace = true
 rust-version.workspace = true
+license.workspace = true
 version.workspace = true
 
 [lints]

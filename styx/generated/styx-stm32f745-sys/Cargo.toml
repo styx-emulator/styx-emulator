@@ -2,6 +2,7 @@
 name = "styx-stm32f745-sys"
 edition.workspace = true
 rust-version.workspace = true
+license.workspace = true
 version.workspace = true
 
 # need extra lints for this crate, so we can't use the workspace

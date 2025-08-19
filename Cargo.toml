@@ -111,6 +111,7 @@ resolver = "2"
 edition = "2021"
 rust-version = "1.88.0"
 version = "1.2.0"
+license = "BSD-2-Clause"
 
 [workspace.lints.rust]
 # we forbid ignoring #[must_use] as it should be, too many async things get messed up

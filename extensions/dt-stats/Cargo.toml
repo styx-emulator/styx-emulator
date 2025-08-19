@@ -3,6 +3,7 @@ name = "dt-stats"
 description = "A tool to gather statistics about collections of device trees"
 edition.workspace = true
 rust-version.workspace = true
+license.workspace = true
 version.workspace = true
 
 [dependencies]

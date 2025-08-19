@@ -192,6 +192,7 @@ mod tests {
 name = "xtask"
 edition.workspace = true
 rust-version.workspace = true
+license.workspace = true
 version.workspace = true
 
 [lints]
@@ -222,6 +223,7 @@ tempdir = { workspace = true }
 name = "xtask"
 edition.workspace = true
 rust-version.workspace = true
+license.workspace = true
 version.workspace = true
 
 [lints]
