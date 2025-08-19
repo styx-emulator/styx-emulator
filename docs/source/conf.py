@@ -8,7 +8,7 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 import os
 
-project = "styx"
+project = "Styx"
 copyright = "2025, Kudu Dynamics LLC, a Leidos Company"
 author = "Styx Emulator Contributors"
 
@@ -65,7 +65,9 @@ sphinxemoji_style = "twemoji"
 html_theme = "sphinx_immaterial"
 html_static_path = ["_static"]
 html_extra_path = ["_static"]
-html_logo = "_static/memory_FILL0_wght400_GRAD0_opsz48.png"
+html_favicon = "_static/styx-emulator-favicon.png"
+html_baseurl = "https://docs.styx-emulator.org/"
+html_title = "Styx Documentation"
 
 html_theme_options = {
     # "nav_title": "styx-emulator",
@@ -99,6 +101,7 @@ html_theme_options = {
     "icon": {
         "repo": "fontawesome/brands/github",
         "edit": "material/file-edit-outline",
+        "logo": "material/memory",
     },
     # TODO: find a way to restore this old behavior we had in `sphinx-material`
     # "nav_links": [
