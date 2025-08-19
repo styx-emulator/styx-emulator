@@ -5,7 +5,10 @@ use styx_pcode::pcode::{Opcode, SpaceName, VarnodeData};
 use styx_pcode_translator::ContextOption;
 use styx_processor::{cpu::CpuBackendExt, memory::Mmu};
 
-use super::decode_info::{DuplexInsClass, PktLoopParseBits};
+use super::{
+    decode_info::{DuplexInsClass, PktLoopParseBits},
+    OutputRegisterType,
+};
 use crate::{
     arch_spec::hexagon::{backend::PacketLocation, dotnew, pkt_semantics::DEST_REG_OFFSET},
     execute_pcode::PcodeHelpers,
@@ -51,7 +54,7 @@ impl DefaultHexagonExecutionHelper {
         &mut self,
         insn_data: u32,
         backend: &mut HexagonPcodeBackend,
-        dotnew_regs_written: &Vec<Option<u64>>,
+        dotnew_regs_written: &Vec<OutputRegisterType>,
         dotnew_instructions: u32,
     ) {
         match dotnew::parse_dotnew(insn_data) {
@@ -63,17 +66,24 @@ impl DefaultHexagonExecutionHelper {
                     dotnew_regs_written
                 );
                 let location = dotnew_instructions - referenced_dotnew_pkt;
-                let register_num = dotnew_regs_written[location as usize].unwrap();
-                trace!("dotnew: this is a dotnew packet, setting context opts");
+                if let OutputRegisterType::General(register_num) =
+                    dotnew_regs_written[location as usize]
+                {
+                    trace!("dotnew: this is a dotnew packet, setting context opts");
 
-                // Set, then reset
-                backend.update_context(
-                    PacketLocation::Now,
-                    ContextOption::HexagonDotnew(register_num as u32),
-                );
-                backend.update_context(PacketLocation::Now, ContextOption::HexagonHasnew(1));
-                backend.update_context(PacketLocation::NextInstr, ContextOption::HexagonDotnew(0));
-                backend.update_context(PacketLocation::NextInstr, ContextOption::HexagonHasnew(0));
+                    // Set, then reset
+                    backend.update_context(
+                        PacketLocation::Now,
+                        ContextOption::HexagonDotnew(register_num as u32),
+                    );
+                    backend.update_context(PacketLocation::Now, ContextOption::HexagonHasnew(1));
+                    backend
+                        .update_context(PacketLocation::NextInstr, ContextOption::HexagonDotnew(0));
+                    backend
+                        .update_context(PacketLocation::NextInstr, ContextOption::HexagonHasnew(0));
+                } else {
+                    unreachable!("dotnew reference was not a general register!")
+                }
             }
             None => {
                 trace!("dotnew: this isn't a dotnew insn")
@@ -332,7 +342,7 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
         &mut self,
         backend: &mut HexagonPcodeBackend,
         insn: Option<u32>,
-        dotnew_regs_written: &Vec<Option<u64>>,
+        dotnew_regs_written: &Vec<OutputRegisterType>,
         dotnew_instructions: u32,
     ) -> Result<(), GeneratePcodeError> {
         // A dotnew instruction will always come at the end of a packet.
@@ -432,8 +442,7 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
 
                         predicates_written_where[pred_idx] = Some(i);
 
-                        if reorder_write_predicates && looking[pred_idx] {
-                            looking[pred_idx] = false;
+                        if reorder_write_predicates && looking[pred_idx] && remains[i] {
                             remains[i] = false;
                             ordering.push(i);
 
@@ -466,15 +475,10 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
                         let reg = pcode.get_input(1);
                         trace!("register got input to callother {:?}", reg);
                         if let Some(pred_idx) = Self::match_predicate(&reg) {
-                            trace!("at a newreg with a predicate");
+                            trace!("at a newreg with a predicate, which always requires caring about reordering");
 
-                            // was the predicate not already referenced?
-                            if let None = predicates_written_where[pred_idx] {
-                                trace!("requires reordering.");
-
-                                reorder_write_predicates = true;
-                                looking[pred_idx] = true;
-                            }
+                            reorder_write_predicates = true;
+                            looking[pred_idx] = true;
                         }
                     }
                 }
