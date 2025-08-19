@@ -2,6 +2,7 @@
 name = "styx-mpc866m"
 edition.workspace = true
 rust-version.workspace = true
+license.workspace = true
 version.workspace = true
 
 [lints]

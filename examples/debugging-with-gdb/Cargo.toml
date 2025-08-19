@@ -2,6 +2,7 @@
 name = "debugging-with-gdb"
 edition.workspace = true
 rust-version.workspace = true
+license.workspace = true
 version.workspace = true
 
 [lints]

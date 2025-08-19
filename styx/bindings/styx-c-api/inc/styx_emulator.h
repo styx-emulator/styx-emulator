@@ -1267,6 +1267,11 @@ void StyxEmulationReport_free(StyxEmulationReport *out);
 uint64_t StyxEmulationReport_instructions(StyxEmulationReport this_);
 
 /**
+ * Get the total wall clock time spent in emulation, in seconds.
+ */
+double StyxEmulationReport_wall_time(StyxEmulationReport this_);
+
+/**
  * Initialize styx logging, this only has effect if you also add the StyxPlugin_StyxTracePlugin
  */
 StyxFFIErrorPtr Styx_init_logging(uint32_t level_len, CStrPtr level);

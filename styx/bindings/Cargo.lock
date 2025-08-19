@@ -5334,6 +5334,7 @@ name = "styx-peripherals"
 version = "1.2.0"
 dependencies = [
  "styx-base-clock",
+ "styx-spi",
  "styx-uart",
  "styx-workspace-hack",
 ]
@@ -5498,6 +5499,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "styx-spi"
+version = "1.2.0"
+dependencies = [
+ "as-any",
+ "async-stream",
+ "async-trait",
+ "derivative",
+ "styx-core",
+ "styx-workspace-hack",
+ "thiserror 2.0.12",
+ "tokio",
+ "tokio-stream",
+ "tonic",
+ "tracing",
+]
+
+[[package]]
 name = "styx-stm32f107-processor"
 version = "1.2.0"
 dependencies = [
@@ -5507,6 +5525,7 @@ dependencies = [
  "getset",
  "styx-core",
  "styx-nvic",
+ "styx-spi",
  "styx-stm32f107-sys",
  "styx-workspace-hack",
  "thiserror 2.0.12",

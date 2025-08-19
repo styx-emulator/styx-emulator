@@ -2,6 +2,7 @@
 name = "external-backend"
 edition.workspace = true
 rust-version.workspace = true
+license.workspace = true
 version.workspace = true
 
 [lints]

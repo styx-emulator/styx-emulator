@@ -3,6 +3,7 @@ name = "styx-util"
 description = "Provides utility functions, types and const's useful to the styx ecosystem"
 edition.workspace = true
 rust-version.workspace = true
+license.workspace = true
 version.workspace = true
 
 [lints]
