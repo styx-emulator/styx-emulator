@@ -67,6 +67,13 @@ pub enum PacketLocation {
     Now,
 }
 
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum OutputRegisterType {
+    Predicate(u64, usize),
+    General(u64),
+    None,
+}
+
 #[derive(Debug)]
 pub struct HexagonPcodeBackend {
     pub internal_backend: PcodeBackend,
@@ -394,6 +401,7 @@ impl HexagonPcodeBackend {
         let mut total_bytes_consumed = 0;
         let mut dotnew_total_insns = 0;
         let mut dotnew_regs_written = vec![];
+        let mut all_regs_written = vec![];
 
         let mut pc = self.internal_pc().unwrap() as u32;
 
@@ -511,24 +519,30 @@ impl HexagonPcodeBackend {
             };
 
             let mut regs_in_insn = vec![];
-            let mut first_general_reg = None;
+            let mut first_general_reg = OutputRegisterType::None;
 
-            for pcode in &mut pcodes {
+            for (i, pcode) in pcodes.iter().enumerate() {
                 let outvar = &pcode.output;
                 if let Some(outvar_unwrap) = outvar {
                     if outvar_unwrap.space == SpaceName::Register {
                         trace!("pcode wrote register at {}", outvar_unwrap.offset);
                         regs_in_insn.push(outvar_unwrap.clone());
 
-                        // Dotnew instructions require registers to be the postfix after R
+                        // Dotnew snstructions require registers to be the postfix after R
 
                         let dotnew_regnum = outvar_unwrap.offset - DEST_REG_OFFSET;
+                        // Permit R* registers or P* registers
                         if dotnew_regnum <= 28 * 4 {
-                            first_general_reg = Some(dotnew_regnum / 4);
+                            first_general_reg = OutputRegisterType::General(dotnew_regnum / 4);
+                        } else if dotnew_regnum >= 0x94 && dotnew_regnum <= 0x97 {
+                            first_general_reg =
+                                OutputRegisterType::Predicate(dotnew_regnum - 0x94, i + 1);
                         }
                     }
                 }
             }
+
+            all_regs_written.push(first_general_reg.clone());
 
             if !is_immext {
                 dotnew_total_insns += 1;
@@ -565,6 +579,83 @@ impl HexagonPcodeBackend {
             // TODO: remove this allocation, and turn this into an option that can be taken and replaced
             let mut ordering = smallvec![];
             execution_helper.sequence(self, &full_pcodes, &mut ordering);
+
+            // Now that sequencing is done, it is time to deal with predicate ANDing.
+            //
+            // If the current output reg is a predicate register,
+            // and this register is also present in the all_regs_written, then
+            // we are in a predicate AND situation
+            let mut predicates_found = [false, false, false, false];
+            for i in &ordering {
+                let first_general_reg = &all_regs_written[*i];
+                if let OutputRegisterType::Predicate(dotnew_regnum, ins_loc) = &first_general_reg {
+                    trace!(
+                        "all_regs_written {:?} first_general_reg {:?} predicates_found {:?}",
+                        all_regs_written,
+                        first_general_reg,
+                        predicates_found
+                    );
+                    // This dotnew value was already set.
+                    if predicates_found[*dotnew_regnum as usize] {
+                        trace!("Predicate anding situation detected at {i}!");
+                        const UNIQ_LOC: u64 = 0x20000000u64;
+                        // We must push this immediately after the instruction that outputs to the predicat,
+                        // mainly because there are *fun* instructions like p0 = cmp.eq(...); if (p0.new) ...
+                        // where the compare and jump happen in the same instruction
+
+                        // Also, this kind of assumes that the predicate register is either 0x00 or 0xff, and
+                        // nothing else.
+                        full_pcodes[*i].insert(
+                            *ins_loc,
+                            Pcode {
+                                opcode: Opcode::IntAnd,
+                                inputs: smallvec![
+                                    VarnodeData {
+                                        space: SpaceName::Register,
+                                        offset: DEST_REG_OFFSET + (*dotnew_regnum + 0x94),
+                                        size: 1,
+                                    },
+                                    VarnodeData {
+                                        space: SpaceName::Unique,
+                                        offset: UNIQ_LOC,
+                                        size: 1
+                                    }
+                                ],
+                                output: Some(VarnodeData {
+                                    space: SpaceName::Register,
+                                    offset: DEST_REG_OFFSET + (*dotnew_regnum + 0x94),
+                                    size: 1,
+                                }),
+                            },
+                        );
+
+                        // We are in a predicate anding situation, so now play with pcodes
+                        full_pcodes[*i].insert(
+                            0,
+                            Pcode {
+                                opcode: Opcode::Copy,
+                                inputs: smallvec![VarnodeData {
+                                    space: SpaceName::Register,
+                                    offset: DEST_REG_OFFSET + (*dotnew_regnum + 0x94),
+                                    size: 1
+                                }],
+                                // WARN: is there an issue here with the unique space somehow overlapping?
+                                // WARN: is this too big?
+                                output: Some(VarnodeData {
+                                    space: SpaceName::Unique,
+                                    offset: UNIQ_LOC,
+                                    size: 1,
+                                }),
+                            },
+                        );
+                    }
+                    // Predicate wasn't found, so indicate that we have found it
+                    else {
+                        trace!("marking predicate {} as found at {}", *dotnew_regnum, i);
+                        predicates_found[*dotnew_regnum as usize] = true;
+                    }
+                }
+            }
 
             self.ordering_location = 0;
             self.ordering = ordering;
@@ -615,7 +706,7 @@ pub trait HexagonExecutionHelper: derive_more::Debug + Send {
         &mut self,
         backend: &mut HexagonPcodeBackend,
         instr: Option<u32>,
-        dotnew_regs_written: &Vec<Option<u64>>,
+        dotnew_regs_written: &Vec<OutputRegisterType>,
         dotnew_instructions: u32,
     ) -> Result<(), GeneratePcodeError>;
     fn pkt_first_duplex(

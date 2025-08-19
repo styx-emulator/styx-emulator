@@ -73,6 +73,15 @@ use test_case::test_case;
     "#,
     smallvec![0, 1, 2, 3]; "four instructions, no reordering"
 )]
+#[test_case(
+    r#"
+       0:	01 42 01 f2	f2014201 { 	p1 = cmp.eq(r1,r2)
+       4:	20 62 01 fb	fb016220   	if (p1.new) r0 = add(r1,r2)
+       8:	01 45 04 f2	f2044501   	p1 = cmp.eq(r4,r5)
+       c:	03 c5 04 f3	f304c503   	r3 = add(r4,r5) }
+    "#,
+    smallvec![2, 0, 1, 3]; "three instructions, reordering sandwich"
+)]
 pub fn test_simple(objdump: &str, ordering: SmallVec<[usize; 4]>) {
     let (mut cpu, mut mmu, mut ev) = setup_objdump(objdump);
 

@@ -56,6 +56,7 @@ mod general;
 mod hwloop;
 mod immediate;
 mod packet;
+mod predicate_anding;
 mod programs;
 mod reg_postfix;
 mod regpair;
