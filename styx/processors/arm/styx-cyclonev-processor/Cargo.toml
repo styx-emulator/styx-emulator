@@ -32,6 +32,7 @@ tracing = { workspace = true }
 log = { workspace = true }
 num-derive = { workspace = true }
 num-traits = { workspace = true }
+serde = { workspace = true }
 styx-workspace-hack = { version = "0.1", path = "../../../workspace-hack" }
 
 [dev-dependencies]

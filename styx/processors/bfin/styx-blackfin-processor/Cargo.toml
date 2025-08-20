@@ -25,6 +25,7 @@ futures = { workspace = true }
 bilge = { workspace = true }
 tap = { workspace = true }
 arbitrary-int = { workspace = true }
+serde = { workspace = true }
 
 
 [dev-dependencies]

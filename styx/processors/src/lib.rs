@@ -36,6 +36,23 @@ pub mod superh {
     pub use styx_superh2a_processor as superh2a;
 }
 
+mod uconf {
+    styx_uconf::register_component!(register processor: id = ppc_4xx, component = crate::ppc::ppc4xx::PowerPC405Builder::new());
+    // todo, broke because ArchMetaVariant
+    // styx_uconf::register_component_is_config!(register processor: id = ppc_mpc8xx, config = crate::ppc::powerquicci::Mpc8xxBuilder);
+
+    styx_uconf::register_component_config!(register processor: id = arm_cyclonev, component = crate::arm::cyclonev::CycloneVBuilder);
+    styx_uconf::register_component!(register processor: id = arm_kinetis21, component = crate::arm::kinetis21::Kinetis21Builder::default());
+    styx_uconf::register_component!(register processor: id = arm_stm32f107, component = crate::arm::stm32f107::Stm32f107Builder);
+    styx_uconf::register_component!(register processor: id = arm_stm32f405, component = crate::arm::stm32f405::Stm32f405Builder {});
+
+    styx_uconf::register_component!(register processor: id = aarch64, component = crate::aarch64::aarch64::Aarch64Processor {});
+
+    styx_uconf::register_component_config!(register processor: id = bfin, component = crate::bfin::blackfin::BlackfinBuilder);
+
+    styx_uconf::register_component!(register processor: id = superh, component = crate::superh::superh2a::SuperH2aBuilder);
+}
+
 /// A processor with no peripherals or event controller, purely instruction emulation.
 pub struct RawProcessor {
     arch: Arch,

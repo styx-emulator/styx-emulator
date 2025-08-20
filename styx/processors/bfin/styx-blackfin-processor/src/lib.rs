@@ -33,6 +33,7 @@ fn allowed_bfin_variant(v: BlackfinVariants) -> bool {
     }
 }
 
+#[derive(serde::Deserialize)]
 pub struct BlackfinBuilder {
     pub variant: BlackfinVariants,
 }

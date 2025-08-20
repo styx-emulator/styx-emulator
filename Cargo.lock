@@ -5850,6 +5850,7 @@ dependencies = [
  "enum-map",
  "futures",
  "num_enum",
+ "serde",
  "styx-blackfin-sys",
  "styx-core",
  "styx-plugins",
@@ -6034,6 +6035,7 @@ dependencies = [
  "num-derive",
  "num-traits",
  "paste",
+ "serde",
  "styx-core",
  "styx-cyclone-v-hps-sys",
  "styx-gic",
@@ -6090,7 +6092,9 @@ name = "styx-debug-tools"
 version = "1.2.0"
 dependencies = [
  "async-trait",
+ "serde",
  "styx-core",
+ "styx-uconf",
  "styx-workspace-hack",
  "tokio",
  "tracing",
@@ -7794,6 +7798,7 @@ dependencies = [
  "opentelemetry-otlp",
  "opentelemetry_sdk",
  "styx-core",
+ "styx-uconf",
  "styx-workspace-hack",
  "tokio",
  "tracing",

@@ -76,10 +76,12 @@ impl ProtectionFaultHook for HaltableHook {
 ///
 /// The plugin behavior is controllable, depending on the `halt` argument,
 /// the plugin will halt the target program execution when the hook is fired
-#[derive(Debug, Default)]
+#[derive(Debug, Default, serde::Deserialize)]
 pub struct UnmappedMemoryFaultPlugin {
     halt: bool,
 }
+
+styx_uconf::register_component_config!(register plugin: id = unmapped_memory_fault, component = UnmappedMemoryFaultPlugin);
 
 impl UnmappedMemoryFaultPlugin {
     pub fn new(halt: bool) -> Self {
@@ -117,10 +119,12 @@ impl UninitPlugin for UnmappedMemoryFaultPlugin {
 ///
 /// The plugin behavior is controllable, depending on the `halt` argument,
 /// the plugin will halt the target program execution when the hook is fired
-#[derive(Debug, Default)]
+#[derive(Debug, Default, serde::Deserialize)]
 pub struct ProtectedMemoryFaultPlugin {
     halt: bool,
 }
+
+styx_uconf::register_component_config!(register plugin: id = protected_memory_fault, component = ProtectedMemoryFaultPlugin);
 
 impl ProtectedMemoryFaultPlugin {
     pub fn new(halt: bool) -> Self {
@@ -134,7 +138,7 @@ impl ProtectedMemoryFaultPlugin {
 
 impl Plugin for ProtectedMemoryFaultPlugin {
     fn name(&self) -> &str {
-        "ProtectecMemoryFault"
+        "ProtectedMemoryFault"
     }
 }
 
