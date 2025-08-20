@@ -193,6 +193,7 @@ const ADDRESS_MAP: [RegionInfo; 53] = [
     RegionInfo("SRAM 64K",        0xFFFF_0000,    64*KB,              RWX, None, None),
 ];
 
+#[derive(serde::Deserialize)]
 pub struct CycloneVBuilder {
     initial_cbar: u32,
     initial_vbar: u32,

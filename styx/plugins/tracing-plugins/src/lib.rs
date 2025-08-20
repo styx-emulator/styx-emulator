@@ -4,7 +4,7 @@
 //!
 //! Not to be confused with `styx-trace`.
 //!
-//! These plugins utilize the [`tracing`] library to log
+//! These plugins utilize the [`mod@tracing`] library to log
 //! messages for different subsystems and report metrics and
 //! interrupt execution spans to observability infrastructure
 //! in order to aid quick debugging, profiling, and insight
@@ -101,6 +101,8 @@ impl TracingLayersList {
 #[derive(Debug, Default)]
 pub struct ProcessorTracingPlugin;
 
+styx_uconf::register_component!(register plugin: id = tracing, component = ProcessorTracingPlugin);
+
 impl Plugin for ProcessorTracingPlugin {
     fn name(&self) -> &str {
         "tracing"
@@ -116,6 +118,7 @@ impl Plugin for ProcessorTracingPlugin {
         Ok(())
     }
 }
+
 impl UninitPlugin for ProcessorTracingPlugin {
     /// Adds the default tracing items to the local static layers
     fn init(
@@ -179,6 +182,8 @@ impl UninitPlugin for TokioConsolePlugin {
     }
 }
 
+styx_uconf::register_component!(register plugin: id = tokio_console, component = TokioConsolePlugin);
+
 /// Enables streaming OTLP telemetry data to an endpoint like grafana or
 /// prometheus. Controlled through environment variables `OTEL_*` as a part
 /// of the upstream opentelemetry crates, defaults to the common opentelemetry
@@ -230,6 +235,8 @@ impl UninitPlugin for OtlpStreamingPlugin {
     }
 }
 
+styx_uconf::register_component!(register plugin: id = otlp_streaming, component = OtlpStreamingPlugin);
+
 fn pc_trace_hook(proc: CoreHandle) -> Result<(), UnknownError> {
     trace!(target: "pc-trace","{{\"type\": \"pc\", \"value\": \"{:#x}\"}}", proc.cpu.pc()?);
     Ok(())
@@ -277,6 +284,8 @@ impl UninitPlugin for JsonPcTracePlugin {
         Ok(self)
     }
 }
+
+styx_uconf::register_component!(register plugin: id = json_pc_trace, component = JsonPcTracePlugin);
 
 /// Logs a json compatible message for every `memory write` event
 fn write_memory_hook(
@@ -345,6 +354,8 @@ impl UninitPlugin for JsonMemoryWritePlugin {
     }
 }
 
+styx_uconf::register_component!(register plugin: id = json_memory_write, component = JsonMemoryWritePlugin);
+
 /// Logs every single target memory read to the console in a JSON compatible message.
 ///
 /// There is a runtime cost associated with using this, buyer beware.
@@ -409,6 +420,8 @@ impl UninitPlugin for JsonMemoryReadPlugin {
     }
 }
 
+styx_uconf::register_component!(register plugin: id = json_memory_read, component = JsonMemoryReadPlugin);
+
 /// Enables console dumping of the interrupt TRACE events.
 ///
 /// The fidelity of messages will be different from event controller
@@ -440,6 +453,8 @@ impl UninitPlugin for JsonInterruptPlugin {
         Ok(self)
     }
 }
+
+styx_uconf::register_component!(register plugin: id = json_interrupt, component = JsonInterruptPlugin);
 
 /// Enables support for the [Tracy](https://github.com/wolfpld/tracy) profiler.
 ///
@@ -480,3 +495,6 @@ impl UninitPlugin for TracyProfilerPlugin {
         Ok(self)
     }
 }
+
+#[cfg(any(tracy, doc))]
+styx_uconf::register_component!(register plugin: id = tracy_profiler, component = TracyProfilerPlugin);

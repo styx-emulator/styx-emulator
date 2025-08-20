@@ -12,6 +12,7 @@ workspace = true
 
 [dependencies]
 styx-core = { workspace = true }
+styx-uconf = { path = "../../../incubation/styx-uconf" }
 
 async-trait = { workspace = true }
 console-subscriber = { workspace = true }
