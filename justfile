@@ -43,8 +43,12 @@ python-bindings:
     cd styx/bindings/styx-py-api
     maturin build
 
-license-check:
+license-check: nogpl-check
     cargo xtask license -c
+
+# checks if the no-default-features build has no gpl code
+nogpl-check:
+    ./util/etc/gpl/nogpl-check
 
 full-cargo-test: cargo-test cargo-doc-test cargo-test-bindings
 cargo-test: cargo-test-deps

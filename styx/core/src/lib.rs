@@ -39,7 +39,7 @@ pub mod prelude {
     pub use super::cpu::{
         arch::backends::*,
         arch::{u1, u20, u4, u40, u80, TryNewIntError},
-        Arch, ArchEndian, Backend, TargetExitReason,
+        Arch, ArchEndian, Backend, BackendNotSupported, TargetExitReason,
     };
     pub use super::errors::anyhow::anyhow;
     pub use super::errors::anyhow::Context;

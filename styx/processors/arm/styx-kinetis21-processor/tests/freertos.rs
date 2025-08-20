@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: BSD-2-Clause
+#![cfg(feature = "unicorn-backend")]
 use std::net::TcpStream;
 
 use styx_core::{peripheral_clients::uart::UartClient, prelude::*};

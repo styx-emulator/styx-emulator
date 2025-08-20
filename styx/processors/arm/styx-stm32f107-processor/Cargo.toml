@@ -36,8 +36,8 @@ tap = { workspace = true }
 
 
 [features]
-default = []
 tracy = ["styx-plugins/tracy"]
+unicorn-backend = ["styx-core/unicorn-backend"]
 
 [package.metadata.cargo-udeps.ignore]
 development = ["styx-plugins"]

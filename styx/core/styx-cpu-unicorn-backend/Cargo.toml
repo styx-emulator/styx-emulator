@@ -3,6 +3,7 @@ name = "styx-cpu-unicorn-backend"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
+# src code follows workspace license but unicorn dep is GPL-2.0
 version.workspace = true
 
 [dependencies]
@@ -11,7 +12,7 @@ styx-sync = { path = "../styx-sync" }
 styx-macros = { path = "../styx-macros" }
 styx-util = { path = "../styx-util" }
 styx-errors = { path = "../styx-errors" }
-styx-cpu-type = { path = "../styx-cpu-type" }
+styx-cpu-type = { path = "../styx-cpu-type", features = ["unicorn-backend"] }
 styx-processor = { path = "../styx-processor" }
 
 log = { workspace = true }

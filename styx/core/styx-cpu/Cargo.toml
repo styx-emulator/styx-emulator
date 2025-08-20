@@ -22,6 +22,10 @@ arch_m32r = ["styx-cpu-pcode-backend/arch_m32r"]
 arch_mips64 = ["styx-cpu-pcode-backend/arch_mips64"]
 arch_ppc = ["styx-cpu-pcode-backend/arch_ppc"]
 arch_superh = ["styx-cpu-pcode-backend/arch_superh"]
+unicorn-backend = [
+  "dep:styx-cpu-unicorn-backend",
+  "styx-cpu-type/unicorn-backend",
+]
 
 [lints]
 workspace = true
@@ -31,7 +35,7 @@ styx-memory = { path = "../styx-memory" }
 styx-sync = { path = "../styx-sync" }
 styx-errors = { path = "../styx-errors" }
 styx-cpu-type = { path = "../styx-cpu-type" }
-styx-cpu-unicorn-backend = { path = "../styx-cpu-unicorn-backend" }
+styx-cpu-unicorn-backend = { path = "../styx-cpu-unicorn-backend", optional = true }
 styx-cpu-pcode-backend = { path = "../styx-cpu-pcode-backend" }
 styx-workspace-hack = { version = "0.1", path = "../../workspace-hack" }
 derivative = { workspace = true }

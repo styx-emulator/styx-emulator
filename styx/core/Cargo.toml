@@ -23,6 +23,7 @@ arch_mips64 = ["styx-cpu/arch_mips64"]
 arch_ppc = ["styx-cpu/arch_ppc"]
 arch_superh = ["styx-cpu/arch_superh"]
 pyo3_bindings = ["styx-grpc/pyo3_bindings"]
+unicorn-backend = ["styx-cpu/unicorn-backend"]
 
 [lints]
 workspace = true

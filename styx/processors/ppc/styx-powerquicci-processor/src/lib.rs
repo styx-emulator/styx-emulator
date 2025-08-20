@@ -29,9 +29,10 @@
 //! |13-14| EBDF |   00  | CLKOUT is GCLK2 divided by 1, Full Speed Bus |
 //! | 15  | CLES |   0   | Big Endian |
 //! ```
+
 use styx_core::core::builder::BuildProcessorImplArgs;
 use styx_core::cpu::arch::ppc32::variants::Mpc8xxVariants;
-use styx_core::cpu::UnicornBackend;
+
 use styx_core::errors::anyhow::anyhow;
 use styx_core::memory::memory_region::MemoryRegion;
 use styx_core::memory::MemoryPermissions;
@@ -96,11 +97,13 @@ impl ProcessorImpl for Mpc8xxBuilder {
                 self.endian,
                 &args.into(),
             )),
-            Backend::Unicorn => Box::new(UnicornBackend::new_engine(
+            #[cfg(feature = "unicorn-backend")]
+            Backend::Unicorn => Box::new(styx_core::cpu::UnicornBackend::new_engine(
                 Arch::Ppc32,
                 self.meta_variant.clone(),
                 self.endian,
             )),
+            _ => return Err(BackendNotSupported(args.backend).into()),
         };
 
         let mut mmu = Mmu::default_region_store();

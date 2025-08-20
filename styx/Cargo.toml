@@ -63,6 +63,7 @@ default = [
   "arch_mips64",
   "arch_ppc",
   "arch_superh",
+  "unicorn-backend",
 ]
 arch_arm = ["styx-core/arch_arm"]
 arch_aarch64 = ["styx-core/arch_aarch64"]
@@ -74,3 +75,7 @@ arch_superh = ["styx-core/arch_superh"]
 pyo3_bindings = ["styx-core/pyo3_bindings"]
 tracy = ["styx-plugins/tracy"]
 tui = ["styx-plugins/tui"]
+unicorn-backend = [
+  "styx-core/unicorn-backend",
+  "styx-processors/unicorn-backend",
+]

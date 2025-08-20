@@ -9,6 +9,8 @@ version.workspace = true
 workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[features]
+unicorn-backend = ["styx-core/unicorn-backend"]
 
 [dependencies]
 styx-core = { workspace = true }

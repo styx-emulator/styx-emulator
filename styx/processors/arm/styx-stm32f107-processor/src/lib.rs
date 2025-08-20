@@ -10,7 +10,7 @@ use styx_core::{
     },
     cpu::{
         arch::arm::{ArmRegister, ArmVariants},
-        PcodeBackend, UnicornBackend,
+        PcodeBackend,
     },
     prelude::*,
 };
@@ -54,12 +54,14 @@ impl ProcessorImpl for Stm32f107Builder {
                 ArchEndian::LittleEndian,
                 &args.into(),
             )),
-            Backend::Unicorn => Box::new(UnicornBackend::new_engine_exception(
+            #[cfg(feature = "unicorn-backend")]
+            Backend::Unicorn => Box::new(styx_core::cpu::UnicornBackend::new_engine_exception(
                 Arch::Arm,
                 ArmVariants::ArmCortexM3,
                 ArchEndian::LittleEndian,
                 args.exception,
             )),
+            _ => return Err(BackendNotSupported(args.backend).into()),
         };
 
         let mut mmu = Mmu::default_region_store();

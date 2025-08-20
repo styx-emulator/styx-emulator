@@ -6157,7 +6157,6 @@ dependencies = [
  "styx-workspace-hack",
  "thiserror 2.0.12",
  "tonic",
- "unicorn-engine",
 ]
 
 [[package]]
@@ -6649,6 +6648,7 @@ dependencies = [
 name = "styx-processors"
 version = "1.2.0"
 dependencies = [
+ "styx-aarch64-processor",
  "styx-blackfin-processor",
  "styx-core",
  "styx-cyclonev-processor",

@@ -4,7 +4,6 @@ use crate::styx_memory::StyxMemoryError;
 use styx_cpu_type::arch::{backends::ArchRegister, Arch, RegisterValue};
 use styx_cpu_type::TargetExitReason;
 use thiserror::Error;
-use unicorn_engine::uc_error;
 
 #[derive(Error, Debug)]
 pub enum StyxCpuSnapshotError {
@@ -88,24 +87,5 @@ impl From<RegisterValue> for StyxCpuBackendError {
 impl From<StyxHookError> for StyxCpuBackendError {
     fn from(value: StyxHookError) -> Self {
         StyxCpuBackendError::HookError(value)
-    }
-}
-
-//
-// unicorn compat
-//
-
-impl From<uc_error> for StyxCpuBackendError {
-    fn from(value: uc_error) -> Self {
-        // make an into all the fun things
-        // need to go back through the api and add other checks as well
-        match value {
-            uc_error::EXCEPTION => StyxCpuBackendError::FFIFailure("Generic Exception".into()),
-            uc_error::ARG => StyxCpuBackendError::FFIFailure("Bad Arguments".into()),
-            uc_error::OK => {
-                StyxCpuBackendError::ErrorOkay("Error state from unicorn passed OK".into())
-            }
-            _ => StyxCpuBackendError::FFIFailure(format!("Unicorn Error: {value:?}")),
-        }
     }
 }

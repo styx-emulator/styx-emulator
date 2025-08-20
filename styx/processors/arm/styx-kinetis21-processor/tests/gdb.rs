@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: BSD-2-Clause
+#![cfg(feature = "unicorn-backend")]
 use styx_core::cpu::arch::arm::gdb_targets::Armv7emDescription;
 use styx_core::loader::RawLoader;
 use styx_core::prelude::*;

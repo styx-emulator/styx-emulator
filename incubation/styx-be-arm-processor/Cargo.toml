@@ -6,12 +6,13 @@ license.workspace = true
 version.workspace = true
 
 [dependencies]
-styx-emulator = { workspace = true }
+styx-emulator = { workspace = true, features = ["unicorn-backend"] }
 styx-core = { workspace = true }
-keystone-engine = { workspace = true }
 styx-workspace-hack = { version = "0.1", path = "../../styx/workspace-hack" }
 tracing = { workspace = true }
 
+[dev-dependencies]
+keystone-engine = { workspace = true }
 
 [lints]
 workspace = true

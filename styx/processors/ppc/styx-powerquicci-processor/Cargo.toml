@@ -32,9 +32,9 @@ styx-workspace-hack = { version = "0.1", path = "../../../workspace-hack" }
 # needed to render pictures in documentation until
 # https://github.com/rust-lang/rust/issues/32104 is resolved
 [features]
-default = []
 docimages = []
 tracy = ["styx-plugins/tracy"]
+unicorn-backend = ["styx-core/unicorn-backend"]
 
 [dev-dependencies]
 styx-plugins = { path = "../../../plugins" }

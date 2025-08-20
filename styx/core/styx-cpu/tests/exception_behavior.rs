@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: BSD-2-Clause
+#![cfg(feature = "unicorn-backend")]
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
 use styx_cpu::{
     arch::arm::{ArmRegister, ArmVariants},
-    Arch, ArchEndian, Backend, PcodeBackend, TargetExitReason, UnicornBackend,
+    Arch, ArchEndian, Backend, BackendNotSupported, PcodeBackend, TargetExitReason, UnicornBackend,
 };
 use styx_errors::UnknownError;
 use styx_processor::{
@@ -36,6 +37,7 @@ impl ProcessorImpl for CustomBuilder {
                 ArchEndian::LittleEndian,
                 args.exception,
             )),
+            _ => return Err(BackendNotSupported(args.backend).into()),
         };
         let mut mmu = Mmu::default_region_store();
         mmu.add_memory_region(MemoryRegion::new(0, 0x1000, MemoryPermissions::all())?)?;
