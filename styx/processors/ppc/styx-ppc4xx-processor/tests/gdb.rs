@@ -31,7 +31,7 @@ fn gdb_tests_builder() -> ProcessorBuilder<'static> {
 "#
     );
     build_raw()
-        .with_loader(ParameterizedLoader)
+        .with_loader(ParameterizedLoader::default())
         .with_input_bytes(loader_yaml.as_bytes().to_owned().into())
 }
 

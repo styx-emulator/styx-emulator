@@ -16,7 +16,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             SuperHVariants::SH2A,
             ArchEndian::BigEndian,
         ))
-        .with_loader(ParameterizedLoader)
+        .with_loader(ParameterizedLoader::default())
         .with_executor(DefaultExecutor)
         .add_plugin(ProcessorTracingPlugin)
         .add_plugin(UnmappedMemoryFaultPlugin::new(true))

@@ -52,7 +52,7 @@ in many cases:
     fn main() -> Result<(), Box<dyn std::error::Error>> {
         let proc = ProcessorBuilder::default()
             .with_backend(Backend::Pcode)
-            .with_loader(ParameterizedLoader)
+            .with_loader(ParameterizedLoader::default())
             .with_executor(Executor::default())
             .with_plugin(ProcessorTracingPlugin)
             .with_target_program(LOAD_YAML)

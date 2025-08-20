@@ -25,7 +25,7 @@ pub fn test_uart() {
         resolve_test_bin(UART_TEST_PATH)
     );
     let processor = ProcessorBuilder::default()
-        .with_loader(ParameterizedLoader)
+        .with_loader(ParameterizedLoader::default())
         .with_input_bytes(loader_yaml.as_bytes().to_owned().into())
         .with_builder(PowerPC405Builder::default());
 
