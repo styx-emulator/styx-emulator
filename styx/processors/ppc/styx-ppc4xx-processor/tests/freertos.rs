@@ -106,7 +106,7 @@ fn test_freertos() {
     );
 
     let mut processor = ProcessorBuilder::default()
-        .with_loader(ParameterizedLoader)
+        .with_loader(ParameterizedLoader::default())
         .with_builder(PowerPC405Builder::default())
         .with_input_bytes(loader_yaml.as_bytes().into())
         .build()

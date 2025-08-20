@@ -72,7 +72,7 @@ fn freertos_builder() -> ProcessorBuilder<'static> {
     );
     ProcessorBuilder::default()
         .with_builder(PowerPC405Builder::default())
-        .with_loader(ParameterizedLoader)
+        .with_loader(ParameterizedLoader::default())
         .with_input_bytes(loader_yaml.as_bytes().to_vec().into())
         .with_executor(DefaultExecutor)
         .with_ipc_port(IPCPort::any())

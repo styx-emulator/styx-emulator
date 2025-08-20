@@ -13,7 +13,7 @@
 //! See `src/styx-loader/example-input/parameterized.yaml` for an example file.
 use crate::loaders::elf::ElfLoaderConfig;
 use crate::{Loader, LoaderHints, MemoryLoaderDesc, RegisterMap};
-use log::warn;
+use log::{info, warn};
 use serde::Deserialize;
 use std::{borrow::Cow, collections::HashMap, fs, path::Path};
 use styx_cpu_type::arch::backends::ArchRegister;
@@ -25,20 +25,20 @@ use super::elf::load_elf;
 use super::raw::load_raw_with_base;
 
 /// This record structure specifies the parameters for a load of an ELF.
-#[derive(Deserialize, PartialEq, Debug)]
-struct LoadFileElf {
+#[derive(Deserialize, PartialEq, Debug, Clone)]
+pub struct LoadFileElf {
     /// Base address for the ELF.
     /// XXX: Not yet implemented.
-    base: u64,
+    pub base: u64,
     /// Path to the ELF to be loaded.
-    file: String,
+    pub file: String,
 }
 
 /// This enumeration is specifies the memory permissions for an allocated memory region.
 /// Note, we need the permissions to be deserializable, so we couldn't just use
 /// [`MemoryPermissions`] in this context.
-#[derive(Deserialize, PartialEq, Debug)]
-enum LoadMemoryPermissions {
+#[derive(Deserialize, PartialEq, Debug, Clone)]
+pub enum LoadMemoryPermissions {
     AllowAll,
     ExecuteOnly,
     ReadExecute,
@@ -63,55 +63,55 @@ impl From<LoadMemoryPermissions> for MemoryPermissions {
 
 /// This record structure specifies the parameters for a load of an raw file.  A raw file is mapped
 /// to a single memory region with the specified permissions.
-#[derive(Deserialize, PartialEq, Debug)]
-struct LoadFileRaw {
+#[derive(Deserialize, PartialEq, Debug, Clone)]
+pub struct LoadFileRaw {
     /// Base address for the mapped memory region.
-    base: u64,
+    pub base: u64,
     /// Path to the raw file to be loaded.
-    file: String,
+    pub file: String,
     /// Permissions to be applied to the memory region. If provided, a memory region is allocated.
     /// If not provided, it is expected that the memory region already exists.
-    perms: Option<LoadMemoryPermissions>,
+    pub perms: Option<LoadMemoryPermissions>,
 }
 
 /// This record structure specifies the parameters for mapping a memory region. The memory region
 /// is created with the specified permissions.
-#[derive(Deserialize, PartialEq, Debug)]
-struct LoadMemoryRegion {
+#[derive(Deserialize, PartialEq, Debug, Clone)]
+pub struct LoadMemoryRegion {
     /// Base address for the mapped memory region.
-    base: u64,
+    pub base: u64,
     /// Size of the requested region.
-    size: u64,
+    pub size: u64,
     /// Permissions to be applied to the memory region.
-    perms: LoadMemoryPermissions,
+    pub perms: LoadMemoryPermissions,
 }
 
 /// This record structure specifies the parameters initializing a register from a memory read.
-#[derive(Deserialize, PartialEq, Debug)]
-struct LoadRegisterMemoryAddress {
+#[derive(Deserialize, PartialEq, Debug, Clone)]
+pub struct LoadRegisterMemoryAddress {
     /// Target register name.
-    register: String,
+    pub register: String,
     /// Absolute address from which to load the register value.
-    address: u64,
+    pub address: u64,
 }
 
 /// This record structure specifies the parameters initializing a register with an immediate value.
-#[derive(Deserialize, PartialEq, Debug)]
-struct LoadRegisterImmediate {
+#[derive(Deserialize, PartialEq, Debug, Clone)]
+pub struct LoadRegisterImmediate {
     /// Target register name.
-    register: String,
+    pub register: String,
     /// Immediate value to load into the register.
-    value: u64,
+    pub value: u64,
 }
 
 // TODO: Make the "value" more generic than u64.
 /// This record structure specifies an architecture-specific state environment variable.
-#[derive(Deserialize, PartialEq, Debug)]
-struct LoadEnvStateVariable(String, u64);
+#[derive(Deserialize, PartialEq, Debug, Clone)]
+pub struct LoadEnvStateVariable(String, u64);
 
 /// Record types supported by the parameterized loader.
-#[derive(Deserialize, PartialEq, Debug)]
-enum LoadRecordType {
+#[derive(Deserialize, PartialEq, Debug, Clone)]
+pub enum LoadRecordType {
     EnvironmentStateVariable(LoadEnvStateVariable),
     FileElf(LoadFileElf),
     FileRaw(LoadFileRaw),
@@ -120,7 +120,7 @@ enum LoadRecordType {
     RegisterMemoryAddress(LoadRegisterMemoryAddress),
 }
 
-type LoadRecords = Vec<LoadRecordType>;
+pub type LoadRecords = Vec<LoadRecordType>;
 
 /// Warn the user of overwritten registers.
 fn warn_key_overwrite(old_map: &RegisterMap, new_map: &RegisterMap) {
@@ -131,10 +131,30 @@ fn warn_key_overwrite(old_map: &RegisterMap, new_map: &RegisterMap) {
     }
 }
 
-/// Loader for parameterized data files. These YAML files can specify files to be loaded (ELF and
-/// raw), memory regions to be mapped and register initializations.
+/// Loader for parameterized data files.
+///
+/// These YAML files can specify files to be loaded (ELF and raw), memory regions to be mapped and
+/// register initializations.
 #[derive(Debug, Default)]
-pub struct ParameterizedLoader;
+pub struct ParameterizedLoader {
+    /// Supplemental records for loading.
+    ///
+    /// These should be added to the list of records next to the "target program" yaml file.
+    ///
+    /// See [`Self::with_records()`].
+    preloaded_records: Option<LoadRecords>,
+}
+impl ParameterizedLoader {
+    /// Create the loader with supplemental records for loading.
+    ///
+    /// These should be added to the list of records next to the "target program" yaml file. This
+    /// allows for applications to programmatically add records without serializing to yaml.
+    pub fn with_records(records: LoadRecords) -> Self {
+        Self {
+            preloaded_records: Some(records),
+        }
+    }
+}
 
 impl Loader for ParameterizedLoader {
     /// Returns the name of the [`Loader`]
@@ -142,7 +162,7 @@ impl Loader for ParameterizedLoader {
     /// ```rust
     /// use styx_loader::{Loader, ParameterizedLoader};
     ///
-    /// assert_eq!("parameterized", ParameterizedLoader.name());
+    /// assert_eq!("parameterized", ParameterizedLoader::default().name());
     /// ```
     fn name(&self) -> &'static str {
         // This is only a half lie.
@@ -175,8 +195,14 @@ impl Loader for ParameterizedLoader {
         let mut reg_address_updates: Vec<(String, u64)> = Vec::new();
         let mut env_state_variables: LoaderHints = LoaderHints::new();
 
-        let records: LoadRecords =
+        let mut records: LoadRecords =
             serde_yaml::from_slice(&data[..]).with_context(|| "failed to parse loader yaml")?;
+
+        if let Some(mut preloaded_records) = self.preloaded_records.clone() {
+            records.append(&mut preloaded_records);
+        }
+
+        info!("{} records", records.len());
 
         for record in records {
             match record {

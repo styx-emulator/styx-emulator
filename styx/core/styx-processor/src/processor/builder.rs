@@ -225,9 +225,9 @@ impl<'a> ProcessorBuilder<'a> {
     /// - [`ProcessorImpl`] via [`Self::with_builder()`]
     /// - A `TargetProgram` stored as [`TargetProgramSource`] via
     ///   [`Self::with_input_bytes()`] or [`Self::with_target_program`].
-    ///   - **NOTE**: If the loader is [`ParameterizedLoader`](styx_loader::ParameterizedLoader) then things
+    ///   - **NOTE**: If the loader is [`ParameterizedLoader`](styx_loader::ParameterizedLoader::default()) then things
     ///     get a little more complicated, see the documentation for
-    ///     [`ParameterizedLoader`](styx_loader::ParameterizedLoader) for more information.
+    ///     [`ParameterizedLoader`](styx_loader::ParameterizedLoader::default()) for more information.
     ///
     /// Once this method returns you'll have a [`Processor`] ready to run code!
     ///
