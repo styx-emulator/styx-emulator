@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! end to end tests for stm32f107
-use styx_core::core::ExceptionBehavior;
 use styx_core::cpu::arch::arm::gdb_targets::ArmMProfileDescription;
 use styx_core::prelude::*;
 use styx_core::util::{logging::init_logging, resolve_test_bin};
@@ -18,9 +17,7 @@ fn build_stm32f107(target_program_path: &'static str) -> ProcessorBuilder<'stati
         .with_loader(RawLoader)
         .with_target_program(test_bin_path)
         .with_ipc_port(IPCPort::any())
-        .with_builder(styx_stm32f107_processor::Stm32f107Builder {
-            exception_behavior: ExceptionBehavior::Panic,
-        })
+        .with_builder(styx_stm32f107_processor::Stm32f107Builder)
 }
 
 /// pre-packaged builder for blink-flash

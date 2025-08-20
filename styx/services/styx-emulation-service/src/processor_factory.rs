@@ -3,7 +3,6 @@
 
 use crate::svc::ProcessorProcess;
 use crate::svc_executor::ServiceExecutor;
-use styx_core::core::ExceptionBehavior;
 use styx_core::cpu::{arch::blackfin::BlackfinVariants, arch::ppc32::Ppc32Variants, ArchEndian};
 use styx_core::errors::{StyxMachineError, UnknownError};
 use styx_core::executor::ExecutorImpl;
@@ -149,9 +148,7 @@ impl ProcessorFactory {
 
             Target::Stm32f107 => {
                 let proc = ProcessorBuilder::default()
-                    .with_builder(Stm32f107Builder {
-                        exception_behavior: ExceptionBehavior::Panic,
-                    })
+                    .with_builder(Stm32f107Builder)
                     .add_plugin(trace_plugin)
                     .with_executor(executor)
                     .with_target_program(firmware_path.to_string())

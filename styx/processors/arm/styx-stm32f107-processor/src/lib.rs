@@ -4,10 +4,7 @@
 use anyhow::Context;
 use derivative::Derivative;
 use styx_core::{
-    core::{
-        builder::{BuildProcessorImplArgs, ProcessorImpl},
-        ExceptionBehavior,
-    },
+    core::builder::{BuildProcessorImplArgs, ProcessorImpl},
     cpu::{
         arch::arm::{ArmRegister, ArmVariants},
         PcodeBackend,
@@ -33,9 +30,7 @@ mod spi;
 
 #[derive(Derivative)]
 #[derivative(Debug, Default)]
-pub struct Stm32f107Builder {
-    pub exception_behavior: ExceptionBehavior,
-}
+pub struct Stm32f107Builder;
 // base address of each SPI port memory region
 const SPI1_BASE_ADDR: u64 = 0x4001_3000;
 const SPI2_BASE_ADDR: u64 = 0x4000_3800;

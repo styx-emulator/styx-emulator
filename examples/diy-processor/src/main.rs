@@ -13,7 +13,6 @@
 //! example in the [styx_machines](crate) crate.
 use std::env;
 use styx_emulator::arch::arm::ArmRegister;
-use styx_emulator::core::core::ExceptionBehavior;
 use styx_emulator::plugins::tracing_plugins::ProcessorTracingPlugin;
 use styx_emulator::prelude::*;
 use styx_emulator::processors::arm::stm32f107::Stm32f107Builder;
@@ -63,9 +62,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Starting emulator");
 
     let mut proc = ProcessorBuilder::default()
-        .with_builder(Stm32f107Builder {
-            exception_behavior: ExceptionBehavior::Panic,
-        })
+        .with_builder(Stm32f107Builder)
         .with_target_program(get_firmware_path())
         .with_backend(Backend::Unicorn)
         // setup logging

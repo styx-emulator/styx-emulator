@@ -24,7 +24,7 @@ fn test_spi_combined() -> Result<(), UnknownError> {
         .with_backend(Backend::Pcode)
         .with_loader(ElfLoader::default())
         .with_target_program(target_program)
-        .with_builder(Stm32f107Builder::default())
+        .with_builder(Stm32f107Builder)
         .build()?;
 
     let port = proc.ipc_port();
