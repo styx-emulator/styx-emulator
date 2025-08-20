@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use std::thread::spawn;
-use styx_emulator::core::core::ExceptionBehavior;
 use styx_emulator::core::util::logging::init_logging;
 use styx_emulator::peripheral_clients::uart::UartClient;
 use styx_emulator::plugins::styx_trace::StyxTracePlugin;
@@ -29,9 +28,7 @@ fn main() {
     const SECONDARY_PORT: u16 = 12346;
 
     let mut primary = ProcessorBuilder::default()
-        .with_builder(Stm32f107Builder {
-            exception_behavior: ExceptionBehavior::Panic,
-        })
+        .with_builder(Stm32f107Builder)
         .with_backend(Backend::Unicorn)
         .with_target_program("test.bin".to_owned())
         .with_ipc_port(PRIMARY_PORT)
@@ -40,9 +37,7 @@ fn main() {
         .unwrap();
 
     let mut secondary = ProcessorBuilder::default()
-        .with_builder(Stm32f107Builder {
-            exception_behavior: ExceptionBehavior::Panic,
-        })
+        .with_builder(Stm32f107Builder)
         .with_backend(Backend::Unicorn)
         .with_target_program("int.bin".to_owned())
         .with_ipc_port(SECONDARY_PORT)

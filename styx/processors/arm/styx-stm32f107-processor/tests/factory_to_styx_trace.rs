@@ -5,7 +5,6 @@ mod behavior_harnesses;
 
 use behavior_harnesses::blink_flash_tester::run_blink_flash;
 use std::time::Duration;
-use styx_core::core::ExceptionBehavior;
 use styx_core::grpc::args::{AppDefault, Target, TracePluginArgs};
 use styx_core::prelude::*;
 use styx_core::tracebus::TraceEventType;
@@ -33,9 +32,7 @@ fn test_blink_flash() {
     init_logging();
     let exp_rng = (MIN_EVENTS, MAX_EVENTS);
     let proc = ProcessorBuilder::default()
-        .with_builder(Stm32f107Builder {
-            exception_behavior: ExceptionBehavior::Panic,
-        })
+        .with_builder(Stm32f107Builder)
         .with_backend(Backend::Unicorn)
         .with_target_program(TestBins::gpio_blink_bin())
         .add_plugin(TracePluginArgs::app_default().conv::<StyxTracePlugin>())
