@@ -6,7 +6,7 @@ use styx_core::{
         builder::{BuildProcessorImplArgs, ProcessorImpl},
         ProcessorBundle,
     },
-    cpu::{Arch, ArchEndian, PcodeBackend, UnicornBackend},
+    cpu::{Arch, ArchEndian, PcodeBackend},
     loader::LoaderHints,
     memory::Mmu,
     prelude::*,
@@ -17,6 +17,10 @@ pub mod arm {
     pub use styx_kinetis21_processor as kinetis21;
     pub use styx_stm32f107_processor as stm32f107;
     pub use styx_stm32f405_processor as stm32f405;
+}
+
+pub mod aarch64 {
+    pub use styx_aarch64_processor as aarch64;
 }
 
 pub mod ppc {
@@ -60,12 +64,14 @@ impl ProcessorImpl for RawProcessor {
                 self.endian,
                 &args.into(),
             )),
-            Backend::Unicorn => Box::new(UnicornBackend::new_engine_exception(
+            #[cfg(feature = "unicorn-backend")]
+            Backend::Unicorn => Box::new(styx_core::cpu::UnicornBackend::new_engine_exception(
                 self.arch,
                 self.arch_variant.clone(),
                 self.endian,
                 args.exception,
             )),
+            _ => return Err(BackendNotSupported(args.backend).into()),
         };
 
         let mut hints = LoaderHints::new();

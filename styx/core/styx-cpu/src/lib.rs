@@ -21,6 +21,7 @@
 #![allow(rustdoc::private_intra_doc_links)] // for the above link to `arch::backends::ArchVariant`
 
 pub use styx_cpu_pcode_backend::{PcodeBackend, PcodeBackendConfiguration};
+#[cfg(feature = "unicorn-backend")]
 pub use styx_cpu_unicorn_backend::UnicornBackend;
 
 // re-export all pub interfaces + enums

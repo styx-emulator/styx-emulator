@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! Compares the behaviour of Pcode and Unicorn backends to make sure we maintain
 //! parity between the two.
+#![cfg(feature = "unicorn-backend")]
 use std::{
     collections::{BTreeMap, HashMap},
     sync::Mutex,
@@ -13,7 +14,7 @@ use styx_cpu::{
         arm::{ArmMetaVariants, ArmRegister},
         backends::{ArchRegister, ArchVariant},
     },
-    Arch, ArchEndian, Backend, PcodeBackend, TargetExitReason, UnicornBackend,
+    Arch, ArchEndian, Backend, BackendNotSupported, PcodeBackend, TargetExitReason, UnicornBackend,
 };
 use styx_errors::UnknownError;
 use styx_processor::{
@@ -1277,6 +1278,7 @@ impl ProcessorImpl for TestProcessor {
                 self.arch_variant.clone(),
                 self.endian,
             )),
+            _ => return Err(BackendNotSupported(args.backend).into()),
         };
 
         Ok(ProcessorBundle {

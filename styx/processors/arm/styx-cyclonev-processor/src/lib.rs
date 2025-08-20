@@ -63,7 +63,7 @@ use styx_core::arch::arm::CoProcessorValue;
 use styx_core::arch_utils::arm::armv7::reset_cpsr;
 use styx_core::core::builder::{BuildProcessorImplArgs, ProcessorImpl};
 use styx_core::cpu::arch::arm::{arm_coproc_registers, ArmVariants};
-use styx_core::cpu::{PcodeBackend, UnicornBackend};
+use styx_core::cpu::PcodeBackend;
 use styx_core::memory::memory_region::MemoryRegion;
 use styx_core::prelude::*;
 use styx_gic::Gic;
@@ -261,12 +261,14 @@ impl ProcessorImpl for CycloneVBuilder {
                 ArchEndian::LittleEndian,
                 &args.into(),
             )),
-            Backend::Unicorn => Box::new(UnicornBackend::new_engine_exception(
+            #[cfg(feature = "unicorn-backend")]
+            Backend::Unicorn => Box::new(styx_core::cpu::UnicornBackend::new_engine_exception(
                 Arch::Arm,
                 ArmVariants::ArmCortexA9,
                 ArchEndian::LittleEndian,
                 args.exception,
             )),
+            _ => return Err(BackendNotSupported(args.backend).into()),
         };
 
         let mut mmu = Mmu::default_region_store();

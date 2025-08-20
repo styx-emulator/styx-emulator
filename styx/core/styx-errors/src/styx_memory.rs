@@ -2,7 +2,6 @@
 use crate::styx_hooks::StyxHookError;
 use styx_memory_type::{MemoryOperation, MemoryPermissions};
 use thiserror::Error;
-use unicorn_engine::uc_error;
 
 #[derive(Error, Debug)]
 pub enum StyxMemorySnaphotError {
@@ -76,20 +75,5 @@ impl From<StyxMemorySnaphotError> for StyxMemoryError {
 impl From<StyxHookError> for StyxMemoryError {
     fn from(value: StyxHookError) -> Self {
         StyxMemoryError::HookError(value)
-    }
-}
-
-//
-// unicorn compat
-//
-
-impl From<uc_error> for StyxMemoryError {
-    fn from(value: uc_error) -> Self {
-        // need to go back through the api and add other checks as well
-        match value {
-            uc_error::EXCEPTION => StyxMemoryError::FFIFailure("Generic Exception".into()),
-            uc_error::ARG => StyxMemoryError::FFIFailure("Bad Arguments".into()),
-            _ => StyxMemoryError::FFIFailure(format!("Unicorn Error: {value:?}")),
-        }
     }
 }

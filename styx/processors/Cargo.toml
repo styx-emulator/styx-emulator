@@ -8,9 +8,20 @@ version.workspace = true
 [lints]
 workspace = true
 
+[features]
+unicorn-backend = [
+  "styx-core/unicorn-backend",
+  "styx-stm32f107-processor/unicorn-backend",
+  "styx-stm32f405-processor/unicorn-backend",
+  "styx-kinetis21-processor/unicorn-backend",
+  "styx-cyclonev-processor/unicorn-backend",
+  "styx-powerquicci-processor/unicorn-backend",
+]
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+styx-aarch64-processor = { path = "./aarch64/styx-aarch64-processor" }
 styx-stm32f107-processor = { path = "./arm/styx-stm32f107-processor" }
 styx-stm32f405-processor = { path = "./arm/styx-stm32f405-processor" }
 styx-kinetis21-processor = { path = "./arm/styx-kinetis21-processor" }

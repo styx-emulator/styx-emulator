@@ -147,3 +147,24 @@ jobs:
       shell: bash
       run: |
         cargo clean
+
+  nogpl-check:
+    name: nogpl check
+    runs-on: self-hosted
+    steps:
+    - name: Checkout source code
+      uses: actions/checkout@v4
+    - uses: Swatinem/rust-cache@v2
+      with:
+        cache-bin: "false"
+
+    - name: nogpl check
+      shell: bash
+      run: |
+        cargo install cargo-deny@0.18.4 --locked
+        just nogpl-check
+
+    - name: clean
+      shell: bash
+      run: |
+        cargo clean

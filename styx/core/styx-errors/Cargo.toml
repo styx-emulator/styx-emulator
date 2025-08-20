@@ -20,5 +20,4 @@ anyhow = { workspace = true }
 derive_more = { workspace = true }
 goblin = { workspace = true }
 tonic = { workspace = true }
-unicorn-engine = { workspace = true }
 styx-workspace-hack = { version = "0.1", path = "../../workspace-hack" }

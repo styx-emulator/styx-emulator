@@ -15,15 +15,18 @@ test = false
 bench = false
 path = "src/bin/stub_gen.rs"
 
+[features]
+default = ["unicorn-backend"]
+unicorn-backend = ["styx-emulator/unicorn-backend"]
 
 [dependencies]
+styx-emulator = { path = "../../", package = "styx-emulator" }
+
 bitflags = "*"
 log = "*"
 paste = "*"
 pyo3 = { version = "0.25", features = ["anyhow"] }
 pyo3-stub-gen = "0.9"
-styx-emulator = { path = "../../", package = "styx-emulator" }
-
 [dev-dependencies]
 temp-dir = "0.1.16"
 folder_compare = "0.4.0"

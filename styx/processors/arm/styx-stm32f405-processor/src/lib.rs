@@ -3,7 +3,7 @@
 #![allow(non_upper_case_globals)]
 use anyhow::Context;
 use styx_core::core::builder::BuildProcessorImplArgs;
-use styx_core::cpu::{PcodeBackend, UnicornBackend};
+use styx_core::cpu::PcodeBackend;
 use styx_core::prelude::*;
 use styx_core::{
     core::builder::ProcessorImpl,
@@ -108,12 +108,14 @@ impl ProcessorImpl for Stm32f405Builder {
                 ArchEndian::LittleEndian,
                 &args.into(),
             )),
-            Backend::Unicorn => Box::new(UnicornBackend::new_engine_exception(
+            #[cfg(feature = "unicorn-backend")]
+            Backend::Unicorn => Box::new(styx_core::cpu::UnicornBackend::new_engine_exception(
                 Arch::Arm,
                 ArmVariants::ArmCortexM4,
                 ArchEndian::LittleEndian,
                 args.exception,
             )),
+            _ => return Err(BackendNotSupported(args.backend).into()),
         };
 
         let mut mmu = Mmu::default_region_store();

@@ -1,0 +1,42 @@
+#!/bin/bash
+
+# Check if a styx-emulator configuration of features is gpl or not.
+#
+# Usage: ./util/etc/gpl/nogpl-check [feature ...]
+#
+# Returns non-zero status if contains GPL code.
+#
+# cargo-deny does the work here in checking if any dependencies are GPL licensed. As always, we rely
+# on the correctness of crates' reported licenses being correct.
+#
+# Ideally, we would just run this in the styx root and be done, however `cargo metadata` (dependency
+# chart: this script -> cargo-deny -> krates -> `cargo metadata`) will always generate the package
+# list as if all features in all workspace crates are enabled. I.e. even if styx-emulator doesn't
+# have GPL code, if an example or nonpublished crate did then that would be included as a crate
+# (even if not in the final compiled binary) and fail the GPL license check.
+#
+# As a workaround, we create a new crate in a temp directory that depends on styx-emulator. This
+# ignores the workspace crates (as it should) and checks deps properly.
+#
+# This https://github.com/rust-lang/cargo/issues/7754 for more information.
+
+styx_dir=$(pwd)
+
+cd $(mktemp -d)
+cargo --quiet new gpl-test
+cd gpl-test
+# add MIT license to test crate
+# this is necessary so cargo-deny doesn't yell at us for no license
+sed -i '/^\[package\]/a license = "MIT"' Cargo.toml
+
+quoted_args=()
+for arg in "$@"; do
+    quoted_args+=("\"$arg\"")
+done
+IFS=","
+
+# "arg1","arg2","arg3"
+features=${quoted_args[*]}
+sed -i "/^\[dependencies\]/a styx-emulator = { path =\"${styx_dir}/styx\", default-features = false, features = [${features}] }" Cargo.toml
+
+cargo deny check --config "${styx_dir}/util/etc/gpl/nogpl.deny.toml" licenses

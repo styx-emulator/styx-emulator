@@ -12,8 +12,9 @@ use thiserror::Error;
 /// top of.
 #[repr(u8)]
 #[derive(Debug, Display, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Default)]
-// #[non_exhaustive] this would be nice but causes error in enum_mirror in bindings
+#[non_exhaustive]
 pub enum Backend {
+    #[cfg(feature = "unicorn-backend")]
     Unicorn,
     /// A Pcode Interpreter
     #[default]
