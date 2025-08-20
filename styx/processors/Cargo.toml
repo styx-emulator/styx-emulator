@@ -33,6 +33,7 @@ styx-superh2a-processor = { path = "./superh/styx-superh2a-processor" }
 styx-core = { workspace = true }
 styx-event-controllers = { path = "../event-controllers" }
 styx-workspace-hack = { version = "0.1", path = "../workspace-hack" }
+styx-uconf = { path = "../../incubation/styx-uconf" }
 
 thiserror = { workspace = true }
 tokio = { workspace = true }

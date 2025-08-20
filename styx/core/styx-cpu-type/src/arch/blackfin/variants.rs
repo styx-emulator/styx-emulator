@@ -29,7 +29,7 @@ impl CpuRegisterBank for BlackfinStandardRegisters {
 
 macro_rules! blackfin_arch_impl {
     ($variant_name:ident) => {
-        #[derive(Debug, Display, PartialEq, Eq, Clone)]
+        #[derive(Debug, Display, PartialEq, Eq, Clone, Copy)]
         pub struct $variant_name {}
 
         impl ArchitectureVariant for $variant_name {}

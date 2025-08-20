@@ -5,7 +5,7 @@ use styx_cpu_type::TargetExitReason;
 use tap::Conv;
 
 /// Allows users to determine the behavior of exception handling.
-#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, Default)]
+#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, Default, serde::Deserialize)]
 pub enum ExceptionBehavior {
     /// Immediately abort the host process
     Panic,

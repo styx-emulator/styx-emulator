@@ -188,6 +188,12 @@ impl<'a> ProcessorBuilder<'a> {
         self
     }
 
+    /// See [`Self::with_builder()`].
+    pub fn with_builder_box(mut self, builder: Box<dyn ProcessorImpl + 'static>) -> Self {
+        self.builder = builder;
+        self
+    }
+
     /// Specifies an [`UninitPlugin`] to add to the [`Processor`] instance.
     ///
     /// It is currently on the user to ensure any [`Plugin`](crate::plugins::Plugin) dependencies are
@@ -389,7 +395,8 @@ impl<'a> BuildingProcessor<'a> {
 }
 
 /// A wrapper type for constraints surrounding port selection.
-#[derive(Default, Clone, Copy)]
+#[derive(Default, Clone, Copy, Debug, serde::Deserialize)]
+#[serde(transparent)]
 pub struct IPCPort(Option<u16>);
 
 impl IPCPort {

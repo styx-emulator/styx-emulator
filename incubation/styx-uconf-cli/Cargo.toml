@@ -1,0 +1,16 @@
+[package]
+name = "styx-uconf-cli"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+styx-emulator = { workspace = true }
+clap = { workspace = true, features = ["derive"] }
+styx-uconf = { path = "../styx-uconf" }
+serde_yaml = { workspace = true }
+styx-workspace-hack = { version = "0.1", path = "../../styx/workspace-hack" }
