@@ -1,0 +1,18 @@
+[package]
+name = "styx-uconf"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+
+[dependencies]
+styx-core = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+serde_yaml = { workspace = true }
+inventory = { workspace = true }
+styx-workspace-hack = { version = "0.1", path = "../../styx/workspace-hack" }

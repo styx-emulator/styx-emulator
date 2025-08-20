@@ -11,7 +11,9 @@ use thiserror::Error;
 /// This Enum is used to select which backend to run emulation on
 /// top of.
 #[repr(u8)]
-#[derive(Debug, Display, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Default)]
+#[derive(
+    Debug, Display, PartialEq, Eq, PartialOrd, Ord, Hash, Clone, Copy, Default, serde::Deserialize,
+)]
 #[non_exhaustive]
 pub enum Backend {
     #[cfg(feature = "unicorn-backend")]

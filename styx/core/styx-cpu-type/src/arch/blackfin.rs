@@ -10,9 +10,11 @@ use variants::*;
 
 pub use registers::{BlackfinRegister, SpecialBlackfinRegister};
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub enum BlackfinVariants {
-    Bf504 = 0,
+#[enum_dispatch(ArchitectureVariant, ArchitectureDef)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, serde::Deserialize)]
+#[serde(from = "BlackfinVariants")]
+pub enum BlackfinMetaVariants {
+    Bf504,
     Bf504f,
     Bf506f,
     Bf512,
@@ -45,10 +47,9 @@ pub enum BlackfinVariants {
     Bf592a,
 }
 
-#[enum_dispatch(ArchitectureVariant, ArchitectureDef)]
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub enum BlackfinMetaVariants {
-    Bf504,
+#[derive(Debug, PartialEq, Eq, Clone, Copy, serde::Deserialize)]
+pub enum BlackfinVariants {
+    Bf504 = 0,
     Bf504f,
     Bf506f,
     Bf512,

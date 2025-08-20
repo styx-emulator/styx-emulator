@@ -2280,9 +2280,9 @@ dependencies = [
 
 [[package]]
 name = "inventory"
-version = "0.3.20"
+version = "0.3.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab08d7cd2c5897f2c949e5383ea7c7db03fb19130ffcfbf7eda795137ae3cb83"
+checksum = "bc61209c082fbeb19919bee74b176221b27223e27b65d781eb91af24eb1fb46e"
 dependencies = [
  "rustversion",
 ]
@@ -4800,6 +4800,7 @@ dependencies = [
  "enum-map",
  "futures",
  "num_enum",
+ "serde",
  "styx-blackfin-sys",
  "styx-core",
  "styx-workspace-hack",
@@ -4907,6 +4908,7 @@ dependencies = [
  "num-derive",
  "num-traits",
  "paste",
+ "serde",
  "strum",
  "strum_macros",
  "styx-macros",
@@ -4959,6 +4961,7 @@ dependencies = [
  "num-derive",
  "num-traits",
  "paste",
+ "serde",
  "styx-core",
  "styx-cyclone-v-hps-sys",
  "styx-gic",
@@ -4975,7 +4978,9 @@ name = "styx-debug-tools"
 version = "1.2.0"
 dependencies = [
  "async-trait",
+ "serde",
  "styx-core",
+ "styx-uconf",
  "styx-workspace-hack",
  "tokio",
  "tracing",
@@ -5461,6 +5466,7 @@ dependencies = [
  "styx-stm32f107-processor",
  "styx-stm32f405-processor",
  "styx-superh2a-processor",
+ "styx-uconf",
  "styx-workspace-hack",
  "thiserror 2.0.12",
  "tokio",
@@ -5649,6 +5655,18 @@ dependencies = [
  "tokio-stream",
  "tonic",
  "tracing",
+]
+
+[[package]]
+name = "styx-uconf"
+version = "1.2.0"
+dependencies = [
+ "inventory",
+ "serde",
+ "serde_yaml",
+ "styx-core",
+ "styx-workspace-hack",
+ "thiserror 2.0.12",
 ]
 
 [[package]]
@@ -6248,6 +6266,7 @@ dependencies = [
  "opentelemetry-otlp",
  "opentelemetry_sdk",
  "styx-core",
+ "styx-uconf",
  "styx-workspace-hack",
  "tokio",
  "tracing",

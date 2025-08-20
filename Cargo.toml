@@ -24,6 +24,8 @@ members = [
   "./incubation/styx-cow",
   "./incubation/styx-macros-args",
   "./incubation/styx-be-arm-processor",
+  "./incubation/styx-uconf",
+  "./incubation/styx-uconf-cli",
   "./data/test-binaries",
   "./data/test-binaries/arm/big_endian_generic",
   "./data/test-binaries/styx-blackfin-testdata",
@@ -257,6 +259,7 @@ codesort = "1.0.0"
 lazy-regex = "3.4.1"
 termimad = "0.33.0"
 fdt = "0.1.5"
+inventory = "0.3.21"
 
 # data structures
 bilge = "0.2.0"
