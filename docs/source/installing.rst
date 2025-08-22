@@ -101,5 +101,5 @@ Installing from Source
     $ python
     Python 3.12.8 (main, Dec  6 2024, 00:00:00) [GCC 14.2.1 20240912 (Red Hat 14.2.1-3)] on linux
     Type "help", "copyright", "credits" or "license" for more information.
-    >>> import styx_exmulator
+    >>> import styx_emulator
     >>>
