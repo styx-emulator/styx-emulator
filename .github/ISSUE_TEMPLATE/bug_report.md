@@ -2,7 +2,7 @@
 name: Bug report
 about: Found a bug? Help us fix it!
 title: ''
-labels: S-Needs-Triage
+labels: C-Bug, S-Needs-Triage
 assignees: ''
 
 ---
