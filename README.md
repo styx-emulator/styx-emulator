@@ -7,6 +7,8 @@ of rapid emulator development for debugging target systems. The Styx Emulator
 is primarily a Rust library with bindings in multiple languages and
 extensions for multiple tools.
 
+Styx is under active development and does not currently follow Semantic Versioning. Beware of breaking changes!
+
 ## Project Links
 
 - Website: <https://styx-emulator.org>
@@ -22,6 +24,7 @@ extensions for multiple tools.
 - [**Layout**](./LAYOUT.md): navigating the codebase
 - [**Conventions**](./CONVENTIONS.md): repository conventions
 - [**Documentation**](#documentation): how to locally build documentation
+- [**Code of Conduct**](./CODE_OF_CONDUCT.md): ya'll please be kind to each other
 
 This is a monorepo that contains code for the `styx-core` library, its
 pre-packaged components in the `styx-emulator` library, and the extensions built
@@ -120,3 +123,5 @@ Copyright © 2025 Kudu Dynamics, LLC, a Leidos Company.
 Licensed under the BSD-2 Clause license which may be obtained from [`./LICENSE`](./LICENSE).
 
 Part of this work was funded by DARPA; The views, opinions, and/or findings expressed are those of the author(s) and should not be interpreted as representing the official views or policies of the Department of Defense or the U.S. Government.
+
+_Distribution A: Approved for public release: Distribution is unlimited._

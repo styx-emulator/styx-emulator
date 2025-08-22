@@ -30,6 +30,15 @@ If something is more clunky than you would like, or is missing functionality tha
 would like, please let us know. Additionally if there is already an issue for it
 please comment +1 on the issue so we can track interest in things and adjust priority.
 
+#### Note for Maintainers
+
+Once a feature is selected for implementation, define sub-tasks for the feature as checkboxes
+in the issue description. Generally the feature should be scoped to be reviewable as one pull request.
+If the feature is sufficiently large and warrants multiple self-contained pull requests, capture those
+tasks as separate issues and apply an approriate Area (A-*) label to group the issues together.
+We uses [Bevy's](https://bevy.org/learn/contribute/reference/triage/) system of Triaging to label our issues.
+
+
 ## Code Contributions
 
 ### General Contribution Workflow
@@ -39,15 +48,20 @@ and the usual insanity that ensues unless the maintenance team has the bandwidth
 proper hygiene. The Styx team is currently small, so we use a `rebase` workflow.
 
 The rough steps:
-- Clone the code (eg. `git pull origin` if you already have a source code checkout)
-- Checkout your branch off of the `main` (or your target) branch
+- Check for open Issues related to your intended contribution. Submit an issue to capture your idea or claim an issue that "Needs Help"
+- If your new feature warrants a larger discussion, submit a `Request For Comment` in the [rfc repository](https://github.com/styx-emulator/rfcs)
+- If all signs point to go, fork this repository.
+- Add this repository as an upstream remote `git remote add upstream https://github.com/styx-emulator/styx-emulator.git`
+- Create a branch off of the `main` (or your target) branch
 - Commit your changes
-- Get the latest changes `git fetch origin`
-- Rebase onto the target branch (eg. `main`) `git rebase origin/main`
+- Get the latest changes `git fetch upstream`
+- Rebase onto the target branch (eg. `main`) `git rebase upstream/main`
 - See something like [this](https://www.atlassian.com/git/tutorials/rewriting-history/git-rebase) for help on the rebase process.
-- When rebase is complete, push it with `git push --force-with-lease` to update your old merge request is you already had one. else a `git push -u origin <your branch name>` to push your branch for the first time.
+- When rebase is complete, push to your forked repository with `git push origin --force-with-lease`
   - **NOTE**: all the commits will be present when merged into the `main` branch, so please rebase your commits into a somewhat tidy set of commits following the conventional commit format discussed in `CONVENTIONS.md`
+- Once you're ready for feedback, submit a pull request and request a review from a Maintainer!
 
+If you're consistently working on Styx and would like to become a Comitter/Maintainer of the Repo (_nasty forkses_), [apply](#Becoming-a-Committer/Maintainer-or-Discord-Moderator) to become part of the core Styx team! 
 
 **Some Advice**:
 
@@ -114,9 +128,9 @@ for more in-depth information.
 
 ### Development Workflow
 
-We use `rebase` commits with `ff-only`. In order for CI to run on your branch a
-maintainer needs to checkoff on it. Feel free to push code **often**, and ping a
-maintainer to kickstart a CI test when you're ready, note that you can run ci on
+We use `rebase` commits with `ff-only`. Once a Pull Request has been submitted, a
+maintainer needs to checkoff on it to run the CI. Feel free to push code **often**, and ping a
+maintainer to kickstart a CI test when you're ready, note that you can run CI on
 your local machine by building the CI container and running to top level scripts
 that CI would run (eg. `pre-commit run -a`, `just test` etc.).
 
@@ -201,58 +215,16 @@ This is roughly the mental calulus that is performed while performing code revie
 - **Communication**: Foster clear and constructive communication, providing specific examples and suggestions for improvement, if you have a hard time articulating your thoughts, that is something you are allowed to admit, and can request assistance with.
 - **Empathy**: Remember that code reviews are not just about the code but also about the people writing it. Approach reviews with empathy and a focus on mentorship and growth, please remember to explain *why* decisions are made and *how* conclusions were reached.
 
-## Becoming a Committer/Maintainer
+## Becoming a Committer/Maintainer or Discord Moderator
 
-The current repo and project infrastructure is managed by Kudu Dynamics LLC, a Leidos Company.
-So the end decision on access resides with the Kudu Dynamics development team. After a regular
-and effective history of good contributions an outsider may be nominated and approached to
-have commit access on a case by case basis. In some large projects there is a distinction
-between a committer and a maintainer, Styx is not large enough to warrant that. For the time
-being they are the one and the same.
-
-Note that Kudu Dynamics reserves the right to revoke maintainer / committer access to individuals with poor
-behavior, or become unreachable for an extended period of time (eg. individual did not provide
-ahead of time notice of vacation, and the development team was unable to contact the maintainer
-for a couple weeks). When this happens the maintainer status will be updated in the following
-section for the reasoning behind the loss of access. Access can be restored on a case by case
-basis.
+Thanks for your interest in Styx! This repo and project infrastructure is managed by Kudu Dynamics LLC, a Leidos Company.
+To apply to become a Committer/Maintainer or Discord Moderator, please email info@styx-emulator.org
 
 ### Maintainer List
 
 - @lockbox (active)
 - @yurboirene (active)
-
-## Becoming a Social Media Manager
-
-The current repo and project infrastructure is managed by Kudu Dynamics LLC, a Leidos Company.
-So the end decision on access resides with the Kudu Dynamics development team. At some point
-the team may be looking for a Social Media Manager to assist with releasing updates and maintaining
-the social media accounts.
-
-Note that Kudu Dynamics reserves the right to revoke access to individuals with poor
-behavior, or become unreachable for an extended period of time (eg. individual did not provide
-ahead of time notice of vacation, and the development team was unable to contact the individual
-for a couple weeks). When this happens the access will be updated in the following
-section for the reasoning behind the loss of access. Access can be restored on a case by case
-basis.
-
-### Social Media Manager List
-
-- @lockbox (active)
-
-## Becoming a Discord Moderator
-
-The current repo and project infrastructure is managed by Kudu Dynamics LLC, a Leidos Company.
-So the end decision on access resides with the Kudu Dynamics development team. There is an
-official discord server hosted at <https://discord.gg/styx-emulator>, individuals may be approached
-to assist in managing the discord comunity on a case by case basis.
-
-Note that Kudu Dynamics reserves the right to revoke access to individuals with poor
-behavior, or become unreachable for an extended period of time (eg. individual did not provide
-ahead of time notice of vacation, and the development team was unable to contact the individual
-for a couple weeks). When this happens the access will be updated in the following
-section for the reasoning behind the loss of access. Access can be restored on a case by case
-basis.
+- @kudu-emilie (active)
 
 ### Discord Moderator List
 
