@@ -25,7 +25,6 @@ Current xtasks
       feature-add          Add features to a DAG of crates at a time
       rust-version-update  Used for updating the version of rust in the codebase
       adr                  Generate a template file for a new ADR
-      rfc                  Generate a template file for a new RFC
       help                 Print this message or the help of the given subcommand(s)
 
     Options:
@@ -70,7 +69,7 @@ the logic needed to correctly update the Rust version as the workspace, the
 containers, and anything else all rely on it and it's easy to get out of sync.
 
 
-RFC / ADR
-^^^^^^^^^
+ADR
+^^^
 
-These generate files for creating a new RFC or ADR, and use a template to do so.
+These generate files for creating a new ADR, and use a template to do so.

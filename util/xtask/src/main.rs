@@ -13,7 +13,6 @@ mod feature_add;
 mod hakari;
 mod license;
 mod release;
-mod rfc;
 mod rust_version;
 
 use clap::Parser;
@@ -73,9 +72,6 @@ fn main() -> anyhow::Result<()> {
             }
             Commands::Adr { name } => {
                 adr::execute(name)?;
-            }
-            Commands::Rfc { name } => {
-                rfc::execute(name)?;
             }
             Commands::Release { version } => {
                 release::execute(version)?;

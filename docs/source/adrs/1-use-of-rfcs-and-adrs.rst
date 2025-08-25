@@ -47,7 +47,7 @@ As a part of the RFC acceptance or rejection a new ADR is created to reflect
 the actions taken.
 
 The structure and guidelines for ADRs will be defined in :ref:`adrs`, and
-RFCs will be defined in :ref:`rfcs`.
+RFCs will be defined in the 'RFCs repository <https://github.com/styx-emulator/rfcs>'_
 
 Selfishly, this will hopefully keep more focus of the actual decision and the
 reasoning behind it documented in the ADR, and leave any niche technical

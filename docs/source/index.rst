@@ -114,7 +114,6 @@ Documentation Contents
    developer/integration_tests
    developer/ci
    developer/releases
-   rfcs
    adrs
 
 
