@@ -78,12 +78,6 @@ pub enum Commands {
         #[arg(long)]
         version: String,
     },
-    /// Generate a template file for a new RFC
-    Rfc {
-        /// Name for the new RFC template
-        #[arg(long)]
-        name: String,
-    },
     /// Used for updating the version of rust in the codebase
     RustVersionUpdate {
         /// Target rust version to use
