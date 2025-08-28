@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! Integration test: Emulation for `STM32F107` GPIO blink_flash
-
+#![cfg(feature = "unicorn-backend")]
 mod behavior_harnesses;
 
 use behavior_harnesses::blink_flash_tester::run_blink_flash;

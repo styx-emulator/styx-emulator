@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
 #![cfg(feature = "unicorn-backend")]
+use styx_core::arch::arm::ArmVariants;
 use styx_core::cpu::arch::arm::gdb_targets::Armv7emDescription;
 use styx_core::loader::RawLoader;
 use styx_core::prelude::*;
@@ -25,5 +26,6 @@ gdb_core_test_suite!(
     0x780,
     0x1fff0050,
     Armv7emDescription,
+    ArmVariants::ArmCortexM4,
     kinetis_21_gdb_blink_flash,
 );

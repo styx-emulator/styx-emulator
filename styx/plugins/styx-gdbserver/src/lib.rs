@@ -49,12 +49,15 @@
 //!
 #![allow(rustdoc::private_intra_doc_links)]
 pub(crate) mod breakpoint_manager;
+mod builder;
 pub(crate) mod event_loop;
 pub(crate) mod mem_watch;
 pub(crate) mod monitor;
 pub(crate) mod plugin;
 pub(crate) mod target_impl;
-use styx_core::cpu::arch::GdbArchIdSupportTrait;
 
+pub use builder::*;
 pub use event_loop::GdbPluginParams;
 pub use plugin::GdbExecutor;
+
+use styx_core::cpu::arch::GdbArchIdSupportTrait;
