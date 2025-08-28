@@ -10,24 +10,24 @@ use styx_processor::{
 };
 
 use crate::{
-    call_other::{CallOtherCallback, CallOtherHandleError},
+    call_other::{CallOtherCallback, CallOtherCpu, CallOtherHandleError},
     memory::{sized_value::SizedValue, space_manager::SpaceManager},
-    PCodeStateChange, PcodeBackend,
+    PCodeStateChange,
 };
 
 /// `RAISE` instruction. Latches asynchronous interrupt.
 #[derive(Debug)]
 pub struct RaiseHandler;
-impl CallOtherCallback for RaiseHandler {
+impl<T: CpuBackend> CallOtherCallback<T> for RaiseHandler {
     fn handle(
         &mut self,
-        backend: &mut PcodeBackend,
+        backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         inputs: &[VarnodeData],
         _output: Option<&VarnodeData>,
     ) -> Result<PCodeStateChange, CallOtherHandleError> {
-        let space_manager = &backend.space_manager;
+        let space_manager = &backend.space_manager();
         let interrupt_argument = space_manager
             .read(inputs.first().unwrap())
             .unwrap()
@@ -45,22 +45,17 @@ impl CallOtherCallback for RaiseHandler {
 /// `EXCPT` instruction. Latches synchronous exception.
 #[derive(Debug)]
 pub struct ExcptHandler;
-impl CallOtherCallback for ExcptHandler {
+impl<T: CpuBackend> CallOtherCallback<T> for ExcptHandler {
     fn handle(
         &mut self,
-        backend: &mut PcodeBackend,
+        backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         inputs: &[styx_pcode::pcode::VarnodeData],
         _output: Option<&styx_pcode::pcode::VarnodeData>,
     ) -> Result<PCodeStateChange, CallOtherHandleError> {
         let parameter_varnode = inputs.first().expect("expected parameter for excpt call");
-        let interrupt_number = backend
-            .space_manager
-            .read(parameter_varnode)
-            .unwrap()
-            .to_u64()
-            .unwrap() as i32;
+        let interrupt_number = backend.read(parameter_varnode).unwrap().to_u64().unwrap() as i32;
 
         Ok(PCodeStateChange::DelayedInterrupt(interrupt_number))
     }
@@ -68,10 +63,10 @@ impl CallOtherCallback for ExcptHandler {
 
 #[derive(Debug)]
 pub struct CSyncHandler;
-impl CallOtherCallback for CSyncHandler {
+impl<T: CpuBackend> CallOtherCallback<T> for CSyncHandler {
     fn handle(
         &mut self,
-        _backend: &mut PcodeBackend,
+        _backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         _inputs: &[VarnodeData],
@@ -85,10 +80,10 @@ impl CallOtherCallback for CSyncHandler {
 
 #[derive(Debug)]
 pub struct SSyncHandler;
-impl CallOtherCallback for SSyncHandler {
+impl<T: CpuBackend> CallOtherCallback<T> for SSyncHandler {
     fn handle(
         &mut self,
-        _backend: &mut PcodeBackend,
+        _backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         _inputs: &[VarnodeData],
@@ -144,10 +139,10 @@ fn do_deposit(sign_extend: bool, background: u32, foreground: u32) -> u32 {
 
 #[derive(Debug)]
 pub struct DepositXHandler;
-impl CallOtherCallback for DepositXHandler {
+impl<T: CpuBackend> CallOtherCallback<T> for DepositXHandler {
     fn handle(
         &mut self,
-        backend: &mut PcodeBackend,
+        backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         inputs: &[VarnodeData],
@@ -157,7 +152,7 @@ impl CallOtherCallback for DepositXHandler {
         debug_assert_eq!(inputs.len(), 2);
         debug_assert!(output.is_some());
 
-        let space_manager = &mut backend.space_manager;
+        let space_manager = &mut backend.space_manager();
 
         let reg1 = space_manager
             .read(inputs.first().unwrap())
@@ -221,10 +216,10 @@ impl CallOtherCallback for DepositXHandler {
 /// - V is cleared.
 ///
 pub struct DepositHandler;
-impl CallOtherCallback for DepositHandler {
+impl<T: CpuBackend> CallOtherCallback<T> for DepositHandler {
     fn handle(
         &mut self,
-        backend: &mut PcodeBackend,
+        backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         inputs: &[VarnodeData],
@@ -234,7 +229,7 @@ impl CallOtherCallback for DepositHandler {
         debug_assert_eq!(inputs.len(), 2);
         debug_assert!(output.is_some());
 
-        let space_manager = &mut backend.space_manager;
+        let space_manager = &mut backend.space_manager();
 
         let reg1 = space_manager
             .read(inputs.first().unwrap())
@@ -298,10 +293,10 @@ impl CallOtherCallback for DepositHandler {
 /// - Left shifts the dividend by 1
 /// - Updates the LSB of the dividend according to the AQ bit
 pub struct DivSHandler;
-impl CallOtherCallback for DivSHandler {
+impl<T: CpuBackend> CallOtherCallback<T> for DivSHandler {
     fn handle(
         &mut self,
-        backend: &mut PcodeBackend,
+        backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         inputs: &[VarnodeData],
@@ -315,13 +310,13 @@ impl CallOtherCallback for DivSHandler {
         let divisor = inputs.get(1).unwrap();
 
         let mut dividend_value = backend
-            .space_manager
+            .space_manager()
             .read(dividend)
             .unwrap()
             .to_u64()
             .unwrap() as u32;
         let divisor_value = backend
-            .space_manager
+            .space_manager()
             .read(divisor)
             .unwrap()
             .to_u64()
@@ -346,7 +341,7 @@ impl CallOtherCallback for DivSHandler {
         dividend_value |= aq as u32;
         dividend_value = (dividend_value & 0x1FFFF) | ((r as u32) << 17);
         backend
-            .space_manager
+            .space_manager()
             .write(
                 dividend,
                 SizedValue::from_u64(dividend_value as u64, dividend.size as u8),
@@ -370,10 +365,10 @@ impl CallOtherCallback for DivSHandler {
 /// - Left shift the dividend 1 bit
 /// - Copy ~ASTAT.AQ into the LSB of the dividend.
 pub struct DivQHandler;
-impl CallOtherCallback for DivQHandler {
+impl<T: CpuBackend> CallOtherCallback<T> for DivQHandler {
     fn handle(
         &mut self,
-        backend: &mut PcodeBackend,
+        backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         inputs: &[VarnodeData],
@@ -393,13 +388,13 @@ impl CallOtherCallback for DivQHandler {
         let divisor = inputs.get(1).unwrap();
 
         let mut dividend_value = backend
-            .space_manager
+            .space_manager()
             .read(dividend)
             .unwrap()
             .to_u64()
             .unwrap() as u32;
         let divisor_value = backend
-            .space_manager
+            .space_manager()
             .read(divisor)
             .unwrap()
             .to_u64()
@@ -439,7 +434,7 @@ impl CallOtherCallback for DivQHandler {
 
         // write out new dividend value
         backend
-            .space_manager
+            .space_manager()
             .write(
                 dividend,
                 SizedValue::from_u64(dividend_value as u64, dividend.size as u8),
@@ -468,16 +463,16 @@ impl CallOtherCallback for DivQHandler {
 /// In either case, the resulting hexadecimal range is minimum 0x00 0000 0000 through
 /// maximum 0xFF FFFF FFFF.
 pub struct MultiplyAccumulatorHandler;
-impl CallOtherCallback for MultiplyAccumulatorHandler {
+impl<T: CpuBackend> CallOtherCallback<T> for MultiplyAccumulatorHandler {
     fn handle(
         &mut self,
-        backend: &mut PcodeBackend,
+        backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         inputs: &[styx_pcode::pcode::VarnodeData],
         output: Option<&styx_pcode::pcode::VarnodeData>,
     ) -> Result<PCodeStateChange, CallOtherHandleError> {
-        let space_manager = &backend.space_manager;
+        let space_manager = &backend.space_manager();
         let multiply_result = space_manager
             .read(inputs.first().unwrap())
             .unwrap()
@@ -486,7 +481,7 @@ impl CallOtherCallback for MultiplyAccumulatorHandler {
 
         // zero extended
         backend
-            .space_manager
+            .space_manager()
             .write(output.unwrap(), SizedValue::from_u64(multiply_result, 8))
             .unwrap();
 
@@ -516,16 +511,16 @@ impl CallOtherCallback for MultiplyAccumulatorHandler {
 /// +31.
 #[derive(Debug)]
 pub struct SignBitsHandler;
-impl CallOtherCallback for SignBitsHandler {
+impl<T: CpuBackend> CallOtherCallback<T> for SignBitsHandler {
     fn handle(
         &mut self,
-        backend: &mut PcodeBackend,
+        backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         inputs: &[styx_pcode::pcode::VarnodeData],
         output: Option<&styx_pcode::pcode::VarnodeData>,
     ) -> Result<PCodeStateChange, CallOtherHandleError> {
-        let sized_number = backend.space_manager.read(inputs.first().unwrap()).unwrap();
+        let sized_number = backend.read(inputs.first().unwrap()).unwrap();
         let number = sized_number.to_u64().unwrap();
 
         let bytes_in_number = sized_number.size();
@@ -548,7 +543,7 @@ impl CallOtherCallback for SignBitsHandler {
 
         let output = output.unwrap();
         let output_value = SizedValue::from_u64(signed_bits as u64, output.size as u8);
-        backend.space_manager.write(output, output_value).unwrap();
+        backend.space_manager().write(output, output_value).unwrap();
 
         Ok(PCodeStateChange::Fallthrough)
     }
@@ -580,10 +575,10 @@ fn calculate_sign_bits(bits_in_number: u32, number: u64) -> i8 {
 /// each of the quad or dual versions must be unique
 #[derive(Debug)]
 pub struct VecAddHandler;
-impl CallOtherCallback for VecAddHandler {
+impl<T: CpuBackend> CallOtherCallback<T> for VecAddHandler {
     fn handle(
         &mut self,
-        backend: &mut PcodeBackend,
+        backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         inputs: &[styx_pcode::pcode::VarnodeData],
@@ -591,14 +586,14 @@ impl CallOtherCallback for VecAddHandler {
     ) -> Result<PCodeStateChange, CallOtherHandleError> {
         let src1_varnode = inputs.first().unwrap();
         let src1_value = backend
-            .space_manager
+            .space_manager()
             .read(src1_varnode)
             .unwrap()
             .to_u64()
             .unwrap();
         let src2_varnode = inputs.get(1).unwrap();
         let src2_value = backend
-            .space_manager
+            .space_manager()
             .read(src2_varnode)
             .unwrap()
             .to_u64()
@@ -610,7 +605,7 @@ impl CallOtherCallback for VecAddHandler {
         let output_sized = SizedValue::from_u64(output_value, output_varnode.size as u8);
 
         backend
-            .space_manager
+            .space_manager()
             .write(output_varnode, output_sized)
             .unwrap();
 
@@ -620,10 +615,10 @@ impl CallOtherCallback for VecAddHandler {
 
 #[derive(Debug)]
 pub struct VecSubHandler;
-impl CallOtherCallback for VecSubHandler {
+impl<T: CpuBackend> CallOtherCallback<T> for VecSubHandler {
     fn handle(
         &mut self,
-        backend: &mut PcodeBackend,
+        backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         inputs: &[styx_pcode::pcode::VarnodeData],
@@ -631,14 +626,14 @@ impl CallOtherCallback for VecSubHandler {
     ) -> Result<PCodeStateChange, CallOtherHandleError> {
         let src1_varnode = inputs.first().unwrap();
         let src1_value = backend
-            .space_manager
+            .space_manager()
             .read(src1_varnode)
             .unwrap()
             .to_u64()
             .unwrap();
         let src2_varnode = inputs.get(1).unwrap();
         let src2_value = backend
-            .space_manager
+            .space_manager()
             .read(src2_varnode)
             .unwrap()
             .to_u64()
@@ -650,7 +645,7 @@ impl CallOtherCallback for VecSubHandler {
         let output_sized = SizedValue::from_u64(output_value, output_varnode.size as u8);
 
         backend
-            .space_manager
+            .space_manager()
             .write(output_varnode, output_sized)
             .unwrap();
 
@@ -661,10 +656,10 @@ impl CallOtherCallback for VecSubHandler {
 /// This should probably do some saturating or something...
 #[derive(Debug)]
 pub struct MoveHandler;
-impl CallOtherCallback for MoveHandler {
+impl<T: CpuBackend> CallOtherCallback<T> for MoveHandler {
     fn handle(
         &mut self,
-        backend: &mut PcodeBackend,
+        backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         inputs: &[styx_pcode::pcode::VarnodeData],
@@ -672,7 +667,7 @@ impl CallOtherCallback for MoveHandler {
     ) -> Result<PCodeStateChange, CallOtherHandleError> {
         let src_varnode = inputs.first().unwrap();
         let src_value = backend
-            .space_manager
+            .space_manager()
             .read(src_varnode)
             .unwrap()
             .to_u64()
@@ -684,7 +679,7 @@ impl CallOtherCallback for MoveHandler {
         let output_sized = SizedValue::from_u64(output_value, output_varnode.size as u8);
 
         backend
-            .space_manager
+            .space_manager()
             .write(output_varnode, output_sized)
             .unwrap();
 
@@ -694,10 +689,10 @@ impl CallOtherCallback for MoveHandler {
 
 #[derive(Debug)]
 pub struct MinHandler;
-impl CallOtherCallback for MinHandler {
+impl<T: CpuBackend> CallOtherCallback<T> for MinHandler {
     fn handle(
         &mut self,
-        backend: &mut PcodeBackend,
+        backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         inputs: &[styx_pcode::pcode::VarnodeData],
@@ -710,13 +705,13 @@ impl CallOtherCallback for MinHandler {
         debug_assert_eq!(src2_varnode.size, output_varnode.size);
 
         let src1_value = backend
-            .space_manager
+            .space_manager()
             .read(src1_varnode)
             .unwrap()
             .to_u64()
             .unwrap();
         let src2_value = backend
-            .space_manager
+            .space_manager()
             .read(src2_varnode)
             .unwrap()
             .to_u64()
@@ -727,7 +722,7 @@ impl CallOtherCallback for MinHandler {
         let output_sized = SizedValue::from_u64(output_value, output_varnode.size as u8);
 
         backend
-            .space_manager
+            .space_manager()
             .write(output_varnode, output_sized)
             .unwrap();
 
@@ -806,10 +801,10 @@ fn extract_generic(
 /// See [extract_generic()] for info on extraction.
 #[derive(Debug)]
 pub struct ExtractZ;
-impl CallOtherCallback for ExtractZ {
+impl<T: CpuBackend> CallOtherCallback<T> for ExtractZ {
     fn handle(
         &mut self,
-        backend: &mut PcodeBackend,
+        backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         inputs: &[VarnodeData],
@@ -820,12 +815,12 @@ impl CallOtherCallback for ExtractZ {
         let output_varnode = output.unwrap();
 
         let output_value =
-            extract_generic(&backend.space_manager, src1_varnode, src2_varnode, false) as u64;
+            extract_generic(backend.space_manager(), src1_varnode, src2_varnode, false) as u64;
 
         let output_sized = SizedValue::from_u64(output_value, output_varnode.size as u8);
 
         backend
-            .space_manager
+            .space_manager()
             .write(output_varnode, output_sized)
             .unwrap();
 
@@ -838,10 +833,10 @@ impl CallOtherCallback for ExtractZ {
 /// See [extract_generic()] for info on extraction.
 #[derive(Debug)]
 pub struct ExtractX;
-impl CallOtherCallback for ExtractX {
+impl<T: CpuBackend> CallOtherCallback<T> for ExtractX {
     fn handle(
         &mut self,
-        backend: &mut PcodeBackend,
+        backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         inputs: &[VarnodeData],
@@ -852,12 +847,12 @@ impl CallOtherCallback for ExtractX {
         let output_varnode = output.unwrap();
 
         let output_value =
-            extract_generic(&backend.space_manager, src1_varnode, src2_varnode, true) as u64;
+            extract_generic(backend.space_manager(), src1_varnode, src2_varnode, true) as u64;
 
         let output_sized = SizedValue::from_u64(output_value, output_varnode.size as u8);
 
         backend
-            .space_manager
+            .space_manager()
             .write(output_varnode, output_sized)
             .unwrap();
 
@@ -1372,8 +1367,8 @@ fn mac_mul(op1: u16, op2: u16, mul_kind: &MulKind, mul_mode: &MulMode) -> Option
 ///     0.471093513071537 (signed),
 ///     0.2355467565357685 (unsigned)
 #[allow(clippy::too_many_arguments)]
-fn debug_mac_print(
-    backend: &mut PcodeBackend,
+fn debug_mac_print<T: CpuBackend>(
+    backend: &mut dyn CallOtherCpu<T>,
     src1_value: &u64,
     src2_value: &u64,
     product: &u32,
@@ -1463,10 +1458,10 @@ fn debug_mac_print(
 /// Handler for the MAC instruction.
 #[derive(Debug)]
 pub struct MacHandler;
-impl CallOtherCallback for MacHandler {
+impl<T: CpuBackend> CallOtherCallback<T> for MacHandler {
     fn handle(
         &mut self,
-        backend: &mut PcodeBackend,
+        backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         inputs: &[VarnodeData],
@@ -1482,27 +1477,21 @@ impl CallOtherCallback for MacHandler {
         let output_varnode = output.unwrap();
 
         let src1_value = backend
-            .space_manager
+            .space_manager()
             .read(src1_varnode)
             .unwrap()
             .to_u64()
             .unwrap();
         let src2_value = backend
-            .space_manager
+            .space_manager()
             .read(src2_varnode)
             .unwrap()
             .to_u64()
             .unwrap();
 
-        let accumulator = extract_accumulator(
-            backend
-                .space_manager
-                .read(accumulator_varnode)
-                .unwrap()
-                .to_u64()
-                .unwrap() as u8,
-        )
-        .unwrap();
+        let accumulator =
+            extract_accumulator(backend.read(accumulator_varnode).unwrap().to_u64().unwrap() as u8)
+                .unwrap();
 
         let accumulator_value = match accumulator {
             Accumulator::A0 => backend.read_register::<u32>(BlackfinRegister::A0w).unwrap() as u64,
@@ -1558,10 +1547,7 @@ impl CallOtherCallback for MacHandler {
 
         let output_sized = SizedValue::from_u64(adjusted_product, output_varnode.size as u8);
 
-        backend
-            .space_manager
-            .write(output_varnode, output_sized)
-            .unwrap();
+        backend.write(output_varnode, output_sized).unwrap();
 
         Ok(PCodeStateChange::Fallthrough)
     }

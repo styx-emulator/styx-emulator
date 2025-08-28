@@ -1,3 +1,5 @@
+use crate::PcodeBackend;
+
 // SPDX-License-Identifier: BSD-2-Clause
 // BSD 2-Clause License
 //
@@ -42,8 +44,6 @@ use backend::HexagonGeneratorHelper;
 use backend::HexagonPcManager;
 
 use pkt_semantics::NewReg;
-use pkt_semantics::PredicateAnd;
-use styx_cpu_type::arch::hexagon::HexagonRegister;
 use styx_pcode_translator::sla::{self, HexagonUserOps};
 
 fn parse_iclass(insn: u32) -> u32 {
@@ -51,7 +51,7 @@ fn parse_iclass(insn: u32) -> u32 {
 }
 
 // Adapted from PPC
-pub fn build() -> ArchSpecBuilder<sla::Hexagon> {
+pub fn build() -> ArchSpecBuilder<sla::Hexagon, PcodeBackend> {
     let mut spec = ArchSpecBuilder::default();
 
     // Generator + pc manager. For now use the default pc manager

@@ -9,7 +9,7 @@ use super::{
     ArchPcManager, GeneratorHelper,
 };
 
-pub(crate) fn mips_common<Sla>(spec: &mut super::ArchSpecBuilder<Sla>) {
+pub(crate) fn mips_common<Sla>(spec: &mut super::ArchSpecBuilder<Sla, PcodeBackend>) {
     spec.set_pc_manager(StandardMipsPcManager::default().into());
 
     // "Do nothing" generator helper.

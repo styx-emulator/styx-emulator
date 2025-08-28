@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::{memory::sized_value::SizedValue, PCodeStateChange, PcodeBackend};
+use crate::{memory::sized_value::SizedValue, PCodeStateChange};
 
-use super::{CallOtherCallback, CallOtherHandleError};
+use super::{CallOtherCallback, CallOtherCpu, CallOtherHandleError};
 use log::trace;
 use std::fmt::Debug;
 use styx_pcode::pcode::VarnodeData;
-use styx_processor::{event_controller::EventController, memory::Mmu};
+use styx_processor::{cpu::CpuBackend, event_controller::EventController, memory::Mmu};
 
 #[derive(Debug)]
 pub struct TraceCallOther {
@@ -16,10 +16,10 @@ impl TraceCallOther {
         Self { debug_string }
     }
 }
-impl CallOtherCallback for TraceCallOther {
+impl<T: CpuBackend> CallOtherCallback<T> for TraceCallOther {
     fn handle(
         &mut self,
-        _cpu: &mut PcodeBackend,
+        _cpu: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         _inputs: &[VarnodeData],
@@ -32,10 +32,10 @@ impl CallOtherCallback for TraceCallOther {
 
 #[derive(Debug)]
 pub struct CountLeadingZeros;
-impl CallOtherCallback for CountLeadingZeros {
+impl<T: CpuBackend> CallOtherCallback<T> for CountLeadingZeros {
     fn handle(
         &mut self,
-        cpu: &mut PcodeBackend,
+        cpu: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         inputs: &[VarnodeData],
@@ -65,10 +65,10 @@ impl CallOtherCallback for CountLeadingZeros {
 /// instruction synchronization.
 #[derive(Debug)]
 pub struct EmptyCallback;
-impl CallOtherCallback for EmptyCallback {
+impl<T: CpuBackend> CallOtherCallback<T> for EmptyCallback {
     fn handle(
         &mut self,
-        _cpu: &mut PcodeBackend,
+        _cpu: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         _inputs: &[VarnodeData],

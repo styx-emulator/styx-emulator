@@ -42,11 +42,7 @@ fn verify_regpairs() {
 
         let regs: Vec<&str> = re.find_iter(&regpair_str).map(|m| m.as_str()).collect();
         trace!(
-            "regs for {} are {:?} and hi {} lo {}",
-            regpair_str,
-            regs,
-            reghi_str,
-            reglo_str
+            "regs for {regpair_str} are {regs:?} and hi {reghi_str} lo {reglo_str}"
         );
         // check these regs aginst the values, make sure the first value in regs
         // aligns with the hi in the map and second aligns with lo in the map

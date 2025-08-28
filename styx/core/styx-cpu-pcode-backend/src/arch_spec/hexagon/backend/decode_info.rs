@@ -21,7 +21,7 @@ pub enum PktLoopParseBits {
 
 impl From<u8> for PktLoopParseBits {
     fn from(value: u8) -> Self {
-        trace!("pkt loop parse bits from {}", value);
+        trace!("pkt loop parse bits from {value}");
         match value {
             0 => Self::Duplex,
             1 => Self::NotEndOfPacket1,

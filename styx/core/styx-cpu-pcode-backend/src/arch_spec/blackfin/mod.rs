@@ -65,7 +65,7 @@ impl ArchPcManager for StandardPcManager {
     }
 }
 
-fn blackfin_common(spec: &mut ArchSpecBuilder<sla::Blackfin>) {
+fn blackfin_common(spec: &mut ArchSpecBuilder<sla::Blackfin, PcodeBackend>) {
     spec.set_pc_manager(StandardPcManager::default().into());
 
     // Standard "do-nothing" generator helper

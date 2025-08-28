@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use half::f16;
+use styx_processor::cpu::CpuBackend;
 
-use crate::{call_other::CallOtherCallback, memory::sized_value::SizedValue, PCodeStateChange};
+use crate::{
+    call_other::{CallOtherCallback, CallOtherCpu},
+    memory::sized_value::SizedValue,
+    PCodeStateChange,
+};
 
 #[derive(Debug, Default)]
 /// Floating-point minimum number (vector):
@@ -26,10 +31,10 @@ use crate::{call_other::CallOtherCallback, memory::sized_value::SizedValue, PCod
 /// The scalar implementation is just a simple FP compare, the vector implementation
 /// iterates over each pair of floats in the vectors and does a compare for each.
 pub struct NeonFminnmCallother;
-impl CallOtherCallback for NeonFminnmCallother {
+impl<T: CpuBackend> CallOtherCallback<T> for NeonFminnmCallother {
     fn handle(
         &mut self,
-        cpu: &mut crate::PcodeBackend,
+        cpu: &mut dyn CallOtherCpu<T>,
         _mmu: &mut styx_processor::memory::Mmu,
         _ev: &mut styx_processor::event_controller::EventController,
         inputs: &[styx_pcode::pcode::VarnodeData],
@@ -142,10 +147,10 @@ impl CallOtherCallback for NeonFminnmCallother {
 ///
 /// Convert to array, do comparison, then convert back.
 pub struct NeonFcmgtCallother;
-impl CallOtherCallback for NeonFcmgtCallother {
+impl<T: CpuBackend> CallOtherCallback<T> for NeonFcmgtCallother {
     fn handle(
         &mut self,
-        cpu: &mut crate::PcodeBackend,
+        cpu: &mut dyn CallOtherCpu<T>,
         _mmu: &mut styx_processor::memory::Mmu,
         _ev: &mut styx_processor::event_controller::EventController,
         inputs: &[styx_pcode::pcode::VarnodeData],
@@ -260,10 +265,10 @@ impl CallOtherCallback for NeonFcmgtCallother {
 ///
 /// Convert to array, do comparison, then convert back.
 pub struct NeonFcmgeCallother;
-impl CallOtherCallback for NeonFcmgeCallother {
+impl<T: CpuBackend> CallOtherCallback<T> for NeonFcmgeCallother {
     fn handle(
         &mut self,
-        cpu: &mut crate::PcodeBackend,
+        cpu: &mut dyn CallOtherCpu<T>,
         _mmu: &mut styx_processor::memory::Mmu,
         _ev: &mut styx_processor::event_controller::EventController,
         inputs: &[styx_pcode::pcode::VarnodeData],
@@ -377,10 +382,10 @@ impl CallOtherCallback for NeonFcmgeCallother {
 ///
 /// Convert to array, do comparison, then convert back.
 pub struct NeonFcmltCallother;
-impl CallOtherCallback for NeonFcmltCallother {
+impl<T: CpuBackend> CallOtherCallback<T> for NeonFcmltCallother {
     fn handle(
         &mut self,
-        cpu: &mut crate::PcodeBackend,
+        cpu: &mut dyn CallOtherCpu<T>,
         _mmu: &mut styx_processor::memory::Mmu,
         _ev: &mut styx_processor::event_controller::EventController,
         inputs: &[styx_pcode::pcode::VarnodeData],
@@ -489,10 +494,10 @@ impl CallOtherCallback for NeonFcmltCallother {
 ///
 /// Convert to array, do comparison, then convert back.
 pub struct NeonFcmleCallother;
-impl CallOtherCallback for NeonFcmleCallother {
+impl<T: CpuBackend> CallOtherCallback<T> for NeonFcmleCallother {
     fn handle(
         &mut self,
-        cpu: &mut crate::PcodeBackend,
+        cpu: &mut dyn CallOtherCpu<T>,
         _mmu: &mut styx_processor::memory::Mmu,
         _ev: &mut styx_processor::event_controller::EventController,
         inputs: &[styx_pcode::pcode::VarnodeData],
@@ -603,10 +608,10 @@ impl CallOtherCallback for NeonFcmleCallother {
 ///
 /// Convert to array, do comparison, then convert back.
 pub struct NeonFcmeqCallother;
-impl CallOtherCallback for NeonFcmeqCallother {
+impl<T: CpuBackend> CallOtherCallback<T> for NeonFcmeqCallother {
     fn handle(
         &mut self,
-        cpu: &mut crate::PcodeBackend,
+        cpu: &mut dyn CallOtherCpu<T>,
         _mmu: &mut styx_processor::memory::Mmu,
         _ev: &mut styx_processor::event_controller::EventController,
         inputs: &[styx_pcode::pcode::VarnodeData],
@@ -725,10 +730,10 @@ impl CallOtherCallback for NeonFcmeqCallother {
 ///
 /// The scalar case is a simple integer comparison.
 pub struct NeonCmtestCallother;
-impl CallOtherCallback for NeonCmtestCallother {
+impl<T: CpuBackend> CallOtherCallback<T> for NeonCmtestCallother {
     fn handle(
         &mut self,
-        cpu: &mut crate::PcodeBackend,
+        cpu: &mut dyn CallOtherCpu<T>,
         _mmu: &mut styx_processor::memory::Mmu,
         _ev: &mut styx_processor::event_controller::EventController,
         inputs: &[styx_pcode::pcode::VarnodeData],
@@ -853,10 +858,10 @@ impl CallOtherCallback for NeonCmtestCallother {
 ///
 /// `reversed = [0^1, 1^1, 2^1, 3^1] = [1, 0, 3, 2]`
 pub struct NeonRev64Callother;
-impl CallOtherCallback for NeonRev64Callother {
+impl<T: CpuBackend> CallOtherCallback<T> for NeonRev64Callother {
     fn handle(
         &mut self,
-        cpu: &mut crate::PcodeBackend,
+        cpu: &mut dyn CallOtherCpu<T>,
         _mmu: &mut styx_processor::memory::Mmu,
         _ev: &mut styx_processor::event_controller::EventController,
         inputs: &[styx_pcode::pcode::VarnodeData],
@@ -939,10 +944,10 @@ impl CallOtherCallback for NeonRev64Callother {
 ///
 /// This operation is equivalent to Vd = (Vn & ~Vm) | (Vd & Vm)
 pub struct NeonBifCallother;
-impl CallOtherCallback for NeonBifCallother {
+impl<T: CpuBackend> CallOtherCallback<T> for NeonBifCallother {
     fn handle(
         &mut self,
-        cpu: &mut crate::PcodeBackend,
+        cpu: &mut dyn CallOtherCpu<T>,
         _mmu: &mut styx_processor::memory::Mmu,
         _ev: &mut styx_processor::event_controller::EventController,
         inputs: &[styx_pcode::pcode::VarnodeData],
@@ -985,10 +990,10 @@ impl CallOtherCallback for NeonBifCallother {
 ///
 /// This operation is equivalent to Vd = (Vn & Vm) | (Vd & ~Vm)
 pub struct NeonBitCallother;
-impl CallOtherCallback for NeonBitCallother {
+impl<T: CpuBackend> CallOtherCallback<T> for NeonBitCallother {
     fn handle(
         &mut self,
-        cpu: &mut crate::PcodeBackend,
+        cpu: &mut dyn CallOtherCpu<T>,
         _mmu: &mut styx_processor::memory::Mmu,
         _ev: &mut styx_processor::event_controller::EventController,
         inputs: &[styx_pcode::pcode::VarnodeData],
@@ -1030,10 +1035,10 @@ impl CallOtherCallback for NeonBitCallother {
 ///
 /// This operation is equivalent to Vd = (Vd & Vn) | (!Vd & Vm)
 pub struct NeonBslCallother;
-impl CallOtherCallback for NeonBslCallother {
+impl<T: CpuBackend> CallOtherCallback<T> for NeonBslCallother {
     fn handle(
         &mut self,
-        cpu: &mut crate::PcodeBackend,
+        cpu: &mut dyn CallOtherCpu<T>,
         _mmu: &mut styx_processor::memory::Mmu,
         _ev: &mut styx_processor::event_controller::EventController,
         inputs: &[styx_pcode::pcode::VarnodeData],
@@ -1080,10 +1085,10 @@ impl CallOtherCallback for NeonBslCallother {
 /// We only transmute between standard integer types so this will always
 /// be safe.
 pub struct NeonAddvCallother;
-impl CallOtherCallback for NeonAddvCallother {
+impl<T: CpuBackend> CallOtherCallback<T> for NeonAddvCallother {
     fn handle(
         &mut self,
-        cpu: &mut crate::PcodeBackend,
+        cpu: &mut dyn CallOtherCpu<T>,
         _mmu: &mut styx_processor::memory::Mmu,
         _ev: &mut styx_processor::event_controller::EventController,
         inputs: &[styx_pcode::pcode::VarnodeData],
@@ -1157,10 +1162,10 @@ impl CallOtherCallback for NeonAddvCallother {
 ///
 /// We convert the input into an array of bytes, and do the popcount operation on each element.
 pub struct NeonCntCallother;
-impl CallOtherCallback for NeonCntCallother {
+impl<T: CpuBackend> CallOtherCallback<T> for NeonCntCallother {
     fn handle(
         &mut self,
-        cpu: &mut crate::PcodeBackend,
+        cpu: &mut dyn CallOtherCpu<T>,
         _mmu: &mut styx_processor::memory::Mmu,
         _ev: &mut styx_processor::event_controller::EventController,
         inputs: &[styx_pcode::pcode::VarnodeData],

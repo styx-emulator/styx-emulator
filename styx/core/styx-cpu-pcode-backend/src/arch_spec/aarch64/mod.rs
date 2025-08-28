@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::{pcode_gen::GeneratePcodeError, Mmu};
+use crate::pcode_gen::GeneratePcodeError;
 use styx_pcode::pcode::VarnodeData;
 use styx_pcode_translator::ContextOption;
 

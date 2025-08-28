@@ -25,7 +25,7 @@ pub fn array_manipulation() {
     let arr2_memloc = 0x200u64;
 
     // Set up 8 element array
-    let mut arr = [6u8, 94, 33, 7, 40, 2, 13, 2];
+    let arr = [6u8, 94, 33, 7, 40, 2, 13, 2];
     trace!("array to write is {arr:?}");
 
     for (i, it) in arr.iter().enumerate() {

@@ -6,15 +6,14 @@ use super::{
     Bool, Float, Int, PCodeStateChange, PcodeType, SInt,
 };
 use crate::{
-    call_other::CallOtherManager,
+    call_other::{CallOtherCpu, CallOtherManager},
     hooks::HasHookManager,
     memory::{
         sized_value::SizedValue,
         space::SpaceError,
         space_manager::{HasSpaceManager, MmuSpaceOps, VarnodeError},
     },
-    pcode_gen::HasPcodeGenerator,
-    HasConfig, PcodeBackend, DEFAULT_REG_ALLOCATION, FALSE,
+    pcode_gen::HasPcodeGenerator, HasConfig, DEFAULT_REG_ALLOCATION, FALSE,
 };
 use log::trace;
 use smallvec::SmallVec;
@@ -69,11 +68,22 @@ impl<'a> From<PCodeStateChange> for PCodeStateChangeInner<'a> {
     }
 }
 
-pub fn execute_pcode(
+pub fn execute_pcode<
+    T: CpuBackend
+        + HasSpaceManager
+        + HasHookManager
+        + HasPcodeGenerator<InnerCpuBackend = T>
+        + HasConfig
+        + MmuSpaceOps
+        + CallOtherCpu<T>
+        + 'static,
+>(
     pcode: &Pcode,
-    cpu: &mut PcodeBackend,
+    cpu: &mut T,
     mmu: &mut Mmu,
     ev: &mut EventController,
+    call_other_manager: &mut CallOtherManager<T>,
+    isa_pc: u64,
     regs_written: &mut SmallVec<[VarnodeData; DEFAULT_REG_ALLOCATION]>,
 ) -> PCodeStateChange {
     let s = execute_pcode_inner(pcode, cpu, mmu, ev);
@@ -90,8 +100,16 @@ pub fn execute_pcode(
 
     match s {
         PCodeStateChangeInner::CallOther(call_other_op, varnode_datas, varnode_data) => {
-            let result_output =
-                CallOtherManager::trigger(cpu, mmu, ev, call_other_op, varnode_datas, varnode_data);
+            let result_output = CallOtherManager::trigger(
+                cpu,
+                call_other_manager,
+                isa_pc,
+                mmu,
+                ev,
+                call_other_op,
+                varnode_datas,
+                varnode_data,
+            );
 
             match result_output {
                 Ok(pcode_state_change) => pcode_state_change,
@@ -109,14 +127,18 @@ pub fn execute_pcode(
     }
 }
 
-fn execute_pcode_inner<'a>(
+fn execute_pcode_inner<
+    'a,
+    B: CpuBackend
+        + HasSpaceManager
+        + HasHookManager
+        + HasPcodeGenerator<InnerCpuBackend = B>
+        + HasConfig
+        + MmuSpaceOps
+        + 'static,
+>(
     pcode: &'a Pcode,
-    cpu: &mut (impl CpuBackend
-              + HasSpaceManager
-              + HasHookManager
-              + HasPcodeGenerator
-              + HasConfig
-              + MmuSpaceOps),
+    cpu: &mut B,
     mmu: &mut Mmu,
     ev: &mut EventController,
 ) -> PCodeStateChangeInner<'a> {
@@ -927,7 +949,13 @@ fn execute_pcode_inner<'a>(
 fn unary_typed_inner<
     V0: PcodeType,
     O: PcodeType,
-    C: CpuBackend + HasSpaceManager + HasHookManager + HasPcodeGenerator + HasConfig + MmuSpaceOps,
+    C: CpuBackend
+        + HasSpaceManager
+        + HasHookManager
+        + HasPcodeGenerator<InnerCpuBackend = C>
+        + HasConfig
+        + MmuSpaceOps
+        + 'static,
 >(
     pcode: &Pcode,
     cpu: &mut C,
@@ -954,7 +982,13 @@ fn unary_typed<
     'a,
     V0: PcodeType,
     O: PcodeType,
-    C: CpuBackend + HasSpaceManager + HasHookManager + HasPcodeGenerator + HasConfig + MmuSpaceOps,
+    C: CpuBackend
+        + HasSpaceManager
+        + HasHookManager
+        + HasPcodeGenerator<InnerCpuBackend = C>
+        + HasConfig
+        + MmuSpaceOps
+        + 'static,
 >(
     pcode: &'a Pcode,
     cpu: &mut C,
@@ -969,7 +1003,13 @@ fn binary_typed_inner<
     V0: PcodeType,
     V1: PcodeType,
     O: PcodeType,
-    C: CpuBackend + HasSpaceManager + HasHookManager + HasPcodeGenerator + HasConfig + MmuSpaceOps,
+    C: CpuBackend
+        + HasSpaceManager
+        + HasHookManager
+        + HasPcodeGenerator<InnerCpuBackend = C>
+        + HasConfig
+        + MmuSpaceOps
+        + 'static,
 >(
     pcode: &Pcode,
     cpu: &mut C,
@@ -1003,7 +1043,13 @@ fn binary_typed<
     V0: PcodeType,
     V1: PcodeType,
     O: PcodeType,
-    C: CpuBackend + HasSpaceManager + HasHookManager + HasPcodeGenerator + HasConfig + MmuSpaceOps,
+    C: CpuBackend
+        + HasSpaceManager
+        + HasHookManager
+        + HasPcodeGenerator<InnerCpuBackend = C>
+        + HasConfig
+        + MmuSpaceOps
+        + 'static,
 >(
     pcode: &'a Pcode,
     cpu: &mut C,
@@ -1221,7 +1267,7 @@ mod tests {
 
         cpu.space_manager.write(pcode.get_input(0), input).unwrap();
 
-        execute_pcode_inner(&pcode, &mut cpu, &mut mmu, &mut evt);
+        execute_pcode_inner::<PcodeBackend>(&pcode, &mut cpu, &mut mmu, &mut evt);
 
         let result = cpu.get_value_mmu(&mut mmu, pcode.get_output()).unwrap();
         assert_eq!(result, expected_output);
@@ -1507,7 +1553,7 @@ mod tests {
         cpu.space_manager.write(pcode.get_input(0), input1).unwrap();
         cpu.space_manager.write(pcode.get_input(1), input2).unwrap();
 
-        execute_pcode_inner(&pcode, &mut cpu, &mut mmu, &mut evt);
+        execute_pcode_inner::<PcodeBackend>(&pcode, &mut cpu, &mut mmu, &mut evt);
 
         let result = cpu.get_value_mmu(&mut mmu, pcode.get_output()).unwrap();
         assert_eq!(result, expected_output);
@@ -1556,7 +1602,7 @@ mod tests {
             output: Some(out),
         };
 
-        execute_pcode_inner(&inst, &mut cpu, &mut mmu, &mut evt);
+        execute_pcode_inner::<PcodeBackend>(&inst, &mut cpu, &mut mmu, &mut evt);
 
         let result = cpu.get_value_mmu(&mut mmu, inst.get_output()).unwrap();
         assert_eq!(result.to_u128().unwrap(), 0xBABE);
@@ -1614,7 +1660,7 @@ mod tests {
             output: Some(out),
         };
 
-        execute_pcode_inner(&inst, &mut cpu, &mut mmu, &mut evt);
+        execute_pcode_inner::<PcodeBackend>(&inst, &mut cpu, &mut mmu, &mut evt);
 
         let result = cpu.get_value_mmu(&mut mmu, inst.get_output()).unwrap();
         assert_eq!(result.to_u128().unwrap(), 0xFFFFBABEFFFF);
@@ -1642,7 +1688,7 @@ mod tests {
             inputs: vec![target].into(),
             output: None,
         };
-        let state = execute_pcode_inner(&inst, &mut cpu, &mut mmu, &mut evt);
+        let state = execute_pcode_inner::<PcodeBackend>(&inst, &mut cpu, &mut mmu, &mut evt);
         assert_eq!(state, PCodeStateChange::PCodeRelative(-2).into());
 
         let target = VarnodeData {
@@ -1655,7 +1701,7 @@ mod tests {
             inputs: vec![target].into(),
             output: None,
         };
-        let state = execute_pcode_inner(&inst, &mut cpu, &mut mmu, &mut evt);
+        let state = execute_pcode_inner::<PcodeBackend>(&inst, &mut cpu, &mut mmu, &mut evt);
         assert_eq!(
             state,
             PCodeStateChange::InstructionAbsolute(0xCAFEBABE).into()
@@ -1680,7 +1726,7 @@ mod tests {
             inputs: vec![target, condition].into(),
             output: None,
         };
-        let state = execute_pcode_inner(&inst, &mut cpu, &mut mmu, &mut evt);
+        let state = execute_pcode_inner::<PcodeBackend>(&inst, &mut cpu, &mut mmu, &mut evt);
 
         assert_eq!(state, PCodeStateChange::PCodeRelative(-2).into());
 
@@ -1699,7 +1745,7 @@ mod tests {
             inputs: vec![target, condition].into(),
             output: None,
         };
-        let state = execute_pcode_inner(&inst, &mut cpu, &mut mmu, &mut evt);
+        let state = execute_pcode_inner::<PcodeBackend>(&inst, &mut cpu, &mut mmu, &mut evt);
 
         assert_eq!(
             state,
@@ -1712,7 +1758,7 @@ mod tests {
             size: 1,
         };
         cpu.space_manager.write(&condition, f).unwrap();
-        let state = execute_pcode_inner(&inst, &mut cpu, &mut mmu, &mut evt);
+        let state = execute_pcode_inner::<PcodeBackend>(&inst, &mut cpu, &mut mmu, &mut evt);
         assert_eq!(state, PCodeStateChange::Fallthrough.into());
 
         // BRANCH_IND/CALL_IND/RETURN
@@ -1729,7 +1775,7 @@ mod tests {
             inputs: vec![target].into(),
             output: None,
         };
-        let state = execute_pcode_inner(&inst, &mut cpu, &mut mmu, &mut evt);
+        let state = execute_pcode_inner::<PcodeBackend>(&inst, &mut cpu, &mut mmu, &mut evt);
 
         assert_eq!(
             state,

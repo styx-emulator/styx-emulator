@@ -4,7 +4,6 @@ use enum_dispatch::enum_dispatch;
 use smallvec::{smallvec, SmallVec};
 use std::fmt::Debug;
 use styx_pcode_translator::ContextOption;
-use styx_processor::memory::Mmu;
 
 #[cfg(feature = "arch_aarch64")]
 use super::aarch64;

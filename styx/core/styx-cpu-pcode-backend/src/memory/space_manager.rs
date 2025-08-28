@@ -67,10 +67,18 @@ pub enum ChunkError {
 
 pub trait HasSpaceManager {
     fn space_manager(&mut self) -> &mut SpaceManager;
+    fn read(&self, varnode: &VarnodeData) -> Result<SizedValue, VarnodeError>;
+    fn write(&mut self, varnode: &VarnodeData, data: SizedValue) -> Result<(), VarnodeError>;
 }
 impl HasSpaceManager for PcodeBackend {
     fn space_manager(&mut self) -> &mut SpaceManager {
         &mut self.space_manager
+    }
+    fn read(&self, varnode: &VarnodeData) -> Result<SizedValue, VarnodeError> {
+        self.space_manager.read(varnode)
+    }
+    fn write(&mut self, varnode: &VarnodeData, data: SizedValue) -> Result<(), VarnodeError> {
+        self.space_manager.write(varnode, data)
     }
 }
 impl SpaceManager {
@@ -408,13 +416,16 @@ impl SpaceManager {
     }
 
     /// Reads a varnode from the mmu spaces and triggers RegisterRead hooks.
-    pub fn read_hooked_register(
-        cpu: &mut (impl CpuBackend
-                  + HasSpaceManager
-                  + MmuSpaceOps
-                  + HasHookManager
-                  + HasPcodeGenerator
-                  + HasConfig),
+    pub fn read_hooked_register<
+        B: CpuBackend
+            + HasSpaceManager
+            + MmuSpaceOps
+            + HasHookManager
+            + HasPcodeGenerator<InnerCpuBackend = B>
+            + HasConfig
+            + 'static,
+    >(
+        cpu: &mut B,
         mmu: &mut Mmu,
         ev: &mut EventController,
         varnode: &VarnodeData,
@@ -426,8 +437,16 @@ impl SpaceManager {
         }
     }
     /// Reads a varnode from the mmu spaces and triggers RegisterRead hooks.
-    pub fn read_hooked_register_inner(
-        cpu: &mut (impl CpuBackend + HasSpaceManager + HasHookManager + HasPcodeGenerator + HasConfig),
+    pub fn read_hooked_register_inner<
+        B: CpuBackend
+            + HasSpaceManager
+            + MmuSpaceOps
+            + HasHookManager
+            + HasPcodeGenerator<InnerCpuBackend = B>
+            + HasConfig
+            + 'static,
+    >(
+        cpu: &mut B,
         mmu: &mut Mmu,
         ev: &mut EventController,
         varnode: &VarnodeData,
@@ -472,13 +491,16 @@ impl SpaceManager {
     }
 
     /// Reads a varnode from the mmu spaces and triggers RegisterRead hooks.
-    pub fn write_hooked_register(
-        cpu: &mut (impl CpuBackend
-                  + HasSpaceManager
-                  + MmuSpaceOps
-                  + HasHookManager
-                  + HasPcodeGenerator
-                  + HasConfig),
+    pub fn write_hooked_register<
+        B: CpuBackend
+            + HasSpaceManager
+            + MmuSpaceOps
+            + HasHookManager
+            + HasPcodeGenerator<InnerCpuBackend = B>
+            + HasConfig
+            + 'static,
+    >(
+        cpu: &mut B,
         mmu: &mut Mmu,
         ev: &mut EventController,
         varnode: &VarnodeData,
@@ -493,8 +515,16 @@ impl SpaceManager {
     }
 
     /// Reads a varnode from the mmu spaces and triggers RegisterRead hooks.
-    fn write_hooked_register_inner(
-        cpu: &mut (impl CpuBackend + HasSpaceManager + HasHookManager + HasPcodeGenerator),
+    fn write_hooked_register_inner<
+        B: CpuBackend
+            + HasSpaceManager
+            + MmuSpaceOps
+            + HasHookManager
+            + HasPcodeGenerator<InnerCpuBackend = B>
+            + HasConfig
+            + 'static,
+    >(
+        cpu: &mut B,
         mmu: &mut Mmu,
         ev: &mut EventController,
         varnode: &VarnodeData,

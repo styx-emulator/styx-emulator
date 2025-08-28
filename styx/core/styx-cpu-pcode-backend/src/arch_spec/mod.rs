@@ -53,15 +53,17 @@ mod hexagon;
 mod generator_helper;
 mod pc_manager;
 
-pub use generator_helper::{GeneratorHelp, GeneratorHelper};
+pub use generator_helper::{GeneratorHelp, GeneratorHelper, CONTEXT_OPTION_LEN};
 pub(crate) use pc_manager::{ArchPcManager, PcManager};
 use styx_pcode::sla::{SlaSpec, SlaUserOps};
 use styx_pcode_translator::sla::SlaRegisters;
+use styx_processor::cpu::CpuBackend;
 
 use crate::{
     call_other::{CallOtherManager, UninitCallOtherManager},
     pcode_gen::{GhidraPcodeGenerator, MmuLoader},
     register_manager::RegisterManager,
+    PcodeBackend,
 };
 use styx_cpu_type::{
     arch::{self, backends::ArchVariant},
@@ -82,13 +84,13 @@ use styx_cpu_type::{
 ///
 /// spec.set_pc_manager(ArmThumbPcManager::default());
 /// ```
-struct ArchSpecBuilder<S> {
-    call_other_manager: UninitCallOtherManager<S>,
-    register_manager: RegisterManager,
+struct ArchSpecBuilder<S, Cpu: CpuBackend> {
+    call_other_manager: UninitCallOtherManager<S, Cpu>,
+    register_manager: RegisterManager<Cpu>,
     generator_helper: Option<GeneratorHelper>,
     pc_manager: Option<PcManager>,
 }
-impl<S> Default for ArchSpecBuilder<S> {
+impl<S, Cpu: CpuBackend> Default for ArchSpecBuilder<S, Cpu> {
     fn default() -> Self {
         Self {
             call_other_manager: Default::default(),
@@ -99,7 +101,7 @@ impl<S> Default for ArchSpecBuilder<S> {
     }
 }
 
-impl<S> ArchSpecBuilder<S> {
+impl<S, Cpu: CpuBackend> ArchSpecBuilder<S, Cpu> {
     /// Set the [GeneratorHelper] implementation, must be done before returning final spec.
     fn set_generator(&mut self, generator: GeneratorHelper) {
         assert!(self.generator_helper.is_none(), "generator already set");
@@ -113,8 +115,8 @@ impl<S> ArchSpecBuilder<S> {
     }
 }
 
-impl<S: SlaSpec + SlaUserOps + SlaRegisters> ArchSpecBuilder<S> {
-    fn build(self, arch: &ArchVariant) -> ArchSpec {
+impl<Cpu: CpuBackend + 'static, S: SlaSpec + SlaUserOps + SlaRegisters> ArchSpecBuilder<S, Cpu> {
+    fn build(self, arch: &ArchVariant) -> ArchSpec<Cpu> {
         let loader = MmuLoader::new();
         let generator_helper = self.generator_helper.expect("generator was not set");
         let pcode_generator = GhidraPcodeGenerator::new::<S>(arch, generator_helper, loader)
@@ -131,7 +133,7 @@ impl<S: SlaSpec + SlaUserOps + SlaRegisters> ArchSpecBuilder<S> {
 }
 
 /// Create an architecture spec from a requested architecture.
-pub fn build_arch_spec(arch: &ArchVariant, endian: ArchEndian) -> ArchSpec {
+pub fn build_arch_spec(arch: &ArchVariant, endian: ArchEndian) -> ArchSpec<PcodeBackend> {
     match arch {
         #[cfg(feature = "arch_arm")]
         ArchVariant::Arm(variant) => arm::arm_arch_spec(arch, variant, endian),
@@ -184,9 +186,12 @@ pub fn build_arch_spec(arch: &ArchVariant, endian: ArchEndian) -> ArchSpec {
 }
 
 /// Finalized arch spec consume by [crate::PcodeBackend].
-pub struct ArchSpec {
-    pub call_other: CallOtherManager,
-    pub register: RegisterManager,
-    pub generator: GhidraPcodeGenerator,
+pub struct ArchSpec<Cpu>
+where
+    Cpu: CpuBackend,
+{
+    pub call_other: CallOtherManager<Cpu>,
+    pub register: RegisterManager<Cpu>,
+    pub generator: GhidraPcodeGenerator<Cpu>,
     pub pc_manager: PcManager,
 }

@@ -88,7 +88,7 @@ pub fn setup_asm(
     if let Some(expected_asm) = expected_asm {
         assert_eq!(code, expected_asm);
     }
-    trace!("bytes {:x?} asm {}", code, asm_str);
+    trace!("bytes {code:x?} asm {asm_str}");
 
     // takes the objdump and extracts the binary from it
     //  duplex instruction:
@@ -128,7 +128,7 @@ pub fn get_isa_pc(cpu: &mut HexagonPcodeBackend) -> u32 {
         .unwrap()
         .to_u64()
         .unwrap() as u32;
-    trace!("get_isa_pc returns {:x}", pc);
+    trace!("get_isa_pc returns {pc:x}");
     pc
 }
 
@@ -140,18 +140,21 @@ pub fn read_dst_reg(
 ) -> Result<SizedValue, RegisterHandleError> {
     let arch_reg: ArchRegister = reg.into();
     let spc = &backend.internal_backend.space_manager;
-    let gen = &backend.internal_backend.pcode_generator;
 
-    let vnode = gen.get_register(&arch_reg).map(|i| {
-        // Have to clone bc we modify
-        let mut i = i.clone();
-        i.offset += DEST_REG_OFFSET;
-        i
-    });
+    let vnode = backend
+        .internal_backend
+        .pcode_generator
+        .get_register(&arch_reg)
+        .map(|i| {
+            // Have to clone bc we modify
+            let mut i = i.clone();
+            i.offset += DEST_REG_OFFSET;
+            i
+        });
 
     match vnode {
         Some(ref varnode) => Ok(spc
-            .read(&varnode)
+            .read(varnode)
             .with_context(|| format!("error reading {reg:?} @ {vnode:?} from space"))?),
         None => Err(RegisterHandleError::CannotHandleRegister(arch_reg)),
     }

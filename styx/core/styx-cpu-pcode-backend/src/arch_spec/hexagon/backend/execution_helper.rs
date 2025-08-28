@@ -60,10 +60,7 @@ impl DefaultHexagonExecutionHelper {
         match dotnew::parse_dotnew(insn_data) {
             Some(referenced_dotnew_pkt) => {
                 trace!(
-                    "dotnew: this is a dotnew packet, finding register at {} - {} within {:?}",
-                    dotnew_instructions,
-                    referenced_dotnew_pkt,
-                    dotnew_regs_written
+                    "dotnew: this is a dotnew packet, finding register at {dotnew_instructions} - {referenced_dotnew_pkt} within {dotnew_regs_written:?}"
                 );
                 let location = dotnew_instructions - referenced_dotnew_pkt;
                 if let OutputRegisterType::General(register_num) =
@@ -109,7 +106,7 @@ impl DefaultHexagonExecutionHelper {
         // check if lc0/lc1 is greater than 1, since
         // a hwloop terminates when lc0/lc1 == 1
         // so it will never get set to zero after the hwloop executes
-        trace!("hwloop help: lc0 {} lc1 {}", lc0, lc1);
+        trace!("hwloop help: lc0 {lc0} lc1 {lc1}");
 
         // check if this packet is the last packet in a hardware loop
         // these are from the manual, section 10.6
@@ -168,7 +165,7 @@ impl DefaultHexagonExecutionHelper {
                 offset -= DEST_REG_OFFSET;
             }
 
-            trace!("offset is {}", offset);
+            trace!("offset is {offset}");
 
             if offset >= pred_start && offset <= pred_end {
                 Some((offset - pred_start) as usize)
@@ -202,9 +199,9 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
     }
     // could probably do the double jump logic here
     fn set_isa_pc(&mut self, value: u64, backend: &mut PcodeBackend) {
-        if let Some(_) = self.pc {
+        if self.pc.is_some() {
             trace!("banking pc set");
-            if let None = self.banked_pc {
+            if self.banked_pc.is_none() {
                 self.banked_pc = Some(value);
             } else {
                 trace!("banking pc IGNORE - was already set earlier (works for double jump)");
@@ -229,7 +226,7 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
         self.internal_pc
     }
     fn set_internal_pc(&mut self, value: u64, _backend: &mut PcodeBackend) {
-        trace!("set internal pc to {}", value);
+        trace!("set internal pc to {value}");
         self.internal_pc = value;
     }
 
@@ -253,7 +250,7 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
 
         // Get the PC
         self.pc_varnode.offset = pc as u64;
-        trace!("got pc is {}", pc);
+        trace!("got pc is {pc}");
 
         match mmu.read_u128_le_virt_code(self.pc_varnode.offset, &mut backend.internal_backend) {
             Ok(insn_data_wide) => {
@@ -270,8 +267,8 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
 
                 let insn_array = [insn_data, insn_next, insn_next1, insn_next2];
 
-                trace!("parse info is {:?}", parse_data);
-                return match parse_data {
+                trace!("parse info is {parse_data:?}");
+                match parse_data {
                     PktLoopParseBits::Duplex => match prev_state {
                         PktState::PktEnded(_) => Ok(PktState::PktStartedFirstDuplex(insn_array)),
                         _ => Ok(PktState::FirstDuplex(insn_array)),
@@ -293,11 +290,11 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
                         _ => unreachable!("invalid packet sequence"),
                     },
                     PktLoopParseBits::Other => unreachable!("invalid packet sequence"),
-                };
+                }
             }
             Err(e) => {
-                error!("couldn't prefetch the next insn from MMU: {:?}", e);
-                return Err(GeneratePcodeError::InvalidAddress);
+                error!("couldn't prefetch the next insn from MMU: {e:?}");
+                Err(GeneratePcodeError::InvalidAddress)
             }
         }
     }
@@ -361,7 +358,7 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
         let insn_data = instrs[0];
         let insclass = ((insn_data >> 28) & 0b1110) | ((insn_data >> 13) & 0b1);
 
-        trace!("duplex instruction, insclass {}", insclass);
+        trace!("duplex instruction, insclass {insclass}");
 
         // From https://github.com/toshipiazza/ghidra-plugin-hexagon/blob/main/Ghidra/Processors/Hexagon/src/main/java/ghidra/app/plugin/core/analysis/HexagonInstructionInfo.java#L68
         let duplex_slots = match insclass {
@@ -437,7 +434,7 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
             for pcode in insn {
                 trace!("pcode output {:?}", pcode.output);
                 if let Some(vn) = &pcode.output {
-                    if let Some(pred_idx) = Self::match_predicate(&vn) {
+                    if let Some(pred_idx) = Self::match_predicate(vn) {
                         trace!("pred_idx {pred_idx}");
 
                         predicates_written_where[pred_idx] = Some(i);
@@ -447,9 +444,7 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
                             ordering.push(i);
 
                             trace!(
-                                "updated ordering: remains {:?}, ordering {:?}",
-                                remains,
-                                ordering,
+                                "updated ordering: remains {remains:?}, ordering {ordering:?}",
                             );
                         }
                     }
@@ -467,14 +462,14 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
                         .internal_backend
                         .pcode_generator
                         .user_op_name(op_index as u32);
-                    trace!("at a callother with name {:?}", name);
+                    trace!("at a callother with name {name:?}");
 
                     // If newreg, we suddenly need to care
                     if let Some("newreg") = name {
                         // What predicate is it?
                         let reg = pcode.get_input(1);
-                        trace!("register got input to callother {:?}", reg);
-                        if let Some(pred_idx) = Self::match_predicate(&reg) {
+                        trace!("register got input to callother {reg:?}");
+                        if let Some(pred_idx) = Self::match_predicate(reg) {
                             trace!("at a newreg with a predicate, which always requires caring about reordering");
 
                             reorder_write_predicates = true;
@@ -495,6 +490,6 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
             }
         }
 
-        trace!("finished sequencing ordering={:?}", ordering);
+        trace!("finished sequencing ordering={ordering:?}");
     }
 }

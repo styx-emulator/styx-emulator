@@ -13,7 +13,7 @@ use super::{
 pub mod call_other;
 pub mod ppc4xx;
 
-fn ppc_common<Sla>(spec: &mut super::ArchSpecBuilder<Sla>) {
+fn ppc_common<Sla>(spec: &mut super::ArchSpecBuilder<Sla, PcodeBackend>) {
     spec.set_pc_manager(StandardPpcPcManager::default().into());
 
     // "Do nothing" generator helper.

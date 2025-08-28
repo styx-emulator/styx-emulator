@@ -664,7 +664,7 @@ fn test_dotnew_offset() {
 
     for test in tests {
         let asm = "{".to_owned() + &test.asm.join("; ") + "}; " + generic_tackon_test;
-        trace!("disas on asm {}", asm);
+        trace!("disas on asm {asm}");
         // compile
 
         let code = ks.asm(asm, init_pc).unwrap();
@@ -908,13 +908,13 @@ fn test_all_dotnew_class() {
                 };
 
                 let subst_asm = case.asm.replace("%0", postfix);
-                info!("assembling {}", subst_asm);
+                info!("assembling {subst_asm}");
 
                 let code = ks
                     .asm(subst_asm.clone(), init_pc)
                     .expect("Could not assemble");
 
-                trace!("code is {:?}", code);
+                trace!("code is {code:?}");
 
                 assert_eq!(code.bytes.len(), case.expected_bytes);
 

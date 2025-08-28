@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use crate::{
-    arch_spec::{GeneratorHelp, GeneratorHelper},
+    arch_spec::{GeneratorHelper, CONTEXT_OPTION_LEN},
     get_pcode::GetPcodeError,
     pcode_gen::GeneratePcodeError,
     register_manager::RegisterHandleError,
-    PcodeBackend,
 };
 
 use derivative::Derivative;
 use log::{debug, trace, warn};
+use smallvec::SmallVec;
 use styx_cpu_type::{
     arch::backends::{ArchRegister, ArchVariant},
     ArchEndian,
@@ -19,22 +19,25 @@ use styx_pcode::{
     sla::SlaSpec,
 };
 use styx_pcode_translator::{
-    sla::SlaRegisters, Loader, LoaderRequires, PcodeTranslator, PcodeTranslatorError,
+    sla::SlaRegisters, ContextOption, Loader, LoaderRequires, PcodeTranslator, PcodeTranslatorError,
 };
 use styx_processor::{
+    cpu::CpuBackend,
     event_controller::EventController,
     memory::{helpers::ReadExt, MemoryOperationError, Mmu, MmuOpError, UnmappedMemoryError},
 };
 
 use std::collections::HashMap;
 
+use super::HasPcodeGenerator;
+
 /// Pcode generator implemented by ghidra's libsla.
 #[derive(Derivative)]
 #[derivative(Debug)]
-pub struct GhidraPcodeGenerator {
+pub struct GhidraPcodeGenerator<T: CpuBackend> {
     #[derivative(Debug = "ignore")]
     /// Internal translator provided by sleigh backend.
-    translator: Option<PcodeTranslator<MmuLoader>>,
+    translator: Option<PcodeTranslator<MmuLoader<T>>>,
 
     /// Arch specific helper for changing context variables.
     pub(crate) helper: Option<Box<GeneratorHelper>>,
@@ -43,11 +46,11 @@ pub struct GhidraPcodeGenerator {
     registers: HashMap<ArchRegister, VarnodeData>,
 }
 
-impl GhidraPcodeGenerator {
+impl<B: CpuBackend + 'static> GhidraPcodeGenerator<B> {
     pub(crate) fn new<S: SlaSpec + SlaRegisters>(
         arch: &ArchVariant,
         helper: GeneratorHelper,
-        loader: MmuLoader,
+        loader: MmuLoader<B>,
     ) -> Result<Self, PcodeTranslatorError> {
         let translator = PcodeTranslator::new::<S>(arch, loader)?;
         let registers: HashMap<_, _> = translator
@@ -71,42 +74,6 @@ impl GhidraPcodeGenerator {
             .map(|t| t.get_register_rev(register_varnode))
             .ok_or(anyhow!("no translator :("))
             .unwrap()
-    }
-
-    pub(crate) fn get_pcode(
-        cpu: &mut PcodeBackend,
-        address: u64,
-        pcodes: &mut Vec<Pcode>,
-        mmu: &mut Mmu,
-        ev: &mut EventController,
-    ) -> Result<u64, GetPcodeError> {
-        // execute prefetch routine on generator helper
-        let mut helper = cpu.pcode_generator.helper.take().unwrap();
-        let context_options = helper.pre_fetch(cpu)?;
-        cpu.pcode_generator.helper = Some(helper);
-
-        let mut err = None;
-        let mut translator = cpu
-            .pcode_generator
-            .translator
-            .take()
-            .ok_or(anyhow!("no translator :("))
-            .unwrap();
-
-        // and apply context options
-        for option in context_options.into_iter() {
-            trace!("Setting context option: {option:?}");
-            translator.set_context_option(option);
-        }
-
-        let data = MmuLoaderDependencies::new(cpu, mmu, ev, &mut err);
-        let result = translator.get_pcode(address, pcodes, data);
-        cpu.pcode_generator.translator = Some(translator);
-        if let Some(err) = err {
-            Err(GetPcodeError::MmuOpErr(err))
-        } else {
-            result.map_err(GeneratePcodeError::from).map_err(Into::into)
-        }
     }
 
     pub(crate) fn endian(&self) -> ArchEndian {
@@ -136,13 +103,46 @@ pub(crate) trait RegisterTranslator {
     }
 }
 
-impl RegisterTranslator for GhidraPcodeGenerator {
+// This should not be dependent on the B generic type of GhidraPcodeGenerator, so we move this out
+pub(crate) fn get_pcode<A: CpuBackend + HasPcodeGenerator<InnerCpuBackend = A> + 'static>(
+    cpu: &mut A,
+    address: u64,
+    pcodes: &mut Vec<Pcode>,
+    context_options: &SmallVec<[ContextOption; CONTEXT_OPTION_LEN]>,
+    mmu: &mut Mmu,
+    ev: &mut EventController,
+) -> Result<u64, GetPcodeError> {
+    let mut err = None;
+    let mut translator = cpu
+        .pcode_generator_mut()
+        .translator
+        .take()
+        .ok_or(anyhow!("no translator :("))
+        .unwrap();
+
+    // and apply context options
+    for option in context_options.iter() {
+        trace!("Setting context option: {option:?}");
+        translator.set_context_option(option);
+    }
+
+    let data = MmuLoaderDependencies::new(cpu, mmu, ev, &mut err);
+    let result = translator.get_pcode(address, pcodes, data);
+    cpu.pcode_generator_mut().translator = Some(translator);
+    if let Some(err) = err {
+        Err(GetPcodeError::MmuOpErr(err))
+    } else {
+        result.map_err(GeneratePcodeError::from).map_err(Into::into)
+    }
+}
+
+impl<B: CpuBackend> RegisterTranslator for GhidraPcodeGenerator<B> {
     fn get_register(&self, register: &ArchRegister) -> Option<&VarnodeData> {
         self.registers.get(register)
     }
 }
 
-impl GhidraPcodeGenerator {
+impl<B: CpuBackend + 'static> GhidraPcodeGenerator<B> {
     // Gets the name of a user op from its index. Useful for reporting unknown
     // and unhandled call others.
     pub fn user_op_name(&self, index: u32) -> Option<&str> {
@@ -159,24 +159,24 @@ impl GhidraPcodeGenerator {
 }
 
 #[derive(Debug)]
-struct MmuLoaderRawDependencies {
-    cpu: *mut PcodeBackend,
+struct MmuLoaderRawDependencies<T: CpuBackend> {
+    cpu: *mut T,
     mmu: *mut Mmu,
     #[allow(unused)]
     // TODO: finish the MMU implementation so it uses this
     ev: *mut EventController,
     err: *mut Option<MmuOpError>,
 }
-pub(crate) struct MmuLoaderDependencies<'a> {
-    pub cpu: &'a mut PcodeBackend,
+pub(crate) struct MmuLoaderDependencies<'a, T: CpuBackend> {
+    pub cpu: &'a mut T,
     pub mmu: &'a mut Mmu,
     pub ev: &'a mut EventController,
     pub err: &'a mut Option<MmuOpError>,
 }
 
-impl<'a> MmuLoaderDependencies<'a> {
+impl<'a, T: CpuBackend> MmuLoaderDependencies<'a, T> {
     pub(crate) fn new(
-        cpu: &'a mut PcodeBackend,
+        cpu: &'a mut T,
         mmu: &'a mut Mmu,
         event_controller: &'a mut EventController,
         err: &'a mut Option<MmuOpError>,
@@ -190,12 +190,16 @@ impl<'a> MmuLoaderDependencies<'a> {
     }
 }
 
-unsafe impl Send for MmuLoader {}
-unsafe impl Sync for MmuLoader {}
+unsafe impl<T: CpuBackend> Send for MmuLoader<T> {}
+unsafe impl<T: CpuBackend> Sync for MmuLoader<T> {}
 #[derive(Debug)]
-pub(crate) struct MmuLoader(MmuLoaderRawDependencies);
-impl LoaderRequires for MmuLoader {
-    type LoadRequires<'a> = MmuLoaderDependencies<'a>;
+pub(crate) struct MmuLoader<T: CpuBackend>(MmuLoaderRawDependencies<T>);
+
+impl<T: CpuBackend> LoaderRequires for MmuLoader<T> {
+    type LoadRequires<'a>
+        = MmuLoaderDependencies<'a, T>
+    where
+        T: 'a;
 
     fn set_data(&mut self, data: Self::LoadRequires<'_>) {
         self.0 = MmuLoaderRawDependencies {
@@ -207,7 +211,7 @@ impl LoaderRequires for MmuLoader {
     }
 }
 
-impl Default for MmuLoaderRawDependencies {
+impl<T: CpuBackend> Default for MmuLoaderRawDependencies<T> {
     fn default() -> Self {
         MmuLoaderRawDependencies {
             cpu: std::ptr::null_mut(),
@@ -217,12 +221,12 @@ impl Default for MmuLoaderRawDependencies {
         }
     }
 }
-impl MmuLoader {
+impl<T: CpuBackend> MmuLoader<T> {
     pub fn new() -> Self {
         Self(MmuLoaderRawDependencies::default())
     }
 }
-impl Loader for MmuLoader {
+impl<T: CpuBackend> Loader for MmuLoader<T> {
     fn load(&mut self, data_buffer: &mut [u8], addr: u64) {
         data_buffer.fill(0);
         trace!(
@@ -276,6 +280,8 @@ mod tests {
         event_controller::DummyEventController,
         memory::{memory_region::MemoryRegion, MemoryPermissions},
     };
+
+    use crate::PcodeBackend;
 
     use super::*;
 

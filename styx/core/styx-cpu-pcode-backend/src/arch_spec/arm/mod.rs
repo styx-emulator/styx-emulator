@@ -31,14 +31,14 @@ use styx_cpu_type::{
 };
 use styx_pcode::{pcode::VarnodeData, sla::SlaUserOps};
 use styx_pcode_translator::{sla::Arm7LeUserOps, ContextOption};
-use styx_processor::{cpu::CpuBackendExt, memory::Mmu};
+use styx_processor::cpu::CpuBackendExt;
 use styx_sync::sync::Arc;
 
 pub fn arm_arch_spec(
     arch: &ArchVariant,
     variant: &ArmMetaVariants,
     endian: ArchEndian,
-) -> ArchSpec {
+) -> ArchSpec<PcodeBackend> {
     match endian {
         ArchEndian::LittleEndian => match variant {
             ArmMetaVariants::ArmCortexM3(_) => cortex_m3::build_le().build(arch),
@@ -57,7 +57,7 @@ pub fn arm_arch_spec(
     }
 }
 
-fn armv7_common<T: SlaUserOps<UserOps: FromStr>>(spec: &mut ArchSpecBuilder<T>) {
+fn armv7_common<T: SlaUserOps<UserOps: FromStr>>(spec: &mut ArchSpecBuilder<T, PcodeBackend>) {
     let call_other_manager = &mut spec.call_other_manager;
     let register_manager = &mut spec.register_manager;
 
@@ -169,7 +169,7 @@ fn armv7_common<T: SlaUserOps<UserOps: FromStr>>(spec: &mut ArchSpecBuilder<T>) 
         .unwrap();
 }
 
-fn armv7m_common<S>(spec: &mut ArchSpecBuilder<S>) {
+fn armv7m_common<S>(spec: &mut ArchSpecBuilder<S, PcodeBackend>) {
     let register_manager = &mut spec.register_manager;
 
     register_manager
@@ -183,7 +183,7 @@ fn armv7m_common<S>(spec: &mut ArchSpecBuilder<S>) {
         .unwrap();
 }
 
-fn armv7a_common<S>(spec: &mut ArchSpecBuilder<S>) {
+fn armv7a_common<S>(spec: &mut ArchSpecBuilder<S, PcodeBackend>) {
     let register_manager = &mut spec.register_manager;
     register_manager
         .add_handler(ArmRegister::Cpsr, CpsrHandler)

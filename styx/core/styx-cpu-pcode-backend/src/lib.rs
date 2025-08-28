@@ -21,7 +21,7 @@ use self::{
     pcode_gen::GhidraPcodeGenerator,
     register_manager::RegisterManager,
 };
-use arch_spec::{build_arch_spec, ArchPcManager, GeneratorHelper, PcManager};
+use arch_spec::{build_arch_spec, ArchPcManager, GeneratorHelp, GeneratorHelper, PcManager};
 use call_other::CallOtherManager;
 use derivative::Derivative;
 use log::trace;
@@ -121,19 +121,29 @@ fn handle_basic_block_hooks(
 
         // Does not matter if this is a branch instruction since it could be the beginning of
         // execution.
-        let (_, bytes) = is_branching_instruction(cpu, &mut pcodes, initial_pc, mmu, ev);
+
+        let mut helper = cpu.pcode_generator.helper.take().unwrap();
+        let ctx_opts = helper.pre_fetch(cpu).unwrap();
+        cpu.pcode_generator.helper = Some(helper);
+
+        let (_, bytes) = is_branching_instruction(cpu, &mut pcodes, &ctx_opts, initial_pc, mmu, ev);
         instruction_pc += bytes;
 
         let mut stop_search = false;
         while !stop_search {
+            let mut helper = cpu.pcode_generator.helper.take().unwrap();
+            let ctx_opts = helper.pre_fetch(cpu).unwrap();
+            cpu.pcode_generator.helper = Some(helper);
+
             let (is_branch, bytes) =
-                is_branching_instruction(cpu, &mut pcodes, instruction_pc, mmu, ev);
+                is_branching_instruction(cpu, &mut pcodes, &ctx_opts, instruction_pc, mmu, ev);
 
             // Stop search if we found a branch OR we've gone over our max search
             stop_search = is_branch || (instruction_pc - initial_pc) > max_search;
             instruction_pc += bytes
         }
         let total_block_size = instruction_pc - initial_pc;
+        trace!("total block size is instruction_pc - initial_pc: {total_block_size}");
 
         HookManager::trigger_block_hook(cpu, mmu, ev, initial_pc, total_block_size as u32)?;
     }
@@ -173,7 +183,7 @@ pub enum SharedStateKey {
 #[derivative(Debug)]
 pub struct PcodeBackend {
     space_manager: SpaceManager,
-    pcode_generator: GhidraPcodeGenerator,
+    pcode_generator: GhidraPcodeGenerator<Self>,
     hook_manager: HookManager,
     /// Was there a stop requested through [CpuBackend::stop()]?
     ///
@@ -184,8 +194,8 @@ pub struct PcodeBackend {
     #[derivative(Debug = "ignore")]
     arch_def: Box<dyn ArchitectureDef>,
     endian: ArchEndian,
-    call_other_manager: CallOtherManager,
-    register_manager: RegisterManager,
+    call_other_manager: Option<CallOtherManager<Self>>,
+    register_manager: RegisterManager<Self>,
     pc_manager: Option<PcManager>,
 
     /// Was the last instruction a branch instruction?
@@ -305,7 +315,7 @@ impl PcodeBackend {
             space_manager,
             pcode_generator,
             endian,
-            call_other_manager: call_other,
+            call_other_manager: Some(call_other),
             register_manager,
             pc_manager: Some(spec.pc_manager),
             last_was_branch: false,
@@ -349,7 +359,9 @@ impl PcodeBackend {
 
         // fetch_pcode handles triggering hooks based on exception handler
         // Err(exit_reason) indicates an exception makes us pause so we should honor that
-        let bytes_consumed = match fetch_pcode(self, pcodes, mmu, ev) {
+        let fetch_result = fetch_pcode(self, pcodes, mmu, ev);
+
+        let bytes_consumed = match fetch_result {
             Ok(success) => success,
             Err(err) => match err {
                 get_pcode::FetchPcodeError::TargetExit(target_exit_reason) => {
@@ -386,7 +398,24 @@ impl PcodeBackend {
                 "Executing Pcode ({}/{total_pcodes}) {current_pcode:?}",
                 i + 1
             );
-            match execute_pcode::execute_pcode(current_pcode, self, mmu, ev, &mut regs_written) {
+
+            let isa_pc = self.pc_manager.as_ref().unwrap().isa_pc();
+
+            let mut call_other = self.call_other_manager.take().unwrap();
+
+            let execute_result = execute_pcode::execute_pcode(
+                current_pcode,
+                self,
+                mmu,
+                ev,
+                &mut call_other,
+                isa_pc,
+                &mut regs_written,
+            );
+
+            self.call_other_manager = Some(call_other);
+
+            match execute_result {
                 PCodeStateChange::Fallthrough => i += 1,
                 PCodeStateChange::DelayedInterrupt(irqn) => {
                     // interrupt will *probably* branch execution

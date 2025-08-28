@@ -11,7 +11,6 @@ use smallvec::{smallvec, SmallVec};
 use styx_cpu_type::{
     arch::{
         backends::{ArchRegister, ArchVariant},
-        hexagon::HexagonRegister,
         ArchitectureDef, RegisterValue,
     },
     Arch, ArchEndian, TargetExitReason,
@@ -26,7 +25,6 @@ use styx_processor::{
     memory::Mmu,
 };
 
-use crate::execute_pcode;
 use crate::hooks::HookManager;
 use crate::{
     arch_spec::{
@@ -37,9 +35,8 @@ use crate::{
     pcode_gen::GeneratePcodeError,
     PcodeBackend, PcodeBackendConfiguration,
 };
+use crate::{execute_pcode, ArchPcManager};
 use crate::{PCodeStateChange, DEFAULT_REG_ALLOCATION};
-
-use super::pkt_semantics::PredicateAnd;
 
 mod decode_info;
 mod execution_helper;
@@ -136,7 +133,7 @@ impl CpuBackend for HexagonPcodeBackend {
                     self.bytes_consumed = Some(bytes);
                 }
                 Err(reason) => {
-                    return Ok(ExecutionReport::new(reason, (i - 1) as u64));
+                    return Ok(ExecutionReport::new(reason, i - 1));
                 }
             }
             self.execution_regs_written = smallvec![];
@@ -146,9 +143,12 @@ impl CpuBackend for HexagonPcodeBackend {
             for i_instrs in ordering {
                 let pcode_instrs = &pcodes[i_instrs];
 
-                trace!("executing single instruction pcodes: {:?}", pcode_instrs);
-                if let Err(reason) = self.execute_single(&pcode_instrs, mmu, ev)? {
-                    return Ok(ExecutionReport::new(reason, i as u64));
+                trace!("executing single instruction pcodes: {pcode_instrs:?}");
+                // this should actually do the fetching for each individual packet.
+                // TODO: move everything that happens within one one execution. call this function something else,
+                // like execute_packet_pcodes or something?
+                if let Err(reason) = self.execute_single(pcode_instrs, mmu, ev)? {
+                    return Ok(ExecutionReport::new(reason, i));
                 }
                 total_instrs_executed += 1;
             }
@@ -158,18 +158,15 @@ impl CpuBackend for HexagonPcodeBackend {
             let regs_flush_pcodes = self.flush_regs_pcode();
 
             if let Err(reason) = self.execute_single(&regs_flush_pcodes, mmu, ev)? {
-                return Ok(ExecutionReport::new(reason, i as u64));
+                return Ok(ExecutionReport::new(reason, i));
             }
 
             let execution_helper_outer = self.execution_helper.take().unwrap();
             {
                 let mut execution_helper = execution_helper_outer.lock().unwrap();
-                let next_pc = execution_helper.isa_pc() as u64 + self.bytes_consumed.unwrap();
+                let next_pc = execution_helper.isa_pc() + self.bytes_consumed.unwrap();
 
-                trace!(
-                    "telling execution helper to bank move forward pc to {:x}",
-                    next_pc
-                );
+                trace!("telling execution helper to bank move forward pc to {next_pc:x}");
                 execution_helper.set_isa_pc(next_pc, &mut self.internal_backend);
 
                 trace!("calling post packet execute hooks...");
@@ -287,13 +284,28 @@ impl HexagonPcodeBackend {
                 "Executing Pcode ({}/{total_pcodes}) {current_pcode:?}",
                 i + 1
             );
-            match execute_pcode::execute_pcode(
+            let internal_pc = self
+                .internal_backend
+                .pc_manager
+                .as_ref()
+                .unwrap()
+                .internal_pc();
+
+            let mut call_other = self.internal_backend.call_other_manager.take().unwrap();
+
+            let execute_result = execute_pcode::execute_pcode::<PcodeBackend>(
                 current_pcode,
                 &mut self.internal_backend,
                 mmu,
                 ev,
+                &mut call_other,
+                internal_pc,
                 &mut self.execution_regs_written,
-            ) {
+            );
+
+            self.internal_backend.call_other_manager = Some(call_other);
+
+            match execute_result {
                 PCodeStateChange::Fallthrough => i += 1,
                 PCodeStateChange::DelayedInterrupt(irqn) => {
                     // interrupt will *probably* branch execution
@@ -424,7 +436,7 @@ impl HexagonPcodeBackend {
                     .pre_insn_fetch(self, mmu, &decode_state, pc)
                     .map_err(|e| UnknownError::from_boxed(Box::new(e)))?;
 
-                trace!("decode state has changed to {:?}", decode_state);
+                trace!("decode state has changed to {decode_state:?}");
 
                 if self.first_packet {
                     trace!("first packet in entire instruction sequence, handling");
@@ -495,12 +507,10 @@ impl HexagonPcodeBackend {
             // that internally accesses/uses the current context opts
             //
             // Somehow we need to modify this stuff to take in the context options we care about.
+
             let bytes_consumed = fetch_pcode(&mut self.internal_backend, &mut pcodes, mmu, ev)?;
-            trace!(
-                "instruction consumed {} bytes and produced pcodes {:?}",
-                bytes_consumed,
-                pcodes
-            );
+
+            trace!("instruction consumed {bytes_consumed} bytes and produced pcodes {pcodes:?}");
 
             // Start common postfetch
             let is_immext = {
@@ -534,7 +544,7 @@ impl HexagonPcodeBackend {
                         // Permit R* registers or P* registers
                         if dotnew_regnum <= 28 * 4 {
                             first_general_reg = OutputRegisterType::General(dotnew_regnum / 4);
-                        } else if dotnew_regnum >= 0x94 && dotnew_regnum <= 0x97 {
+                        } else if (0x94..=0x97).contains(&dotnew_regnum) {
                             first_general_reg =
                                 OutputRegisterType::Predicate(dotnew_regnum - 0x94, i + 1);
                         }
@@ -559,7 +569,7 @@ impl HexagonPcodeBackend {
                 execution_helper.post_insn_fetch(bytes_consumed, self);
 
                 pc += bytes_consumed as u32;
-                trace!("advancing internal pc to {}", pc);
+                trace!("advancing internal pc to {pc}");
                 execution_helper.set_internal_pc(pc as u64, &mut self.internal_backend)
             }
             self.execution_helper = Some(execution_helper_outer);
@@ -590,10 +600,7 @@ impl HexagonPcodeBackend {
                 let first_general_reg = &all_regs_written[*i];
                 if let OutputRegisterType::Predicate(dotnew_regnum, ins_loc) = &first_general_reg {
                     trace!(
-                        "all_regs_written {:?} first_general_reg {:?} predicates_found {:?}",
-                        all_regs_written,
-                        first_general_reg,
-                        predicates_found
+                        "all_regs_written {all_regs_written:?} first_general_reg {first_general_reg:?} predicates_found {predicates_found:?}"
                     );
                     // This dotnew value was already set.
                     if predicates_found[*dotnew_regnum as usize] {

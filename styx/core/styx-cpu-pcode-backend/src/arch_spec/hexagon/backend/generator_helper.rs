@@ -25,7 +25,6 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 use log::trace;
 use smallvec::SmallVec;
-use styx_processor::memory::Mmu;
 
 use crate::{
     arch_spec::{generator_helper::CONTEXT_OPTION_LEN, GeneratorHelp},
@@ -35,15 +34,11 @@ use crate::{
 use styx_pcode_translator::ContextOption;
 
 #[derive(Debug, Clone)]
+#[derive(Default)]
 pub struct HexagonGeneratorHelper {
     ctx_opts: Option<Result<SmallVec<[ContextOption; CONTEXT_OPTION_LEN]>, GeneratePcodeError>>,
 }
 
-impl Default for HexagonGeneratorHelper {
-    fn default() -> Self {
-        Self { ctx_opts: None }
-    }
-}
 
 impl HexagonGeneratorHelper {
     pub fn update_context(

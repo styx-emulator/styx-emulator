@@ -17,7 +17,6 @@ use crate::{pcode_gen::GeneratePcodeError, PcodeBackend, DEFAULT_REG_ALLOCATION}
 use smallvec::{smallvec, SmallVec};
 use styx_pcode::pcode::VarnodeData;
 use styx_pcode_translator::ContextOption;
-use styx_processor::memory::Mmu;
 
 /// Program Counter manager for SuperH processors.
 ///

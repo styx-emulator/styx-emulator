@@ -37,11 +37,7 @@ pub fn parse_dotnew(insn: u32) -> Option<u32> {
     let insn_1010_type = (insn >> 22) & 0b111;
 
     trace!(
-        "dotnew: iclass is {:08b}, types 0011 type {:06b} 0100 type {:03b} 1010 type {:03b}",
-        iclass,
-        insn_0011_type,
-        insn_0100_type,
-        insn_1010_type,
+        "dotnew: iclass is {iclass:08b}, types 0011 type {insn_0011_type:06b} 0100 type {insn_0100_type:03b} 1010 type {insn_1010_type:03b}",
     );
 
     // in a new-value instruction, there is a field Nt that exists.

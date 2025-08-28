@@ -72,7 +72,7 @@ impl SavedContextOpts {
     }
 
     pub fn setup_context_opts(&mut self, decode_location: &PktState) {
-        trace!("current context opts saved are {:?}", self);
+        trace!("current context opts saved are {self:?}");
         self.setup_context_opts = Some(smallvec![]);
         match decode_location {
             PktState::PktStartedFirstDuplex(_) | PktState::PktStarted(_) => {

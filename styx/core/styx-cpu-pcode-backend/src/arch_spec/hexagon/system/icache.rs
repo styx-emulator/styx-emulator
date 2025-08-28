@@ -27,11 +27,11 @@ use derive_more::FromStr;
 use log::debug;
 use styx_pcode::{pcode::VarnodeData, sla::SlaUserOps};
 use styx_pcode_translator::sla::HexagonUserOps;
-use styx_processor::{event_controller::EventController, memory::Mmu};
+use styx_processor::{cpu::CpuBackend, event_controller::EventController, memory::Mmu};
 
 use crate::{
     arch_spec::ArchSpecBuilder,
-    call_other::{CallOtherCallback, CallOtherHandleError},
+    call_other::{CallOtherCallback, CallOtherCpu, CallOtherHandleError},
     PCodeStateChange, PcodeBackend,
 };
 
@@ -42,10 +42,10 @@ pub struct IcacheGenericStub {
     from: String,
 }
 
-impl CallOtherCallback for IcacheGenericStub {
+impl<T: CpuBackend> CallOtherCallback<T> for IcacheGenericStub {
     fn handle(
         &mut self,
-        _backend: &mut PcodeBackend,
+        _backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         _inputs: &[VarnodeData],
@@ -56,7 +56,9 @@ impl CallOtherCallback for IcacheGenericStub {
     }
 }
 
-pub fn add_icache_callothers<S: SlaUserOps<UserOps: FromStr>>(spec: &mut ArchSpecBuilder<S>) {
+pub fn add_icache_callothers<S: SlaUserOps<UserOps: FromStr>>(
+    spec: &mut ArchSpecBuilder<S, PcodeBackend>,
+) {
     spec.call_other_manager
         .add_handler_other_sla(
             HexagonUserOps::Ictagr,

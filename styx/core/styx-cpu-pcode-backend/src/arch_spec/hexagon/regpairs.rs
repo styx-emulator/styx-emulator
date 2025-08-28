@@ -31,9 +31,10 @@ use styx_cpu_type::arch::{
     hexagon::HexagonRegister,
 };
 use styx_errors::anyhow::anyhow;
-use styx_processor::cpu::CpuBackendExt;
+use styx_processor::cpu::{CpuBackend, CpuBackendExt};
 use styx_sync::lazy_static;
 
+use crate::register_manager::RegisterCallbackCpu;
 use crate::{
     arch_spec::ArchSpecBuilder,
     memory::sized_value::SizedValue,
@@ -432,9 +433,7 @@ impl RegpairHandler {
     ) -> Option<(HexagonRegister, HexagonRegister)> {
         // WARN: this assumes the registers are defined contiguously
         match register {
-            ArchRegister::Basic(BasicArchRegister::Hexagon(reg)) => {
-                return REGPAIR_MAP.get(&reg).copied();
-            }
+            ArchRegister::Basic(BasicArchRegister::Hexagon(reg)) => REGPAIR_MAP.get(&reg).copied(),
             _ => unreachable!(),
         }
     }
@@ -442,11 +441,11 @@ impl RegpairHandler {
 
 #[derive(Debug, Default)]
 pub struct RegpairHandler;
-impl RegisterCallback for RegpairHandler {
+impl<T: CpuBackend> RegisterCallback<T> for RegpairHandler {
     fn read(
         &mut self,
         register: ArchRegister,
-        cpu: &mut PcodeBackend,
+        cpu: &mut dyn RegisterCallbackCpu<T>,
     ) -> Result<SizedValue, RegisterHandleError> {
         let (reg_hi, reg_lo) = Self::get_pairs_from_archregister(register)
             .ok_or(anyhow!("could not get registers to read from"))?;
@@ -462,12 +461,7 @@ impl RegisterCallback for RegpairHandler {
         let combined = (hi << 32) | lo;
 
         trace!(
-            "regpair read_pair: reg_lo {} lo {} reg_hi {} hi {} combined {}",
-            reg_lo,
-            lo,
-            reg_hi,
-            hi,
-            combined
+            "regpair read_pair: reg_lo {reg_lo} lo {lo} reg_hi {reg_hi} hi {hi} combined {combined}"
         );
 
         Ok(combined.into())
@@ -476,25 +470,23 @@ impl RegisterCallback for RegpairHandler {
     fn write(
         &mut self,
         register: ArchRegister,
-        write_val: SizedValue,
-        cpu: &mut PcodeBackend,
+        value: SizedValue,
+        cpu: &mut dyn RegisterCallbackCpu<T>,
     ) -> Result<(), RegisterHandleError> {
         // must be 64 bit for this handler
-        assert_eq!(write_val.size(), 8);
+        assert_eq!(value.size(), 8);
 
         let (reg_hi, reg_lo) = Self::get_pairs_from_archregister(register)
             .ok_or(anyhow!("could not get registers to write from"))?;
 
-        let write_val = write_val
-            .to_u64()
-            .ok_or(RegisterHandleError::Other(anyhow!(
-                "could not get 64 bit value to write to register pair"
-            )))?;
+        let write_val = value.to_u64().ok_or(RegisterHandleError::Other(anyhow!(
+            "could not get 64 bit value to write to register pair"
+        )))?;
 
         let lo = (write_val & 0xffffffff) as u32;
         let hi = ((write_val >> 32) & 0xffffffff) as u32;
 
-        trace!("regpair write_pair: lo {} hi {}", lo, hi);
+        trace!("regpair write_pair: lo {lo} hi {hi}");
 
         // NOTE: would this not cause a bug because write_register just calls this method
         // infinitely and recurisvely?
@@ -510,11 +502,11 @@ impl RegisterCallback for RegpairHandler {
 // TODO: when we implement, just do it in the normal Regpair handler.
 #[derive(Debug, Default)]
 pub struct VectorRegpairQuadStub;
-impl RegisterCallback for VectorRegpairQuadStub {
+impl<T: CpuBackend> RegisterCallback<T> for VectorRegpairQuadStub {
     fn read(
         &mut self,
         _register: ArchRegister,
-        _cpu: &mut PcodeBackend,
+        _cpu: &mut dyn RegisterCallbackCpu<T>,
     ) -> Result<SizedValue, RegisterHandleError> {
         debug!("vector register pair/quad read");
         Ok(0u32.into())
@@ -524,7 +516,7 @@ impl RegisterCallback for VectorRegpairQuadStub {
         &mut self,
         _register: ArchRegister,
         _value: SizedValue,
-        _cpu: &mut PcodeBackend,
+        _cpu: &mut dyn RegisterCallbackCpu<T>,
     ) -> Result<(), RegisterHandleError> {
         debug!("vector register pair/quad write");
         Ok(())
@@ -533,20 +525,20 @@ impl RegisterCallback for VectorRegpairQuadStub {
 
 // TODO: vector register pairs
 
-pub fn add_register_pair_handlers<S>(spec: &mut ArchSpecBuilder<S>) {
+pub fn add_register_pair_handlers<S>(spec: &mut ArchSpecBuilder<S, PcodeBackend>) {
     let register_manager = &mut spec.register_manager;
     for reg in REGPAIR_MAP.keys() {
-        trace!("adding regpair handler for {}", reg);
+        trace!("adding regpair handler for {reg}");
         register_manager
             .add_handler(*reg, RegpairHandler)
             .expect("couldn't add regpair handler");
     }
 }
 
-pub fn add_vector_register_pair_handlers<S>(spec: &mut ArchSpecBuilder<S>) {
+pub fn add_vector_register_pair_handlers<S>(spec: &mut ArchSpecBuilder<S, PcodeBackend>) {
     let register_manager = &mut spec.register_manager;
     for reg in VECTOR_REGPAIR_MAP.keys() {
-        trace!("adding vector regpair handler for {}", reg);
+        trace!("adding vector regpair handler for {reg}");
         register_manager
             .add_handler(*reg, VectorRegpairQuadStub)
             .expect("couldn't add vector regpair handler");

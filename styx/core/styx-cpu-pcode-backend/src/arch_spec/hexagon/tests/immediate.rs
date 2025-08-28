@@ -35,8 +35,7 @@ fn test_immediates() {
     const R0VAL: u32 = 21;
     let (mut cpu, mut mmu, mut ev) = setup_asm(
         &format!(
-            "{{ r1 = add(r0, #{}); }}; {{ r2 = add(r1, #{}) }}; {{ r3 = add(r1, r2); }}; {{ r4 = r2; }};",
-            WRITTEN, WRITTEN2
+            "{{ r1 = add(r0, #{WRITTEN}); }}; {{ r2 = add(r1, #{WRITTEN2}) }}; {{ r3 = add(r1, r2); }}; {{ r4 = r2; }};"
         ),
         None,
     );
@@ -68,7 +67,7 @@ fn test_immediates() {
 fn test_immediate_instruction() {
     const WRITTEN: u32 = 0x29177717;
     const R0VAL: u32 = 21;
-    let (mut cpu, mut mmu, mut ev) = setup_asm(&format!("{{ r1 = add(r0, #{}); }}", WRITTEN), None);
+    let (mut cpu, mut mmu, mut ev) = setup_asm(&format!("{{ r1 = add(r0, #{WRITTEN}); }}"), None);
     cpu.write_register(HexagonRegister::R0, R0VAL).unwrap();
 
     // TODO: how should the ISA PC respond to immext?

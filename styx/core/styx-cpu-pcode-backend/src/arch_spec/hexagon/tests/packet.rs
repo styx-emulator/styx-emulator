@@ -43,7 +43,7 @@ fn test_packet_instructions() {
 
     // truncate
     let initial_isa_pc = get_isa_pc(&mut cpu);
-    trace!("initial isa pc is {}", initial_isa_pc);
+    trace!("initial isa pc is {initial_isa_pc}");
     cpu.write_register(HexagonRegister::R0, r0).unwrap();
     cpu.write_register(HexagonRegister::R3, mult_opts.0)
         .unwrap();
@@ -67,7 +67,7 @@ fn test_packet_instructions() {
     assert_eq!(r2, mult_opts.0 * mult_opts.1);
     assert_eq!(r3, r5 + 10);
 
-    trace!("initial pc is {}, new pc is {}", initial_isa_pc, end_isa_pc);
+    trace!("initial pc is {initial_isa_pc}, new pc is {end_isa_pc}");
 
     // TODO: test pc increment at end of packet
     assert_eq!(end_isa_pc - initial_isa_pc, 12);
@@ -201,8 +201,8 @@ fn test_all_packet_adjacent() {
             let mut ins0regs = vec![];
 
             for k in 0..ins0.no_regs {
-                let reg = format!("R{}", k);
-                asm0 = asm0.replace(&format!("%{}", k), &reg);
+                let reg = format!("R{k}");
+                asm0 = asm0.replace(&format!("%{k}"), &reg);
                 ins0regs
                     .push(HexagonRegister::from_name(&reg).expect("failed to get reg from str"));
                 reg_cnt += 1;
@@ -213,7 +213,7 @@ fn test_all_packet_adjacent() {
             let mut ins1regs = vec![];
 
             for k in reg_cnt_base..(reg_cnt_base + ins1.no_regs) {
-                let reg = format!("R{}", k);
+                let reg = format!("R{k}");
                 asm1 = asm1.replace(&format!("%{}", k - reg_cnt_base), &reg);
                 ins1regs
                     .push(HexagonRegister::from_name(&reg).expect("failed to get reg from str"));
@@ -224,7 +224,7 @@ fn test_all_packet_adjacent() {
             let asm_with_sets = "{ r23 = #123; r22 = #443; };".to_owned() + &asm0 + ";" + &asm1;
 
             for (asm_phase, asm) in [asm_plain, asm_with_sets].into_iter().enumerate() {
-                info!("assembling {}", asm);
+                info!("assembling {asm}");
 
                 let has_sets = asm_phase == 1;
                 let code0 = ks.asm(asm0.clone(), init_pc).expect("Could not assemble");
@@ -279,7 +279,7 @@ fn test_all_packet_adjacent() {
                     .clone()
                     .into_iter()
                     .map(|reg| {
-                        trace!("reading register {:?}", reg);
+                        trace!("reading register {reg:?}");
                         cpu.read_register::<u32>(reg).unwrap()
                     })
                     .collect();

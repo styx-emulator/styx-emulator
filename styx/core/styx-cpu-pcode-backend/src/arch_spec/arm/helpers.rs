@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::PcodeBackend;
 use styx_cpu_type::arch::arm::ArmRegister;
-use styx_processor::cpu::CpuBackendExt;
+use styx_processor::cpu::{CpuBackend, CpuBackendExt};
 use styx_sync::sync::Mutex;
 
 /// Represents the stack pointer currently selected, holding the deselected stack pointer's value.
@@ -36,7 +35,7 @@ pub struct StackPointerManager {
 
 impl StackPointerManager {
     /// Gets the Msp.
-    pub fn get_main(&self, backend: &mut PcodeBackend) -> u32 {
+    pub fn get_main(&self, backend: &mut dyn CpuBackend) -> u32 {
         match *self.stored_stack_pointer.lock().unwrap() {
             SelectedStackPointer::Process { main } => main,
             _ => backend.read_register::<u32>(ArmRegister::Sp).unwrap(),
@@ -44,7 +43,7 @@ impl StackPointerManager {
     }
 
     /// Gets the Psp.
-    pub fn get_process(&self, backend: &mut PcodeBackend) -> u32 {
+    pub fn get_process(&self, backend: &mut dyn CpuBackend) -> u32 {
         match *self.stored_stack_pointer.lock().unwrap() {
             SelectedStackPointer::Main { process } => process,
             _ => backend.read_register::<u32>(ArmRegister::Sp).unwrap(),
@@ -52,7 +51,7 @@ impl StackPointerManager {
     }
 
     /// Sets the Msp.
-    pub fn set_main(&self, new_value: u32, backend: &mut PcodeBackend) {
+    pub fn set_main(&self, new_value: u32, backend: &mut dyn CpuBackend) {
         match &mut *self.stored_stack_pointer.lock().unwrap() {
             SelectedStackPointer::Process { main } => {
                 *main = new_value;
@@ -64,7 +63,7 @@ impl StackPointerManager {
     }
 
     /// Sets the Psp.
-    pub fn set_process(&self, new_value: u32, backend: &mut PcodeBackend) {
+    pub fn set_process(&self, new_value: u32, backend: &mut dyn CpuBackend) {
         match &mut *self.stored_stack_pointer.lock().unwrap() {
             SelectedStackPointer::Main { process } => {
                 *process = new_value;
@@ -78,7 +77,7 @@ impl StackPointerManager {
     /// Sets the Stack Pointer Select Bit (spsel).
     ///
     /// This will swap the Sp with the new stack pointer if the aliased stack pointer has changed. False if Msp is aliased to Sp, True if Psp is aliased to sp.
-    pub fn set_stack_pointer_select(&self, process_selected: bool, cpu: &mut PcodeBackend) {
+    pub fn set_stack_pointer_select(&self, process_selected: bool, cpu: &mut dyn CpuBackend) {
         let stored = &mut *self.stored_stack_pointer.lock().unwrap();
 
         if process_selected {
