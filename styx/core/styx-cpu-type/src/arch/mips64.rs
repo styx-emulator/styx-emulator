@@ -8,13 +8,15 @@ pub mod variants;
 
 pub use registers::{Mips64Register, SpecialMips64Register};
 
+use tap::Conv;
 // for enum dispatch
 use variants::*;
 
 use super::ArchitectureDef;
 
 #[enum_dispatch(ArchitectureVariant, ArchitectureDef)]
-#[derive(Debug, Display, PartialEq, Eq, Clone)]
+#[derive(Debug, Display, PartialEq, Eq, Clone, Copy, serde::Deserialize)]
+#[serde(from = "Mips64Variants")]
 pub enum Mips64MetaVariants {
     Mips6420kc,
     Mips645kc,
@@ -74,7 +76,7 @@ impl From<Mips64MetaVariants> for Box<dyn ArchitectureDef> {
 
 /// The sole purpose of this enum is ergonomics when selecting
 /// a cpu model to use
-#[derive(Debug, Display, PartialEq, Eq, Clone)]
+#[derive(Debug, Display, PartialEq, Eq, Clone, Copy, serde::Deserialize)]
 pub enum Mips64Variants {
     Mips6420kc,
     Mips645kc,
@@ -156,5 +158,11 @@ impl From<Mips64Variants> for Mips64MetaVariants {
             Mips64Variants::Mips64Cn6870 => Mips64Cn6870 {}.into(),
             Mips64Variants::Mips64Cn6880 => Mips64Cn6880 {}.into(),
         }
+    }
+}
+
+impl From<Mips64Variants> for crate::arch::backends::ArchVariant {
+    fn from(value: Mips64Variants) -> Self {
+        value.conv::<Mips64MetaVariants>().into()
     }
 }

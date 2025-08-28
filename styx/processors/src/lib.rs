@@ -77,14 +77,14 @@ impl ProcessorImpl for RawProcessor {
     ) -> Result<styx_core::prelude::ProcessorBundle, styx_core::prelude::UnknownError> {
         let cpu: Box<dyn CpuBackend> = match args.backend {
             Backend::Pcode => Box::new(PcodeBackend::new_engine_config(
-                self.arch_variant.clone(),
+                self.arch_variant,
                 self.endian,
                 &args.into(),
             )),
             #[cfg(feature = "unicorn-backend")]
             Backend::Unicorn => Box::new(styx_core::cpu::UnicornBackend::new_engine_exception(
                 self.arch,
-                self.arch_variant.clone(),
+                self.arch_variant,
                 self.endian,
                 args.exception,
             )),

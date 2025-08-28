@@ -774,7 +774,7 @@ impl UnicornBackend {
         // the first `.into()` converts into the `ArchVariant`,
         // the clone is required since complex arch variants can exist
         // the second does the final conversion into an `ArchitectureDef`
-        let arch_def: Box<dyn ArchitectureDef> = arch_variant.clone().into();
+        let arch_def: Box<dyn ArchitectureDef> = arch_variant.into();
 
         // get the unicorn specific options required for the architecture
         let (uc_arch, uc_mode, uc_model) =

@@ -1270,12 +1270,12 @@ impl ProcessorImpl for TestProcessor {
         let cpu: Box<dyn CpuBackend> = match args.backend {
             Backend::Pcode => Box::new(PcodeBackend::new_engine(
                 self.arch,
-                self.arch_variant.clone(),
+                self.arch_variant,
                 self.endian,
             )),
             Backend::Unicorn => Box::new(UnicornBackend::new_engine(
                 self.arch,
-                self.arch_variant.clone(),
+                self.arch_variant,
                 self.endian,
             )),
             _ => return Err(BackendNotSupported(args.backend).into()),
@@ -1362,7 +1362,7 @@ impl TestMachine {
             ProcessorBuilder::default()
                 .with_builder(TestProcessor::new(
                     configuration.backend_arch,
-                    configuration.backend_arch_variant.clone(),
+                    configuration.backend_arch_variant,
                     configuration.backend_endian,
                 ))
                 .with_backend(backend_type),

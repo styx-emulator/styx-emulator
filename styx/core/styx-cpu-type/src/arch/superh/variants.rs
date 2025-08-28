@@ -35,7 +35,7 @@ macro_rules! register_map_to_cpu_register_bank {
 macro_rules! build_variant {
     ($name:ident, $reg_map:ident, $data_word:literal, $usize:literal, $gdb_desc:ident) => {
         paste! {
-            #[derive(Debug, Display, PartialEq, Eq, Clone)]
+            #[derive(Debug, Display, PartialEq, Eq, Clone, Copy)]
             pub struct $name {}
 
             impl ArchitectureVariant for $name {}

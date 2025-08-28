@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use derive_more::Display;
 use enum_dispatch::enum_dispatch;
+use tap::Conv;
 
 pub mod gdb_targets;
 mod registers;
@@ -16,7 +17,8 @@ use variants::*;
 use super::ArchitectureDef;
 
 #[enum_dispatch(ArchitectureVariant, ArchitectureDef)]
-#[derive(Debug, Display, PartialEq, Eq, Clone)]
+#[derive(Debug, Display, PartialEq, Eq, Clone, Copy, serde::Deserialize)]
+#[serde(from = "Msp430Variants")]
 pub enum Msp430MetaVariants {
     Msp430x31x,
 }
@@ -36,7 +38,7 @@ impl From<Msp430MetaVariants> for Box<dyn ArchitectureDef> {
 
 /// The sole purpose of this enum is ergonomics when selecting
 /// a cpu model to use
-#[derive(Debug, Display, PartialEq, Eq, Clone)]
+#[derive(Debug, Display, PartialEq, Eq, Clone, Copy, serde::Deserialize)]
 pub enum Msp430Variants {
     Msp430x31x,
 }
@@ -46,5 +48,11 @@ impl From<Msp430Variants> for Msp430MetaVariants {
         match value {
             Msp430Variants::Msp430x31x => Msp430x31x {}.into(),
         }
+    }
+}
+
+impl From<Msp430Variants> for crate::arch::backends::ArchVariant {
+    fn from(value: Msp430Variants) -> Self {
+        value.conv::<Msp430MetaVariants>().into()
     }
 }

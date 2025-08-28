@@ -19,7 +19,8 @@ use variants::*;
 use super::ArchitectureDef;
 
 #[enum_dispatch(ArchitectureVariant, ArchitectureDef)]
-#[derive(Debug, Display, PartialEq, Eq, Clone)]
+#[derive(Debug, Display, PartialEq, Eq, Clone, Copy, serde::Deserialize)]
+#[serde(from = "ArmVariants")]
 pub enum ArmMetaVariants {
     Arm1026,
     Arm1136,
@@ -71,7 +72,7 @@ impl From<ArmMetaVariants> for Box<dyn ArchitectureDef> {
 
 /// The sole purpose of this enum is ergonomics when selecting
 /// a cpu model to use
-#[derive(Debug, Display, PartialEq, Eq, Clone)]
+#[derive(Debug, Display, PartialEq, Eq, Clone, serde::Deserialize)]
 pub enum ArmVariants {
     Arm926 = 0,
     Arm946,
