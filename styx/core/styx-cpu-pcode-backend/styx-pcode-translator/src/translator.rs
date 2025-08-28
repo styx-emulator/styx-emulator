@@ -56,7 +56,7 @@ impl<L: Loader + LoaderRequires + 'static> PcodeTranslator<L> {
         let sla = S::spec();
         let spec_file = styx_util::bytes_to_tmp_file(sla);
 
-        let arch_def: Box<dyn ArchitectureDef> = arch.clone().into();
+        let arch_def: Box<dyn ArchitectureDef> = (*arch).into();
         // must be a reference to the NamedTempFile, otherwise it gets dropped before initializing
         let mut sleigh = Sleigh::new(loader, &spec_file)?;
 

@@ -8,16 +8,18 @@ pub mod variants;
 
 pub use registers::{Mips32Register, SpecialMips32Register};
 
+use tap::Conv;
 // for enum dispatch
 use variants::*;
 
 use super::ArchitectureDef;
 
-#[enum_dispatch(ArchitectureVariant, ArchitectureDef)]
-#[derive(Debug, Display, PartialEq, Eq, Clone)]
 // Almost complete list: https://techinfodepot.shoutwiki.com/wiki/MIPS32
 // GCC defintions for processors at: /gcc/config/mips/mips-cpus.def in gcc source.
 //      https://github.com/gcc-mirror/gcc/blob/master/gcc/config/mips/mips-cpus.def
+#[enum_dispatch(ArchitectureVariant, ArchitectureDef)]
+#[derive(Debug, Display, PartialEq, Eq, Clone, Copy, serde::Deserialize)]
+#[serde(from = "Mips32Variants")]
 pub enum Mips32MetaVariants {
     // Generic mips32 revision 1 isa
     Mips32r1Generic,
@@ -96,7 +98,7 @@ impl From<Mips32MetaVariants> for Box<dyn ArchitectureDef> {
 
 /// The sole purpose of this enum is ergonomics when selecting
 /// a cpu model to use
-#[derive(Debug, Display, PartialEq, Eq, Clone)]
+#[derive(Debug, Display, PartialEq, Eq, Clone, Copy, serde::Deserialize)]
 pub enum Mips32Variants {
     Mips32r1Generic,
     Mips324kc,
@@ -210,5 +212,11 @@ impl From<Mips32Variants> for Mips32MetaVariants {
             Mips32Variants::Mips32m5100 => Mips32m5100 {}.into(),
             Mips32Variants::Mips32m5101 => Mips32m5101 {}.into(),
         }
+    }
+}
+
+impl From<Mips32Variants> for crate::arch::backends::ArchVariant {
+    fn from(value: Mips32Variants) -> Self {
+        value.conv::<Mips32MetaVariants>().into()
     }
 }

@@ -106,9 +106,11 @@ use ppc32::{variants::*, Ppc32MetaVariants, Ppc32Register, SpecialPpc32Register}
 use superh::{variants::*, SpecialSuperHRegister, SuperHMetaVariants, SuperHRegister};
 
 /// Enum used for endianness selection of target cpu emulation
-#[derive(Debug, Display, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+#[derive(serde::Deserialize, Debug, Display, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub enum ArchEndian {
+    #[serde(rename = "Little")]
     LittleEndian = 0,
+    #[serde(rename = "Big")]
     BigEndian,
 }
 
@@ -916,7 +918,8 @@ pub mod backends {
     ///
     /// All architectures need to have a variant dedicated to their own
     /// enum of architecture variants.
-    #[derive(Debug, PartialEq, Eq, Clone)]
+    #[derive(Debug, PartialEq, Eq, Clone, Copy, serde::Deserialize)]
+    #[serde(untagged)]
     pub enum ArchVariant {
         Arm(ArmMetaVariants),
         Aarch64(Aarch64MetaVariants),
@@ -1262,4 +1265,26 @@ pub trait GdbArchIdSupportTrait:
     + Ord
     + std::hash::Hash
 {
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use test_case::test_case;
+
+    // Test the deserialization of arch variants
+    // one from each arch is probably enough
+    #[test_case("Generic", aarch64::Aarch64Variants::Generic)]
+    #[test_case("ArmCortexM4", arm::ArmVariants::ArmCortexM4)]
+    #[test_case("Bf512", blackfin::BlackfinVariants::Bf512)]
+    #[test_case("Mips32r1Generic", mips32::Mips32Variants::Mips32r1Generic)]
+    #[test_case("Mips64R2Generic", mips64::Mips64Variants::Mips64R2Generic)]
+    #[test_case("Msp430x31x", msp430::Msp430Variants::Msp430x31x)]
+    #[test_case("SH4", superh::SuperHVariants::SH4)]
+    #[test_case("Ppc405", ppc32::Ppc32Variants::Ppc405)]
+    fn test_deserialize(name: &str, arch: impl Into<backends::ArchVariant>) {
+        let arch = arch.into();
+        let arch_variant: backends::ArchVariant = serde_yaml::from_str(name).unwrap();
+        assert_eq!(arch_variant, arch);
+    }
 }

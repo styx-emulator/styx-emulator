@@ -198,7 +198,7 @@ impl CpuRegisterBank for Ppc32GeneralRegistersWithFloat {
 
 macro_rules! ppc32_arch_impl {
     ($variant_name:ident, $registers_struct:ty, $target_description:ty) => {
-        #[derive(Debug, Display, PartialEq, Eq, Clone)]
+        #[derive(Debug, Display, PartialEq, Eq, Clone, Copy)]
         pub struct $variant_name {}
 
         impl ArchitectureVariant for $variant_name {}
@@ -299,7 +299,7 @@ ppc32_arch_impl!(Mpc859DSL, Ppc32GeneralRegisters, Mpc8xxTargetDescription);
 /// # let bad_meta: ArchVariant = Ppc32Variants::Mpc821.into();
 /// # assert!(TryInto::<Mpc8xxVariants>::try_into(bad_meta).is_err());
 /// ```
-#[derive(Debug, Display, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(serde::Deserialize, Debug, Display, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Mpc8xxVariants {
     Mpc850,
     Mpc860,

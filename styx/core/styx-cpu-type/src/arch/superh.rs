@@ -15,7 +15,8 @@ use variants::*;
 use super::ArchitectureDef;
 
 #[enum_dispatch(ArchitectureVariant, ArchitectureDef)]
-#[derive(Debug, PartialEq, Eq, Clone, Display)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Display, serde::Deserialize)]
+#[serde(from = "SuperHVariants")]
 pub enum SuperHMetaVariants {
     SH1,
     SH1Dsp,
@@ -47,7 +48,7 @@ impl From<SuperHMetaVariants> for Box<dyn ArchitectureDef> {
 
 /// The ergonomic enum implementation, should mirror *exactly*
 /// [`SuperHMetaVariants`]
-#[derive(Debug, Display, PartialEq, Eq, Clone)]
+#[derive(Debug, Display, PartialEq, Eq, Clone, Copy, serde::Deserialize)]
 pub enum SuperHVariants {
     SH1,
     SH1Dsp,

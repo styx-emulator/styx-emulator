@@ -18,7 +18,8 @@ use variants::*;
 use super::ArchitectureDef;
 
 #[enum_dispatch(ArchitectureVariant, ArchitectureDef)]
-#[derive(Debug, Display, PartialEq, Eq, Clone)]
+#[derive(Debug, Display, PartialEq, Eq, Clone, Copy, serde::Deserialize)]
+#[serde(from = "Aarch64Variants")]
 pub enum Aarch64MetaVariants {
     Generic,
 }
@@ -38,7 +39,7 @@ impl From<Aarch64MetaVariants> for Box<dyn ArchitectureDef> {
 
 /// The sole purpose of this enum is ergonomics when selecting
 /// a cpu model to use
-#[derive(Debug, Display, PartialEq, Eq, Clone)]
+#[derive(Debug, Display, PartialEq, Eq, Clone, Copy, serde::Deserialize)]
 pub enum Aarch64Variants {
     Generic,
 }

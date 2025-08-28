@@ -264,7 +264,7 @@ impl PcodeBackend {
         // derive the styx architecture metadata from the enum passed in
         // the first `.into()` converts into the `ArchVariant`,
         // the second does the final conversion into an `ArchitectureDef`
-        let arch_def: Box<dyn ArchitectureDef> = arch_variant.clone().into();
+        let arch_def: Box<dyn ArchitectureDef> = arch_variant.into();
 
         let hook_manager = HookManager::new();
 

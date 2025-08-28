@@ -77,7 +77,7 @@ pub struct Mpc8xxBuilder {
 impl Mpc8xxBuilder {
     pub fn new(variant: impl Into<ArchVariant>, endian: ArchEndian) -> Result<Self, UnknownError> {
         let variant: ArchVariant = variant.into();
-        if let Ok(mpc_variant) = TryInto::<Mpc8xxVariants>::try_into(variant.clone()) {
+        if let Ok(mpc_variant) = TryInto::<Mpc8xxVariants>::try_into(variant) {
             Ok(Self {
                 family_variant: mpc_variant,
                 meta_variant: variant,
@@ -93,14 +93,14 @@ impl ProcessorImpl for Mpc8xxBuilder {
     fn build(&self, args: &BuildProcessorImplArgs) -> Result<ProcessorBundle, UnknownError> {
         let mut cpu: Box<dyn CpuBackend> = match args.backend {
             Backend::Pcode => Box::new(PcodeBackend::new_engine_config(
-                self.meta_variant.clone(),
+                self.meta_variant,
                 self.endian,
                 &args.into(),
             )),
             #[cfg(feature = "unicorn-backend")]
             Backend::Unicorn => Box::new(styx_core::cpu::UnicornBackend::new_engine(
                 Arch::Ppc32,
-                self.meta_variant.clone(),
+                self.meta_variant,
                 self.endian,
             )),
             _ => return Err(BackendNotSupported(args.backend).into()),

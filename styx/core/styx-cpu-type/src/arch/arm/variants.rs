@@ -55,7 +55,7 @@ impl CpuRegisterBank for ArmMProfileRegisters {
 /// [`CpuRegister`](crate::arch::CpuRegister) impl
 macro_rules! arm_cortex_arch_impl {
     ($variant_name:ident) => {
-        #[derive(Debug, Display, PartialEq, Eq, Clone)]
+        #[derive(Debug, Display, PartialEq, Eq, Clone, Copy)]
         pub struct $variant_name {}
 
         impl ArchitectureVariant for $variant_name {}
@@ -99,7 +99,7 @@ macro_rules! arm_cortex_arch_impl {
         }
     };
     ($variant_name:ident, $registers_struct:ty, $target_description:ty) => {
-        #[derive(Debug, Display, PartialEq, Eq, Clone)]
+        #[derive(Debug, Display, PartialEq, Eq, Clone, Copy)]
         pub struct $variant_name {}
 
         impl ArchitectureVariant for $variant_name {}

@@ -47,7 +47,7 @@ impl CpuRegisterBank for Msp430GeneralRegisters {
 
 macro_rules! msp430_arch_impl {
     ($variant_name:ident, $registers_struct:ty, $target_description:ty) => {
-        #[derive(Debug, Display, PartialEq, Eq, Clone)]
+        #[derive(Debug, Display, PartialEq, Eq, Clone, Copy)]
         pub struct $variant_name {}
 
         impl ArchitectureVariant for $variant_name {}

@@ -15,7 +15,8 @@ use variants::*;
 use super::ArchitectureDef;
 
 #[enum_dispatch(ArchitectureVariant, ArchitectureDef)]
-#[derive(Debug, PartialEq, Eq, Clone, Display)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Display, serde::Deserialize)]
+#[serde(from = "Ppc32Variants")]
 pub enum Ppc32MetaVariants {
     // PowerQUICC I family
     // https://www.nxp.com/products/processors-and-microcontrollers/legacy-mpu-mcus/powerquicc-processors:POWERQUICC_HOME
@@ -60,7 +61,7 @@ impl From<Ppc32MetaVariants> for Box<dyn ArchitectureDef> {
 }
 /// The ergonomic enum implementation, should mirror *exactly*
 /// [`Ppc32MetaVariants`]
-#[derive(Debug, Display, PartialEq, Eq, Clone)]
+#[derive(Debug, Display, PartialEq, Eq, Clone, Copy, serde::Deserialize)]
 pub enum Ppc32Variants {
     // PowerQUICC I family
     // https://www.nxp.com/products/processors-and-microcontrollers/legacy-mpu-mcus/powerquicc-processors:POWERQUICC_HOME
