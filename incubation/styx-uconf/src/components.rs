@@ -90,6 +90,30 @@ macro_rules! register_component_config {
     };
 }
 
+#[macro_export]
+macro_rules! register_component_config_fn {
+    (register $class:ident: id = $id:ident, component_fn = $component_fn:ident, config = $config:ty) => {
+        fn $id(
+            config: Option<&$crate::ComponentConfig>,
+        ) -> Result<$crate::components::component_types::$class, $crate::components::UnknownError> {
+            use $crate::components::Context;
+            let new_config = config
+                .map(|c| {
+                    $crate::components::from_value::<$config>(c.config.clone())
+                        .with_context(|| "invalid config")
+                })
+                .transpose()?;
+            let new_config = new_config.with_context(|| "config not passed")?;
+            let component = $component_fn(new_config)?;
+            Ok(component)
+        }
+
+        $crate::components::inventory_submit! {
+            $crate::$class!(stringify!($id), $id)
+        }
+    };
+}
+
 pub mod component_types {
     //! Component types for use by [`register_component`] and [`register_component_config`]
     #![allow(non_camel_case_types)]

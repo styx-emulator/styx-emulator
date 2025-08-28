@@ -12,7 +12,7 @@ use gdbmi::{Gdb, TimeoutError};
 use std::fmt::Write;
 use std::num::ParseIntError;
 use styx_core::prelude::*;
-use styx_plugins::gdb::{GdbExecutor, GdbPluginParams};
+use styx_plugins::gdb::{build_gdb, GdbExecutor, GdbPluginParams};
 
 use thiserror::Error;
 use tokio::process::{Child, Command};
@@ -599,7 +599,23 @@ pub struct GdbHarness {
     _processor_handle: JoinHandle<()>,
 }
 
+fn params() -> GdbPluginParams {
+    GdbPluginParams::tcp("127.0.0.1", 0, false)
+}
 impl GdbHarness {
+    pub fn from_arch(builder: ProcessorBuilder, arch: impl Into<ArchVariant>) -> Self {
+        let arch = arch.into();
+        let params = params();
+        let port = params.port_in_use.clone();
+        // create gdb plugin with port 0
+        let gdb_plugin = build_gdb(arch, params).unwrap();
+
+        // get assigned port (doesn't happen until processor starts) todo
+        let port = *port.lock().unwrap();
+
+        Self::from_foo(builder, gdb_plugin, port)
+    }
+
     pub fn from_processor_builder<GdbSupport>(builder: ProcessorBuilder) -> Self
     where
         GdbSupport: gdbstub::arch::Arch + 'static + std::fmt::Debug,
@@ -607,15 +623,22 @@ impl GdbHarness {
         GdbSupport::RegId: styx_core::cpu::arch::GdbArchIdSupportTrait,
     {
         // create gdb plugin with port 0
-        let gdb_plugin =
-            GdbExecutor::<GdbSupport>::new(GdbPluginParams::tcp("127.0.0.1", 0, false)).unwrap();
+        let gdb_plugin = GdbExecutor::<GdbSupport>::new(params()).unwrap();
 
         // get assigned port (doesn't happen until processor starts) todo
         let port = gdb_plugin.port();
 
+        Self::from_foo(builder, Box::new(gdb_plugin), port)
+    }
+
+    pub fn from_foo(
+        builder: ProcessorBuilder,
+        gdb_plugin: Box<dyn ExecutorImpl>,
+        port: u16,
+    ) -> Self {
         let mut processor = builder
             // .with_executor()
-            .with_executor(gdb_plugin)
+            .with_executor_box(gdb_plugin)
             .with_ipc_port(0)
             .build()
             .unwrap();

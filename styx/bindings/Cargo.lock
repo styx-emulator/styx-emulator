@@ -4915,6 +4915,7 @@ dependencies = [
  "styx-sync",
  "styx-util",
  "styx-workspace-hack",
+ "tap",
  "thiserror 2.0.12",
  "unicorn-engine",
 ]
@@ -5063,8 +5064,11 @@ dependencies = [
  "derivative",
  "gdbstub",
  "num-traits",
+ "serde",
  "styx-core",
+ "styx-uconf",
  "styx-workspace-hack",
+ "tap",
  "tokio",
  "tracing",
 ]

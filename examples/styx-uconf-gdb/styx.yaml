@@ -1,0 +1,19 @@
+version: 1
+processors:
+  - name: FreeRTOS Test Processor
+    processor: ppc_4xx
+    backend: Pcode
+    executor:
+      id: gdb
+      config:
+        connection: 127.0.0.1:9999
+        arch_variant: Ppc405
+        verbose: true
+    program:
+      - !FileRaw
+        base: 0xfff00000
+        file: ../../data/test-binaries/ppc/ppc405/bin/freertos.bin
+        perms: !AllowAll
+      - !RegisterImmediate
+        register: pc
+        value: 0xfffffffc

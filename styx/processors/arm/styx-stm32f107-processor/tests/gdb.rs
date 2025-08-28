@@ -34,5 +34,6 @@ gdb_core_test_suite!(
     0x5906,                 // breakpoint two
     0x40011014,             // watchpoint 1
     ArmMProfileDescription, // type of gdb target description
+    styx_core::arch::arm::ArmVariants::ArmCortexM3,
     stm32f107_blink_flash,
 );

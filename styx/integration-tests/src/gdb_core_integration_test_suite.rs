@@ -30,6 +30,7 @@ macro_rules! gdb_core_test_suite {
      $bp_two:expr_2021,
      $wp_one:expr_2021,
      $test_target_description_type:tt,
+     $test_target_arch:expr,
      $gdb_test_processor:ident,
      ) => {
         mod gdb_core_integration {
@@ -1025,6 +1026,44 @@ macro_rules! gdb_core_test_suite {
 
                 // now step out of the watchpoint
                 let _ = harness.gdb_continue().unwrap();
+            }
+
+            // test_add_breakpoint_hit_and_si
+            #[test]
+            fn test_arch_builder() {
+                let harness = ::styx_integration_tests::gdb_harness::GdbHarness::from_arch(
+                    $gdb_test_processor(),
+                    $test_target_arch,
+                );
+                let registers = harness.list_registers().unwrap();
+
+                let address = BP_ONE;
+                assert_ne!(address, *registers.get(PC_REGISTER).unwrap());
+
+                // set breakpoint at address
+                let breakpoint = harness.add_breakpoint(address).unwrap();
+
+                // now continue into the breakpoint
+                harness.gdb_continue().unwrap();
+                // get the stop reason from gdb
+                let stop_reason = harness.wait_for_stop_reason().unwrap();
+
+                // assert that:
+                // - stop reason is breakpoint we created
+                // - current address is our breakpoint's address
+                let bp_id = match stop_reason {
+                    ::gdbmi::status::StopReason::Breakpoint { number } => number,
+                    _ => panic!("Did not stop due to breakpoint"),
+                };
+                let registers = harness.list_registers().unwrap();
+                let current_pc = *registers.get(PC_REGISTER).unwrap();
+
+                assert_eq!(breakpoint.number, bp_id);
+                assert_eq!(address, current_pc);
+
+                // now step out of the breakpoint
+                let current_pc = harness.step_instruction().unwrap();
+                assert_ne!(address, current_pc);
             }
         }
     };

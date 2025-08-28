@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
+use styx_core::arch::ppc32::Ppc32Variants;
 use styx_core::cpu::arch::ppc32::gdb_targets::Ppc4xxTargetDescription;
 use styx_core::prelude::*;
 
@@ -46,5 +47,6 @@ gdb_core_test_suite!(
     0x20dc,
     0xFFFFFEB4,
     Ppc4xxTargetDescription,
+    Ppc32Variants::Ppc405,
     gdb_tests_builder,
 );
