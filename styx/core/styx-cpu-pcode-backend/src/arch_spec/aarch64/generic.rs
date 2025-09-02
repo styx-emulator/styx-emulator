@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use styx_pcode_translator::sla::{Aarch64, Aarch64UserOps};
+use styx_processor::cpu::CpuBackend;
 
 use crate::{
     arch_spec::{
