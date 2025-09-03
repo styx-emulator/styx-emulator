@@ -1,4 +1,3 @@
-use crate::PcodeBackend;
 
 use super::generator_helper::EmptyGeneratorHelper;
 // SPDX-License-Identifier: BSD-2-Clause
@@ -29,7 +28,6 @@ use super::generator_helper::EmptyGeneratorHelper;
 use super::ArchSpecBuilder;
 use super::GeneratorHelper;
 use super::HexagonPcodeBackend;
-use super::PcManager;
 
 pub mod backend;
 // Anything related to packet semantics

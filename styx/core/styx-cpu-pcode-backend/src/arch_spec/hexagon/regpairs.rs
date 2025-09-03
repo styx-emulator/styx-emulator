@@ -39,7 +39,6 @@ use crate::{
     arch_spec::ArchSpecBuilder,
     memory::sized_value::SizedValue,
     register_manager::{RegisterCallback, RegisterHandleError},
-    PcodeBackend,
 };
 
 use super::backend::HexagonPcodeBackend;

@@ -32,7 +32,7 @@ use styx_processor::{cpu::CpuBackend, event_controller::EventController, memory:
 use crate::{
     arch_spec::{ArchSpecBuilder, HexagonPcodeBackend},
     call_other::{CallOtherCallback, CallOtherCpu, CallOtherHandleError},
-    PCodeStateChange, PcodeBackend,
+    PCodeStateChange,
 };
 
 // Instruction cache

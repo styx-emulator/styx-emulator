@@ -11,7 +11,6 @@ use super::aarch64;
 #[cfg(feature = "arch_arm")]
 use super::arm;
 
-use super::hexagon;
 #[cfg(feature = "arch_superh")]
 use super::superh;
 

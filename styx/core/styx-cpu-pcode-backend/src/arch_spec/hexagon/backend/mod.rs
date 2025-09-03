@@ -1,11 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use std::{
-    collections::BTreeMap,
-    sync::{Arc, Mutex},
-};
+use std::collections::BTreeMap;
 
 use anyhow::anyhow;
-use as_any::{AsAny, Downcast};
 use execution_helper::DefaultHexagonExecutionHelper;
 use log::trace;
 pub use saved_context_opts::SavedContextOpts;
@@ -40,20 +36,15 @@ use crate::{
     hooks::{HasHookManager, HookManager},
     memory::{
         sized_value::SizedValue,
-        space_manager::{HasSpaceManager, MmuSpaceOps, SpaceManager},
+        space_manager::{HasSpaceManager, SpaceManager},
     },
     pcode_gen::HasPcodeGenerator,
     register_manager::{HasRegisterManager, RegisterCallbackCpu},
     GhidraPcodeGenerator, HasConfig, RegisterManager, MAX_PACKET_SIZE,
 };
 use crate::{
-    arch_spec::{
-        hexagon::{parse_iclass, pkt_semantics::DEST_REG_OFFSET},
-        GeneratorHelper, PcManager,
-    },
-    get_pcode::fetch_pcode,
-    pcode_gen::GeneratePcodeError,
-    PcodeBackend, PcodeBackendConfiguration,
+    arch_spec::hexagon::{parse_iclass, pkt_semantics::DEST_REG_OFFSET},
+    pcode_gen::GeneratePcodeError, PcodeBackendConfiguration,
 };
 use crate::{execute_pcode, ArchPcManager};
 use crate::{PCodeStateChange, DEFAULT_REG_ALLOCATION};
@@ -228,7 +219,7 @@ impl CpuBackend for HexagonPcodeBackend {
                 .to_u64()
                 .with_context(|| &"regpair should be (at least) 64 bits")?;
 
-            let hi = ((val >> 32) & 0xffffffff);
+            let hi = (val >> 32) & 0xffffffff;
             let lo = (val & 0xffffffff) as u32;
 
             self.set_pc(hi)?;

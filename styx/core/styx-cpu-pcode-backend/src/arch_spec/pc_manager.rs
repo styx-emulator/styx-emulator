@@ -23,8 +23,6 @@ use super::ppc;
 #[cfg(any(feature = "arch_mips32", feature = "arch_mips64"))]
 use super::mips_common;
 
-#[cfg(feature = "arch_hexagon")]
-use super::hexagon;
 
 /// Concrete enum for program counter managers.
 ///

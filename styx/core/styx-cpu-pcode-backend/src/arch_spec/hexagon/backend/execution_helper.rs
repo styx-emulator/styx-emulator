@@ -15,7 +15,6 @@ use crate::{
     memory::sized_value::SizedValue,
     pcode_gen::GeneratePcodeError,
     register_manager::RegisterManager,
-    PcodeBackend,
 };
 
 use super::{HexagonExecutionHelper, HexagonPcodeBackend, PktState};

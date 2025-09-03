@@ -1,17 +1,9 @@
 use std::collections::HashMap;
 
-use styx_cpu_type::{
-    arch::{
-        self,
-        backends::{ArchRegister, ArchVariant},
-        ArchitectureDef, CpuRegister, RegisterValue,
-    },
-    ArchEndian,
-};
-use styx_errors::{styx_cpu::StyxCpuBackendError, UnknownError};
+use styx_errors::UnknownError;
 use styx_pcode::pcode::SpaceName;
 use styx_processor::{
-    cpu::{CpuBackend, ReadRegisterError},
+    cpu::CpuBackend,
     event_controller::EventController,
     memory::{MemoryOperation, MemoryType, Mmu},
 };
@@ -19,11 +11,10 @@ use styx_processor::{
 use crate::{
     hooks::{HasHookManager, HookManager},
     memory::{
-        blob_store::BlobStore, hash_store::HashStore, sized_value::SizedValue, space::Space,
+        blob_store::BlobStore, hash_store::HashStore, space::Space,
         space_manager::SpaceManager,
     },
-    register_manager::RegisterCallbackCpu,
-    GhidraPcodeGenerator, MmuSpace, PcodeBackendConfiguration, RegisterManager,
+    GhidraPcodeGenerator, MmuSpace,
     REGISTER_SPACE_SIZE,
 };
 

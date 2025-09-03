@@ -40,7 +40,7 @@ pub use styx_processor::{
 pub(crate) use crate::RegisterManager;
 use crate::{
     memory::{sized_value::SizedValue, space_manager::HasSpaceManager},
-    pcode_gen::{HasPcodeGenerator, RegisterTranslator},
+    pcode_gen::RegisterTranslator,
     register_manager::{RegisterCallbackCpu, RegisterHandleError},
 };
 pub use styx_processor::cpu::CpuBackendExt;

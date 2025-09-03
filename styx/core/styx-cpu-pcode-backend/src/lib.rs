@@ -16,7 +16,7 @@ use smallvec::smallvec;
 use self::{
     hooks::HookManager,
     memory::{
-        blob_store::BlobStore, hash_store::HashStore, sized_value::SizedValue, space::Space,
+        sized_value::SizedValue,
         space_manager::SpaceManager,
     },
     pcode_gen::GhidraPcodeGenerator,
@@ -29,7 +29,7 @@ use log::trace;
 use memory::{mmu_store::MmuSpace, space_manager::VarnodeError};
 use pcode_gen::GeneratePcodeError;
 use rustc_hash::FxHashMap;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 use styx_cpu_type::{
     arch::{
         arm::SpecialArmRegister,
@@ -43,12 +43,12 @@ use styx_errors::{
     styx_cpu::StyxCpuBackendError,
     UnknownError,
 };
-use styx_pcode::pcode::{Pcode, SpaceName, VarnodeData};
+use styx_pcode::pcode::{Pcode, VarnodeData};
 use styx_processor::{
     core::{builder::BuildProcessorImplArgs, ExceptionBehavior},
     cpu::{CpuBackend, ExecutionReport, ReadRegisterError, WriteRegisterError},
     event_controller::{EventController, ExceptionNumber},
-    memory::{MemoryOperation, MemoryType, Mmu},
+    memory::Mmu,
 };
 use types::*;
 
