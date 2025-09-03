@@ -57,6 +57,7 @@ use types::*;
 /// increased from 20000 because ARM64 has too many registers
 const REGISTER_SPACE_SIZE: usize = 80000;
 pub(crate) const DEFAULT_REG_ALLOCATION: usize = 3;
+pub(crate) const MAX_PACKET_SIZE: usize = 4;
 
 #[derive(Debug, PartialEq)]
 pub(crate) enum PCodeStateChange {

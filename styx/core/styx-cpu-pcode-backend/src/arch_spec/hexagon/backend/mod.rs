@@ -44,7 +44,7 @@ use crate::{
     },
     pcode_gen::HasPcodeGenerator,
     register_manager::{HasRegisterManager, RegisterCallbackCpu},
-    GhidraPcodeGenerator, HasConfig, RegisterManager,
+    GhidraPcodeGenerator, HasConfig, RegisterManager, MAX_PACKET_SIZE,
 };
 use crate::{
     arch_spec::{
@@ -94,15 +94,20 @@ pub enum OutputRegisterType {
 
 #[derive(Debug)]
 pub struct HexagonPcodeBackend {
+    // This shared state is not local to a function to avoid
+    // expensive re-allocations. we could move to a smallvec
+    // to get rid of this
     saved_context_opts: SavedContextOpts,
+
     regs_written: Vec<Vec<VarnodeData>>,
     execution_helper: Option<DefaultHexagonExecutionHelper>,
-    bytes_consumed: Option<u64>,
 
+    // This is also to prevent re-allocation
     pcodes: Option<Vec<Vec<Pcode>>>,
-    ordering: SmallVec<[usize; 4]>,
-    ordering_location: usize,
+
+    // This state is for any hooks that need to set up edge case stuff for the very first packet that executes.
     first_packet: bool,
+
     pcode_config: PcodeBackendConfiguration,
     endian: ArchEndian,
     space_manager: SpaceManager,
@@ -258,11 +263,15 @@ impl CpuBackend for HexagonPcodeBackend {
     ) -> Result<ExecutionReport, UnknownError> {
         let mut total_instrs_executed = 0;
         let mut exit_reason = TargetExitReason::InstructionCountComplete;
+        let mut last_ordering = smallvec![];
         // fetch a number of packets, then execute them
         for i in 0..count {
             trace!("pcket count is {i}");
             match self.execute_single(mmu, ev)? {
-                Ok(ins) => total_instrs_executed += ins,
+                Ok((ins, ordering)) => {
+                    total_instrs_executed += ins;
+                    last_ordering = ordering
+                }
                 Err(e) => {
                     exit_reason = e;
                     break;
@@ -275,7 +284,7 @@ impl CpuBackend for HexagonPcodeBackend {
         Ok(ExecutionReport {
             exit_reason,
             instructions_executed: Some(total_instrs_executed as u64),
-            last_packet_order: Some(self.ordering.clone()),
+            last_packet_order: Some(last_ordering),
         })
     }
 
@@ -371,9 +380,6 @@ impl HexagonPcodeBackend {
             saved_execution_helper: None,
             execution_helper: Some(execution_helper), // TODO: performance optimizations
             pcodes: Some(Vec::new()),
-            ordering: SmallVec::new(),
-            ordering_location: 0,
-            bytes_consumed: None,
             first_packet: true,
             space_manager,
             endian,
@@ -400,31 +406,33 @@ impl HexagonPcodeBackend {
         &mut self,
         mmu: &mut Mmu,
         ev: &mut EventController,
-    ) -> Result<Result<u64, TargetExitReason>, UnknownError> {
+    ) -> Result<Result<(u64, SmallVec<[usize; MAX_PACKET_SIZE]>), TargetExitReason>, UnknownError>
+    {
         let mut total_instrs_executed = 0;
         let mut execution_regs_written = smallvec![];
 
-        match self.fetch_decode_packet(mmu, ev)? {
-            Ok(bytes) => {
-                self.bytes_consumed = Some(bytes);
-            }
+        let (bytes_consumed, ordering) = match self.fetch_decode_packet(mmu, ev)? {
+            Ok(bytes_ordering) => bytes_ordering,
             Err(reason) => {
                 return Ok(Err(reason));
             }
-        }
+        };
 
         let pcodes = self.pcodes.take().unwrap();
-        let ordering = self.ordering.clone();
-        for i_instrs in ordering {
-            let pcode_instrs = &pcodes[i_instrs];
+        for i_instrs in &ordering {
+            let pcode_instrs = &pcodes[*i_instrs];
 
             trace!("executing single instruction pcodes: {pcode_instrs:?}");
             // this should actually do the fetching for each individual packet.
             // TODO: move everything that happens within one one execution. call this function something else,
             // like execute_packet_pcodes or something?
-            if let Err(reason) =
-                self.execute_single_ins(pcode_instrs, mmu, ev, &mut execution_regs_written)?
-            {
+            if let Err(reason) = self.execute_single_instr(
+                pcode_instrs,
+                mmu,
+                ev,
+                &mut execution_regs_written,
+                bytes_consumed,
+            )? {
                 return Ok(Err(reason));
             }
             total_instrs_executed += 1;
@@ -433,15 +441,19 @@ impl HexagonPcodeBackend {
         // We should only flush regs based on executed pcodes.
         trace!("end of packet, flushing registers...");
         let regs_flush_pcodes = Self::flush_regs_pcode(&execution_regs_written);
-        if let Err(reason) =
-            self.execute_single_ins(&regs_flush_pcodes, mmu, ev, &mut execution_regs_written)?
-        {
+        if let Err(reason) = self.execute_single_instr(
+            &regs_flush_pcodes,
+            mmu,
+            ev,
+            &mut execution_regs_written,
+            bytes_consumed,
+        )? {
             return Ok(Err(reason));
         }
 
         let mut execution_helper_outer = self.execution_helper.take().unwrap();
         {
-            let next_pc = execution_helper_outer.isa_pc() + self.bytes_consumed.unwrap();
+            let next_pc = execution_helper_outer.isa_pc() + bytes_consumed;
 
             trace!("telling execution helper to bank move forward pc to {next_pc:x}");
             execution_helper_outer.set_isa_pc(next_pc, self);
@@ -451,16 +463,17 @@ impl HexagonPcodeBackend {
         }
         self.execution_helper = Some(execution_helper_outer);
 
-        Ok(Ok(total_instrs_executed))
+        Ok(Ok((total_instrs_executed, ordering)))
     }
 
     /// Execute a single instruction
-    pub fn execute_single_ins(
+    pub fn execute_single_instr(
         &mut self,
         pcodes: &Vec<Pcode>,
         mmu: &mut Mmu,
         ev: &mut EventController,
         execution_regs_written: &mut SmallVec<[VarnodeData; DEFAULT_REG_ALLOCATION]>,
+        bytes_consumed: u64,
     ) -> Result<Result<u64, TargetExitReason>, UnknownError> {
         // execute
         let mut i = 0;
@@ -507,15 +520,13 @@ impl HexagonPcodeBackend {
                 PCodeStateChange::InstructionAbsolute(new_pc) => {
                     trace!("Pcode state change absolute jump new PC=0x{new_pc:X}");
                     self.set_pc(new_pc)?;
-                    return Ok(Ok(i as u64)); // Don't increment PC, jump to next instruction
+                    return Ok(Ok(bytes_consumed)); // Don't increment PC, jump to next instruction
                 }
                 PCodeStateChange::Exception(irqn) => {
                     // exception occurred
                     // we should interrupt hook and rerun instruction
                     HookManager::trigger_interrupt_hook(self, mmu, ev, irqn)?;
-                    return Ok(Ok(self
-                        .bytes_consumed
-                        .expect("Couldn't get number of bytes consumed in packet")));
+                    return Ok(Ok(bytes_consumed));
                     // Don't increment PC
                 }
                 PCodeStateChange::Exit(reason) => return Ok(Err(reason)),
@@ -526,7 +537,7 @@ impl HexagonPcodeBackend {
             HookManager::trigger_interrupt_hook(self, mmu, ev, irqn)?;
         }
 
-        Ok(Ok(pcodes.len() as u64))
+        Ok(Ok(bytes_consumed))
     }
 
     pub fn flush_regs_pcode(
@@ -547,21 +558,16 @@ impl HexagonPcodeBackend {
         pcodes
     }
 
-    // this really should only be used for testing, it is extraorderingly inefficient
-    pub(crate) fn ordering(&self) -> &SmallVec<[usize; 4]> {
-        &self.ordering
-    }
-
     fn fetch_decode_packet(
         &mut self,
         mmu: &mut Mmu,
         ev: &mut EventController,
-    ) -> Result<Result<u64, TargetExitReason>, UnknownError> {
-        assert_eq!(self.ordering_location, 0);
-
+    ) -> Result<Result<(u64, SmallVec<[usize; MAX_PACKET_SIZE]>), TargetExitReason>, UnknownError>
+    {
         self.regs_written.clear();
         let mut full_pcodes = vec![];
 
+        let mut ordering: SmallVec<[usize; 4]> = SmallVec::new();
         let mut decode_state = PktState::PktEnded(None);
         let mut total_bytes_consumed = 0;
         let mut dotnew_total_insns = 0;
@@ -731,7 +737,6 @@ impl HexagonPcodeBackend {
             execution_helper.post_packet_fetch(self);
 
             // TODO: remove this allocation, and turn this into an option that can be taken and replaced
-            let mut ordering = smallvec![];
             execution_helper.sequence(self, &full_pcodes, &mut ordering);
 
             // Now that sequencing is done, it is time to deal with predicate ANDing.
@@ -807,14 +812,11 @@ impl HexagonPcodeBackend {
                     }
                 }
             }
-
-            self.ordering_location = 0;
-            self.ordering = ordering;
         }
         self.execution_helper = Some(execution_helper);
         self.pcodes = Some(full_pcodes);
 
-        Ok(Ok(total_bytes_consumed))
+        Ok(Ok((total_bytes_consumed, ordering)))
     }
 }
 
