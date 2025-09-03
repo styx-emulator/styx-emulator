@@ -41,9 +41,7 @@ fn verify_regpairs() {
         let reghi_str = hexagon_reg_to_str(&v.0);
 
         let regs: Vec<&str> = re.find_iter(&regpair_str).map(|m| m.as_str()).collect();
-        trace!(
-            "regs for {regpair_str} are {regs:?} and hi {reghi_str} lo {reglo_str}"
-        );
+        trace!("regs for {regpair_str} are {regs:?} and hi {reghi_str} lo {reglo_str}");
         // check these regs aginst the values, make sure the first value in regs
         // aligns with the hi in the map and second aligns with lo in the map
         assert_eq!(reghi_str, regs[0].into());
@@ -55,7 +53,7 @@ fn verify_regpairs() {
 fn test_all_regpairs() {
     styx_util::logging::init_logging();
     // we're not going to run anything, just write and read stuff from and to registers
-    let (mut cpu, _mmu, _ev) = setup_cpu(0, vec![]);
+    let (mut cpu, _mmu, _ev) = setup_cpu();
 
     let re = Regex::new(r"[A-Z]*\d*").unwrap();
 

@@ -243,7 +243,7 @@ fn test_all_packet_adjacent() {
                 }
 
                 // NOTE: this is inefficient, but properly resets the state
-                let (mut cpu, mut mmu, mut ev) = setup_cpu(init_pc, code.bytes);
+                let (mut cpu, mut mmu, mut ev) = setup_cpu_pc(init_pc, code.bytes);
 
                 cpu.write_register(HexagonRegister::R20, 32u32).unwrap();
                 cpu.write_register(HexagonRegister::R21, 991u32).unwrap();

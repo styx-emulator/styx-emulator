@@ -213,8 +213,27 @@ impl CpuBackend for HexagonPcodeBackend {
         let sized_value: SizedValue = value.try_into().unwrap();
 
         let pc_reg_variant = self.pc_register().variant();
+        let pc_reg_pair_variant = HexagonRegister::C9C8.register().variant();
+
         if reg == pc_reg_variant {
             self.set_pc(sized_value.to_u64().with_context(|| "too big")?)?;
+        } else if reg == pc_reg_pair_variant {
+            // C9 is PC (hi 4 bytes), C8 is USR (lo 4 bytes)
+            let val = sized_value
+                .to_u64()
+                .with_context(|| &"regpair should be (at least) 64 bits")?;
+
+            let hi = ((val >> 32) & 0xffffffff);
+            let lo = (val & 0xffffffff) as u32;
+
+            self.set_pc(hi)?;
+            RegisterManager::write_register(
+                self,
+                HexagonRegister::Usr.into(),
+                lo.try_into()
+                    .with_context(|| &"couldn't turn c8 lo value into sizedvalue")?,
+            )
+            .with_context(|| "could not write_register_raw")?;
         } else {
             RegisterManager::write_register(self, reg, sized_value)
                 .with_context(|| "could not write_register_raw")?;
@@ -238,62 +257,23 @@ impl CpuBackend for HexagonPcodeBackend {
         count: u64,
     ) -> Result<ExecutionReport, UnknownError> {
         let mut total_instrs_executed = 0;
+        let mut exit_reason = TargetExitReason::InstructionCountComplete;
         // fetch a number of packets, then execute them
         for i in 0..count {
             trace!("pcket count is {i}");
-            match self.fetch_decode_packet(mmu, ev)? {
-                Ok(bytes) => {
-                    self.bytes_consumed = Some(bytes);
+            match self.execute_single(mmu, ev)? {
+                Ok(ins) => total_instrs_executed += ins,
+                Err(e) => {
+                    exit_reason = e;
+                    break;
                 }
-                Err(reason) => {
-                    return Ok(ExecutionReport::new(reason, i - 1));
-                }
             }
-            let mut execution_regs_written = smallvec![];
-
-            let pcodes = self.pcodes.take().unwrap();
-            let ordering = self.ordering.clone();
-            for i_instrs in ordering {
-                let pcode_instrs = &pcodes[i_instrs];
-
-                trace!("executing single instruction pcodes: {pcode_instrs:?}");
-                // this should actually do the fetching for each individual packet.
-                // TODO: move everything that happens within one one execution. call this function something else,
-                // like execute_packet_pcodes or something?
-                if let Err(reason) =
-                    self.execute_single(pcode_instrs, mmu, ev, &mut execution_regs_written)?
-                {
-                    return Ok(ExecutionReport::new(reason, i));
-                }
-                total_instrs_executed += 1;
-            }
-
-            // We should only flush regs based on executed pcodes.
-            trace!("end of packet, flushing registers...");
-            let regs_flush_pcodes = Self::flush_regs_pcode(&execution_regs_written);
-            if let Err(reason) =
-                self.execute_single(&regs_flush_pcodes, mmu, ev, &mut execution_regs_written)?
-            {
-                return Ok(ExecutionReport::new(reason, i));
-            }
-
-            let mut execution_helper_outer = self.execution_helper.take().unwrap();
-            {
-                let next_pc = execution_helper_outer.isa_pc() + self.bytes_consumed.unwrap();
-
-                trace!("telling execution helper to bank move forward pc to {next_pc:x}");
-                execution_helper_outer.set_isa_pc(next_pc, self);
-
-                trace!("calling post packet execute hooks...");
-                execution_helper_outer.post_packet_execute(self);
-            }
-            self.execution_helper = Some(execution_helper_outer);
         }
 
         // Honestly, like, should this be instructions or packets?
         // Instructions might avoid a lot of pain
         Ok(ExecutionReport {
-            exit_reason: TargetExitReason::InstructionCountComplete,
+            exit_reason,
             instructions_executed: Some(total_instrs_executed as u64),
             last_packet_order: Some(self.ordering.clone()),
         })
@@ -407,14 +387,75 @@ impl HexagonPcodeBackend {
             saved_reg_context: BTreeMap::new(),
         }
     }
-    // Indicate when we should update the context reg
-    // and what the new value should be
+    /// Indicate when we should update the context reg
+    /// and what the new value should be
     pub fn update_context(&mut self, when: PacketLocation, what: ContextOption) {
         // TODO: what to do when Now is set outside of prefetch?
         // current functionality is to clear all unset now instructions out.
         self.saved_context_opts.update_context(when, what);
     }
+
+    /// Execute a single packet
     pub fn execute_single(
+        &mut self,
+        mmu: &mut Mmu,
+        ev: &mut EventController,
+    ) -> Result<Result<u64, TargetExitReason>, UnknownError> {
+        let mut total_instrs_executed = 0;
+        let mut execution_regs_written = smallvec![];
+
+        match self.fetch_decode_packet(mmu, ev)? {
+            Ok(bytes) => {
+                self.bytes_consumed = Some(bytes);
+            }
+            Err(reason) => {
+                return Ok(Err(reason));
+            }
+        }
+
+        let pcodes = self.pcodes.take().unwrap();
+        let ordering = self.ordering.clone();
+        for i_instrs in ordering {
+            let pcode_instrs = &pcodes[i_instrs];
+
+            trace!("executing single instruction pcodes: {pcode_instrs:?}");
+            // this should actually do the fetching for each individual packet.
+            // TODO: move everything that happens within one one execution. call this function something else,
+            // like execute_packet_pcodes or something?
+            if let Err(reason) =
+                self.execute_single_ins(pcode_instrs, mmu, ev, &mut execution_regs_written)?
+            {
+                return Ok(Err(reason));
+            }
+            total_instrs_executed += 1;
+        }
+
+        // We should only flush regs based on executed pcodes.
+        trace!("end of packet, flushing registers...");
+        let regs_flush_pcodes = Self::flush_regs_pcode(&execution_regs_written);
+        if let Err(reason) =
+            self.execute_single_ins(&regs_flush_pcodes, mmu, ev, &mut execution_regs_written)?
+        {
+            return Ok(Err(reason));
+        }
+
+        let mut execution_helper_outer = self.execution_helper.take().unwrap();
+        {
+            let next_pc = execution_helper_outer.isa_pc() + self.bytes_consumed.unwrap();
+
+            trace!("telling execution helper to bank move forward pc to {next_pc:x}");
+            execution_helper_outer.set_isa_pc(next_pc, self);
+
+            trace!("calling post packet execute hooks...");
+            execution_helper_outer.post_packet_execute(self);
+        }
+        self.execution_helper = Some(execution_helper_outer);
+
+        Ok(Ok(total_instrs_executed))
+    }
+
+    /// Execute a single instruction
+    pub fn execute_single_ins(
         &mut self,
         pcodes: &Vec<Pcode>,
         mmu: &mut Mmu,

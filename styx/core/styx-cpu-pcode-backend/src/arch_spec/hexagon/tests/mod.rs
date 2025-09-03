@@ -93,20 +93,26 @@ pub fn setup_asm(
 
     // takes the objdump and extracts the binary from it
     //  duplex instruction:
-    setup_cpu(init_pc, code)
+    setup_cpu_pc(init_pc, code)
 }
 
-pub fn setup_cpu(init_pc: u64, code: Vec<u8>) -> (HexagonPcodeBackend, Mmu, EventController) {
-    let mut cpu = HexagonPcodeBackend::new_engine(
+pub fn setup_cpu() -> (HexagonPcodeBackend, Mmu, EventController) {
+    let cpu = HexagonPcodeBackend::new_engine(
         Arch::Hexagon,
         HexagonVariants::QDSP6V66,
         ArchEndian::BigEndian,
     );
 
+    let mmu = Mmu::default();
+    let ev = EventController::default();
+
+    (cpu, mmu, ev)
+}
+
+pub fn setup_cpu_pc(init_pc: u64, code: Vec<u8>) -> (HexagonPcodeBackend, Mmu, EventController) {
+    let (mut cpu, mut mmu, ev) = setup_cpu();
     cpu.set_pc(init_pc).unwrap();
 
-    let mut mmu = Mmu::default();
-    let ev = EventController::default();
     mmu.code().write(init_pc).bytes(&code).unwrap();
     trace!("wrote code to mmu");
 
@@ -118,7 +124,7 @@ pub fn setup_objdump(objdump: &str) -> (HexagonPcodeBackend, Mmu, EventControlle
 
     const START: u64 = 0x1000u64;
 
-    setup_cpu(
+    setup_cpu_pc(
         START,
         styx_util::parse_objdump(objdump).expect("failed to parse objdump supplied to test case!"),
     )

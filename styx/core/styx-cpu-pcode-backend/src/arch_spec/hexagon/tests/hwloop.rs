@@ -35,7 +35,7 @@ fn test_hwloop0() {
      *start:
      * { R0 = mpyi(R0,R0) } :endloop0
      */
-    let (mut cpu, mut mmu, mut ev) = setup_cpu(
+    let (mut cpu, mut mmu, mut ev) = setup_cpu_pc(
         0x1000,
         vec![
             0x0b, 0xc0, 0x00, 0x69, 0x00, 0x80, 0x0, 0xed, 0x0, 0xc0, 0x0, 0x7f,

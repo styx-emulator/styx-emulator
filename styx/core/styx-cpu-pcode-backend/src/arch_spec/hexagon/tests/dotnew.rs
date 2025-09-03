@@ -668,7 +668,7 @@ fn test_dotnew_offset() {
         // compile
 
         let code = ks.asm(asm, init_pc).unwrap();
-        let (mut cpu, mut mmu, mut ev) = setup_cpu(init_pc, code.bytes);
+        let (mut cpu, mut mmu, mut ev) = setup_cpu_pc(init_pc, code.bytes);
         cpu.write_register(HexagonRegister::R4, r4val).unwrap();
         cpu.write_register(HexagonRegister::R6, r6val).unwrap();
         cpu.write_register(HexagonRegister::R8, expected_val)
@@ -928,7 +928,7 @@ fn test_all_dotnew_class() {
 
                 assert_eq!(iclass, case.iclass as u32);
 
-                let (mut cpu, mut mmu, mut ev) = setup_cpu(init_pc, code.bytes);
+                let (mut cpu, mut mmu, mut ev) = setup_cpu_pc(init_pc, code.bytes);
 
                 cpu.write_register(HexagonRegister::R2, 1u32).unwrap();
                 cpu.write_register(HexagonRegister::R3, mem_base).unwrap();
