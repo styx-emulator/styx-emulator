@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::PcodeBackend;
+use crate::{PcodeBackend, DEFAULT_REG_ALLOCATION};
 
 use smallvec::SmallVec;
 use styx_pcode::pcode::VarnodeData;
@@ -51,7 +51,7 @@ impl ArchPcManager for StandardMipsPcManager {
         &mut self,
         bytes_consumed: u64,
         _backend: &mut PcodeBackend,
-        _regs_written: &mut SmallVec<[VarnodeData; 3]>,
+        _regs_written: &mut SmallVec<[VarnodeData; DEFAULT_REG_ALLOCATION]>,
         _total_pcodes: usize,
     ) -> Result<(), PcOverflow> {
         self.internal_pc = self

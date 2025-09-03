@@ -94,24 +94,23 @@ pub enum OutputRegisterType {
 
 #[derive(Debug)]
 pub struct HexagonPcodeBackend {
-    // This shared state is not local to a function to avoid
-    // expensive re-allocations. we could move to a smallvec
-    // to get rid of this
+    // These shared states are not local to a function to avoid
+    // expensive re-allocations. we could maybe move to a smallvec
+    // to get rid of this, but if we ever re-allocate these vectors to be larger
+    // we can "use" this larger allocation later if needed.
     saved_context_opts: SavedContextOpts,
-
-    regs_written: Vec<Vec<VarnodeData>>,
-    execution_helper: Option<DefaultHexagonExecutionHelper>,
-
-    // This is also to prevent re-allocation
     pcodes: Option<Vec<Vec<Pcode>>>,
+    regs_written: Vec<Vec<VarnodeData>>,
+
+    execution_helper: Option<DefaultHexagonExecutionHelper>,
 
     // This state is for any hooks that need to set up edge case stuff for the very first packet that executes.
     first_packet: bool,
 
+    // State required for execution
     pcode_config: PcodeBackendConfiguration,
     endian: ArchEndian,
     space_manager: SpaceManager,
-
     #[debug(skip)]
     arch_def: Box<dyn ArchitectureDef>,
     hook_manager: HookManager,
@@ -119,7 +118,8 @@ pub struct HexagonPcodeBackend {
     pcode_generator: GhidraPcodeGenerator<Self>,
     stop_requested: bool,
     call_other_manager: Option<CallOtherManager<Self>>,
-    // holds saved register state
+
+    // State for context saved/restored
     saved_reg_context: BTreeMap<ArchRegister, RegisterValue>,
     saved_execution_helper: Option<DefaultHexagonExecutionHelper>,
 }
@@ -263,7 +263,7 @@ impl CpuBackend for HexagonPcodeBackend {
     ) -> Result<ExecutionReport, UnknownError> {
         let mut total_instrs_executed = 0;
         let mut exit_reason = TargetExitReason::InstructionCountComplete;
-        let mut last_ordering = smallvec![];
+        let mut last_ordering: SmallVec<[usize; MAX_PACKET_SIZE]> = smallvec![];
         // fetch a number of packets, then execute them
         for i in 0..count {
             trace!("pcket count is {i}");
@@ -401,7 +401,7 @@ impl HexagonPcodeBackend {
         self.saved_context_opts.update_context(when, what);
     }
 
-    /// Execute a single packet
+    /// Execute a single packet. Returns number of instructions executed and the ordering of the packet (used for execution report)
     pub fn execute_single(
         &mut self,
         mmu: &mut Mmu,
@@ -409,7 +409,8 @@ impl HexagonPcodeBackend {
     ) -> Result<Result<(u64, SmallVec<[usize; MAX_PACKET_SIZE]>), TargetExitReason>, UnknownError>
     {
         let mut total_instrs_executed = 0;
-        let mut execution_regs_written = smallvec![];
+        let mut execution_regs_written: SmallVec<[VarnodeData; DEFAULT_REG_ALLOCATION]> =
+            smallvec![];
 
         let (bytes_consumed, ordering) = match self.fetch_decode_packet(mmu, ev)? {
             Ok(bytes_ordering) => bytes_ordering,

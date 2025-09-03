@@ -56,8 +56,10 @@ use types::*;
 ///
 /// increased from 20000 because ARM64 has too many registers
 const REGISTER_SPACE_SIZE: usize = 80000;
-pub(crate) const DEFAULT_REG_ALLOCATION: usize = 3;
 pub(crate) const MAX_PACKET_SIZE: usize = 4;
+// If each instruction in a packet writes 2 registers (max number written in a packet?)
+// then we should allocate for 8 registers
+pub(crate) const DEFAULT_REG_ALLOCATION: usize = MAX_PACKET_SIZE * 2;
 
 #[derive(Debug, PartialEq)]
 pub(crate) enum PCodeStateChange {
