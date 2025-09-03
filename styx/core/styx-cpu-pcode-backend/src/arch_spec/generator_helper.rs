@@ -46,8 +46,6 @@ pub enum GeneratorHelper {
     Empty(EmptyGeneratorHelper),
     #[cfg(feature = "arch_superh")]
     SuperH(superh::StandardGeneratorHelper),
-    #[cfg(feature = "arch_hexagon")]
-    Hexagon(hexagon::backend::HexagonGeneratorHelper),
 }
 
 impl Default for GeneratorHelper {

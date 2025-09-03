@@ -30,9 +30,9 @@ use styx_pcode_translator::sla::HexagonUserOps;
 use styx_processor::{cpu::CpuBackend, event_controller::EventController, memory::Mmu};
 
 use crate::{
-    arch_spec::ArchSpecBuilder,
+    arch_spec::{ArchSpecBuilder, HexagonPcodeBackend},
     call_other::{CallOtherCallback, CallOtherCpu, CallOtherHandleError},
-    PCodeStateChange, PcodeBackend,
+    PCodeStateChange,
 };
 
 #[derive(Debug)]
@@ -55,7 +55,7 @@ impl<T: CpuBackend> CallOtherCallback<T> for TlbGenericStub {
 }
 
 pub fn add_tlb_callothers<S: SlaUserOps<UserOps: FromStr>>(
-    spec: &mut ArchSpecBuilder<S, PcodeBackend>,
+    spec: &mut ArchSpecBuilder<S, HexagonPcodeBackend>,
 ) {
     spec.call_other_manager
         .add_handler_other_sla(

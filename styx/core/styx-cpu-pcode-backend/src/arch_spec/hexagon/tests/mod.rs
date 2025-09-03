@@ -39,8 +39,9 @@ pub use styx_processor::{
 
 pub(crate) use crate::RegisterManager;
 use crate::{
-    memory::sized_value::SizedValue, pcode_gen::RegisterTranslator,
-    register_manager::RegisterHandleError,
+    memory::{sized_value::SizedValue, space_manager::HasSpaceManager},
+    pcode_gen::{HasPcodeGenerator, RegisterTranslator},
+    register_manager::{RegisterCallbackCpu, RegisterHandleError},
 };
 pub use styx_processor::cpu::CpuBackendExt;
 
@@ -124,7 +125,7 @@ pub fn setup_objdump(objdump: &str) -> (HexagonPcodeBackend, Mmu, EventControlle
 }
 
 pub fn get_isa_pc(cpu: &mut HexagonPcodeBackend) -> u32 {
-    let pc = RegisterManager::read_register(&mut cpu.internal_backend, HexagonRegister::Pc.into())
+    let pc = RegisterManager::read_register(cpu, HexagonRegister::Pc.into())
         .unwrap()
         .to_u64()
         .unwrap() as u32;
@@ -139,18 +140,14 @@ pub fn read_dst_reg(
     reg: HexagonRegister,
 ) -> Result<SizedValue, RegisterHandleError> {
     let arch_reg: ArchRegister = reg.into();
-    let spc = &backend.internal_backend.space_manager;
+    let (spc, gen) = backend.borrow_space_gen();
 
-    let vnode = backend
-        .internal_backend
-        .pcode_generator
-        .get_register(&arch_reg)
-        .map(|i| {
-            // Have to clone bc we modify
-            let mut i = i.clone();
-            i.offset += DEST_REG_OFFSET;
-            i
-        });
+    let vnode = gen.get_register(&arch_reg).map(|i| {
+        // Have to clone bc we modify
+        let mut i = i.clone();
+        i.offset += DEST_REG_OFFSET;
+        i
+    });
 
     match vnode {
         Some(ref varnode) => Ok(spc

@@ -1,5 +1,6 @@
 use crate::PcodeBackend;
 
+use super::generator_helper::EmptyGeneratorHelper;
 // SPDX-License-Identifier: BSD-2-Clause
 // BSD 2-Clause License
 //
@@ -27,6 +28,7 @@ use crate::PcodeBackend;
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 use super::ArchSpecBuilder;
 use super::GeneratorHelper;
+use super::HexagonPcodeBackend;
 use super::PcManager;
 
 pub mod backend;
@@ -40,9 +42,6 @@ mod system;
 #[cfg(test)]
 pub mod tests;
 
-use backend::HexagonGeneratorHelper;
-use backend::HexagonPcManager;
-
 use pkt_semantics::NewReg;
 use styx_pcode_translator::sla::{self, HexagonUserOps};
 
@@ -51,12 +50,11 @@ fn parse_iclass(insn: u32) -> u32 {
 }
 
 // Adapted from PPC
-pub fn build() -> ArchSpecBuilder<sla::Hexagon, PcodeBackend> {
+pub fn build() -> ArchSpecBuilder<sla::Hexagon, HexagonPcodeBackend> {
     let mut spec = ArchSpecBuilder::default();
 
     // Generator + pc manager. For now use the default pc manager
-    spec.set_generator(GeneratorHelper::Hexagon(HexagonGeneratorHelper::default()));
-    spec.set_pc_manager(PcManager::Hexagon(HexagonPcManager::default()));
+    spec.set_generator(GeneratorHelper::Empty(EmptyGeneratorHelper::default()));
 
     // TODO: callother manager for system instructions, reg manager
 

@@ -88,7 +88,7 @@ fn get_pcode_for_pcode_backend(
 }
 
 /// thin wrapper to [GhidraPcodeGenerator::get_pcode].
-fn get_pcode_at_address<B: CpuBackend + HasPcodeGenerator<InnerCpuBackend = B> + 'static>(
+pub fn get_pcode_at_address<B: CpuBackend + HasPcodeGenerator<InnerCpuBackend = B> + 'static>(
     cpu: &mut B,
     addr: u64,
     pcodes: &mut Vec<Pcode>,

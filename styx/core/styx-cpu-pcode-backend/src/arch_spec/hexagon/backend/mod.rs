@@ -1,21 +1,28 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use std::sync::{Arc, Mutex};
+use std::{
+    collections::BTreeMap,
+    sync::{Arc, Mutex},
+};
 
+use anyhow::anyhow;
 use as_any::{AsAny, Downcast};
 use execution_helper::DefaultHexagonExecutionHelper;
-pub use generator_helper::HexagonGeneratorHelper;
 use log::trace;
-pub use pc_manager::HexagonPcManager;
 pub use saved_context_opts::SavedContextOpts;
 use smallvec::{smallvec, SmallVec};
 use styx_cpu_type::{
     arch::{
         backends::{ArchRegister, ArchVariant},
+        hexagon::HexagonRegister,
         ArchitectureDef, RegisterValue,
     },
     Arch, ArchEndian, TargetExitReason,
 };
-use styx_errors::UnknownError;
+use styx_errors::{
+    anyhow::{self, Context},
+    styx_cpu::StyxCpuBackendError,
+    UnknownError,
+};
 use styx_pcode::pcode::{Opcode, Pcode, SpaceName, VarnodeData};
 use styx_pcode_translator::ContextOption;
 use styx_processor::{
@@ -25,7 +32,20 @@ use styx_processor::{
     memory::Mmu,
 };
 
-use crate::hooks::HookManager;
+use crate::{
+    arch_spec::hexagon_build_arch_spec,
+    backend_helper,
+    call_other::CallOtherManager,
+    get_pcode::{get_pcode_at_address, handle_pcode_exception},
+    hooks::{HasHookManager, HookManager},
+    memory::{
+        sized_value::SizedValue,
+        space_manager::{HasSpaceManager, MmuSpaceOps, SpaceManager},
+    },
+    pcode_gen::HasPcodeGenerator,
+    register_manager::{HasRegisterManager, RegisterCallbackCpu},
+    GhidraPcodeGenerator, HasConfig, RegisterManager,
+};
 use crate::{
     arch_spec::{
         hexagon::{parse_iclass, pkt_semantics::DEST_REG_OFFSET},
@@ -37,11 +57,10 @@ use crate::{
 };
 use crate::{execute_pcode, ArchPcManager};
 use crate::{PCodeStateChange, DEFAULT_REG_ALLOCATION};
+use derive_more::Debug;
 
 mod decode_info;
 mod execution_helper;
-mod generator_helper;
-mod pc_manager;
 
 mod saved_context_opts;
 
@@ -71,35 +90,119 @@ pub enum OutputRegisterType {
     None,
 }
 
+// We need an enum dispatch before we start using generics for dyn ExecutionHelper
+
 #[derive(Debug)]
 pub struct HexagonPcodeBackend {
-    pub internal_backend: PcodeBackend,
-
     saved_context_opts: SavedContextOpts,
     regs_written: Vec<Vec<VarnodeData>>,
-    execution_regs_written: SmallVec<[VarnodeData; DEFAULT_REG_ALLOCATION]>,
-    execution_helper: Option<Arc<Mutex<Box<dyn HexagonExecutionHelper>>>>,
+    execution_helper: Option<DefaultHexagonExecutionHelper>,
     bytes_consumed: Option<u64>,
 
     pcodes: Option<Vec<Vec<Pcode>>>,
     ordering: SmallVec<[usize; 4]>,
     ordering_location: usize,
     first_packet: bool,
+    pcode_config: PcodeBackendConfiguration,
+    endian: ArchEndian,
+    space_manager: SpaceManager,
+
+    #[debug(skip)]
+    arch_def: Box<dyn ArchitectureDef>,
+    hook_manager: HookManager,
+    register_manager: RegisterManager<Self>,
+    pcode_generator: GhidraPcodeGenerator<Self>,
+    stop_requested: bool,
+    call_other_manager: Option<CallOtherManager<Self>>,
+    // holds saved register state
+    saved_reg_context: BTreeMap<ArchRegister, RegisterValue>,
+    saved_execution_helper: Option<DefaultHexagonExecutionHelper>,
 }
 
 impl Hookable for HexagonPcodeBackend {
     fn add_hook(&mut self, hook: StyxHook) -> Result<HookToken, AddHookError> {
-        self.internal_backend.add_hook(hook)
+        self.hook_manager.add_hook(&self.pcode_config, hook)
     }
 
     fn delete_hook(&mut self, token: HookToken) -> Result<(), DeleteHookError> {
-        self.internal_backend.delete_hook(token)
+        self.hook_manager.delete_hook(token)
+    }
+}
+
+impl HasSpaceManager for HexagonPcodeBackend {
+    fn space_manager(&mut self) -> &mut SpaceManager {
+        &mut self.space_manager
+    }
+
+    fn read(
+        &self,
+        varnode: &VarnodeData,
+    ) -> Result<SizedValue, crate::memory::space_manager::VarnodeError> {
+        self.space_manager.read(varnode)
+    }
+
+    fn write(
+        &mut self,
+        varnode: &VarnodeData,
+        data: SizedValue,
+    ) -> Result<(), crate::memory::space_manager::VarnodeError> {
+        self.space_manager.write(varnode, data)
+    }
+}
+
+impl HasPcodeGenerator for HexagonPcodeBackend {
+    type InnerCpuBackend = HexagonPcodeBackend;
+
+    fn pcode_generator_mut(&mut self) -> &mut GhidraPcodeGenerator<Self::InnerCpuBackend> {
+        &mut self.pcode_generator
+    }
+
+    fn pcode_generator(&self) -> &GhidraPcodeGenerator<Self::InnerCpuBackend> {
+        &self.pcode_generator
+    }
+}
+
+impl HasHookManager for HexagonPcodeBackend {
+    fn hook_manager(&mut self) -> &mut HookManager {
+        &mut self.hook_manager
+    }
+}
+
+impl HasRegisterManager for HexagonPcodeBackend {
+    type InnerCpuBackend = HexagonPcodeBackend;
+
+    fn register_manager(&mut self) -> &mut RegisterManager<Self::InnerCpuBackend> {
+        &mut self.register_manager
+    }
+}
+
+impl HasConfig for HexagonPcodeBackend {
+    fn config(&self) -> &PcodeBackendConfiguration {
+        &self.pcode_config
+    }
+}
+
+impl RegisterCallbackCpu<HexagonPcodeBackend> for HexagonPcodeBackend {
+    fn borrow_space_gen(
+        &mut self,
+    ) -> (
+        &mut SpaceManager,
+        &mut crate::GhidraPcodeGenerator<HexagonPcodeBackend>,
+    ) {
+        (&mut self.space_manager, &mut self.pcode_generator)
     }
 }
 
 impl CpuBackend for HexagonPcodeBackend {
     fn read_register_raw(&mut self, reg: ArchRegister) -> Result<RegisterValue, ReadRegisterError> {
-        self.internal_backend.read_register_raw(reg)
+        let data = if reg == self.pc_register().variant() {
+            SizedValue::from_u128(self.pc()? as u128, 4)
+        } else {
+            RegisterManager::read_register(self, reg)
+                .map_err(|err| StyxCpuBackendError::GenericError(err.into()))
+                .context("could not read_register_raw")?
+        };
+        Ok(data.try_into().with_context(|| "no")?)
     }
 
     fn write_register_raw(
@@ -107,15 +210,25 @@ impl CpuBackend for HexagonPcodeBackend {
         reg: ArchRegister,
         value: RegisterValue,
     ) -> Result<(), WriteRegisterError> {
-        self.internal_backend.write_register_raw(reg, value)
+        let sized_value: SizedValue = value.try_into().unwrap();
+
+        let pc_reg_variant = self.pc_register().variant();
+        if reg == pc_reg_variant {
+            self.set_pc(sized_value.to_u64().with_context(|| "too big")?)?;
+        } else {
+            RegisterManager::write_register(self, reg, sized_value)
+                .with_context(|| "could not write_register_raw")?;
+        }
+
+        Ok(())
     }
 
     fn architecture(&self) -> &dyn ArchitectureDef {
-        self.internal_backend.architecture()
+        self.arch_def.as_ref()
     }
 
     fn endian(&self) -> ArchEndian {
-        self.internal_backend.endian()
+        self.endian
     }
 
     fn execute(
@@ -136,7 +249,7 @@ impl CpuBackend for HexagonPcodeBackend {
                     return Ok(ExecutionReport::new(reason, i - 1));
                 }
             }
-            self.execution_regs_written = smallvec![];
+            let mut execution_regs_written = smallvec![];
 
             let pcodes = self.pcodes.take().unwrap();
             let ordering = self.ordering.clone();
@@ -147,7 +260,9 @@ impl CpuBackend for HexagonPcodeBackend {
                 // this should actually do the fetching for each individual packet.
                 // TODO: move everything that happens within one one execution. call this function something else,
                 // like execute_packet_pcodes or something?
-                if let Err(reason) = self.execute_single(pcode_instrs, mmu, ev)? {
+                if let Err(reason) =
+                    self.execute_single(pcode_instrs, mmu, ev, &mut execution_regs_written)?
+                {
                     return Ok(ExecutionReport::new(reason, i));
                 }
                 total_instrs_executed += 1;
@@ -155,22 +270,22 @@ impl CpuBackend for HexagonPcodeBackend {
 
             // We should only flush regs based on executed pcodes.
             trace!("end of packet, flushing registers...");
-            let regs_flush_pcodes = self.flush_regs_pcode();
-
-            if let Err(reason) = self.execute_single(&regs_flush_pcodes, mmu, ev)? {
+            let regs_flush_pcodes = Self::flush_regs_pcode(&execution_regs_written);
+            if let Err(reason) =
+                self.execute_single(&regs_flush_pcodes, mmu, ev, &mut execution_regs_written)?
+            {
                 return Ok(ExecutionReport::new(reason, i));
             }
 
-            let execution_helper_outer = self.execution_helper.take().unwrap();
+            let mut execution_helper_outer = self.execution_helper.take().unwrap();
             {
-                let mut execution_helper = execution_helper_outer.lock().unwrap();
-                let next_pc = execution_helper.isa_pc() + self.bytes_consumed.unwrap();
+                let next_pc = execution_helper_outer.isa_pc() + self.bytes_consumed.unwrap();
 
                 trace!("telling execution helper to bank move forward pc to {next_pc:x}");
-                execution_helper.set_isa_pc(next_pc, &mut self.internal_backend);
+                execution_helper_outer.set_isa_pc(next_pc, self);
 
                 trace!("calling post packet execute hooks...");
-                execution_helper.post_packet_execute(self);
+                execution_helper_outer.post_packet_execute(self);
             }
             self.execution_helper = Some(execution_helper_outer);
         }
@@ -185,40 +300,61 @@ impl CpuBackend for HexagonPcodeBackend {
     }
 
     fn stop(&mut self) {
-        self.internal_backend.stop()
+        self.stop_requested = true;
     }
 
     // TODO: fix this
     fn context_save(&mut self) -> Result<(), UnknownError> {
-        self.internal_backend.context_save()
+        self.saved_reg_context.clear();
+
+        for register in self.architecture().registers().registers() {
+            // we need to do this because not every processor supports all of the valid registers defined by the architecture
+            if let Ok(val) = self.read_register_raw(register.variant()) {
+                self.saved_reg_context.insert(register.variant(), val);
+            }
+        }
+
+        self.saved_execution_helper = self.execution_helper.clone();
+
+        Ok(())
     }
 
     fn context_restore(&mut self) -> Result<(), UnknownError> {
-        self.internal_backend.context_restore()
+        if self.saved_reg_context.is_empty() {
+            return Err(anyhow!("attempting to restore from nothing"));
+        }
+
+        let reg_context = std::mem::take(&mut self.saved_reg_context);
+
+        for register in reg_context.keys() {
+            self.write_register_raw(*register, *reg_context.get(register).unwrap())?;
+        }
+
+        let _ = std::mem::replace(&mut self.saved_reg_context, reg_context);
+
+        self.execution_helper = self.saved_execution_helper.clone();
+
+        Ok(())
     }
 
     fn pc(&mut self) -> Result<u64, UnknownError> {
-        let execution_helper_outer = self.execution_helper.take().unwrap();
-        let pc = {
-            let execution_helper = execution_helper_outer.lock().unwrap();
-            execution_helper.isa_pc()
-        };
-        self.execution_helper = Some(execution_helper_outer);
-        Ok(pc)
+        Ok(self.execution_helper.as_ref().unwrap().isa_pc())
     }
 
     fn set_pc(&mut self, value: u64) -> Result<(), UnknownError> {
-        let execution_helper_outer = self.execution_helper.take().unwrap();
-        {
-            let mut execution_helper = execution_helper_outer.lock().unwrap();
-            execution_helper.set_isa_pc(value, &mut self.internal_backend);
-        }
-        self.execution_helper = Some(execution_helper_outer);
+        let mut helper = self.execution_helper.take().unwrap();
+        helper.set_isa_pc(value, self);
+        self.execution_helper = Some(helper);
+
         Ok(())
     }
 }
 
 impl HexagonPcodeBackend {
+    fn pc_register(&self) -> styx_cpu_type::arch::CpuRegister {
+        self.arch_def.registers().pc()
+    }
+
     pub fn new_engine(
         _arch: Arch, // Kept to keep interface the same as unicorn
         arch_variant: impl Into<ArchVariant>,
@@ -232,31 +368,43 @@ impl HexagonPcodeBackend {
         endian: ArchEndian,
         config: &PcodeBackendConfiguration,
     ) -> HexagonPcodeBackend {
-        let mut internal_backend = PcodeBackend::new_engine_config(arch_variant, endian, config);
-        let execution_helper: Arc<Mutex<Box<dyn HexagonExecutionHelper>>> = Arc::new(Mutex::new(
-            Box::new(DefaultHexagonExecutionHelper::default()),
-        ));
+        let arch_variant = arch_variant.into();
 
-        let pc_manager = internal_backend.pc_manager.as_mut().unwrap();
-        let pc_manager_down = pc_manager.downcast_mut::<PcManager>().unwrap();
-        match pc_manager_down {
-            PcManager::Hexagon(pc_manager) => {
-                pc_manager.set_helper(execution_helper.clone());
-            }
-            _ => unreachable!(),
-        }
+        let spec = hexagon_build_arch_spec(&arch_variant, endian);
+        let pcode_generator = spec.generator;
+
+        let endian = pcode_generator.endian();
+        let space_manager = backend_helper::build_space_manager(&pcode_generator);
+
+        let arch_def: Box<dyn ArchitectureDef> = arch_variant.clone().into();
+
+        let hook_manager = HookManager::new();
+
+        let call_other = spec.call_other;
+        let register_manager = spec.register;
+
+        let execution_helper = DefaultHexagonExecutionHelper::default();
 
         Self {
-            internal_backend,
             saved_context_opts: SavedContextOpts::default(),
             regs_written: Vec::with_capacity(10),
-            execution_regs_written: smallvec![],
+            saved_execution_helper: None,
             execution_helper: Some(execution_helper), // TODO: performance optimizations
             pcodes: Some(Vec::new()),
             ordering: SmallVec::new(),
             ordering_location: 0,
             bytes_consumed: None,
             first_packet: true,
+            space_manager,
+            endian,
+            arch_def,
+            hook_manager,
+            register_manager,
+            pcode_generator,
+            pcode_config: config.clone(),
+            stop_requested: true,
+            call_other_manager: Some(call_other),
+            saved_reg_context: BTreeMap::new(),
         }
     }
     // Indicate when we should update the context reg
@@ -271,6 +419,7 @@ impl HexagonPcodeBackend {
         pcodes: &Vec<Pcode>,
         mmu: &mut Mmu,
         ev: &mut EventController,
+        execution_regs_written: &mut SmallVec<[VarnodeData; DEFAULT_REG_ALLOCATION]>,
     ) -> Result<Result<u64, TargetExitReason>, UnknownError> {
         // execute
         let mut i = 0;
@@ -284,26 +433,21 @@ impl HexagonPcodeBackend {
                 "Executing Pcode ({}/{total_pcodes}) {current_pcode:?}",
                 i + 1
             );
-            let internal_pc = self
-                .internal_backend
-                .pc_manager
-                .as_ref()
-                .unwrap()
-                .internal_pc();
+            let pc = self.pc()?;
 
-            let mut call_other = self.internal_backend.call_other_manager.take().unwrap();
+            let mut call_other = self.call_other_manager.take().unwrap();
 
-            let execute_result = execute_pcode::execute_pcode::<PcodeBackend>(
+            let execute_result = execute_pcode::execute_pcode(
                 current_pcode,
-                &mut self.internal_backend,
+                self,
                 mmu,
                 ev,
                 &mut call_other,
-                internal_pc,
-                &mut self.execution_regs_written,
+                pc,
+                execution_regs_written,
             );
 
-            self.internal_backend.call_other_manager = Some(call_other);
+            self.call_other_manager = Some(call_other);
 
             match execute_result {
                 PCodeStateChange::Fallthrough => i += 1,
@@ -327,7 +471,7 @@ impl HexagonPcodeBackend {
                 PCodeStateChange::Exception(irqn) => {
                     // exception occurred
                     // we should interrupt hook and rerun instruction
-                    HookManager::trigger_interrupt_hook(&mut self.internal_backend, mmu, ev, irqn)?;
+                    HookManager::trigger_interrupt_hook(self, mmu, ev, irqn)?;
                     return Ok(Ok(self
                         .bytes_consumed
                         .expect("Couldn't get number of bytes consumed in packet")));
@@ -338,15 +482,17 @@ impl HexagonPcodeBackend {
         }
 
         if let Some(irqn) = delayed_irqn {
-            HookManager::trigger_interrupt_hook(&mut self.internal_backend, mmu, ev, irqn)?;
+            HookManager::trigger_interrupt_hook(self, mmu, ev, irqn)?;
         }
 
         Ok(Ok(pcodes.len() as u64))
     }
 
-    pub fn flush_regs_pcode(&self) -> Vec<Pcode> {
+    pub fn flush_regs_pcode(
+        execution_regs_written: &SmallVec<[VarnodeData; DEFAULT_REG_ALLOCATION]>,
+    ) -> Vec<Pcode> {
         let mut pcodes = vec![];
-        for reg in &self.execution_regs_written {
+        for reg in execution_regs_written {
             pcodes.push(Pcode {
                 opcode: Opcode::Copy,
                 inputs: smallvec![reg.clone()],
@@ -360,43 +506,9 @@ impl HexagonPcodeBackend {
         pcodes
     }
 
-    /*pub fn execute_packets(
-        &mut self,
-        mmu: &mut Mmu,
-        ev: &mut EventController,
-        pkts: usize,
-    ) -> Result<Result<u64, TargetExitReason>, UnknownError> {
-        // Can't start executing packets after a packet has started or whatnot.
-        for i in 0..pkts {
-            self.fetch_decode_packet(mmu, ev);
-            // We update this in case of an error?
-            for i_pcode in &self.ordering {
-                self.internal_backend
-                    .execute_single(&mut self.pcodes[*i_pcode], mmu, ev)?;
-                self.ordering_location += 1;
-            }
-            let mut execution_helper = self.execution_helper.take().unwrap();
-            execution_helper.post_packet_execute(self);
-            self.execution_helper = Some(execution_helper);
-        }
-
-        Ok(())
-    }*/
-
     // this really should only be used for testing, it is extraorderingly inefficient
     pub(crate) fn ordering(&self) -> &SmallVec<[usize; 4]> {
         &self.ordering
-    }
-
-    fn internal_pc(&mut self) -> Result<u64, UnknownError> {
-        trace!("fetching internal pc for next insn in fetch-decode packet");
-        let execution_helper_outer = self.execution_helper.take().unwrap();
-        let pc = {
-            let execution_helper = execution_helper_outer.lock().unwrap();
-            execution_helper.internal_pc()
-        };
-        self.execution_helper = Some(execution_helper_outer);
-        Ok(pc)
     }
 
     fn fetch_decode_packet(
@@ -415,7 +527,7 @@ impl HexagonPcodeBackend {
         let mut dotnew_regs_written = vec![];
         let mut all_regs_written = vec![];
 
-        let mut pc = self.internal_pc().unwrap() as u32;
+        let mut pc = self.pc().unwrap() as u32;
 
         loop {
             match decode_state {
@@ -426,12 +538,8 @@ impl HexagonPcodeBackend {
             }
             // Pseudocode
             // TODO
-            let execution_helper_outer = self.execution_helper.take().unwrap();
+            let mut execution_helper = self.execution_helper.take().unwrap();
             let ctx_opts = {
-                trace!("locking execution helper");
-                let mut execution_helper = execution_helper_outer.lock().unwrap();
-                trace!("locked execution helper");
-
                 decode_state = execution_helper
                     .pre_insn_fetch(self, mmu, &decode_state, pc)
                     .map_err(|e| UnknownError::from_boxed(Box::new(e)))?;
@@ -479,25 +587,7 @@ impl HexagonPcodeBackend {
                 res.map_err(|e| UnknownError::from_boxed(Box::new(e)))?;
                 self.saved_context_opts.get_context_opts()
             };
-            self.execution_helper = Some(execution_helper_outer);
-
-            // Clear this now
-
-            let helper = self
-                .internal_backend
-                .pcode_generator
-                .helper
-                .as_mut()
-                .unwrap();
-
-            helper.as_any_mut().downcast_mut::<Box<GeneratorHelper>>();
-
-            match helper.as_mut() {
-                GeneratorHelper::Hexagon(helper) => {
-                    helper.update_context(ctx_opts);
-                }
-                _ => unreachable!(),
-            }
+            self.execution_helper = Some(execution_helper);
 
             // TODO: optimize
             let mut pcodes = vec![];
@@ -508,7 +598,22 @@ impl HexagonPcodeBackend {
             //
             // Somehow we need to modify this stuff to take in the context options we care about.
 
-            let bytes_consumed = fetch_pcode(&mut self.internal_backend, &mut pcodes, mmu, ev)?;
+            let bytes_consumed =
+                get_pcode_at_address(self, pc as u64, &mut pcodes, &ctx_opts?, mmu, ev);
+
+            let bytes_consumed = match bytes_consumed {
+                Ok(b) => b,
+                Err(e) => {
+                    let (target_exit_reason, did_fix) = handle_pcode_exception(self, mmu, ev, e)?;
+
+                    // Need to restart this whole process, since we may have bad state now
+                    // Not sure what this should look like just yet to preserve the functionality of only trying twice
+                    // Maybe this should have a "handle exceptions" parameter that's set to true or false
+                    // Also requires no global state
+                    trace!("did_fix: {did_fix:?}");
+                    unimplemented!()
+                }
+            };
 
             trace!("instruction consumed {bytes_consumed} bytes and produced pcodes {pcodes:?}");
 
@@ -563,16 +668,15 @@ impl HexagonPcodeBackend {
             // End common postfetch
 
             // TODO: change
-            let execution_helper_outer = self.execution_helper.take().unwrap();
+            let mut execution_helper = self.execution_helper.take().unwrap();
             {
-                let mut execution_helper = execution_helper_outer.lock().unwrap();
                 execution_helper.post_insn_fetch(bytes_consumed, self);
 
+                trace!("advancing fetch pc to {pc}");
                 pc += bytes_consumed as u32;
-                trace!("advancing internal pc to {pc}");
-                execution_helper.set_internal_pc(pc as u64, &mut self.internal_backend)
             }
-            self.execution_helper = Some(execution_helper_outer);
+            self.execution_helper = Some(execution_helper);
+
             self.saved_context_opts.advance_instr();
             self.regs_written.push(regs_in_insn);
 
@@ -581,9 +685,8 @@ impl HexagonPcodeBackend {
 
         // This hook may be useful for register flushing/banking
 
-        let execution_helper_outer = self.execution_helper.take().unwrap();
+        let mut execution_helper = self.execution_helper.take().unwrap();
         {
-            let mut execution_helper = execution_helper_outer.lock().unwrap();
             execution_helper.post_packet_fetch(self);
 
             // TODO: remove this allocation, and turn this into an option that can be taken and replaced
@@ -667,7 +770,7 @@ impl HexagonPcodeBackend {
             self.ordering_location = 0;
             self.ordering = ordering;
         }
-        self.execution_helper = Some(execution_helper_outer);
+        self.execution_helper = Some(execution_helper);
         self.pcodes = Some(full_pcodes);
 
         Ok(Ok(total_bytes_consumed))
@@ -677,13 +780,8 @@ impl HexagonPcodeBackend {
 pub trait HexagonExecutionHelper: derive_more::Debug + Send {
     // This is only called during execution, not decoding.
     fn isa_pc(&self) -> u64;
-    fn internal_pc(&self) -> u64 {
-        self.isa_pc()
-    }
-    fn set_isa_pc(&mut self, value: u64, backend: &mut PcodeBackend);
-    fn set_internal_pc(&mut self, value: u64, backend: &mut PcodeBackend) {
-        self.set_isa_pc(value, backend)
-    }
+    fn set_isa_pc(&mut self, value: u64, backend: &mut HexagonPcodeBackend);
+
     fn post_packet_execute(&mut self, _backend: &mut HexagonPcodeBackend) {}
 
     // During decoding

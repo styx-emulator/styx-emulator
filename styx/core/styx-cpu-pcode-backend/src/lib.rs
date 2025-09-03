@@ -282,7 +282,10 @@ impl PcodeBackend {
             endian,
             call_other_manager: Some(call_other),
             register_manager,
-            pc_manager: Some(spec.pc_manager),
+            pc_manager: Some(
+                spec.pc_manager
+                    .expect("arch spec didn't contain pc manager"),
+            ),
             last_was_branch: false,
             pcode_config: config.clone(),
             saved_reg_context: BTreeMap::default(),
@@ -466,6 +469,7 @@ impl CpuBackend for PcodeBackend {
                 .map_err(|err| StyxCpuBackendError::GenericError(err.into()))
                 .context("could not read_register_raw")?
         };
+
         if let ArchRegister::Special(SpecialArchRegister::Arm(SpecialArmRegister::CoProcessor(r))) =
             reg
         {

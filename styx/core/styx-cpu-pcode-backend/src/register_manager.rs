@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use super::memory::sized_value::SizedValue;
+use crate::arch_spec::HexagonPcodeBackend;
 use crate::memory::space_manager::{HasSpaceManager, SpaceManager};
 use crate::pcode_gen::{GhidraPcodeGenerator, HasPcodeGenerator, RegisterTranslator};
 use crate::PcodeBackend;
@@ -46,6 +47,14 @@ pub enum RegisterHandleError {
 pub struct RegisterHandler<T: CpuBackend>(pub Box<dyn RegisterCallback<T>>);
 
 impl<T: RegisterCallback<PcodeBackend> + 'static> From<T> for RegisterHandler<PcodeBackend> {
+    fn from(value: T) -> Self {
+        RegisterHandler(Box::new(value))
+    }
+}
+
+impl<T: RegisterCallback<HexagonPcodeBackend> + 'static> From<T>
+    for RegisterHandler<HexagonPcodeBackend>
+{
     fn from(value: T) -> Self {
         RegisterHandler(Box::new(value))
     }

@@ -20,12 +20,11 @@ use crate::{
 
 use super::{HexagonExecutionHelper, HexagonPcodeBackend, PktState};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DefaultHexagonExecutionHelper {
     pc: Option<u64>,
     pc_varnode: VarnodeData,
     banked_pc: Option<u64>,
-    internal_pc: u64,
 }
 
 impl DefaultHexagonExecutionHelper {
@@ -183,7 +182,6 @@ impl Default for DefaultHexagonExecutionHelper {
         Self {
             pc: None,
             banked_pc: None,
-            internal_pc: Default::default(),
             pc_varnode: VarnodeData {
                 space: SpaceName::Ram,
                 offset: 0,
@@ -198,7 +196,7 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
         self.pc.unwrap_or(0)
     }
     // could probably do the double jump logic here
-    fn set_isa_pc(&mut self, value: u64, backend: &mut PcodeBackend) {
+    fn set_isa_pc(&mut self, value: u64, backend: &mut HexagonPcodeBackend) {
         if self.pc.is_some() {
             trace!("banking pc set");
             if self.banked_pc.is_none() {
@@ -210,7 +208,6 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
             // TODO: dry, reuse fn in post execute packet
             trace!("first pc set, not banking");
             self.pc = Some(value);
-            self.internal_pc = value;
 
             RegisterManager::write_register(
                 backend,
@@ -219,15 +216,6 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
             )
             .unwrap();
         }
-    }
-
-    fn internal_pc(&self) -> u64 {
-        trace!("internal pc is now {}", self.internal_pc);
-        self.internal_pc
-    }
-    fn set_internal_pc(&mut self, value: u64, _backend: &mut PcodeBackend) {
-        trace!("set internal pc to {value}");
-        self.internal_pc = value;
     }
 
     fn pre_insn_fetch(
@@ -252,7 +240,7 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
         self.pc_varnode.offset = pc as u64;
         trace!("got pc is {pc}");
 
-        match mmu.read_u128_le_virt_code(self.pc_varnode.offset, &mut backend.internal_backend) {
+        match mmu.read_u128_le_virt_code(self.pc_varnode.offset, backend) {
             Ok(insn_data_wide) => {
                 let insn_data = (insn_data_wide & 0xffffffff) as u32;
                 let insn_next = ((insn_data_wide >> 32) & 0xffffffff) as u32;
@@ -401,12 +389,11 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
         if let Some(banked_pc) = self.banked_pc {
             trace!("banked pc was set, setting pc to {:?}", self.banked_pc);
             self.pc = Some(banked_pc);
-            self.internal_pc = banked_pc;
             self.banked_pc = None;
 
             trace!("register manager write register self.pc={:?}", self.pc);
             RegisterManager::write_register(
-                &mut backend.internal_backend,
+                backend,
                 HexagonRegister::Pc.into(),
                 SizedValue::from(self.pc.unwrap() as u32),
             )
@@ -443,25 +430,19 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
                             remains[i] = false;
                             ordering.push(i);
 
-                            trace!(
-                                "updated ordering: remains {remains:?}, ordering {ordering:?}",
-                            );
+                            trace!("updated ordering: remains {remains:?}, ordering {ordering:?}",);
                         }
                     }
                 }
 
                 if pcode.opcode == Opcode::CallOther {
                     let op_index = backend
-                        .internal_backend
                         .space_manager
                         .read(pcode.get_input(0))
                         .unwrap()
                         .to_u64()
                         .unwrap();
-                    let name = backend
-                        .internal_backend
-                        .pcode_generator
-                        .user_op_name(op_index as u32);
+                    let name = backend.pcode_generator.user_op_name(op_index as u32);
                     trace!("at a callother with name {name:?}");
 
                     // If newreg, we suddenly need to care

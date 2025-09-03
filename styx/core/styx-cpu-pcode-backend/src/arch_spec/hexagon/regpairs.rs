@@ -42,6 +42,8 @@ use crate::{
     PcodeBackend,
 };
 
+use super::backend::HexagonPcodeBackend;
+
 // TODO: FxHashmap here?
 lazy_static! {
     pub static ref REGPAIR_MAP: HashMap<HexagonRegister, (HexagonRegister, HexagonRegister)> =
@@ -525,7 +527,7 @@ impl<T: CpuBackend> RegisterCallback<T> for VectorRegpairQuadStub {
 
 // TODO: vector register pairs
 
-pub fn add_register_pair_handlers<S>(spec: &mut ArchSpecBuilder<S, PcodeBackend>) {
+pub fn add_register_pair_handlers<S>(spec: &mut ArchSpecBuilder<S, HexagonPcodeBackend>) {
     let register_manager = &mut spec.register_manager;
     for reg in REGPAIR_MAP.keys() {
         trace!("adding regpair handler for {reg}");
@@ -535,7 +537,7 @@ pub fn add_register_pair_handlers<S>(spec: &mut ArchSpecBuilder<S, PcodeBackend>
     }
 }
 
-pub fn add_vector_register_pair_handlers<S>(spec: &mut ArchSpecBuilder<S, PcodeBackend>) {
+pub fn add_vector_register_pair_handlers<S>(spec: &mut ArchSpecBuilder<S, HexagonPcodeBackend>) {
     let register_manager = &mut spec.register_manager;
     for reg in VECTOR_REGPAIR_MAP.keys() {
         trace!("adding vector regpair handler for {reg}");

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use super::PCodeStateChange;
 use crate::{
-    memory::space_manager::HasSpaceManager, pcode_gen::HasPcodeGenerator, PcodeBackend,
+    arch_spec::HexagonPcodeBackend, memory::space_manager::HasSpaceManager,
+    pcode_gen::HasPcodeGenerator, PcodeBackend,
 };
 use handlers::EmptyCallback;
 use log::{trace, warn};
@@ -35,6 +36,7 @@ pub trait CallOtherCpu<T: CpuBackend>:
 {
 }
 impl CallOtherCpu<PcodeBackend> for PcodeBackend {}
+impl CallOtherCpu<HexagonPcodeBackend> for HexagonPcodeBackend {}
 
 type HandlerIndex = u64;
 pub trait CallOtherCallback<T: CpuBackend>: Debug + Send + Sync {
@@ -52,6 +54,13 @@ pub trait CallOtherCallback<T: CpuBackend>: Debug + Send + Sync {
 #[derive(Debug)]
 pub struct CallOtherHandler<T: CpuBackend>(Box<dyn CallOtherCallback<T>>);
 impl<Q: CallOtherCallback<PcodeBackend> + 'static> From<Q> for CallOtherHandler<PcodeBackend> {
+    fn from(value: Q) -> Self {
+        CallOtherHandler(Box::new(value))
+    }
+}
+impl<Q: CallOtherCallback<HexagonPcodeBackend> + 'static> From<Q>
+    for CallOtherHandler<HexagonPcodeBackend>
+{
     fn from(value: Q) -> Self {
         CallOtherHandler(Box::new(value))
     }

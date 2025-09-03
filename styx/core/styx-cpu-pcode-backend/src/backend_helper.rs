@@ -1,13 +1,17 @@
 use std::collections::HashMap;
 
 use styx_cpu_type::{
-    arch::{self, backends::ArchVariant, ArchitectureDef},
+    arch::{
+        self,
+        backends::{ArchRegister, ArchVariant},
+        ArchitectureDef, CpuRegister, RegisterValue,
+    },
     ArchEndian,
 };
-use styx_errors::UnknownError;
+use styx_errors::{styx_cpu::StyxCpuBackendError, UnknownError};
 use styx_pcode::pcode::SpaceName;
 use styx_processor::{
-    cpu::CpuBackend,
+    cpu::{CpuBackend, ReadRegisterError},
     event_controller::EventController,
     memory::{MemoryOperation, MemoryType, Mmu},
 };
@@ -15,9 +19,12 @@ use styx_processor::{
 use crate::{
     hooks::{HasHookManager, HookManager},
     memory::{
-        blob_store::BlobStore, hash_store::HashStore, space::Space, space_manager::SpaceManager,
+        blob_store::BlobStore, hash_store::HashStore, sized_value::SizedValue, space::Space,
+        space_manager::SpaceManager,
     },
-    GhidraPcodeGenerator, MmuSpace, PcodeBackendConfiguration, REGISTER_SPACE_SIZE,
+    register_manager::RegisterCallbackCpu,
+    GhidraPcodeGenerator, MmuSpace, PcodeBackendConfiguration, RegisterManager,
+    REGISTER_SPACE_SIZE,
 };
 
 pub fn build_space_manager<T: CpuBackend + 'static>(

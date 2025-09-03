@@ -54,6 +54,7 @@ mod generator_helper;
 mod pc_manager;
 
 pub use generator_helper::{GeneratorHelp, GeneratorHelper, CONTEXT_OPTION_LEN};
+pub use hexagon::backend::HexagonPcodeBackend;
 pub(crate) use pc_manager::{ArchPcManager, PcManager};
 use styx_pcode::sla::{SlaSpec, SlaUserOps};
 use styx_pcode_translator::sla::SlaRegisters;
@@ -115,8 +116,8 @@ impl<S, Cpu: CpuBackend> ArchSpecBuilder<S, Cpu> {
     }
 }
 
-impl<Cpu: CpuBackend + 'static, S: SlaSpec + SlaUserOps + SlaRegisters> ArchSpecBuilder<S, Cpu> {
-    fn build(self, arch: &ArchVariant) -> ArchSpec<Cpu> {
+impl<S: SlaSpec + SlaUserOps + SlaRegisters> ArchSpecBuilder<S, PcodeBackend> {
+    fn build(self, arch: &ArchVariant) -> ArchSpec<PcodeBackend> {
         let loader = MmuLoader::new();
         let generator_helper = self.generator_helper.expect("generator was not set");
         let pcode_generator = GhidraPcodeGenerator::new::<S>(arch, generator_helper, loader)
@@ -127,7 +128,24 @@ impl<Cpu: CpuBackend + 'static, S: SlaSpec + SlaUserOps + SlaRegisters> ArchSpec
             call_other: self.call_other_manager.init(),
             register: self.register_manager,
             generator: pcode_generator,
-            pc_manager: self.pc_manager.expect("pc manager was not set"),
+            pc_manager: Some(self.pc_manager.expect("pc manager was not set")),
+        }
+    }
+}
+
+impl<S: SlaSpec + SlaUserOps + SlaRegisters> ArchSpecBuilder<S, HexagonPcodeBackend> {
+    fn build(self, arch: &ArchVariant) -> ArchSpec<HexagonPcodeBackend> {
+        let loader = MmuLoader::new();
+        let generator_helper = self.generator_helper.expect("generator was not set");
+        let pcode_generator = GhidraPcodeGenerator::new::<S>(arch, generator_helper, loader)
+            .expect("could not create GhidraPcodeGenerator");
+
+        // Make finalized arch spec
+        ArchSpec {
+            call_other: self.call_other_manager.init(),
+            register: self.register_manager,
+            generator: pcode_generator,
+            pc_manager: None,
         }
     }
 }
@@ -169,17 +187,28 @@ pub fn build_arch_spec(arch: &ArchVariant, endian: ArchEndian) -> ArchSpec<Pcode
         #[cfg(feature = "arch_mips64")]
         ArchVariant::Mips64(_) => mips64::mips64_arch_spec(arch, endian).unwrap(),
 
+        _ => unimplemented!("architecture {arch:?} not supported by pcode backend"),
+    }
+}
+
+pub fn hexagon_build_arch_spec(
+    arch: &ArchVariant,
+    endian: ArchEndian,
+) -> ArchSpec<HexagonPcodeBackend> {
+    match arch {
         #[cfg(feature = "arch_hexagon")]
-        ArchVariant::Hexagon(arch::hexagon::HexagonMetaVariants::QDSP6V60(_)  |
-                             arch::hexagon::HexagonMetaVariants::QDSP6V62(_) |
-                             arch::hexagon::HexagonMetaVariants::QDSP6V65 (_) |
-                             arch::hexagon::HexagonMetaVariants::QDSP6V66(_) |
-                             arch::hexagon::HexagonMetaVariants::QDSP6V67(_) |
-                             arch::hexagon::HexagonMetaVariants::QDSP6V67T(_) |
-                             arch::hexagon::HexagonMetaVariants::QDSP6V69(_) |
-                             arch::hexagon::HexagonMetaVariants::QDSP6V71 (_) |
-                             arch::hexagon::HexagonMetaVariants::QDSP6V73 (_) |
-                             arch::hexagon::HexagonMetaVariants::QDSP6V77(_) ) => hexagon::build().build(arch),
+        ArchVariant::Hexagon(
+            arch::hexagon::HexagonMetaVariants::QDSP6V60(_)
+            | arch::hexagon::HexagonMetaVariants::QDSP6V62(_)
+            | arch::hexagon::HexagonMetaVariants::QDSP6V65(_)
+            | arch::hexagon::HexagonMetaVariants::QDSP6V66(_)
+            | arch::hexagon::HexagonMetaVariants::QDSP6V67(_)
+            | arch::hexagon::HexagonMetaVariants::QDSP6V67T(_)
+            | arch::hexagon::HexagonMetaVariants::QDSP6V69(_)
+            | arch::hexagon::HexagonMetaVariants::QDSP6V71(_)
+            | arch::hexagon::HexagonMetaVariants::QDSP6V73(_)
+            | arch::hexagon::HexagonMetaVariants::QDSP6V77(_),
+        ) => hexagon::build().build(arch),
 
         _ => unimplemented!("architecture {arch:?} not supported by pcode backend"),
     }
@@ -193,5 +222,5 @@ where
     pub call_other: CallOtherManager<Cpu>,
     pub register: RegisterManager<Cpu>,
     pub generator: GhidraPcodeGenerator<Cpu>,
-    pub pc_manager: PcManager,
+    pub pc_manager: Option<PcManager>,
 }

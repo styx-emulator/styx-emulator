@@ -54,8 +54,6 @@ pub enum PcManager {
     SuperH(superh::StandardPcManager),
     #[cfg(any(feature = "arch_mips32", feature = "arch_mips64"))]
     Mips(mips_common::StandardMipsPcManager),
-    #[cfg(feature = "arch_hexagon")]
-    Hexagon(hexagon::backend::HexagonPcManager),
 }
 
 /// Implemented for structs that can manager the pcode machine program counters.

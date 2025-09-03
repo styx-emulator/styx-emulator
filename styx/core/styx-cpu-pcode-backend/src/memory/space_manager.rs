@@ -626,19 +626,22 @@ pub(crate) trait MmuSpaceOps {
     ) -> Result<(), ChunkError>;
 }
 
-impl MmuSpaceOps for PcodeBackend {
+impl<T> MmuSpaceOps for T
+where
+    T: HasSpaceManager + CpuBackend,
+{
     fn get_value_mmu(
         &mut self,
         mmu: &mut Mmu,
         varnode: &VarnodeData,
     ) -> Result<SizedValue, VarnodeError> {
         Ok(
-            if let Ok(space) = self.space_manager.get_space(&varnode.space) {
+            if let Ok(space) = self.space_manager().get_space(&varnode.space) {
                 space.get_value(varnode.offset, varnode.size as u8)?
             } else {
-                let space = self.space_manager.take_mmu_space(&varnode.space)?;
+                let space = self.space_manager().take_mmu_space(&varnode.space)?;
                 let res = space.get_value(mmu, self, varnode.offset, varnode.size as u8);
-                self.space_manager
+                self.space_manager()
                     .put_mmu_space(varnode.space.clone(), space);
                 res?
             },
@@ -651,12 +654,12 @@ impl MmuSpaceOps for PcodeBackend {
         varnode: &VarnodeData,
         data: SizedValue,
     ) -> Result<(), VarnodeError> {
-        if let Ok(space) = self.space_manager.get_space_mut(&varnode.space) {
+        if let Ok(space) = self.space_manager().get_space_mut(&varnode.space) {
             space.set_value(varnode.offset, data)?
         } else {
-            let space = self.space_manager.take_mmu_space(&varnode.space)?;
+            let space = self.space_manager().take_mmu_space(&varnode.space)?;
             let res = space.set_value(mmu, self, varnode.offset, data);
-            self.space_manager
+            self.space_manager()
                 .put_mmu_space(varnode.space.clone(), space);
             res?;
         };
@@ -670,12 +673,13 @@ impl MmuSpaceOps for PcodeBackend {
         offset: u64,
         buf: &mut [u8],
     ) -> Result<(), ChunkError> {
-        if let Ok(space) = self.space_manager.get_space(space_name) {
+        if let Ok(space) = self.space_manager().get_space(space_name) {
             space.get_chunk(offset, buf)?
         } else {
-            let space = self.space_manager.take_mmu_space(space_name)?;
+            let space = self.space_manager().take_mmu_space(space_name)?;
             let res = space.get_chunk(mmu, self, offset, buf);
-            self.space_manager.put_mmu_space(space_name.clone(), space);
+            self.space_manager()
+                .put_mmu_space(space_name.clone(), space);
             res?;
         };
         Ok(())
