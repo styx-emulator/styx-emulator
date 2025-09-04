@@ -17,7 +17,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             ArchEndian::BigEndian,
         ))
         .with_loader(ParameterizedLoader::default())
-        .with_executor(DefaultExecutor)
+        .with_executor(DefaultExecutor::default())
         .add_plugin(ProcessorTracingPlugin)
         .add_plugin(UnmappedMemoryFaultPlugin::new(true))
         .add_plugin(ProtectedMemoryFaultPlugin::new(true))

@@ -22,6 +22,7 @@ use crate::{
     hooks::StyxHook,
     memory::Mmu,
     plugins::{collection::PluginsContainer, UninitPlugin},
+    processor::{config::Config, ProcessorConfig},
     runtime::ProcessorRuntime,
 };
 
@@ -67,7 +68,7 @@ impl<'a> TargetProgramSource<'a> {
 /// # use std::time::Duration;
 /// // process is owned and must be mutable.
 /// let proc: Processor = ProcessorBuilder::default()
-///     .with_executor(DefaultExecutor)
+///     .with_executor(DefaultExecutor::default())
 ///     .with_backend(Backend::Pcode)
 ///     .with_builder(DummyProcessorBuilder)
 ///     .build().unwrap();
@@ -84,11 +85,12 @@ pub struct ProcessorBuilder<'a> {
     cpu_backend: Backend,
     exception_behavior: ExceptionBehavior,
     hooks: Vec<StyxHook>,
+    config: Config,
 }
 impl<'a> Default for ProcessorBuilder<'a> {
     fn default() -> Self {
         Self {
-            executor: Box::new(DefaultExecutor),
+            executor: Box::new(DefaultExecutor::default()),
             runtime: ProcessorRuntime::default(),
             plugins: PluginsContainer::default(),
             port: IPCPort::default(),
@@ -98,6 +100,7 @@ impl<'a> Default for ProcessorBuilder<'a> {
             cpu_backend: Backend::default(),
             exception_behavior: ExceptionBehavior::default(),
             hooks: Vec::new(),
+            config: Config::default(),
         }
     }
 }
@@ -228,6 +231,77 @@ impl<'a> ProcessorBuilder<'a> {
         self
     }
 
+    /// Registers a [`ProcessorConfig`] value with the builder.
+    ///
+    /// Config values are keyed by their concrete type: registering the same
+    /// type twice replaces the first value with the second. Use
+    /// [`Self::modify_config_or_default()`] instead when you need to amend an
+    /// existing value rather than replace it entirely.
+    ///
+    /// The config is made available to [`ProcessorImpl::build()`] via
+    /// [`BuildProcessorImplArgs`], [`Loader`]s, and possibly ported to other
+    /// parts of the processor where it can be retrieved with [`Config::get()`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use styx_processor::processor::{ProcessorBuilder, ProcessorConfig};
+    /// # use styx_processor::core::builder::DummyProcessorBuilder;
+    ///
+    /// struct SamplingConfig { sample_rate_hz: u32 }
+    /// impl ProcessorConfig for SamplingConfig {}
+    ///
+    /// let _proc = ProcessorBuilder::default()
+    ///     .with_builder(DummyProcessorBuilder)
+    ///     .register_config(SamplingConfig { sample_rate_hz: 1000 })
+    ///     .build()
+    ///     .unwrap();
+    /// ```
+    pub fn register_config<C: ProcessorConfig>(mut self, config: C) -> Self {
+        self.config.register_config(config);
+        self
+    }
+
+    /// Modifies an existing config value, or inserts the
+    /// [`Default`] value and then modifies it if absent.
+    ///
+    /// This is useful when multiple call sites need to contribute to
+    /// the same config (e.g. appending to a list) without overwriting
+    /// each other's additions.
+    ///
+    /// The config is made available to [`ProcessorImpl::build()`] via
+    /// [`BuildProcessorImplArgs`], [`Loader`]s, and possibly ported to other
+    /// parts of the processor where it can be retrieved with [`Config::get()`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use styx_processor::processor::{ProcessorBuilder, ProcessorConfig};
+    /// # use styx_processor::core::builder::DummyProcessorBuilder;
+    ///
+    /// #[derive(Default)]
+    /// struct AllowedAddrs(Vec<u64>);
+    /// impl ProcessorConfig for AllowedAddrs {}
+    ///
+    /// let _proc = ProcessorBuilder::default()
+    ///     .with_builder(DummyProcessorBuilder)
+    ///     .modify_config_or_default(|cfg: &mut AllowedAddrs| {
+    ///         cfg.0.push(0x1000);
+    ///     })
+    ///     .modify_config_or_default(|cfg: &mut AllowedAddrs| {
+    ///         cfg.0.push(0x2000);
+    ///     })
+    ///     .build()
+    ///     .unwrap();
+    /// ```
+    pub fn modify_config_or_default<C: ProcessorConfig + Default>(
+        mut self,
+        f: impl FnOnce(&mut C),
+    ) -> Self {
+        self.config.modify_config_or_default(f);
+        self
+    }
+
     /// Builds the processor and initializes it.
     ///
     /// Required components:
@@ -247,6 +321,7 @@ impl<'a> ProcessorBuilder<'a> {
             runtime: self.runtime.handle(),
             backend: self.cpu_backend,
             exception: self.exception_behavior,
+            config: &self.config,
         };
         let processor = builder.build(&args)?;
         self.build_inner(processor, builder)
@@ -258,7 +333,7 @@ impl<'a> ProcessorBuilder<'a> {
 
     /// Builds processor and initializes components.
     fn build_inner(
-        self,
+        mut self,
         bundle: ProcessorBundle,
         builder: Box<dyn ProcessorImpl>,
     ) -> Result<Processor, UnknownError> {
@@ -292,9 +367,8 @@ impl<'a> ProcessorBuilder<'a> {
             bundle.loader_hints,
             self.target_program_source,
             &mut core,
+            &self.config,
         )?;
-
-        let executor = Executor::new(self.executor);
 
         let mut peripherals = bundle.peripherals;
 
@@ -309,7 +383,11 @@ impl<'a> ProcessorBuilder<'a> {
             runtime: &mut runtime,
             routes: Default::default(),
             ipc_connection: IPCConnection::local_from_port(ipc_resolved_port.port()),
+            config: &self.config,
         };
+
+        self.executor.init(&mut building_processor)?;
+        let executor = Executor::new(self.executor);
 
         debug!("initializing plugins");
         let mut plugins = self
@@ -366,6 +444,7 @@ fn autobots_load_up(
     hints: LoaderHints,
     source: Option<TargetProgramSource>,
     core: &mut ProcessorCore,
+    config: &Config,
 ) -> Result<(), UnknownError> {
     debug!("autobots_load_up loader: {loader:?} source: {source:?}");
 
@@ -426,6 +505,7 @@ pub struct BuildingProcessor<'a> {
     pub runtime: &'a mut ProcessorRuntime,
     pub routes: RoutesBuilder,
     pub ipc_connection: IPCConnection,
+    pub config: &'a Config,
 }
 
 /// A wrapper type for constraints surrounding port selection.

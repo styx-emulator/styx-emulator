@@ -5,6 +5,7 @@ use styx_errors::UnknownError;
 
 use crate::{
     core::ProcessorCore, cpu::ExecutionReport, executor::Delta, plugins::collection::Plugins,
+    processor::core_configs::ConfigRequestedStrideLength,
 };
 
 use super::ExecutorImpl;
@@ -16,6 +17,7 @@ use super::ExecutorImpl;
 /// Notably implements [ExecutorImpl].
 pub struct ConditionalExecutor {
     should_stop: Box<dyn FnMut() -> bool + Send>,
+    stride_length: u64,
 }
 
 impl ConditionalExecutor {
@@ -26,13 +28,14 @@ impl ConditionalExecutor {
     pub fn new(should_stop: impl FnMut() -> bool + 'static + Send) -> Self {
         Self {
             should_stop: Box::new(should_stop),
+            stride_length: 1000,
         }
     }
 }
 
 impl ExecutorImpl for ConditionalExecutor {
     fn get_stride_length(&self) -> u64 {
-        1000
+        self.stride_length
     }
 
     fn emulate(
@@ -65,5 +68,16 @@ impl ExecutorImpl for ConditionalExecutor {
 
     fn halt_emulation(&mut self, reason: &TargetExitReason, _delta: &Delta) -> bool {
         reason.fatal() || (self.should_stop)()
+    }
+
+    fn init(
+        &mut self,
+        _proc: &mut crate::processor::BuildingProcessor,
+    ) -> Result<(), UnknownError> {
+        self.stride_length = _proc
+            .config
+            .get_or_default::<ConfigRequestedStrideLength>()
+            .preferred_stride_length;
+        Ok(())
     }
 }

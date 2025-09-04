@@ -66,7 +66,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             )?,
         }
     } else {
-        ProcessorFactory::create_processor_no_svc(&args, DefaultExecutor)?
+        ProcessorFactory::create_processor_no_svc(&args, DefaultExecutor::default())?
     };
 
     match proc_process.run(Forever) {
