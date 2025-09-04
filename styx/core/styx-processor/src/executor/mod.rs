@@ -149,7 +149,7 @@ impl Executor {
 impl Default for Executor {
     fn default() -> Self {
         Self {
-            inner: Box::new(DefaultExecutor),
+            inner: Box::new(DefaultExecutor::default()),
         }
     }
 }

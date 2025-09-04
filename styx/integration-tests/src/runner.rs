@@ -46,7 +46,8 @@ impl ProcessorIntegrationTest {
     ) -> Self {
         use styx_core::executor::DefaultExecutor;
 
-        let pp = ProcessorFactory::create_processor_no_svc(args, DefaultExecutor).unwrap();
+        let pp =
+            ProcessorFactory::create_processor_no_svc(args, DefaultExecutor::default()).unwrap();
         Self::from_proc(pp, args.target(), run_duration, event_mask)
     }
 

@@ -32,11 +32,11 @@
 //!
 //! Alternatively, you can construct the processor builder using the config and components store
 //! separately. This gives more control over the process allowing you do derive the
-//! [`ProcessorConfig`] from a separate source (storage, other serde target, cli) and add custom
+//! [`struct@ProcessorConfig`] from a separate source (storage, other serde target, cli) and add custom
 //! components to the [`ProcessorComponentsStore`] from other sources.
 //!
-//! The two main parts of uconf are the [`ProcessorConfig`] and [`ProcessorComponentsStore`]. The
-//! [`ProcessorConfig`] is the Yaml declaration given by the user to define the processor. It can be
+//! The two main parts of uconf are the [`struct@ProcessorConfig`] and [`ProcessorComponentsStore`]. The
+//! [`struct@ProcessorConfig`] is the Yaml declaration given by the user to define the processor. It can be
 //! stored, serialized, deserialized, and exists has an independent file of Styx. The
 //! [`ProcessorComponentsStore`] on the other hand contains all of the Styx specific glue needed to
 //! transform the configuration into a functional processor. Namely, it allows for crates external

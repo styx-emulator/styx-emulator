@@ -6,6 +6,7 @@ use styx_errors::UnknownError;
 
 use crate::{
     core::ProcessorCore, cpu::ExecutionReport, executor::Delta, plugins::collection::Plugins,
+    processor::BuildingProcessor,
 };
 
 /// The common interface that all executor implementations need to support.
@@ -144,5 +145,9 @@ pub trait ExecutorImpl: Send {
     #[inline]
     fn get_stride_length(&self) -> u64 {
         1000
+    }
+
+    fn init(&mut self, _proc: &mut BuildingProcessor) -> Result<(), UnknownError> {
+        Ok(())
     }
 }

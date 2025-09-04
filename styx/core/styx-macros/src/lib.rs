@@ -3,6 +3,7 @@
 
 mod build_with;
 mod enum_mirror;
+mod processor_config;
 mod styx_manifest;
 
 use proc_macro::TokenStream;
@@ -952,4 +953,47 @@ pub fn enum_mirror(attr: TokenStream, item: TokenStream) -> TokenStream {
     enum_mirror::enum_mirror(attr.into(), item.into())
         .unwrap_or_else(|e| e.into_compile_error())
         .into()
+}
+
+/// Derives `ProcessorConfig` for a struct, enabling it to be
+/// stored in the processor's type-keyed `Config` map.
+///
+/// # Example
+///
+/// ```ignore
+/// use styx_macros::ProcessorConfig;
+///
+/// #[derive(ProcessorConfig)]
+/// pub struct MyPluginConfig {
+///     pub sample_rate: u32,
+/// }
+/// ```
+///
+/// Expands to:
+///
+/// ```ignore
+/// pub struct MyPluginConfig {
+///     pub sample_rate: u32,
+/// }
+///
+/// // path varies by crate location
+/// impl <resolved>::processor::config::ProcessorConfig for MyPluginConfig {}
+/// ```
+///
+/// # Usage
+///
+/// The macro inspects the calling crate's `Cargo.toml` to resolve
+/// the correct import path to `styx_processor`, so the derive works
+/// from any layer of the workspace:
+///
+/// | Crate location | Resolved base path |
+/// |---|---|
+/// | `styx-processor` itself | `crate` |
+/// | Sibling core crate | `::styx_processor` |
+/// | Non-core styx crate (`styx-core` dep) | `::styx_core` |
+/// | External crate (`styx-emulator` dep) | `::styx_emulator` |
+///
+#[proc_macro_derive(ProcessorConfig)]
+pub fn derive_processor_config(input: TokenStream) -> TokenStream {
+    processor_config::derive_processor_config(input.into()).into()
 }

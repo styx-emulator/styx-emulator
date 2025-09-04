@@ -587,7 +587,7 @@ mod tests {
     fn create_default_with_nop_code(input_bytes: Cow<'_, [u8]>) -> ProcessorBuilder<'_> {
         ProcessorBuilder::default()
             .with_loader(RawLoader)
-            .with_executor(DefaultExecutor)
+            .with_executor(DefaultExecutor::default())
             .with_input_bytes(input_bytes)
     }
 

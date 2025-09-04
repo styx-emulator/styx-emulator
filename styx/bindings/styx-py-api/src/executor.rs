@@ -22,7 +22,7 @@ impl DefaultExecutor {
         (
             Self,
             StyxExecutor(Mutex::new(Some(Box::new(
-                styx_emulator::core::executor::DefaultExecutor,
+                styx_emulator::core::executor::DefaultExecutor::default(),
             )))),
         )
     }
