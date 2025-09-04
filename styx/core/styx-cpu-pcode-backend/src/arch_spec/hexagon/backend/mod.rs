@@ -29,6 +29,12 @@ use styx_processor::{
 };
 
 use crate::{
+    arch_spec::hexagon::{parse_iclass, pkt_semantics::DEST_REG_OFFSET},
+    backend_helper::BackendHelper,
+    pcode_gen::GeneratePcodeError,
+    MachineState, PcodeBackendConfiguration,
+};
+use crate::{
     arch_spec::hexagon_build_arch_spec,
     backend_helper,
     call_other::CallOtherManager,
@@ -41,10 +47,6 @@ use crate::{
     pcode_gen::HasPcodeGenerator,
     register_manager::{HasRegisterManager, RegisterCallbackCpu},
     GhidraPcodeGenerator, HasConfig, RegisterManager, MAX_PACKET_SIZE,
-};
-use crate::{
-    arch_spec::hexagon::{parse_iclass, pkt_semantics::DEST_REG_OFFSET},
-    pcode_gen::GeneratePcodeError, PcodeBackendConfiguration,
 };
 use crate::{execute_pcode, ArchPcManager};
 use crate::{PCodeStateChange, DEFAULT_REG_ALLOCATION};
@@ -90,7 +92,6 @@ pub struct HexagonPcodeBackend {
     // to get rid of this, but if we ever re-allocate these vectors to be larger
     // we can "use" this larger allocation later if needed.
     saved_context_opts: SavedContextOpts,
-    pcodes: Option<Vec<Vec<Pcode>>>,
     regs_written: Vec<Vec<VarnodeData>>,
 
     execution_helper: Option<DefaultHexagonExecutionHelper>,
@@ -108,6 +109,7 @@ pub struct HexagonPcodeBackend {
     register_manager: RegisterManager<Self>,
     pcode_generator: GhidraPcodeGenerator<Self>,
     stop_requested: bool,
+    last_was_branch: bool,
     call_other_manager: Option<CallOtherManager<Self>>,
 
     // State for context saved/restored
@@ -189,6 +191,108 @@ impl RegisterCallbackCpu<HexagonPcodeBackend> for HexagonPcodeBackend {
     }
 }
 
+impl BackendHelper<(u64, SmallVec<[usize; MAX_PACKET_SIZE]>), Vec<Pcode>> for HexagonPcodeBackend {
+    fn pre_execute_hooks(
+        &mut self,
+        mmu: &mut Mmu,
+        ev: &mut EventController,
+    ) -> Result<(), UnknownError> {
+        let pc = self.pc()?;
+        backend_helper::pre_execute_hooks(self, pc, mmu, ev)
+    }
+
+    fn stop_requested(&self) -> bool {
+        self.stop_requested
+    }
+
+    fn set_stop_requested(&mut self, stop_requested: bool) {
+        self.stop_requested = stop_requested;
+    }
+
+    /// Execute a single packet. Returns number of instructions executed and the ordering of the packet (used for execution report)
+    fn execute_single(
+        &mut self,
+        pcodes: &mut Vec<Vec<Pcode>>,
+        mmu: &mut Mmu,
+        ev: &mut EventController,
+    ) -> Result<Result<(u64, SmallVec<[usize; MAX_PACKET_SIZE]>), TargetExitReason>, UnknownError>
+    {
+        let mut total_instrs_executed = 0;
+        let mut execution_regs_written: SmallVec<[VarnodeData; DEFAULT_REG_ALLOCATION]> =
+            smallvec![];
+
+        let (bytes_consumed, ordering) = match self.fetch_decode_packet(pcodes, mmu, ev)? {
+            Ok(bytes_ordering) => bytes_ordering,
+            Err(reason) => {
+                return Ok(Err(reason));
+            }
+        };
+
+        for i_instrs in &ordering {
+            let pcode_instrs = &pcodes[*i_instrs];
+
+            trace!("executing single instruction pcodes: {pcode_instrs:?}");
+            // this should actually do the fetching for each individual packet.
+            // TODO: move everything that happens within one one execution. call this function something else,
+            // like execute_packet_pcodes or something?
+            if let Err(reason) = self.execute_single_instr(
+                pcode_instrs,
+                mmu,
+                ev,
+                &mut execution_regs_written,
+                bytes_consumed,
+            )? {
+                return Ok(Err(reason));
+            }
+            total_instrs_executed += 1;
+        }
+
+        // We should only flush regs based on executed pcodes.
+        trace!("end of packet, flushing registers...");
+        let regs_flush_pcodes = Self::flush_regs_pcode(&execution_regs_written);
+        if let Err(reason) = self.execute_single_instr(
+            &regs_flush_pcodes,
+            mmu,
+            ev,
+            &mut execution_regs_written,
+            bytes_consumed,
+        )? {
+            return Ok(Err(reason));
+        }
+
+        let mut execution_helper_outer = self.execution_helper.take().unwrap();
+        {
+            let next_pc = execution_helper_outer.isa_pc() + bytes_consumed;
+
+            trace!("telling execution helper to bank move forward pc to {next_pc:x}");
+            execution_helper_outer.set_isa_pc(next_pc, self);
+
+            trace!("calling post packet execute hooks...");
+            execution_helper_outer.post_packet_execute(self);
+        }
+        self.execution_helper = Some(execution_helper_outer);
+
+        Ok(Ok((total_instrs_executed, ordering)))
+    }
+
+    fn set_last_was_branch(&mut self, last_was_branch: bool) {
+        self.last_was_branch = last_was_branch;
+    }
+
+    fn last_was_branch(&mut self) -> bool {
+        self.last_was_branch
+    }
+
+    fn find_first_basic_block(
+        &mut self,
+        mmu: &mut Mmu,
+        ev: &mut EventController,
+        initial_pc: u64,
+    ) -> u64 {
+        unimplemented!()
+    }
+}
+
 impl CpuBackend for HexagonPcodeBackend {
     fn read_register_raw(&mut self, reg: ArchRegister) -> Result<RegisterValue, ReadRegisterError> {
         let data = if reg == self.pc_register().variant() {
@@ -246,41 +350,20 @@ impl CpuBackend for HexagonPcodeBackend {
         self.endian
     }
 
+    fn stop(&mut self) {
+        self.stop_requested = true;
+    }
     fn execute(
         &mut self,
         mmu: &mut Mmu,
-        ev: &mut EventController,
+        event_controller: &mut EventController,
         count: u64,
     ) -> Result<ExecutionReport, UnknownError> {
-        let mut total_instrs_executed = 0;
-        let mut exit_reason = TargetExitReason::InstructionCountComplete;
-        let mut last_ordering: SmallVec<[usize; MAX_PACKET_SIZE]> = smallvec![];
-        // fetch a number of packets, then execute them
-        for i in 0..count {
-            trace!("pcket count is {i}");
-            match self.execute_single(mmu, ev)? {
-                Ok((ins, ordering)) => {
-                    total_instrs_executed += ins;
-                    last_ordering = ordering
-                }
-                Err(e) => {
-                    exit_reason = e;
-                    break;
-                }
-            }
-        }
-
-        // Honestly, like, should this be instructions or packets?
-        // Instructions might avoid a lot of pain
-        Ok(ExecutionReport {
-            exit_reason,
-            instructions_executed: Some(total_instrs_executed as u64),
-            last_packet_order: Some(last_ordering),
-        })
-    }
-
-    fn stop(&mut self) {
-        self.stop_requested = true;
+        self.execute_helper(mmu, event_controller, count)
+            .map(|mut i| {
+                i.1.last_packet_order = Some(i.0.unwrap().1);
+                i.1
+            })
     }
 
     // TODO: fix this
@@ -331,6 +414,12 @@ impl CpuBackend for HexagonPcodeBackend {
 }
 
 impl HexagonPcodeBackend {
+    fn stop_request_check_and_reset(&mut self) -> bool {
+        let res = self.stop_requested;
+        self.stop_requested = false;
+        res
+    }
+
     fn pc_register(&self) -> styx_cpu_type::arch::CpuRegister {
         self.arch_def.registers().pc()
     }
@@ -370,7 +459,6 @@ impl HexagonPcodeBackend {
             regs_written: Vec::with_capacity(10),
             saved_execution_helper: None,
             execution_helper: Some(execution_helper), // TODO: performance optimizations
-            pcodes: Some(Vec::new()),
             first_packet: true,
             space_manager,
             endian,
@@ -379,7 +467,8 @@ impl HexagonPcodeBackend {
             register_manager,
             pcode_generator,
             pcode_config: config.clone(),
-            stop_requested: true,
+            stop_requested: false,
+            last_was_branch: false,
             call_other_manager: Some(call_other),
             saved_reg_context: BTreeMap::new(),
         }
@@ -390,72 +479,6 @@ impl HexagonPcodeBackend {
         // TODO: what to do when Now is set outside of prefetch?
         // current functionality is to clear all unset now instructions out.
         self.saved_context_opts.update_context(when, what);
-    }
-
-    /// Execute a single packet. Returns number of instructions executed and the ordering of the packet (used for execution report)
-    pub fn execute_single(
-        &mut self,
-        mmu: &mut Mmu,
-        ev: &mut EventController,
-    ) -> Result<Result<(u64, SmallVec<[usize; MAX_PACKET_SIZE]>), TargetExitReason>, UnknownError>
-    {
-        let mut total_instrs_executed = 0;
-        let mut execution_regs_written: SmallVec<[VarnodeData; DEFAULT_REG_ALLOCATION]> =
-            smallvec![];
-
-        let (bytes_consumed, ordering) = match self.fetch_decode_packet(mmu, ev)? {
-            Ok(bytes_ordering) => bytes_ordering,
-            Err(reason) => {
-                return Ok(Err(reason));
-            }
-        };
-
-        let pcodes = self.pcodes.take().unwrap();
-        for i_instrs in &ordering {
-            let pcode_instrs = &pcodes[*i_instrs];
-
-            trace!("executing single instruction pcodes: {pcode_instrs:?}");
-            // this should actually do the fetching for each individual packet.
-            // TODO: move everything that happens within one one execution. call this function something else,
-            // like execute_packet_pcodes or something?
-            if let Err(reason) = self.execute_single_instr(
-                pcode_instrs,
-                mmu,
-                ev,
-                &mut execution_regs_written,
-                bytes_consumed,
-            )? {
-                return Ok(Err(reason));
-            }
-            total_instrs_executed += 1;
-        }
-
-        // We should only flush regs based on executed pcodes.
-        trace!("end of packet, flushing registers...");
-        let regs_flush_pcodes = Self::flush_regs_pcode(&execution_regs_written);
-        if let Err(reason) = self.execute_single_instr(
-            &regs_flush_pcodes,
-            mmu,
-            ev,
-            &mut execution_regs_written,
-            bytes_consumed,
-        )? {
-            return Ok(Err(reason));
-        }
-
-        let mut execution_helper_outer = self.execution_helper.take().unwrap();
-        {
-            let next_pc = execution_helper_outer.isa_pc() + bytes_consumed;
-
-            trace!("telling execution helper to bank move forward pc to {next_pc:x}");
-            execution_helper_outer.set_isa_pc(next_pc, self);
-
-            trace!("calling post packet execute hooks...");
-            execution_helper_outer.post_packet_execute(self);
-        }
-        self.execution_helper = Some(execution_helper_outer);
-
-        Ok(Ok((total_instrs_executed, ordering)))
     }
 
     /// Execute a single instruction
@@ -552,12 +575,13 @@ impl HexagonPcodeBackend {
 
     fn fetch_decode_packet(
         &mut self,
+        full_pcodes: &mut Vec<Vec<Pcode>>,
         mmu: &mut Mmu,
         ev: &mut EventController,
     ) -> Result<Result<(u64, SmallVec<[usize; MAX_PACKET_SIZE]>), TargetExitReason>, UnknownError>
     {
         self.regs_written.clear();
-        let mut full_pcodes = vec![];
+        full_pcodes.clear();
 
         let mut ordering: SmallVec<[usize; 4]> = SmallVec::new();
         let mut decode_state = PktState::PktEnded(None);
@@ -806,7 +830,6 @@ impl HexagonPcodeBackend {
             }
         }
         self.execution_helper = Some(execution_helper);
-        self.pcodes = Some(full_pcodes);
 
         Ok(Ok((total_bytes_consumed, ordering)))
     }

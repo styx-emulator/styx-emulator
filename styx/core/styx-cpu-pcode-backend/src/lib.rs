@@ -11,14 +11,12 @@ mod register_manager;
 mod types;
 
 use crate::get_pcode::{fetch_pcode, is_branching_instruction};
+use backend_helper::BackendHelper;
 use smallvec::smallvec;
 
 use self::{
     hooks::HookManager,
-    memory::{
-        sized_value::SizedValue,
-        space_manager::SpaceManager,
-    },
+    memory::{sized_value::SizedValue, space_manager::SpaceManager},
     pcode_gen::GhidraPcodeGenerator,
     register_manager::RegisterManager,
 };
@@ -104,54 +102,6 @@ impl MachineState {
         self.current_instruction_count += 1;
         self.check_done()
     }
-}
-
-/// Run on every "new basic block" meaning after every jump or at the start of execution.
-fn handle_basic_block_hooks(
-    initial_pc: u64,
-    cpu: &mut PcodeBackend,
-    mmu: &mut Mmu,
-    ev: &mut EventController,
-) -> Result<(), UnknownError> {
-    let block_hook_count = cpu.hook_manager.block_hook_count()?;
-    // Only run basic block hook finding if we have at least one block hook.
-    if block_hook_count > 0 {
-        let mut pcodes = Vec::with_capacity(16);
-
-        // Maximum amount of bytes to search for the next branch.
-        // This is necessary because it can continue the search through the whole address space.
-        let max_search = 1000;
-        let mut instruction_pc = initial_pc;
-
-        // Does not matter if this is a branch instruction since it could be the beginning of
-        // execution.
-
-        let mut helper = cpu.pcode_generator.helper.take().unwrap();
-        let ctx_opts = helper.pre_fetch(cpu).unwrap();
-        cpu.pcode_generator.helper = Some(helper);
-
-        let (_, bytes) = is_branching_instruction(cpu, &mut pcodes, &ctx_opts, initial_pc, mmu, ev);
-        instruction_pc += bytes;
-
-        let mut stop_search = false;
-        while !stop_search {
-            let mut helper = cpu.pcode_generator.helper.take().unwrap();
-            let ctx_opts = helper.pre_fetch(cpu).unwrap();
-            cpu.pcode_generator.helper = Some(helper);
-
-            let (is_branch, bytes) =
-                is_branching_instruction(cpu, &mut pcodes, &ctx_opts, instruction_pc, mmu, ev);
-
-            // Stop search if we found a branch OR we've gone over our max search
-            stop_search = is_branch || (instruction_pc - initial_pc) > max_search;
-            instruction_pc += bytes
-        }
-        let total_block_size = instruction_pc - initial_pc;
-        trace!("total block size is instruction_pc - initial_pc: {total_block_size}");
-
-        HookManager::trigger_block_hook(cpu, mmu, ev, initial_pc, total_block_size as u32)?;
-    }
-    Ok(())
 }
 
 /// The Pcode Cpu Backend
@@ -313,6 +263,87 @@ impl PcodeBackend {
         self.space_manager.write(varnode, data)
     }
 
+    fn pc_register(&self) -> styx_cpu_type::arch::CpuRegister {
+        self.arch_def.registers().pc()
+    }
+
+    /// Clears stop_requested and returns the previous result.
+    ///
+    /// Use this instead of checking the raw value stop_requested to avoid bugs in forgetting to
+    /// reset it.
+    fn stop_request_check_and_reset(&mut self) -> bool {
+        let res = self.stop_requested;
+        self.stop_requested = false;
+        res
+    }
+}
+
+impl BackendHelper<u64, Pcode> for PcodeBackend {
+    /// Helper
+    fn find_first_basic_block(
+        &mut self,
+        mmu: &mut Mmu,
+        ev: &mut EventController,
+        initial_pc: u64,
+    ) -> u64 {
+        let mut pcodes = Vec::with_capacity(16);
+
+        // Maximum amount of bytes to search for the next branch.
+        // This is necessary because it can continue the search through the whole address space.
+        let max_search = 1000;
+        let mut instruction_pc = initial_pc;
+
+        // Does not matter if this is a branch instruction since it could be the beginning of
+        // execution.
+
+        let mut helper = self.pcode_generator.helper.take().unwrap();
+        let ctx_opts = helper.pre_fetch(self).unwrap();
+        self.pcode_generator.helper = Some(helper);
+
+        let (_, bytes) =
+            is_branching_instruction(self, &mut pcodes, &ctx_opts, initial_pc, mmu, ev);
+        instruction_pc += bytes;
+
+        let mut stop_search = false;
+        while !stop_search {
+            let mut helper = self.pcode_generator.helper.take().unwrap();
+            let ctx_opts = helper.pre_fetch(self).unwrap();
+            self.pcode_generator.helper = Some(helper);
+
+            let (is_branch, bytes) =
+                is_branching_instruction(self, &mut pcodes, &ctx_opts, instruction_pc, mmu, ev);
+
+            // Stop search if we found a branch OR we've gone over our max search
+            stop_search = is_branch || (instruction_pc - initial_pc) > max_search;
+            instruction_pc += bytes
+        }
+
+        instruction_pc
+    }
+    fn pre_execute_hooks(
+        &mut self,
+        mmu: &mut Mmu,
+        ev: &mut EventController,
+    ) -> Result<(), UnknownError> {
+        // Trigger code hooks for this address
+        // This is done before pcode generation allowing for the
+        // current instruction to be modified in memory, not sure if this is correct behavior.
+        let mut pc_manager = self.pc_manager.take().unwrap();
+        pc_manager.pre_code_hook(self);
+        self.pc_manager = Some(pc_manager);
+
+        let pc = self.pc_manager.as_mut().unwrap().internal_pc();
+        backend_helper::pre_execute_hooks(self, pc, mmu, ev)
+    }
+
+    fn stop_requested(&self) -> bool {
+        self.stop_requested
+    }
+
+    fn set_stop_requested(&mut self, stop_requested: bool) {
+        self.stop_requested = stop_requested;
+    }
+
     /// Execute a single machine instruction.
     fn execute_single(
         &mut self,
@@ -421,6 +452,7 @@ impl PcodeBackend {
         let mut pc_manager = self.pc_manager.take().unwrap();
         let pc_post_execute_res =
             pc_manager.post_execute(bytes_consumed, self, &mut regs_written, total_pcodes);
+
         self.pc_manager = Some(pc_manager);
         if pc_post_execute_res.is_err() {
             return Err(anyhow!("pc overflowed in pcode backend during post execute. you can modify the pc manager to wrap or prevent overflow if this is desired behavior"));
@@ -432,34 +464,12 @@ impl PcodeBackend {
         Ok(Ok(bytes_consumed))
     }
 
-    fn pre_execute_hooks(
-        &mut self,
-        mmu: &mut Mmu,
-        ev: &mut EventController,
-    ) -> Result<(), UnknownError> {
-        // Trigger code hooks for this address
-        // This is done before pcode generation allowing for the
-        // current instruction to be modified in memory, not sure if this is correct behavior.
-        let mut pc_manager = self.pc_manager.take().unwrap();
-        pc_manager.pre_code_hook(self);
-        self.pc_manager = Some(pc_manager);
-
-        let pc = self.pc_manager.as_mut().unwrap().internal_pc();
-        backend_helper::pre_execute_hooks(self, pc, mmu, ev)
+    fn set_last_was_branch(&mut self, last_was_branch: bool) {
+        self.last_was_branch = last_was_branch;
     }
 
-    fn pc_register(&self) -> styx_cpu_type::arch::CpuRegister {
-        self.arch_def.registers().pc()
-    }
-
-    /// Clears stop_requested and returns the previous result.
-    ///
-    /// Use this instead of checking the raw value stop_requested to avoid bugs in forgetting to
-    /// reset it.
-    fn stop_request_check_and_reset(&mut self) -> bool {
-        let res = self.stop_requested;
-        self.stop_requested = false;
-        res
+    fn last_was_branch(&mut self) -> bool {
+        self.last_was_branch
     }
 }
 
@@ -514,66 +524,8 @@ impl CpuBackend for PcodeBackend {
         event_controller: &mut EventController,
         count: u64,
     ) -> Result<ExecutionReport, UnknownError> {
-        let mut state = MachineState::new(count);
-        trace!("Starting pcode machine with max_count={count}");
-
-        // Stop if requested in between ticks
-        if self.stop_request_check_and_reset() {
-            // self.is_stopped
-            return Ok(ExecutionReport::new(TargetExitReason::HostStopRequest, 0));
-        }
-        self.stop_requested = false;
-        let mut current_stop = state.check_done();
-        let mut pcodes = Vec::with_capacity(20);
-
-        self.last_was_branch = false;
-        while current_stop.is_none() {
-            // call code hooks, can change pc/execution path
-            self.pre_execute_hooks(mmu, event_controller)
-                .with_context(|| "pre execute hooks failed")
-                .unwrap();
-
-            // Stop if requested in code hook
-            if self.stop_request_check_and_reset() {
-                // self.is_stopped
-                current_stop = Some(ExecutionReport::new(
-                    TargetExitReason::HostStopRequest,
-                    state.current_instruction_count,
-                ));
-                continue;
-            }
-
-            if self.last_was_branch {
-                handle_basic_block_hooks(self.pc().unwrap(), self, mmu, event_controller)?;
-
-                self.last_was_branch = false;
-            }
-
-            pcodes.clear();
-            if let Err(reason) = self.execute_single(&mut pcodes, mmu, event_controller)? {
-                return Ok(ExecutionReport::new(
-                    reason,
-                    state.current_instruction_count,
-                ));
-            }
-
-            current_stop = state.increment_instruction_count();
-            let stop_requested = self.stop_request_check_and_reset();
-            trace!("current stop bool: {stop_requested}");
-            current_stop = current_stop.or({
-                if stop_requested {
-                    Some(ExecutionReport::new(
-                        TargetExitReason::HostStopRequest,
-                        state.current_instruction_count,
-                    ))
-                } else {
-                    None
-                }
-            })
-        }
-        let exit_reason = current_stop.unwrap();
-        trace!("Exiting due to {exit_reason:?}");
-        Ok(exit_reason)
+        self.execute_helper(mmu, event_controller, count)
+            .map(|t| t.1)
     }
 
     fn pc(&mut self) -> Result<u64, UnknownError> {
