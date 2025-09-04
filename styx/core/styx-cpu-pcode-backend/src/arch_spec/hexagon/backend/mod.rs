@@ -27,10 +27,13 @@ use styx_processor::{
     hooks::{AddHookError, DeleteHookError, HookToken, Hookable, StyxHook},
     memory::Mmu,
 };
+use tap::TryConv;
+use thiserror::Error;
 
 use crate::{
     arch_spec::hexagon::{parse_iclass, pkt_semantics::DEST_REG_OFFSET},
     backend_helper::BackendHelper,
+    get_pcode::{FetchPcodeError, GetPcodeError, PcodeFetchException},
     pcode_gen::GeneratePcodeError,
     MachineState, PcodeBackendConfiguration,
 };
@@ -56,6 +59,14 @@ mod decode_info;
 mod execution_helper;
 
 mod saved_context_opts;
+
+#[derive(Error, Debug)]
+enum HexagonFetchDecodeError {
+    #[error(transparent)]
+    GetPcodeError(#[from] GetPcodeError),
+    #[error(transparent)]
+    Other(#[from] UnknownError),
+}
 
 #[derive(PartialEq, Debug)]
 pub enum PktState {
@@ -221,11 +232,40 @@ impl BackendHelper<(u64, SmallVec<[usize; MAX_PACKET_SIZE]>), Vec<Pcode>> for He
         let mut execution_regs_written: SmallVec<[VarnodeData; DEFAULT_REG_ALLOCATION]> =
             smallvec![];
 
-        let (bytes_consumed, ordering) = match self.fetch_decode_packet(pcodes, mmu, ev)? {
-            Ok(bytes_ordering) => bytes_ordering,
-            Err(reason) => {
-                return Ok(Err(reason));
+        let (bytes_consumed, ordering) = match self.fetch_decode_packet(pcodes, mmu, ev) {
+            Ok(data) => match data {
+                Ok(data) => data,
+                Err(exit_reason) => return Ok(Err(exit_reason)),
+            },
+            // Try exactly once more
+            Err(HexagonFetchDecodeError::GetPcodeError(result_err)) => {
+                trace!("trying to get pcode again after a GetPcodeError");
+                // Try one more time before giving up
+                // Note: the PC could get set here, and we should NOT be
+                // banking if this happens
+
+                // When disabling PC banking, this allows any PC write here to just overwrite the PC register
+                // which is what we want since for all intents and purposes, we're not in any specific packet
+                // anymore.
+                self.execution_helper.as_mut().unwrap().disable_pc_banking();
+                let (target_exit_reason, did_fix) =
+                    handle_pcode_exception(self, mmu, ev, result_err)?;
+                self.execution_helper.as_mut().unwrap().enable_pc_banking();
+
+                trace!("did_fix: {did_fix:?}");
+
+                if did_fix.fixed() {
+                    match self.fetch_decode_packet(pcodes, mmu, ev)? {
+                        Ok(bytes_consumed) => bytes_consumed,
+                        Err(exit_reason) => {
+                            return Ok(Err(exit_reason));
+                        }
+                    }
+                } else {
+                    return Ok(Err(target_exit_reason));
+                }
             }
+            Err(HexagonFetchDecodeError::Other(e)) => return Err(e),
         };
 
         for i_instrs in &ordering {
@@ -578,8 +618,10 @@ impl HexagonPcodeBackend {
         full_pcodes: &mut Vec<Vec<Pcode>>,
         mmu: &mut Mmu,
         ev: &mut EventController,
-    ) -> Result<Result<(u64, SmallVec<[usize; MAX_PACKET_SIZE]>), TargetExitReason>, UnknownError>
-    {
+    ) -> Result<
+        Result<(u64, SmallVec<[usize; MAX_PACKET_SIZE]>), TargetExitReason>,
+        HexagonFetchDecodeError,
+    > {
         self.regs_written.clear();
         full_pcodes.clear();
 
@@ -599,13 +641,13 @@ impl HexagonPcodeBackend {
                 }
                 _ => {}
             }
-            // Pseudocode
-            // TODO
             let mut execution_helper = self.execution_helper.take().unwrap();
             let ctx_opts = {
                 decode_state = execution_helper
                     .pre_insn_fetch(self, mmu, &decode_state, pc)
-                    .map_err(|e| UnknownError::from_boxed(Box::new(e)))?;
+                    .map_err(|e| {
+                        HexagonFetchDecodeError::Other(UnknownError::from_boxed(Box::new(e)))
+                    })?;
 
                 trace!("decode state has changed to {decode_state:?}");
 
@@ -631,10 +673,14 @@ impl HexagonPcodeBackend {
                     PktState::PktStartedFirstDuplex(insns) => Ok({
                         execution_helper
                             .pkt_first_duplex(self, insns)
-                            .map_err(|e| UnknownError::from_boxed(Box::new(e)))?;
-                        execution_helper
-                            .pkt_started(self, insns, pc)
-                            .map_err(|e| UnknownError::from_boxed(Box::new(e)))?;
+                            .map_err(|e| {
+                                HexagonFetchDecodeError::Other(UnknownError::from_boxed(Box::new(
+                                    e,
+                                )))
+                            })?;
+                        execution_helper.pkt_started(self, insns, pc).map_err(|e| {
+                            HexagonFetchDecodeError::Other(UnknownError::from_boxed(Box::new(e)))
+                        })?;
                     }),
                     PktState::PktStandalone(insns) => Ok({
                         execution_helper
@@ -662,21 +708,7 @@ impl HexagonPcodeBackend {
             // Somehow we need to modify this stuff to take in the context options we care about.
 
             let bytes_consumed =
-                get_pcode_at_address(self, pc as u64, &mut pcodes, &ctx_opts?, mmu, ev);
-
-            let bytes_consumed = match bytes_consumed {
-                Ok(b) => b,
-                Err(e) => {
-                    let (target_exit_reason, did_fix) = handle_pcode_exception(self, mmu, ev, e)?;
-
-                    // Need to restart this whole process, since we may have bad state now
-                    // Not sure what this should look like just yet to preserve the functionality of only trying twice
-                    // Maybe this should have a "handle exceptions" parameter that's set to true or false
-                    // Also requires no global state
-                    trace!("did_fix: {did_fix:?}");
-                    unimplemented!()
-                }
-            };
+                get_pcode_at_address(self, pc as u64, &mut pcodes, &ctx_opts?, mmu, ev)?;
 
             trace!("instruction consumed {bytes_consumed} bytes and produced pcodes {pcodes:?}");
 

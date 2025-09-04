@@ -29,7 +29,7 @@ use styx_pcode_translator::ContextOption;
 
 use crate::{arch_spec::generator_helper::CONTEXT_OPTION_LEN, pcode_gen::GeneratePcodeError};
 
-use super::{PacketLocation, PktState};
+use super::{HexagonFetchDecodeError, PacketLocation, PktState};
 #[derive(Debug)]
 pub struct SavedContextOpts {
     start: Vec<ContextOption>,
@@ -102,7 +102,7 @@ impl SavedContextOpts {
 
     pub fn get_context_opts(
         &mut self,
-    ) -> Result<SmallVec<[ContextOption; CONTEXT_OPTION_LEN]>, GeneratePcodeError> {
+    ) -> Result<SmallVec<[ContextOption; CONTEXT_OPTION_LEN]>, HexagonFetchDecodeError> {
         // self.now is cleared later, in order to avoid
         // stuff set past post-fetch from making it to the next instruction
         let mut immediate_context_opts = self

@@ -33,7 +33,7 @@ pub(crate) enum GetPcodeError {
 }
 
 #[derive(Clone, Copy)]
-enum PcodeFetchException {
+pub(crate) enum PcodeFetchException {
     ProtectedMemoryFetch { have: MemoryPermissions },
     UnmappedMemoryFetch,
     InvalidInstruction,

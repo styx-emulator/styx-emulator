@@ -24,9 +24,16 @@ pub struct DefaultHexagonExecutionHelper {
     pc: Option<u64>,
     pc_varnode: VarnodeData,
     banked_pc: Option<u64>,
+    enable_banking: bool,
 }
 
 impl DefaultHexagonExecutionHelper {
+    pub(crate) fn enable_pc_banking(&mut self) {
+        self.enable_banking = true;
+    }
+    pub(crate) fn disable_pc_banking(&mut self) {
+        self.enable_banking = true;
+    }
     fn handle_duplex_immext(
         &self,
         backend: &mut HexagonPcodeBackend,
@@ -186,6 +193,7 @@ impl Default for DefaultHexagonExecutionHelper {
                 offset: 0,
                 size: 4,
             },
+            enable_banking: true,
         }
     }
 }
@@ -196,7 +204,7 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
     }
     // could probably do the double jump logic here
     fn set_isa_pc(&mut self, value: u64, backend: &mut HexagonPcodeBackend) {
-        if self.pc.is_some() {
+        if self.enable_banking && self.pc.is_some() {
             trace!("banking pc set");
             if self.banked_pc.is_none() {
                 self.banked_pc = Some(value);
@@ -205,7 +213,10 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
             }
         } else {
             // TODO: dry, reuse fn in post execute packet
-            trace!("first pc set, not banking");
+            trace!(
+                "setting pc, banking is {}, otherwise first set",
+                self.enable_banking
+            );
             self.pc = Some(value);
 
             RegisterManager::write_register(
