@@ -3,6 +3,8 @@
 This examples shows Styx's Unified Configuration by running a processor with GDB integration. The
 example instantiates a ppc405 processor and loads some freertos firmware.
 
+Check out the unified configuration page in the docs.
+
 ## Quick Start
 
 In one terminal, run a freertos binary.
