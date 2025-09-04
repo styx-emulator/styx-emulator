@@ -30,14 +30,13 @@ If something is more clunky than you would like, or is missing functionality tha
 would like, please let us know. Additionally if there is already an issue for it
 please comment +1 on the issue so we can track interest in things and adjust priority.
 
-#### Project Issue Labeling and Organization
+### Project Issue Labeling and Organization
 
 Once a feature is selected for implementation, define sub-tasks for the feature as checkboxes
 in the issue description. Generally the feature should be scoped to be reviewable as one pull request.
 If the feature is sufficiently large and warrants multiple self-contained pull requests, capture those
 tasks as separate issues and apply an approriate Area (A-*) label to group the issues together.
 Our system of labeling issues is inspired by [Bevy's](https://bevy.org/learn/contribute/reference/triage/) Triaging methods.
-
 
 ## Code Contributions
 
@@ -48,6 +47,7 @@ and the usual insanity that ensues unless the maintenance team has the bandwidth
 proper hygiene. The Styx team is currently small, so we use a `rebase` workflow.
 
 The rough steps:
+
 - Check for open Issues related to your intended contribution. Submit an issue to capture your idea or claim an issue that "Needs Help"
 - If your new feature warrants a larger discussion, submit a `Request For Comment` in the [rfc repository](https://github.com/styx-emulator/rfcs)
 - If all signs point to go, fork this repository.
@@ -61,7 +61,7 @@ The rough steps:
   - **NOTE**: all the commits will be present when merged into the `main` branch, so please rebase your commits into a somewhat tidy set of commits following the conventional commit format discussed in `CONVENTIONS.md`
 - Once you're ready for feedback, submit a pull request and request a review from a Maintainer!
 
-If you're consistently working on Styx and would like to become a Comitter/Maintainer of the Repo (_nasty forkses_), [apply](#Becoming-a-Committer/Maintainer-or-Discord-Moderator) to become part of the core Styx team!
+If you're consistently working on Styx and would like to become a Comitter/Maintainer of the Repo (_nasty forkses_), [apply](#Becoming-a-Committer/Maintainer) to become part of the core Styx team!
 
 **Some Advice**:
 
@@ -117,9 +117,11 @@ Note that using the remote development container will overwrite the local
 ![image](https://code.visualstudio.com/assets/docs/devcontainers/create-dev-container/container-edit-loop.png)
 
 #### To open Styx in the dev container
+
 F1 -> Open Folder in Container (select Styx root director)
 
 #### To reopen Styx locally
+
 F1 -> Reopen Folder Locallly
 
 See VSCode's
@@ -180,7 +182,7 @@ This is roughly the mental calulus that is performed while performing code revie
 ### 3. Requirements
 
 - **Completeness**: Verify that the submitted code meets all the outlined requirements, goals, and non-goals.
-- **Validation**: Ensure there's a mechanism in place to validate inputs and configurations against the requirements (tests, and tests with *real* workloads and/or inputs).
+- **Validation**: Ensure there's a mechanism in place to validate inputs and configurations against the requirements (tests, and tests with _real_ workloads and/or inputs).
 
 ### 4. Documentation and Comments
 
@@ -206,28 +208,21 @@ This is roughly the mental calulus that is performed while performing code revie
 
 ### 8. Performance
 
-- **Efficiency**: Look for any inefficient code patterns that could impact performance, such as runtime hooks, excessive memory usage/resource contention, or unoptimized algorithms. If the default target runtime is getting modified, be sure to test the code on representative + *real* workloads that would be affected by this change.
+- **Efficiency**: Look for any inefficient code patterns that could impact performance, such as runtime hooks, excessive memory usage/resource contention, or unoptimized algorithms. If the default target runtime is getting modified, be sure to test the code on representative + _real_ workloads that would be affected by this change.
 - **Profiling**: Recommend profiling critical sections of the code to identify and address performance bottlenecks. This is especially important in core changes or updates to an instruction execution backend.
 
 ### General Tips for Maintainers
 
 - **Iterative Improvement**: Encourage iterative improvements rather than demanding perfection in a single review cycle, balancing thoroughness with the need to make progress. If quality is not up to standards but the functionality is there, make sure that gets communicated so it doesn't seem like the merge criteria keep changing. A positive "you did a good job implementing ___, now we just need to clean up the code + docs to get this merged in" goes a long way to validating contributions.
 - **Communication**: Foster clear and constructive communication, providing specific examples and suggestions for improvement, if you have a hard time articulating your thoughts, that is something you are allowed to admit, and can request assistance with.
-- **Empathy**: Remember that code reviews are not just about the code but also about the people writing it. Approach reviews with empathy and a focus on mentorship and growth, please remember to explain *why* decisions are made and *how* conclusions were reached.
+- **Empathy**: Remember that code reviews are not just about the code but also about the people writing it. Approach reviews with empathy and a focus on mentorship and growth, please remember to explain _why_ decisions are made and _how_ conclusions were reached.
 
-## Becoming a Committer/Maintainer or Discord Moderator
+## Becoming a Committer/Maintainer
 
 Thanks for your interest in Styx! This repo and project infrastructure is managed by Kudu Dynamics LLC, a Leidos Company.
-To apply to become a Committer/Maintainer or Discord Moderator, please email info@styx-emulator.org
+To apply to become a Committer/Maintainer, please email <info@styx-emulator.org>
 
 ### Maintainer List
 
-- @lockbox (active)
 - @yurboirene (active)
 - @kudu-emilie (active)
-
-### Discord Moderator List
-
-- @lockbox (active)
-- @rene (active)
-- @qiaxxi (active)

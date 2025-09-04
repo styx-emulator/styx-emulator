@@ -11,12 +11,19 @@ Styx is under active development and does not currently follow Semantic Versioni
 
 ## Project Links
 
-- Website: <https://styx-emulator.org>
+### Official
+
+- Docs Website: <https://docs.styx-emulator.org>
 - Documentation Site: <https://docs.styx-emulator.org>
 - Github: <https://github.com/styx-emulator>
-- Discord: <https://discord.gg/styx-emulator>
 - Mastodon: <https://infosec.exchange/@styx_emulator>
 - Twitter/X: <https://x.com/styx_emulator>
+
+### Unofficial
+
+**Note**: Unofficial communities are not moderated by or affiliated with Kudu Dynamics, LLC.
+
+- Discord: <https://discord.gg/styx-emulator>
 
 ## Why Use Styx?
 
@@ -32,7 +39,6 @@ Styx is under active development and does not currently follow Semantic Versioni
 Styx is designed to be a foundational tool for building custom emulators, allowing you to focus on target specifics rather than the underlying emulation mechanics. It provides a powerful framework for creating tailored emulators that can be used in a variety of contexts, from debugging embedded systems to state of the art security research. Styx focuses on introspection and instrumentation over raw execution speed, meaning that in general Styx will sacrifice some execution speed in order to grant users the ability to get detailed information like cross-emulator interrupt tracking and data flow analysis. The best part? A lot of that instrumentation can be *compiled out* if you don't need it, so you can still get great performance when you don't need the introspection.
 
 Whether you're working on embedded systems, DSPs, or just need a lightweight emulator for bug-finding, Styx has you covered. With built-in fuzzing support, plugins, external tool integrations and multi-processor capabilities, Styx exists to bring modern tools to long forgotten architectures and targets.
-
 
 | **Feature**              | **STYX**                       | **QEMU**             | **UNICORN**           | **ICICLE-EMU**                   |
 |--------------------------|--------------------------------|----------------------|-----------------------|----------------------------------|
@@ -99,6 +105,7 @@ docker build -t styx-ci -f ./utils/docker/ci.Dockerfile --build-arg RUST_VERSION
 ### Host / Native development
 
 To perform host development, you'll need somewhat recent versions of the following tools:
+
 - [direnv](https://direnv.net/)
 - A working rust installation (cargo will automatically install the correct versions)
 - `python` > 3.9 + `python3-virtualenv` + `python3-pip`
@@ -106,6 +113,7 @@ To perform host development, you'll need somewhat recent versions of the followi
 - `cmake`
 
 #### For Tests + Local CI
+
 - `pre-commit`
 - `gdb-multiarch` (`gdb` on RHEL systems)
 
@@ -152,4 +160,4 @@ Licensed under the BSD-2 Clause license which may be obtained from [`./LICENSE`]
 
 Part of this work was funded by DARPA; The views, opinions, and/or findings expressed are those of the author(s) and should not be interpreted as representing the official views or policies of the Department of Defense or the U.S. Government.
 
-_Distribution A: Approved for public release: Distribution is unlimited._
+*Distribution A: Approved for public release: Distribution is unlimited.*
