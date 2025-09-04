@@ -3,6 +3,7 @@
 
 mod build_with;
 mod enum_mirror;
+mod styx_manifest;
 
 use proc_macro::TokenStream;
 use quote::{format_ident, quote, ToTokens};
