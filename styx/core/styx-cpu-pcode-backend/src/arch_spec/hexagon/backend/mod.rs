@@ -228,6 +228,7 @@ impl BackendHelper<(u64, SmallVec<[usize; MAX_PACKET_SIZE]>), Vec<Pcode>> for He
         ev: &mut EventController,
     ) -> Result<Result<(u64, SmallVec<[usize; MAX_PACKET_SIZE]>), TargetExitReason>, UnknownError>
     {
+        let mut delayed_irqn: Option<i32> = None;
         let mut total_instrs_executed = 0;
         let mut execution_regs_written: SmallVec<[VarnodeData; DEFAULT_REG_ALLOCATION]> =
             smallvec![];
@@ -237,7 +238,8 @@ impl BackendHelper<(u64, SmallVec<[usize; MAX_PACKET_SIZE]>), Vec<Pcode>> for He
                 Ok(data) => data,
                 Err(exit_reason) => return Ok(Err(exit_reason)),
             },
-            // Try exactly once more
+            // Try exactly once more, which is the same functionality as in
+            // fetch_pcode
             Err(HexagonFetchDecodeError::GetPcodeError(result_err)) => {
                 trace!("trying to get pcode again after a GetPcodeError");
                 // Try one more time before giving up
@@ -275,14 +277,16 @@ impl BackendHelper<(u64, SmallVec<[usize; MAX_PACKET_SIZE]>), Vec<Pcode>> for He
             // this should actually do the fetching for each individual packet.
             // TODO: move everything that happens within one one execution. call this function something else,
             // like execute_packet_pcodes or something?
-            if let Err(reason) = self.execute_single_instr(
+            match self.execute_single_instr(
                 pcode_instrs,
                 mmu,
                 ev,
                 &mut execution_regs_written,
                 bytes_consumed,
             )? {
-                return Ok(Err(reason));
+                Ok((_consumed, Some(new_delayed_irqn))) => delayed_irqn = Some(new_delayed_irqn),
+                Err(e) => return Ok(Err(e)),
+                _ => {}
             }
             total_instrs_executed += 1;
         }
@@ -290,14 +294,19 @@ impl BackendHelper<(u64, SmallVec<[usize; MAX_PACKET_SIZE]>), Vec<Pcode>> for He
         // We should only flush regs based on executed pcodes.
         trace!("end of packet, flushing registers...");
         let regs_flush_pcodes = Self::flush_regs_pcode(&execution_regs_written);
-        if let Err(reason) = self.execute_single_instr(
+
+        // NOTE: to my knowledge, this won't ever cause an interrupt??
+        match self.execute_single_instr(
             &regs_flush_pcodes,
             mmu,
             ev,
             &mut execution_regs_written,
             bytes_consumed,
         )? {
-            return Ok(Err(reason));
+            // Only handle if there was actually an IRQ request
+            Ok((_consumed, Some(new_delayed_irqn))) => delayed_irqn = Some(new_delayed_irqn),
+            Err(reason) => return Ok(Err(reason)),
+            _ => {}
         }
 
         let mut execution_helper_outer = self.execution_helper.take().unwrap();
@@ -311,6 +320,10 @@ impl BackendHelper<(u64, SmallVec<[usize; MAX_PACKET_SIZE]>), Vec<Pcode>> for He
             execution_helper_outer.post_packet_execute(self);
         }
         self.execution_helper = Some(execution_helper_outer);
+
+        if let Some(irqn) = delayed_irqn {
+            HookManager::trigger_interrupt_hook(self, mmu, ev, irqn)?;
+        }
 
         Ok(Ok((total_instrs_executed, ordering)))
     }
@@ -529,7 +542,7 @@ impl HexagonPcodeBackend {
         ev: &mut EventController,
         execution_regs_written: &mut SmallVec<[VarnodeData; DEFAULT_REG_ALLOCATION]>,
         bytes_consumed: u64,
-    ) -> Result<Result<u64, TargetExitReason>, UnknownError> {
+    ) -> Result<Result<(u64, Option<i32>), TargetExitReason>, UnknownError> {
         // execute
         let mut i = 0;
         let total_pcodes = pcodes.len();
@@ -562,6 +575,7 @@ impl HexagonPcodeBackend {
                 PCodeStateChange::Fallthrough => i += 1,
                 PCodeStateChange::DelayedInterrupt(irqn) => {
                     // interrupt will *probably* branch execution
+                    self.last_was_branch = true;
                     let ret_value = delayed_irqn.replace(irqn);
                     assert!(ret_value.is_none(), "irqn already in delay interrupt slot");
                     i += 1;
@@ -574,25 +588,24 @@ impl HexagonPcodeBackend {
                 }
                 PCodeStateChange::InstructionAbsolute(new_pc) => {
                     trace!("Pcode state change absolute jump new PC=0x{new_pc:X}");
+                    self.last_was_branch = true;
                     self.set_pc(new_pc)?;
-                    return Ok(Ok(bytes_consumed)); // Don't increment PC, jump to next instruction
+                    return Ok(Ok((bytes_consumed, delayed_irqn))); // Don't increment PC, jump to next instruction
                 }
                 PCodeStateChange::Exception(irqn) => {
                     // exception occurred
                     // we should interrupt hook and rerun instruction
                     HookManager::trigger_interrupt_hook(self, mmu, ev, irqn)?;
-                    return Ok(Ok(bytes_consumed));
+                    return Ok(Ok((bytes_consumed, delayed_irqn)));
                     // Don't increment PC
                 }
                 PCodeStateChange::Exit(reason) => return Ok(Err(reason)),
             }
         }
 
-        if let Some(irqn) = delayed_irqn {
-            HookManager::trigger_interrupt_hook(self, mmu, ev, irqn)?;
-        }
-
-        Ok(Ok(bytes_consumed))
+        // Delayed IRQ should run at the end of a packet, not at the end of
+        // an instruction
+        Ok(Ok((bytes_consumed, delayed_irqn)))
     }
 
     pub fn flush_regs_pcode(
