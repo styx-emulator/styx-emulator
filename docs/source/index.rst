@@ -73,6 +73,7 @@ Documentation Contents
    user/bindings
    user/unicorn_replacement
    user/processors
+   user/unified_configuration
    user/styx_trace
    user/using_a_processor
    user/adding_a_processor
