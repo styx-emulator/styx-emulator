@@ -21,6 +21,7 @@ use crate::{
     executor::{DefaultExecutor, Executor, ExecutorImpl},
     hooks::StyxHook,
     plugins::{collection::PluginsContainer, UninitPlugin},
+    processor::{config::Config, ProcessorConfig},
     runtime::ProcessorRuntime,
 };
 
@@ -81,6 +82,7 @@ pub struct ProcessorBuilder<'a> {
     cpu_backend: Backend,
     exception_behavior: ExceptionBehavior,
     hooks: Vec<StyxHook>,
+    config: Config,
 }
 impl<'a> Default for ProcessorBuilder<'a> {
     fn default() -> Self {
@@ -95,6 +97,7 @@ impl<'a> Default for ProcessorBuilder<'a> {
             cpu_backend: Backend::default(),
             exception_behavior: ExceptionBehavior::default(),
             hooks: Vec::new(),
+            config: Config::default(),
         }
     }
 }
@@ -225,6 +228,12 @@ impl<'a> ProcessorBuilder<'a> {
         self
     }
 
+    /// Overwrites a config parameter.
+    pub fn add_config<C: ProcessorConfig>(mut self, config: C) -> Self {
+        self.config.add_config(config);
+        self
+    }
+
     /// Builds the processor and initializes it.
     ///
     /// Required components:
@@ -244,6 +253,7 @@ impl<'a> ProcessorBuilder<'a> {
             runtime: self.runtime.handle(),
             backend: self.cpu_backend,
             exception: self.exception_behavior,
+            config: &self.config,
         };
         let processor = builder.build(&args)?;
         self.build_inner(processor, builder)
@@ -281,8 +291,6 @@ impl<'a> ProcessorBuilder<'a> {
             &mut core,
         )?;
 
-        let executor = Executor::new(self.executor);
-
         let mut peripherals = bundle.peripherals;
 
         for hook in self.hooks {
@@ -291,7 +299,10 @@ impl<'a> ProcessorBuilder<'a> {
                 .context("failed to add initial processor hooks")?;
         }
 
-        let mut building_processor = BuildingProcessor::new(&mut core, &mut runtime);
+        let mut building_processor = BuildingProcessor::new(&mut core, &mut runtime, &self.config);
+
+        self.executor.init(&mut building_processor)?;
+        let executor = Executor::new(self.executor);
 
         debug!("initializing plugins");
         let mut plugins = self
@@ -382,14 +393,20 @@ pub struct BuildingProcessor<'a> {
     pub core: &'a mut ProcessorCore,
     pub runtime: &'a mut ProcessorRuntime,
     pub routes: RoutesBuilder,
+    pub config: &'a Config,
 }
 
 impl<'a> BuildingProcessor<'a> {
-    pub fn new(core: &'a mut ProcessorCore, runtime: &'a mut ProcessorRuntime) -> Self {
+    pub fn new(
+        core: &'a mut ProcessorCore,
+        runtime: &'a mut ProcessorRuntime,
+        config: &'a Config,
+    ) -> Self {
         Self {
             core,
             runtime,
             routes: Default::default(),
+            config,
         }
     }
 }

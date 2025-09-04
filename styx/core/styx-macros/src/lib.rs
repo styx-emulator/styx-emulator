@@ -3,6 +3,7 @@
 
 mod build_with;
 mod enum_mirror;
+mod processor_config;
 
 use proc_macro::TokenStream;
 use quote::{format_ident, quote, ToTokens};
@@ -951,4 +952,9 @@ pub fn enum_mirror(attr: TokenStream, item: TokenStream) -> TokenStream {
     enum_mirror::enum_mirror(attr.into(), item.into())
         .unwrap_or_else(|e| e.into_compile_error())
         .into()
+}
+
+#[proc_macro_derive(ProcessorConfig)]
+pub fn derive_processor_config(input: TokenStream) -> TokenStream {
+    processor_config::derive_processor_config(input)
 }

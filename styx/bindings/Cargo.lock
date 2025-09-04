@@ -5433,6 +5433,7 @@ dependencies = [
  "styx-cpu-type",
  "styx-errors",
  "styx-loader",
+ "styx-macros",
  "styx-memory-type",
  "styx-sync",
  "styx-util",
