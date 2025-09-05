@@ -27,15 +27,13 @@ use styx_processor::{
     hooks::{AddHookError, DeleteHookError, HookToken, Hookable, StyxHook},
     memory::Mmu,
 };
-use tap::TryConv;
 use thiserror::Error;
 
 use crate::{
     arch_spec::hexagon::{parse_iclass, pkt_semantics::DEST_REG_OFFSET},
     backend_helper::BackendHelper,
-    get_pcode::{FetchPcodeError, GetPcodeError, PcodeFetchException},
-    pcode_gen::GeneratePcodeError,
-    MachineState, PcodeBackendConfiguration,
+    get_pcode::GetPcodeError,
+    pcode_gen::GeneratePcodeError, PcodeBackendConfiguration,
 };
 use crate::{
     arch_spec::hexagon_build_arch_spec,

@@ -27,7 +27,7 @@ use log::trace;
 use smallvec::{smallvec, SmallVec};
 use styx_pcode_translator::ContextOption;
 
-use crate::{arch_spec::generator_helper::CONTEXT_OPTION_LEN, pcode_gen::GeneratePcodeError};
+use crate::arch_spec::generator_helper::CONTEXT_OPTION_LEN;
 
 use super::{HexagonFetchDecodeError, PacketLocation, PktState};
 #[derive(Debug)]

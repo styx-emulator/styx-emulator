@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use log::trace;
 use styx_cpu_type::TargetExitReason;
 use styx_errors::{anyhow::Context, UnknownError};
-use styx_pcode::pcode::{Pcode, SpaceName};
+use styx_pcode::pcode::SpaceName;
 use styx_processor::{
     cpu::{CpuBackend, ExecutionReport},
     event_controller::EventController,

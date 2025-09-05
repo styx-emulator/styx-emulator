@@ -86,7 +86,7 @@ pub use hookable::*;
 use styx_cpu_type::arch::backends::ArchRegister;
 pub use token::HookToken;
 
-use std::{fmt::Debug, sync::Arc};
+use std::fmt::Debug;
 
 /// Enum containing all possible hooks on a Styx cpu.
 ///
