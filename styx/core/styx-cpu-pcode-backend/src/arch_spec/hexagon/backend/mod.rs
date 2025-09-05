@@ -94,6 +94,13 @@ pub enum OutputRegisterType {
     None,
 }
 
+enum HexagonSingleInstructionAction {
+    DelayedInterrupt(i32),
+    PcChange(u64),
+    Rerun,
+    None,
+}
+
 // We need an enum dispatch before we start using generics for dyn ExecutionHelper
 
 #[derive(Debug)]
@@ -228,6 +235,7 @@ impl BackendHelper<(u64, SmallVec<[usize; MAX_PACKET_SIZE]>), Vec<Pcode>> for He
         ev: &mut EventController,
     ) -> Result<Result<(u64, SmallVec<[usize; MAX_PACKET_SIZE]>), TargetExitReason>, UnknownError>
     {
+        let mut branched_pc: Option<u64> = None;
         let mut delayed_irqn: Option<i32> = None;
         let mut total_instrs_executed = 0;
         let mut execution_regs_written: SmallVec<[VarnodeData; DEFAULT_REG_ALLOCATION]> =
@@ -246,13 +254,9 @@ impl BackendHelper<(u64, SmallVec<[usize; MAX_PACKET_SIZE]>), Vec<Pcode>> for He
                 // Note: the PC could get set here, and we should NOT be
                 // banking if this happens
 
-                // When disabling PC banking, this allows any PC write here to just overwrite the PC register
-                // which is what we want since for all intents and purposes, we're not in any specific packet
-                // anymore.
-                self.execution_helper.as_mut().unwrap().disable_pc_banking();
+                // This may overwrite the PC, but that's fine.
                 let (target_exit_reason, did_fix) =
                     handle_pcode_exception(self, mmu, ev, result_err)?;
-                self.execution_helper.as_mut().unwrap().enable_pc_banking();
 
                 trace!("did_fix: {did_fix:?}");
 
@@ -284,7 +288,18 @@ impl BackendHelper<(u64, SmallVec<[usize; MAX_PACKET_SIZE]>), Vec<Pcode>> for He
                 &mut execution_regs_written,
                 bytes_consumed,
             )? {
-                Ok((_consumed, Some(new_delayed_irqn))) => delayed_irqn = Some(new_delayed_irqn),
+                Ok(HexagonSingleInstructionAction::DelayedInterrupt(irqn)) => {
+                    delayed_irqn = Some(irqn);
+                }
+                Ok(HexagonSingleInstructionAction::Rerun) => {
+                    todo!()
+                }
+
+                // Setting it only once when it's none allows for the first branch to be taken,
+                // as required by double jumps
+                Ok(HexagonSingleInstructionAction::PcChange(pc)) if branched_pc.is_none() => {
+                    branched_pc = Some(pc)
+                }
                 Err(e) => return Ok(Err(e)),
                 _ => {}
             }
@@ -304,14 +319,19 @@ impl BackendHelper<(u64, SmallVec<[usize; MAX_PACKET_SIZE]>), Vec<Pcode>> for He
             bytes_consumed,
         )? {
             // Only handle if there was actually an IRQ request
-            Ok((_consumed, Some(new_delayed_irqn))) => delayed_irqn = Some(new_delayed_irqn),
+            Ok(HexagonSingleInstructionAction::DelayedInterrupt(irqn)) => {
+                delayed_irqn = Some(irqn);
+            }
             Err(reason) => return Ok(Err(reason)),
             _ => {}
         }
 
         let mut execution_helper_outer = self.execution_helper.take().unwrap();
         {
-            let next_pc = execution_helper_outer.isa_pc() + bytes_consumed;
+            let next_pc = match branched_pc {
+                Some(pc) => pc,
+                None => execution_helper_outer.isa_pc() + bytes_consumed,
+            };
 
             trace!("telling execution helper to bank move forward pc to {next_pc:x}");
             execution_helper_outer.set_isa_pc(next_pc, self);
@@ -542,7 +562,7 @@ impl HexagonPcodeBackend {
         ev: &mut EventController,
         execution_regs_written: &mut SmallVec<[VarnodeData; DEFAULT_REG_ALLOCATION]>,
         bytes_consumed: u64,
-    ) -> Result<Result<(u64, Option<i32>), TargetExitReason>, UnknownError> {
+    ) -> Result<Result<HexagonSingleInstructionAction, TargetExitReason>, UnknownError> {
         // execute
         let mut i = 0;
         let total_pcodes = pcodes.len();
@@ -589,14 +609,15 @@ impl HexagonPcodeBackend {
                 PCodeStateChange::InstructionAbsolute(new_pc) => {
                     trace!("Pcode state change absolute jump new PC=0x{new_pc:X}");
                     self.last_was_branch = true;
-                    self.set_pc(new_pc)?;
-                    return Ok(Ok((bytes_consumed, delayed_irqn))); // Don't increment PC, jump to next instruction
+                    // self.set_pc(new_pc)?;
+                    return Ok(Ok(HexagonSingleInstructionAction::PcChange(new_pc)));
+                    // Don't increment PC, jump to next instruction
                 }
                 PCodeStateChange::Exception(irqn) => {
                     // exception occurred
                     // we should interrupt hook and rerun instruction
                     HookManager::trigger_interrupt_hook(self, mmu, ev, irqn)?;
-                    return Ok(Ok((bytes_consumed, delayed_irqn)));
+                    return Ok(Ok(HexagonSingleInstructionAction::Rerun));
                     // Don't increment PC
                 }
                 PCodeStateChange::Exit(reason) => return Ok(Err(reason)),
@@ -605,7 +626,10 @@ impl HexagonPcodeBackend {
 
         // Delayed IRQ should run at the end of a packet, not at the end of
         // an instruction
-        Ok(Ok((bytes_consumed, delayed_irqn)))
+        match delayed_irqn {
+            Some(irqn) => Ok(Ok(HexagonSingleInstructionAction::DelayedInterrupt(irqn))),
+            None => Ok(Ok(HexagonSingleInstructionAction::None)),
+        }
     }
 
     pub fn flush_regs_pcode(

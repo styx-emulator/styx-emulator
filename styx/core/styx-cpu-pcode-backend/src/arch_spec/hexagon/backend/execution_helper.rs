@@ -23,17 +23,9 @@ use super::{HexagonExecutionHelper, HexagonPcodeBackend, PktState};
 pub struct DefaultHexagonExecutionHelper {
     pc: Option<u64>,
     pc_varnode: VarnodeData,
-    banked_pc: Option<u64>,
-    enable_banking: bool,
 }
 
 impl DefaultHexagonExecutionHelper {
-    pub(crate) fn enable_pc_banking(&mut self) {
-        self.enable_banking = true;
-    }
-    pub(crate) fn disable_pc_banking(&mut self) {
-        self.enable_banking = true;
-    }
     fn handle_duplex_immext(
         &self,
         backend: &mut HexagonPcodeBackend,
@@ -187,13 +179,11 @@ impl Default for DefaultHexagonExecutionHelper {
     fn default() -> Self {
         Self {
             pc: None,
-            banked_pc: None,
             pc_varnode: VarnodeData {
                 space: SpaceName::Ram,
                 offset: 0,
                 size: 4,
             },
-            enable_banking: true,
         }
     }
 }
@@ -204,28 +194,14 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
     }
     // could probably do the double jump logic here
     fn set_isa_pc(&mut self, value: u64, backend: &mut HexagonPcodeBackend) {
-        if self.enable_banking && self.pc.is_some() {
-            trace!("banking pc set");
-            if self.banked_pc.is_none() {
-                self.banked_pc = Some(value);
-            } else {
-                trace!("banking pc IGNORE - was already set earlier (works for double jump)");
-            }
-        } else {
-            // TODO: dry, reuse fn in post execute packet
-            trace!(
-                "setting pc, banking is {}, otherwise first set",
-                self.enable_banking
-            );
-            self.pc = Some(value);
+        self.pc = Some(value);
 
-            RegisterManager::write_register(
-                backend,
-                HexagonRegister::Pc.into(),
-                SizedValue::from(self.pc.unwrap() as u32),
-            )
-            .unwrap();
-        }
+        RegisterManager::write_register(
+            backend,
+            HexagonRegister::Pc.into(),
+            SizedValue::from(self.pc.unwrap() as u32),
+        )
+        .unwrap();
     }
 
     fn pre_insn_fetch(
@@ -396,19 +372,6 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
 
     fn post_packet_execute(&mut self, backend: &mut HexagonPcodeBackend) {
         trace!("post packet execute called");
-        if let Some(banked_pc) = self.banked_pc {
-            trace!("banked pc was set, setting pc to {:?}", self.banked_pc);
-            self.pc = Some(banked_pc);
-            self.banked_pc = None;
-
-            trace!("register manager write register self.pc={:?}", self.pc);
-            RegisterManager::write_register(
-                backend,
-                HexagonRegister::Pc.into(),
-                SizedValue::from(self.pc.unwrap() as u32),
-            )
-            .unwrap();
-        }
     }
 
     // TODO: in the future, maybe also give the instructions to figure this out faster,
