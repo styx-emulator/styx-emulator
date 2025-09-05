@@ -274,9 +274,9 @@ impl BackendHelper<(u64, SmallVec<[usize; MAX_PACKET_SIZE]>), Vec<Pcode>> for He
             Err(HexagonFetchDecodeError::Other(e)) => return Err(e),
         };
 
-        for i_instrs in &ordering {
-            let pcode_instrs = &pcodes[*i_instrs];
-
+        let mut i = 0;
+        while i < ordering.len() {
+            let pcode_instrs = &pcodes[ordering[i]];
             trace!("executing single instruction pcodes: {pcode_instrs:?}");
             // this should actually do the fetching for each individual packet.
             // TODO: move everything that happens within one one execution. call this function something else,
@@ -291,8 +291,12 @@ impl BackendHelper<(u64, SmallVec<[usize; MAX_PACKET_SIZE]>), Vec<Pcode>> for He
                 Ok(HexagonSingleInstructionAction::DelayedInterrupt(irqn)) => {
                     delayed_irqn = Some(irqn);
                 }
+                // Rerunning a single instruction is tenuous, as packets are supposed to be
+                // atomic. The rerun condition occurs when there's an exception in an instruction.
+                // Re-running the entire packet while in the middle of the packet would require a rollback,
+                // however.
                 Ok(HexagonSingleInstructionAction::Rerun) => {
-                    todo!()
+                    continue;
                 }
 
                 // Setting it only once when it's none allows for the first branch to be taken,
@@ -304,6 +308,7 @@ impl BackendHelper<(u64, SmallVec<[usize; MAX_PACKET_SIZE]>), Vec<Pcode>> for He
                 _ => {}
             }
             total_instrs_executed += 1;
+            i += 1;
         }
 
         // We should only flush regs based on executed pcodes.
