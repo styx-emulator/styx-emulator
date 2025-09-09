@@ -127,6 +127,7 @@ use styx_core::{
 pub mod components;
 mod core_components;
 mod mapper;
+mod pcs;
 
 pub use mapper::ComponentGenerator;
 pub use mapper::ProcessorComponentsStore;

@@ -269,6 +269,10 @@ impl<'a> ProcessorBuilder<'a> {
         bundle: ProcessorBundle,
         builder: Box<dyn ProcessorImpl>,
     ) -> Result<Processor, UnknownError> {
+        let resolved_port = self
+            .port
+            .resolve()
+            .with_context(|| "could not resolve the ipc port to build the processor")?;
         let mut runtime = self.runtime;
 
         let mut cpu = bundle.cpu;
@@ -327,7 +331,8 @@ impl<'a> ProcessorBuilder<'a> {
             )?;
         }
 
-        let port = start_ipc(building_processor.routes, runtime.handle(), self.port)?;
+        let port = resolved_port.port();
+        start_ipc(building_processor.routes, runtime.handle(), resolved_port)?;
 
         // transfer ownership of peripherals to event controller
         for peripheral in peripherals {
@@ -426,6 +431,31 @@ impl IPCPort {
     pub fn specific(port: u16) -> Self {
         Self(Some(port))
     }
+
+    pub(crate) fn resolve(self) -> Result<ResolvedIPCPort, UnknownError> {
+        // default to port `0`, we will let the OS choose a random port
+        // and then set an internal record of the port in use
+        let port = self.0.unwrap_or(0);
+
+        // TODO don't need to from_std here
+        let std_listener = std::net::TcpListener::bind(format!("0.0.0.0:{port}"))?;
+        std_listener.set_nonblocking(true)?;
+        let listener = TcpListener::from_std(std_listener)?; // grab a tcp listener
+        Ok(ResolvedIPCPort(listener))
+    }
+}
+
+pub(crate) struct ResolvedIPCPort(pub(crate) TcpListener);
+
+impl ResolvedIPCPort {
+    pub(crate) fn port(&self) -> u16 {
+        // I have never seen .local_addr() error, don't think this will happen
+        // otherwise we can make this return a result
+        self.0
+            .local_addr()
+            .expect("local addr was not successful")
+            .port()
+    }
 }
 
 impl From<u16> for IPCPort {
@@ -435,21 +465,14 @@ impl From<u16> for IPCPort {
 }
 
 /// Start tonic server on async thread and returns the chosen port.
-fn start_ipc(routes: RoutesBuilder, runtime: Handle, port: IPCPort) -> Result<u16, UnknownError> {
-    // default to port `0`, we will let the OS choose a random port
-    // and then set an internal record of the port in use
-    let port = port.0.unwrap_or(0);
+fn start_ipc(
+    routes: RoutesBuilder,
+    runtime: Handle,
+    port: ResolvedIPCPort,
+) -> Result<(), UnknownError> {
+    info!("Processor IPC server listening on port {}", port.port());
 
-    // grab a tcp listener
-    let tcp_listener = runtime
-        .block_on(async move {
-            // create the tcp listener
-            TcpListener::bind(format!("0.0.0.0:{port}")).await
-        })
-        .with_context(|| format!("could not bind to port {port}"))?;
-    let port = tcp_listener.local_addr()?.port();
-
-    info!("Processor IPC server listening on port {port}");
+    let ResolvedIPCPort(tcp_listener) = port;
 
     // spawn ipc on async runtime
     runtime.spawn(async move {
@@ -459,6 +482,5 @@ fn start_ipc(routes: RoutesBuilder, runtime: Handle, port: IPCPort) -> Result<u1
             .await
             .unwrap()
     });
-
-    Ok(port)
+    Ok(())
 }
