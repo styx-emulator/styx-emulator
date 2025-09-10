@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: BSD-2-Clause
 use log::trace;
 
 #[derive(Copy, Clone, Debug)]

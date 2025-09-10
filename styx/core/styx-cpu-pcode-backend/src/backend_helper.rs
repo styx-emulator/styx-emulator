@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: BSD-2-Clause
 use std::collections::HashMap;
 
 use log::trace;
