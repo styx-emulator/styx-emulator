@@ -23,7 +23,6 @@ use super::ppc;
 #[cfg(any(feature = "arch_mips32", feature = "arch_mips64"))]
 use super::mips_common;
 
-
 /// Concrete enum for program counter managers.
 ///
 /// In pcode emulation multiple program counters must be kept track of to provide the correct value

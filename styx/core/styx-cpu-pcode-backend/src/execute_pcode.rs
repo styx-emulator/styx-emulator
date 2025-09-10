@@ -13,7 +13,8 @@ use crate::{
         space::SpaceError,
         space_manager::{HasSpaceManager, MmuSpaceOps, VarnodeError},
     },
-    pcode_gen::HasPcodeGenerator, HasConfig, DEFAULT_REG_ALLOCATION, FALSE,
+    pcode_gen::HasPcodeGenerator,
+    HasConfig, DEFAULT_REG_ALLOCATION, FALSE,
 };
 use log::trace;
 use smallvec::SmallVec;

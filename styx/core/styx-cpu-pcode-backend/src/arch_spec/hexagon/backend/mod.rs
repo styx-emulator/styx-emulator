@@ -33,7 +33,8 @@ use crate::{
     arch_spec::hexagon::{parse_iclass, pkt_semantics::DEST_REG_OFFSET},
     backend_helper::BackendHelper,
     get_pcode::GetPcodeError,
-    pcode_gen::GeneratePcodeError, PcodeBackendConfiguration,
+    pcode_gen::GeneratePcodeError,
+    PcodeBackendConfiguration,
 };
 use crate::{
     arch_spec::hexagon_build_arch_spec,

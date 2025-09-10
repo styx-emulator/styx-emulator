@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use styx_cpu_type::arch::backends::ArchRegister;
-use styx_errors::anyhow::Context;
-use styx_processor::cpu::CpuBackend;
+use crate::register_manager::RegisterCallbackCpu;
 use crate::{
     memory::sized_value::SizedValue,
     pcode_gen::RegisterTranslator,
     register_manager::{RegisterCallback, RegisterHandleError},
 };
-use crate::register_manager::RegisterCallbackCpu;
+use styx_cpu_type::arch::backends::ArchRegister;
+use styx_errors::anyhow::Context;
+use styx_processor::cpu::CpuBackend;
 
 /// Handler for A0 and A1 to explicitly convert size from sla specs 8 bytes to styx's expected 5
 /// bytes.
@@ -45,8 +45,7 @@ impl<T: CpuBackend> RegisterCallback<T> for AnalogRegister {
         // size 5 -> 8 loses no data
         let value = value.resize(8);
 
-        spc
-            .write(&varnode, value)
+        spc.write(&varnode, value)
             .with_context(|| format!("failed to write {register:?} at {varnode:?}"))?;
         Ok(())
     }
