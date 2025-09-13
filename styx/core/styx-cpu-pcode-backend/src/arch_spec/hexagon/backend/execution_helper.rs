@@ -226,50 +226,45 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
         self.pc_varnode.offset = pc as u64;
         trace!("got pc is {pc}");
 
-        match mmu.read_u128_le_virt_code(self.pc_varnode.offset, backend) {
-            Ok(insn_data_wide) => {
-                let insn_data = (insn_data_wide & 0xffffffff) as u32;
-                let insn_next = ((insn_data_wide >> 32) & 0xffffffff) as u32;
-                let insn_next1 = ((insn_data_wide >> 64) & 0xffffffff) as u32;
-                let insn_next2 = ((insn_data_wide >> 96) & 0xffffffff) as u32;
+        let insn_data_wide = mmu
+            .read_u128_le_virt_code(self.pc_varnode.offset, backend)
+            .with_context(|e| "couldn't prefetch the next insn from MMU {e:?}")?;
+        let insn_data = (insn_data_wide & 0xffffffff) as u32;
+        let insn_next = ((insn_data_wide >> 32) & 0xffffffff) as u32;
+        let insn_next1 = ((insn_data_wide >> 64) & 0xffffffff) as u32;
+        let insn_next2 = ((insn_data_wide >> 96) & 0xffffffff) as u32;
 
-                let parse_data = PktLoopParseBits::new_from_insn(insn_data);
-                let parse_next = PktLoopParseBits::new_from_insn(insn_next);
+        let parse_data = PktLoopParseBits::new_from_insn(insn_data);
+        let parse_next = PktLoopParseBits::new_from_insn(insn_next);
 
-                // This should be run every fetch
-                self.handle_duplex_immext(backend, parse_next, insn_next, pc);
+        // This should be run every fetch
+        self.handle_duplex_immext(backend, parse_next, insn_next, pc);
 
-                let insn_array = [insn_data, insn_next, insn_next1, insn_next2];
+        let insn_array = [insn_data, insn_next, insn_next1, insn_next2];
 
-                trace!("parse info is {parse_data:?}");
-                match parse_data {
-                    PktLoopParseBits::Duplex => match prev_state {
-                        PktState::PktEnded(_) => Ok(PktState::PktStartedFirstDuplex(insn_array)),
-                        _ => Ok(PktState::FirstDuplex(insn_array)),
-                    },
-                    PktLoopParseBits::NotEndOfPacket1 | PktLoopParseBits::NotEndOfPacket2 => {
-                        match prev_state {
-                            PktState::InsidePacket(_) | PktState::PktStarted(_) => {
-                                Ok(PktState::InsidePacket(insn_array))
-                            }
-                            PktState::PktEnded(_) => Ok(PktState::PktStarted(insn_array)),
-                            _ => unreachable!("invalid packet sequence"),
-                        }
+        trace!("parse info is {parse_data:?}");
+        match parse_data {
+            PktLoopParseBits::Duplex => match prev_state {
+                PktState::PktEnded(_) => Ok(PktState::PktStartedFirstDuplex(insn_array)),
+                _ => Ok(PktState::FirstDuplex(insn_array)),
+            },
+            PktLoopParseBits::NotEndOfPacket1 | PktLoopParseBits::NotEndOfPacket2 => {
+                match prev_state {
+                    PktState::InsidePacket(_) | PktState::PktStarted(_) => {
+                        Ok(PktState::InsidePacket(insn_array))
                     }
-                    PktLoopParseBits::EndOfPacket => match prev_state {
-                        PktState::PktEnded(_) => Ok(PktState::PktStandalone(insn_array)),
-                        PktState::InsidePacket(_) | PktState::PktStarted(_) => {
-                            Ok(PktState::PktEnded(Some(insn_data)))
-                        }
-                        _ => unreachable!("invalid packet sequence"),
-                    },
-                    PktLoopParseBits::Other => unreachable!("invalid packet sequence"),
+                    PktState::PktEnded(_) => Ok(PktState::PktStarted(insn_array)),
+                    _ => unreachable!("invalid packet sequence"),
                 }
             }
-            Err(e) => {
-                error!("couldn't prefetch the next insn from MMU: {e:?}");
-                Err(GeneratePcodeError::InvalidAddress)
-            }
+            PktLoopParseBits::EndOfPacket => match prev_state {
+                PktState::PktEnded(_) => Ok(PktState::PktStandalone(insn_array)),
+                PktState::InsidePacket(_) | PktState::PktStarted(_) => {
+                    Ok(PktState::PktEnded(Some(insn_data)))
+                }
+                _ => unreachable!("invalid packet sequence"),
+            },
+            PktLoopParseBits::Other => unreachable!("invalid packet sequence"),
         }
     }
 
