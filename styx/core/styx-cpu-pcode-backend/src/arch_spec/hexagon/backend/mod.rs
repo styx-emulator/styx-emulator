@@ -922,7 +922,7 @@ pub trait HexagonExecutionHelper: derive_more::Debug + Send {
         mmu: &mut Mmu,
         prev_state: &PktState,
         pc: u32,
-    ) -> Result<PktState, GeneratePcodeError>;
+    ) -> Result<PktState, HexagonFetchDecodeError>;
 
     fn post_insn_fetch(&mut self, _bytes_consumed: u64, _backend: &mut HexagonPcodeBackend) {}
 

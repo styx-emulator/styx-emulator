@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use log::{error, trace};
 use styx_cpu_type::arch::hexagon::HexagonRegister;
+use styx_errors::{anyhow::Context, UnknownError};
 use styx_pcode::pcode::{Opcode, SpaceName, VarnodeData};
 use styx_pcode_translator::ContextOption;
 use styx_processor::{cpu::CpuBackendExt, memory::Mmu};
 
 use super::{
     decode_info::{DuplexInsClass, PktLoopParseBits},
-    OutputRegisterType,
+    HexagonFetchDecodeError, OutputRegisterType,
 };
 use crate::{
     arch_spec::hexagon::{backend::PacketLocation, dotnew, pkt_semantics::DEST_REG_OFFSET},
@@ -210,7 +211,7 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
         mmu: &mut Mmu,
         prev_state: &PktState,
         pc: u32,
-    ) -> Result<PktState, crate::pcode_gen::GeneratePcodeError> {
+    ) -> Result<PktState, HexagonFetchDecodeError> {
         // Duplex always ends the packet
         match prev_state {
             PktState::FirstDuplex(_) | PktState::PktStartedFirstDuplex(_) => {
@@ -228,7 +229,8 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
 
         let insn_data_wide = mmu
             .read_u128_le_virt_code(self.pc_varnode.offset, backend)
-            .with_context(|e| "couldn't prefetch the next insn from MMU {e:?}")?;
+            .with_context(|| "couldn't prefetch the next insn from MMU")
+            .map_err(|e| HexagonFetchDecodeError::Other(e.into()))?;
         let insn_data = (insn_data_wide & 0xffffffff) as u32;
         let insn_next = ((insn_data_wide >> 32) & 0xffffffff) as u32;
         let insn_next1 = ((insn_data_wide >> 64) & 0xffffffff) as u32;
