@@ -11,8 +11,6 @@ use crate::{
     PCodeStateChange,
 };
 
-// Data cache
-
 #[derive(Debug)]
 pub struct InterruptGenericStub {
     from: String,
