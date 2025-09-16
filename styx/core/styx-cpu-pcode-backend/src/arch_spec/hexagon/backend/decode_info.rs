@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use log::trace;
 
+/// Information about the instruction class for each sub-instruction of a duplex instruction.
+///
+/// This information is available in section 10.2, and specifically table 10-2.
+///
+/// The slaspec used is unable to lookahead/backtrack on instructions, which requires Styx to separately parse the instruction classes for both
+/// sub-instructions within the emulator. Infomation on parsing this is available in table 10-5.
 #[derive(Copy, Clone, Debug)]
 pub enum DuplexInsClass {
     A = 1,
@@ -10,6 +16,11 @@ pub enum DuplexInsClass {
     S2 = 5,
 }
 
+/// Encodes instruction status as End of Packet, duplex, or not end of packet. Also Loop end.
+///
+/// See section 10.5. Occupies 15:14 of the instruction word.
+///
+/// By itself from one instruction this only indicates EndofPacket (see enum variant names). If combined as the first and second instructions in a packet you can construct the status of last/not last in a hardware loop. See section 10.6
 #[derive(Copy, Clone, Debug, PartialEq)]
 #[repr(u8)]
 pub enum PktLoopParseBits {

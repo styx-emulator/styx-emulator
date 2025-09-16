@@ -231,6 +231,7 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
             .read_u128_le_virt_code(self.pc_varnode.offset, backend)
             .with_context(|| "couldn't prefetch the next insn from MMU")
             .map_err(|e| HexagonFetchDecodeError::Other(e.into()))?;
+
         let insn_data = (insn_data_wide & 0xffffffff) as u32;
         let insn_next = ((insn_data_wide >> 32) & 0xffffffff) as u32;
         let insn_next1 = ((insn_data_wide >> 64) & 0xffffffff) as u32;
