@@ -15,7 +15,7 @@ use crate::{
 
 #[derive(Debug)]
 pub struct DcacheGenericStub {
-    from: String,
+    from: &'static str,
 }
 
 impl<T: CpuBackend> CallOtherCallback<T> for DcacheGenericStub {
@@ -36,65 +36,42 @@ pub fn add_dcache_callothers<S: SlaUserOps<UserOps: FromStr>>(
     spec: &mut ArchSpecBuilder<S, HexagonPcodeBackend>,
 ) {
     spec.call_other_manager
-        .add_handler_other_sla(
-            HexagonUserOps::Dctagr,
-            DcacheGenericStub {
-                from: "dctagr".to_owned(),
-            },
-        )
+        .add_handler_other_sla(HexagonUserOps::Dctagr, DcacheGenericStub { from: "dctagr" })
         .unwrap();
 
     spec.call_other_manager
-        .add_handler_other_sla(
-            HexagonUserOps::Dctagw,
-            DcacheGenericStub {
-                from: "dctagw".to_owned(),
-            },
-        )
+        .add_handler_other_sla(HexagonUserOps::Dctagw, DcacheGenericStub { from: "dctagw" })
         .unwrap();
 
     spec.call_other_manager
         .add_handler_other_sla(
             HexagonUserOps::Dcfetch,
-            DcacheGenericStub {
-                from: "dcfetch".to_owned(),
-            },
+            DcacheGenericStub { from: "dcfetch" },
         )
         .unwrap();
 
     spec.call_other_manager
-        .add_handler_other_sla(
-            HexagonUserOps::Dckill,
-            DcacheGenericStub {
-                from: "dckill".to_owned(),
-            },
-        )
+        .add_handler_other_sla(HexagonUserOps::Dckill, DcacheGenericStub { from: "dckill" })
         .unwrap();
 
     spec.call_other_manager
         .add_handler_other_sla(
             HexagonUserOps::Dczeroa,
-            DcacheGenericStub {
-                from: "dczeroa".to_owned(),
-            },
+            DcacheGenericStub { from: "dczeroa" },
         )
         .unwrap();
 
     spec.call_other_manager
         .add_handler_other_sla(
             HexagonUserOps::Dccleana,
-            DcacheGenericStub {
-                from: "dccleana".to_owned(),
-            },
+            DcacheGenericStub { from: "dccleana" },
         )
         .unwrap();
 
     spec.call_other_manager
         .add_handler_other_sla(
             HexagonUserOps::Dccleanidx,
-            DcacheGenericStub {
-                from: "dccleanidx".to_owned(),
-            },
+            DcacheGenericStub { from: "dccleanidx" },
         )
         .unwrap();
 
@@ -102,7 +79,7 @@ pub fn add_dcache_callothers<S: SlaUserOps<UserOps: FromStr>>(
         .add_handler_other_sla(
             HexagonUserOps::Dccleaninva,
             DcacheGenericStub {
-                from: "dccleaninva".to_owned(),
+                from: "dccleaninva",
             },
         )
         .unwrap();
@@ -110,26 +87,19 @@ pub fn add_dcache_callothers<S: SlaUserOps<UserOps: FromStr>>(
         .add_handler_other_sla(
             HexagonUserOps::Dccleaninvidx,
             DcacheGenericStub {
-                from: "dccleaninvidx".to_owned(),
+                from: "dccleaninvidx",
             },
         )
         .unwrap();
 
     spec.call_other_manager
-        .add_handler_other_sla(
-            HexagonUserOps::Dcinva,
-            DcacheGenericStub {
-                from: "dcinva".to_owned(),
-            },
-        )
+        .add_handler_other_sla(HexagonUserOps::Dcinva, DcacheGenericStub { from: "dcinva" })
         .unwrap();
 
     spec.call_other_manager
         .add_handler_other_sla(
             HexagonUserOps::Dcinvidx,
-            DcacheGenericStub {
-                from: "dcinvidx".to_owned(),
-            },
+            DcacheGenericStub { from: "dcinvidx" },
         )
         .unwrap();
 }

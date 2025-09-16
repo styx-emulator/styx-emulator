@@ -13,7 +13,7 @@ use crate::{
 
 #[derive(Debug)]
 pub struct InterruptGenericStub {
-    from: String,
+    from: &'static str,
 }
 
 impl<T: CpuBackend> CallOtherCallback<T> for InterruptGenericStub {
@@ -35,90 +35,52 @@ pub fn add_interrupt_callothers<S: SlaUserOps<UserOps: FromStr>>(
     spec.call_other_manager
         .add_handler_other_sla(
             HexagonUserOps::Trap0,
-            InterruptGenericStub {
-                from: "trap0".to_owned(),
-            },
+            InterruptGenericStub { from: "trap0" },
         )
         .unwrap();
 
     spec.call_other_manager
         .add_handler_other_sla(
             HexagonUserOps::Trap1,
-            InterruptGenericStub {
-                from: "trap1".to_owned(),
-            },
+            InterruptGenericStub { from: "trap1" },
         )
         .unwrap();
 
     spec.call_other_manager
-        .add_handler_other_sla(
-            HexagonUserOps::Rte,
-            InterruptGenericStub {
-                from: "rte".to_owned(),
-            },
-        )
+        .add_handler_other_sla(HexagonUserOps::Rte, InterruptGenericStub { from: "rte" })
         .unwrap();
 
     spec.call_other_manager
-        .add_handler_other_sla(
-            HexagonUserOps::Swi,
-            InterruptGenericStub {
-                from: "swi".to_owned(),
-            },
-        )
+        .add_handler_other_sla(HexagonUserOps::Swi, InterruptGenericStub { from: "swi" })
         .unwrap();
 
     spec.call_other_manager
-        .add_handler_other_sla(
-            HexagonUserOps::Cswi,
-            InterruptGenericStub {
-                from: "cswi".to_owned(),
-            },
-        )
+        .add_handler_other_sla(HexagonUserOps::Cswi, InterruptGenericStub { from: "cswi" })
         .unwrap();
 
     spec.call_other_manager
-        .add_handler_other_sla(
-            HexagonUserOps::Ciad,
-            InterruptGenericStub {
-                from: "ciad".to_owned(),
-            },
-        )
+        .add_handler_other_sla(HexagonUserOps::Ciad, InterruptGenericStub { from: "ciad" })
         .unwrap();
 
     spec.call_other_manager
-        .add_handler_other_sla(
-            HexagonUserOps::Siad,
-            InterruptGenericStub {
-                from: "siad".to_owned(),
-            },
-        )
+        .add_handler_other_sla(HexagonUserOps::Siad, InterruptGenericStub { from: "siad" })
         .unwrap();
 
     spec.call_other_manager
         .add_handler_other_sla(
             HexagonUserOps::Iassignr,
-            InterruptGenericStub {
-                from: "iassignr".to_owned(),
-            },
+            InterruptGenericStub { from: "iassignr" },
         )
         .unwrap();
 
     spec.call_other_manager
         .add_handler_other_sla(
             HexagonUserOps::Iassignw,
-            InterruptGenericStub {
-                from: "iassignw".to_owned(),
-            },
+            InterruptGenericStub { from: "iassignw" },
         )
         .unwrap();
 
     spec.call_other_manager
-        .add_handler_other_sla(
-            HexagonUserOps::Nmi,
-            InterruptGenericStub {
-                from: "nmi".to_owned(),
-            },
-        )
+        .add_handler_other_sla(HexagonUserOps::Nmi, InterruptGenericStub { from: "nmi" })
         .unwrap();
 }

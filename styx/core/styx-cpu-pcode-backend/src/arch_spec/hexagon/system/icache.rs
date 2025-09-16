@@ -15,7 +15,7 @@ use crate::{
 
 #[derive(Debug)]
 pub struct IcacheGenericStub {
-    from: String,
+    from: &'static str,
 }
 
 impl<T: CpuBackend> CallOtherCallback<T> for IcacheGenericStub {
@@ -36,65 +36,39 @@ pub fn add_icache_callothers<S: SlaUserOps<UserOps: FromStr>>(
     spec: &mut ArchSpecBuilder<S, HexagonPcodeBackend>,
 ) {
     spec.call_other_manager
-        .add_handler_other_sla(
-            HexagonUserOps::Ictagr,
-            IcacheGenericStub {
-                from: "ictagr".to_owned(),
-            },
-        )
+        .add_handler_other_sla(HexagonUserOps::Ictagr, IcacheGenericStub { from: "ictagr" })
         .unwrap();
 
     spec.call_other_manager
-        .add_handler_other_sla(
-            HexagonUserOps::Ictagw,
-            IcacheGenericStub {
-                from: "ictagw".to_owned(),
-            },
-        )
+        .add_handler_other_sla(HexagonUserOps::Ictagw, IcacheGenericStub { from: "ictagw" })
         .unwrap();
 
     spec.call_other_manager
         .add_handler_other_sla(
             HexagonUserOps::Icdatar,
-            IcacheGenericStub {
-                from: "icdatar".to_owned(),
-            },
+            IcacheGenericStub { from: "icdatar" },
         )
         .unwrap();
 
     spec.call_other_manager
         .add_handler_other_sla(
             HexagonUserOps::Icdataw,
-            IcacheGenericStub {
-                from: "icdataw".to_owned(),
-            },
+            IcacheGenericStub { from: "icdataw" },
         )
         .unwrap();
 
     spec.call_other_manager
-        .add_handler_other_sla(
-            HexagonUserOps::Icinva,
-            IcacheGenericStub {
-                from: "icinva".to_owned(),
-            },
-        )
+        .add_handler_other_sla(HexagonUserOps::Icinva, IcacheGenericStub { from: "icinva" })
         .unwrap();
 
     spec.call_other_manager
         .add_handler_other_sla(
             HexagonUserOps::Icinvidx,
-            IcacheGenericStub {
-                from: "icinvidx".to_owned(),
-            },
+            IcacheGenericStub { from: "icinvidx" },
         )
         .unwrap();
 
     spec.call_other_manager
-        .add_handler_other_sla(
-            HexagonUserOps::Ickill,
-            IcacheGenericStub {
-                from: "ickill".to_owned(),
-            },
-        )
+        .add_handler_other_sla(HexagonUserOps::Ickill, IcacheGenericStub { from: "ickill" })
         .unwrap();
 }

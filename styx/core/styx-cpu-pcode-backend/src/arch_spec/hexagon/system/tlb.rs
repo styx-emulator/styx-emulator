@@ -13,7 +13,7 @@ use crate::{
 
 #[derive(Debug)]
 pub struct TlbGenericStub {
-    from: String,
+    from: &'static str,
 }
 
 impl<T: CpuBackend> CallOtherCallback<T> for TlbGenericStub {
@@ -34,82 +34,46 @@ pub fn add_tlb_callothers<S: SlaUserOps<UserOps: FromStr>>(
     spec: &mut ArchSpecBuilder<S, HexagonPcodeBackend>,
 ) {
     spec.call_other_manager
-        .add_handler_other_sla(
-            HexagonUserOps::Tlbw,
-            TlbGenericStub {
-                from: "tlbw".to_owned(),
-            },
-        )
+        .add_handler_other_sla(HexagonUserOps::Tlbw, TlbGenericStub { from: "tlbw" })
         .unwrap();
     spec.call_other_manager
         .add_handler_other_sla(
             HexagonUserOps::Tlbmatch,
-            TlbGenericStub {
-                from: "tlbmatch".to_owned(),
-            },
+            TlbGenericStub { from: "tlbmatch" },
         )
         .unwrap();
 
     spec.call_other_manager
-        .add_handler_other_sla(
-            HexagonUserOps::Ctlbw,
-            TlbGenericStub {
-                from: "ctlbw".to_owned(),
-            },
-        )
+        .add_handler_other_sla(HexagonUserOps::Ctlbw, TlbGenericStub { from: "ctlbw" })
         .unwrap();
 
     spec.call_other_manager
-        .add_handler_other_sla(
-            HexagonUserOps::Tlboc,
-            TlbGenericStub {
-                from: "tlboc".to_owned(),
-            },
-        )
+        .add_handler_other_sla(HexagonUserOps::Tlboc, TlbGenericStub { from: "tlboc" })
         .unwrap();
 
     spec.call_other_manager
-        .add_handler_other_sla(
-            HexagonUserOps::Tlbr,
-            TlbGenericStub {
-                from: "tlbr".to_owned(),
-            },
-        )
+        .add_handler_other_sla(HexagonUserOps::Tlbr, TlbGenericStub { from: "tlbr" })
         .unwrap();
 
     spec.call_other_manager
-        .add_handler_other_sla(
-            HexagonUserOps::Tlbp,
-            TlbGenericStub {
-                from: "tlbp".to_owned(),
-            },
-        )
+        .add_handler_other_sla(HexagonUserOps::Tlbp, TlbGenericStub { from: "tlbp" })
         .unwrap();
 
     spec.call_other_manager
         .add_handler_other_sla(
             HexagonUserOps::Tlbinvasid,
-            TlbGenericStub {
-                from: "tlbinvasid".to_owned(),
-            },
+            TlbGenericStub { from: "tlbinvasid" },
         )
         .unwrap();
 
     spec.call_other_manager
-        .add_handler_other_sla(
-            HexagonUserOps::Tlblock,
-            TlbGenericStub {
-                from: "tlblock".to_owned(),
-            },
-        )
+        .add_handler_other_sla(HexagonUserOps::Tlblock, TlbGenericStub { from: "tlblock" })
         .unwrap();
 
     spec.call_other_manager
         .add_handler_other_sla(
             HexagonUserOps::Tlbunlock,
-            TlbGenericStub {
-                from: "tlbunlock".to_owned(),
-            },
+            TlbGenericStub { from: "tlbunlock" },
         )
         .unwrap();
 }
