@@ -25,8 +25,7 @@ impl<T: CpuBackend> CallOtherCallback<T> for InterruptGenericStub {
         _inputs: &[VarnodeData],
         _output: Option<&VarnodeData>,
     ) -> Result<PCodeStateChange, CallOtherHandleError> {
-        debug!("interrupt related stub called for {}", self.from);
-        Ok(PCodeStateChange::Fallthrough)
+        unimplemented!("interrupt related stub called for {}", self.from);
     }
 }
 
