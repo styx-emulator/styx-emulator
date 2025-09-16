@@ -29,8 +29,6 @@ pub fn build() -> ArchSpecBuilder<sla::Hexagon, HexagonPcodeBackend> {
     // Generator + pc manager. For now use the default pc manager
     spec.set_generator(GeneratorHelper::Empty(EmptyGeneratorHelper::default()));
 
-    // TODO: callother manager for system instructions, reg manager
-
     spec.call_other_manager
         .add_handler_other_sla(HexagonUserOps::Newreg, NewReg {})
         .unwrap();
