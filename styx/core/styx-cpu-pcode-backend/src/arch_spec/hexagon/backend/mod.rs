@@ -60,7 +60,7 @@ mod execution_helper;
 mod saved_context_opts;
 
 #[derive(Error, Debug)]
-enum HexagonFetchDecodeError {
+pub enum HexagonFetchDecodeError {
     #[error(transparent)]
     GetPcodeError(#[from] GetPcodeError),
     #[error(transparent)]
