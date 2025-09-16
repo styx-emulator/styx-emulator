@@ -213,6 +213,11 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
         let insn_array = [insn_data, insn_next, insn_next1, insn_next2];
 
         trace!("parse info is {parse_data:?}");
+        trace!("1st instruction is {insn_data:#010x}");
+        trace!("2nd instruction is {insn_next:#010x}");
+        trace!("3rd instruction is {insn_next1:#010x}");
+        trace!("4th instruction is {insn_next2:#010x}");
+
         match parse_data {
             PktLoopParseBits::Duplex => match prev_state {
                 PktState::PktEnded(_) => Ok(PktState::PktStartedFirstDuplex(insn_array)),
