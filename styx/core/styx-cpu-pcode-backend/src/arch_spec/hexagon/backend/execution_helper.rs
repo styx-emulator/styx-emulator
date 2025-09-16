@@ -11,7 +11,11 @@ use super::{
     HexagonFetchDecodeError, OutputRegisterType,
 };
 use crate::{
-    arch_spec::hexagon::{backend::PacketLocation, dotnew, pkt_semantics::DEST_REG_OFFSET},
+    arch_spec::hexagon::{
+        backend::{decode_info::HardwareLoopStatus, PacketLocation},
+        dotnew,
+        pkt_semantics::DEST_REG_OFFSET,
+    },
     execute_pcode::PcodeHelpers,
     memory::sized_value::SizedValue,
     pcode_gen::GeneratePcodeError,
@@ -100,56 +104,19 @@ impl DefaultHexagonExecutionHelper {
             .read_register::<u32>(HexagonRegister::Lc1)
             .map_err(|_| GeneratePcodeError::InvalidAddress)?;
 
-        // check for hardware loop
-        // check if lc0/lc1 is greater than 1, since
-        // a hwloop terminates when lc0/lc1 == 1
-        // so it will never get set to zero after the hwloop executes
-        trace!("hwloop help: lc0 {lc0} lc1 {lc1}");
-
-        // check if this packet is the last packet in a hardware loop
-        // these are from the manual, section 10.6
-        if lc0 > 1 || lc1 > 1 {
-            // last in loop 1
-            let pkt_endloop = if parse_now == PktLoopParseBits::NotEndOfPacket1
-                && parse_next == PktLoopParseBits::NotEndOfPacket2
-            {
-                trace!("hwloop help: last in loop 1");
-                2
-            }
-            // last in loop 0
-            else if parse_now == PktLoopParseBits::NotEndOfPacket2
-                && (parse_next == PktLoopParseBits::NotEndOfPacket1
-                    || parse_next == PktLoopParseBits::EndOfPacket
-                    // Is this undocumented? the assembler will happily make endloop0
-                    // spit out a duplex as last instruction, but
-                    // this case isn't covered in the manual AFAICT.
-                    // Endloop1 and 01 are fine since they must be padded with at least 2 nops.
-                    || parse_next == PktLoopParseBits::Duplex)
-            {
-                trace!("hwloop help: last in loop 0");
-                1
-            }
-            // last in loop 0 and 1
-            else if parse_now == PktLoopParseBits::NotEndOfPacket2
-                && parse_next == PktLoopParseBits::NotEndOfPacket2
-            {
-                trace!("hwloop help: last in loop 0 and loop 1");
-                3
-            }
-            // not last pkt in loop
-            else {
-                trace!("hwloop help: not the last packet in a hwloop");
-                0
-            };
-
-            if pkt_endloop > 0 {
+        match HardwareLoopStatus::parse(lc0, lc1, parse_now, parse_next) {
+            Some(loop_status) if loop_status != HardwareLoopStatus::NotLastInLoop => {
                 backend.update_context(
                     PacketLocation::PktEnd,
-                    ContextOption::HexagonEndloop(pkt_endloop),
+                    ContextOption::HexagonEndloop(loop_status as u32),
                 );
                 backend.update_context(PacketLocation::PktStart, ContextOption::HexagonEndloop(0));
             }
+            _ => {
+                trace!("not setting any context options for hardware loop, not in hwloop or not end of hwloop")
+            }
         }
+
         Ok(())
     }
 
