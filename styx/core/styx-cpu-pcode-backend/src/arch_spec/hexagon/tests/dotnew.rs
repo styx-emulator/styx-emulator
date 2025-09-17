@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::arch_spec::hexagon::{parse_iclass, tests::*};
+use crate::arch_spec::hexagon::{backend::GeneralHexagonInstruction, tests::*};
 use log::info;
 use test_case::test_case;
 
@@ -923,10 +923,11 @@ fn test_all_dotnew_class() {
                     .try_into()
                     .expect("Couldn't extract last insn");
 
-                let insn = u32::from_le_bytes(last_4);
-                let iclass = parse_iclass(insn);
+                let insn =
+                    GeneralHexagonInstruction::new_with_raw_value(u32::from_le_bytes(last_4));
+                let iclass = insn.nonduplex_iclass().raw_value();
 
-                assert_eq!(iclass, case.iclass as u32);
+                assert_eq!(u8::from(iclass), case.iclass);
 
                 let (mut cpu, mut mmu, mut ev) = setup_cpu_pc(init_pc, code.bytes);
 

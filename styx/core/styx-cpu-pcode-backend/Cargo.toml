@@ -66,6 +66,7 @@ derive_more = { workspace = true }
 smallvec = { workspace = true }
 rustc-hash = { workspace = true }
 as-any = { workspace = true }
+bitbybit = { workspace = true }
 
 [dev-dependencies]
 keystone-engine = { workspace = true }

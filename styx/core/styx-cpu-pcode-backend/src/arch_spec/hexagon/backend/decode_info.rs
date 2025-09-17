@@ -1,5 +1,53 @@
 // SPDX-License-Identifier: BSD-2-Clause
+use arbitrary_int::*;
+use bitbybit::{bitenum, bitfield};
+use derive_more::derive::{BitAnd, BitOr, Shr};
 use log::trace;
+
+/// Some common parsing functionality for Hexagon instructions
+/// This information comes from Table 10-4 in the Hexagon manual.
+#[bitfield(u32)]
+#[derive(Debug, Shr, PartialEq, BitAnd, BitOr)]
+pub struct GeneralHexagonInstruction {
+    #[bits([0..=13,16..=27] r)]
+    reserved: u26,
+    #[bits(14..=15, r)]
+    parse: PktLoopParseBits,
+    #[bits(28..=31, r)]
+    nonduplex_iclass: Iclass,
+    /// Table 10-4 in the Hexagon manual indicates that the ICLASS field in a Hexagon instruction
+    /// is split to comprise of bits 31:29 as the high 3 bits and bit 13 as the lowest bit for duplexes.
+    #[bits([13, 29..=31], r)]
+    duplex_iclass: u4,
+}
+
+impl GeneralHexagonInstruction {
+    pub fn is_zero(&self) -> bool {
+        self.raw_value() == 0
+    }
+}
+
+/// The non-duplex iclass values for Hexagon
+#[bitenum(u4, exhaustive = true)]
+#[derive(PartialEq)]
+pub enum Iclass {
+    Immext = 0b0000,
+    Jump1 = 0b0001,
+    Jump2 = 0b0010,
+    IclassLoadStore = 0b0011,
+    IclassConditionalGPLoadStore = 0b0100,
+    Jump3 = 0b0101,
+    Cr = 0b0110,
+    Alu32_1 = 0b0111,
+    XType1 = 0b1000,
+    IclassLoad = 0b1001,
+    IclassStore = 0b1010,
+    Alu32_2 = 0b1011,
+    XType2 = 0b1100,
+    XType3 = 0b1101,
+    XType4 = 0b1110,
+    Alu32_3 = 0b1111,
+}
 
 /// Information about the instruction class for each sub-instruction of a duplex instruction.
 ///
@@ -14,21 +62,6 @@ pub enum DuplexInsClass {
     L2 = 3,
     S1 = 4,
     S2 = 5,
-}
-
-/// Encodes instruction status as End of Packet, duplex, or not end of packet. Also Loop end.
-///
-/// See section 10.5. Occupies 15:14 of the instruction word.
-///
-/// By itself from one instruction this only indicates EndofPacket (see enum variant names). If combined as the first and second instructions in a packet you can construct the status of last/not last in a hardware loop. See section 10.6
-#[derive(Copy, Clone, Debug, PartialEq)]
-#[repr(u8)]
-pub enum PktLoopParseBits {
-    Duplex = 0,
-    NotEndOfPacket1 = 1,
-    NotEndOfPacket2 = 2,
-    EndOfPacket = 3,
-    Other,
 }
 
 /// Hardware loop status. This is a context option in our slaspec, that indicates to the slaspec
@@ -106,21 +139,16 @@ impl HardwareLoopStatus {
     }
 }
 
-impl From<u8> for PktLoopParseBits {
-    fn from(value: u8) -> Self {
-        trace!("pkt loop parse bits from {value}");
-        match value {
-            0 => Self::Duplex,
-            1 => Self::NotEndOfPacket1,
-            2 => Self::NotEndOfPacket2,
-            3 => Self::EndOfPacket,
-            _ => Self::Other,
-        }
-    }
-}
-
-impl PktLoopParseBits {
-    pub fn new_from_insn(insn_data: u32) -> Self {
-        (((insn_data >> 14) & 0b11) as u8).into()
-    }
+/// Encodes instruction status as End of Packet, duplex, or not end of packet. Also Loop end.
+///
+/// See section 10.5. Occupies 15:14 of the instruction word.
+///
+/// By itself from one instruction this only indicates EndofPacket (see enum variant names). If combined as the first and second instructions in a packet you can construct the status of last/not last in a hardware loop. See section 10.6
+#[bitenum(u2, exhaustive = true)]
+#[derive(Debug, PartialEq)]
+pub enum PktLoopParseBits {
+    Duplex = 0b00,
+    NotEndOfPacket1 = 0b01,
+    NotEndOfPacket2 = 0b10,
+    EndOfPacket = 0b11,
 }

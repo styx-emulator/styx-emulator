@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use log::{error, trace};
-use styx_cpu_type::arch::hexagon::HexagonRegister;
+use styx_cpu_type::arch::hexagon::{variants::HexagonGeneralRegistersWithHvx, HexagonRegister};
 use styx_errors::{anyhow::Context, UnknownError};
 use styx_pcode::pcode::{Opcode, SpaceName, VarnodeData};
 use styx_pcode_translator::ContextOption;
@@ -12,7 +12,10 @@ use super::{
 };
 use crate::{
     arch_spec::hexagon::{
-        backend::{decode_info::HardwareLoopStatus, PacketLocation},
+        backend::{
+            decode_info::{GeneralHexagonInstruction, HardwareLoopStatus},
+            PacketLocation,
+        },
         dotnew,
         pkt_semantics::DEST_REG_OFFSET,
     },
@@ -35,11 +38,11 @@ impl DefaultHexagonExecutionHelper {
         &self,
         backend: &mut HexagonPcodeBackend,
         parse_next: PktLoopParseBits,
-        insn_next: u32,
+        insn_next: GeneralHexagonInstruction,
         unwrapped_pc: u32,
     ) {
         // This is only needed for immext
-        if parse_next == PktLoopParseBits::Duplex && insn_next != 0 {
+        if parse_next == PktLoopParseBits::Duplex && !insn_next.is_zero() {
             trace!("duplex immext is coming up");
 
             backend.update_context(
@@ -54,7 +57,7 @@ impl DefaultHexagonExecutionHelper {
     }
     fn handle_dotnew(
         &mut self,
-        insn_data: u32,
+        insn_data: GeneralHexagonInstruction,
         backend: &mut HexagonPcodeBackend,
         dotnew_regs_written: &Vec<OutputRegisterType>,
         dotnew_instructions: u32,
@@ -199,13 +202,20 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
             .with_context(|| "couldn't prefetch the next insn from MMU")
             .map_err(|e| HexagonFetchDecodeError::Other(e.into()))?;
 
-        let insn_data = (insn_data_wide & 0xffffffff) as u32;
-        let insn_next = ((insn_data_wide >> 32) & 0xffffffff) as u32;
-        let insn_next1 = ((insn_data_wide >> 64) & 0xffffffff) as u32;
-        let insn_next2 = ((insn_data_wide >> 96) & 0xffffffff) as u32;
+        let insn_data =
+            GeneralHexagonInstruction::new_with_raw_value((insn_data_wide & 0xffffffff) as u32);
+        let insn_next = GeneralHexagonInstruction::new_with_raw_value(
+            ((insn_data_wide >> 32) & 0xffffffff) as u32,
+        );
+        let insn_next1 = GeneralHexagonInstruction::new_with_raw_value(
+            ((insn_data_wide >> 64) & 0xffffffff) as u32,
+        );
+        let insn_next2 = GeneralHexagonInstruction::new_with_raw_value(
+            ((insn_data_wide >> 96) & 0xffffffff) as u32,
+        );
 
-        let parse_data = PktLoopParseBits::new_from_insn(insn_data);
-        let parse_next = PktLoopParseBits::new_from_insn(insn_next);
+        let parse_data = insn_data.parse();
+        let parse_next = insn_next.parse();
 
         // This should be run every fetch
         self.handle_duplex_immext(backend, parse_next, insn_next, pc);
@@ -213,10 +223,10 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
         let insn_array = [insn_data, insn_next, insn_next1, insn_next2];
 
         trace!("parse info is {parse_data:?}");
-        trace!("1st instruction is {insn_data:#010x}");
-        trace!("2nd instruction is {insn_next:#010x}");
-        trace!("3rd instruction is {insn_next1:#010x}");
-        trace!("4th instruction is {insn_next2:#010x}");
+        trace!("1st instruction is {:#010x}", insn_data.raw_value());
+        trace!("2nd instruction is {:#010x}", insn_next.raw_value());
+        trace!("3rd instruction is {:#010x}", insn_next1.raw_value());
+        trace!("4th instruction is {:#010x}", insn_next2.raw_value());
 
         match parse_data {
             PktLoopParseBits::Duplex => match prev_state {
@@ -239,7 +249,6 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
                 }
                 _ => unreachable!("invalid packet sequence"),
             },
-            PktLoopParseBits::Other => unreachable!("invalid packet sequence"),
         }
     }
 
@@ -258,11 +267,11 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
     fn pkt_started(
         &mut self,
         backend: &mut HexagonPcodeBackend,
-        instrs: [u32; 4],
+        instrs: [GeneralHexagonInstruction; 4],
         pc: u32,
     ) -> Result<(), GeneratePcodeError> {
-        let parse_now = PktLoopParseBits::new_from_insn(instrs[0]);
-        let parse_next = PktLoopParseBits::new_from_insn(instrs[1]);
+        let parse_now = instrs[0].parse();
+        let parse_next = instrs[1].parse();
 
         self.detect_hwloop_start_of_packet(backend, parse_now, parse_next)?;
 
@@ -273,7 +282,7 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
     fn pkt_inside(
         &mut self,
         _backend: &mut HexagonPcodeBackend,
-        _instrs: [u32; 4],
+        _instrs: [GeneralHexagonInstruction; 4],
     ) -> Result<(), GeneratePcodeError> {
         trace!("hexagon prefetch is middle of pkt");
         Ok(())
@@ -282,7 +291,7 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
     fn pkt_ended(
         &mut self,
         backend: &mut HexagonPcodeBackend,
-        insn: Option<u32>,
+        insn: Option<GeneralHexagonInstruction>,
         dotnew_regs_written: &Vec<OutputRegisterType>,
         dotnew_instructions: u32,
     ) -> Result<(), GeneratePcodeError> {
@@ -297,14 +306,14 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
     fn pkt_first_duplex(
         &mut self,
         backend: &mut HexagonPcodeBackend,
-        instrs: [u32; 4],
+        instrs: [GeneralHexagonInstruction; 4],
     ) -> Result<(), GeneratePcodeError> {
         let insn_data = instrs[0];
-        let insclass = ((insn_data >> 28) & 0b1110) | ((insn_data >> 13) & 0b1);
+        let insclass = insn_data.duplex_iclass().value();
 
         trace!("duplex instruction, insclass {insclass}");
 
-        // From https://github.com/toshipiazza/ghidra-plugin-hexagon/blob/main/Ghidra/Processors/Hexagon/src/main/java/ghidra/app/plugin/core/analysis/HexagonInstructionInfo.java#L68
+        // See Table 10-5 (DUPLEX ICLASS field) in Hexagon manual for this mapping
         let duplex_slots = match insclass {
             0 => (DuplexInsClass::L1, DuplexInsClass::L1),
             1 => (DuplexInsClass::L2, DuplexInsClass::L1),

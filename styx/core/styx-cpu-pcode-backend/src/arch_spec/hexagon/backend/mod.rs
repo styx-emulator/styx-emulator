@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use std::collections::BTreeMap;
 
 use anyhow::anyhow;
+pub use decode_info::{GeneralHexagonInstruction, Iclass};
 use execution_helper::DefaultHexagonExecutionHelper;
 use log::trace;
 pub use saved_context_opts::SavedContextOpts;
 use smallvec::{smallvec, SmallVec};
+use std::collections::BTreeMap;
 use styx_cpu_type::{
     arch::{
         backends::{ArchRegister, ArchVariant},
@@ -30,11 +31,8 @@ use styx_processor::{
 use thiserror::Error;
 
 use crate::{
-    arch_spec::hexagon::{parse_iclass, pkt_semantics::DEST_REG_OFFSET},
-    backend_helper::BackendHelper,
-    get_pcode::GetPcodeError,
-    pcode_gen::GeneratePcodeError,
-    PcodeBackendConfiguration,
+    arch_spec::hexagon::pkt_semantics::DEST_REG_OFFSET, backend_helper::BackendHelper,
+    get_pcode::GetPcodeError, pcode_gen::GeneratePcodeError, PcodeBackendConfiguration,
 };
 use crate::{
     arch_spec::hexagon_build_arch_spec,
@@ -69,13 +67,13 @@ pub enum HexagonFetchDecodeError {
 
 #[derive(PartialEq, Debug)]
 pub enum PktState {
-    PktStarted([u32; 4]),
-    PktStandalone([u32; 4]),
-    InsidePacket([u32; 4]),
-    FirstDuplex([u32; 4]),
-    PktStartedFirstDuplex([u32; 4]),
+    PktStarted([GeneralHexagonInstruction; 4]),
+    PktStandalone([GeneralHexagonInstruction; 4]),
+    InsidePacket([GeneralHexagonInstruction; 4]),
+    FirstDuplex([GeneralHexagonInstruction; 4]),
+    PktStartedFirstDuplex([GeneralHexagonInstruction; 4]),
     // A duplex instruction would not want to give this information
-    PktEnded(Option<u32>),
+    PktEnded(Option<GeneralHexagonInstruction>),
 }
 
 #[derive(Debug)]
@@ -760,8 +758,7 @@ impl HexagonPcodeBackend {
                     PktState::PktStarted(insn_data)
                     | PktState::InsidePacket(insn_data)
                     | PktState::PktStartedFirstDuplex(insn_data) => {
-                        let iclass = parse_iclass(insn_data[0]);
-                        iclass == 0b0000
+                        insn_data[0].nonduplex_iclass() == Iclass::Immext
                     }
                     PktState::PktStandalone(_)
                     | PktState::FirstDuplex(_)
@@ -930,25 +927,25 @@ pub trait HexagonExecutionHelper: derive_more::Debug + Send {
     fn pkt_started(
         &mut self,
         backend: &mut HexagonPcodeBackend,
-        instrs: [u32; 4],
+        instrs: [GeneralHexagonInstruction; 4],
         pc: u32,
     ) -> Result<(), GeneratePcodeError>;
     fn pkt_inside(
         &mut self,
         backend: &mut HexagonPcodeBackend,
-        instrs: [u32; 4],
+        instrs: [GeneralHexagonInstruction; 4],
     ) -> Result<(), GeneratePcodeError>;
     fn pkt_ended(
         &mut self,
         backend: &mut HexagonPcodeBackend,
-        instr: Option<u32>,
+        instr: Option<GeneralHexagonInstruction>,
         dotnew_regs_written: &Vec<OutputRegisterType>,
         dotnew_instructions: u32,
     ) -> Result<(), GeneratePcodeError>;
     fn pkt_first_duplex(
         &mut self,
         backend: &mut HexagonPcodeBackend,
-        instrs: [u32; 4],
+        instrs: [GeneralHexagonInstruction; 4],
     ) -> Result<(), GeneratePcodeError>;
     fn first_pkt(&mut self, backend: &mut HexagonPcodeBackend, pc: u32);
 
