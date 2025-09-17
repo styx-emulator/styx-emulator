@@ -28,6 +28,9 @@ impl GeneralHexagonInstruction {
 }
 
 /// The non-duplex iclass values for Hexagon
+///
+/// The following information comes from QEMU's target/hexagon/imported/iclass.def
+/// and section 10.4 of the Hexagon manual
 #[bitenum(u4, exhaustive = true)]
 #[derive(PartialEq)]
 pub enum Iclass {

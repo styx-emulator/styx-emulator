@@ -56,6 +56,41 @@ fn test_dotnew_basic_cases(
     test_dotnew_basic(insn, verify_insn, pkt_count, write_value, read_value);
 }
 
+#[test_case(
+    12, 2; "branch taken"
+)]
+#[test_case(
+    8, 1; "branch not taken"
+)]
+fn test_dotnew_jump(r1_set: u32, insns_to_run: u64) {
+    const SRC_MEMLOC: u32 = 0x300;
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(
+        r#"
+        0:	23 40 00 78	78004023 { 	r3 = #0x1
+       4:	42 42 00 78	78004242   	r2 = #0x12
+       8:	80 41 00 78	78004180   	r0 = #0xc
+       c:	08 e1 02 20	2002e108   	if (cmp.eq(r0.new,r1)) jump:t 0x10 }
+      10:	92 29 33 28	28332992 { 	r3 = #0x3; 	r2 = #0x19 }"#,
+    );
+
+    cpu.write_register(HexagonRegister::R1, 12u32).unwrap();
+
+    // Load
+    let exit = cpu.execute(&mut mmu, &mut ev, insns_to_run).unwrap();
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
+
+    let r2 = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
+    let r3 = cpu.read_register::<u32>(HexagonRegister::R3).unwrap();
+
+    if r1_set == 12 {
+        assert_eq!(r2, 0x19);
+        assert_eq!(r3, 0x3);
+    } else {
+        assert_eq!(r2, 0x12);
+        assert_eq!(r3, 0x1);
+    }
+}
+
 #[test]
 fn test_dotnew_two_outputs() {
     const SRC_MEMLOC: u64 = 20;
