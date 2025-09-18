@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use log::{error, trace};
-use styx_cpu_type::arch::hexagon::{variants::HexagonGeneralRegistersWithHvx, HexagonRegister};
+use styx_cpu_type::arch::{
+    backends::{ArchRegister, BasicArchRegister},
+    hexagon::{variants::HexagonGeneralRegistersWithHvx, HexagonRegister},
+};
 use styx_errors::{anyhow::Context, UnknownError};
 use styx_pcode::pcode::{Opcode, SpaceName, VarnodeData};
 use styx_pcode_translator::ContextOption;
@@ -21,7 +24,7 @@ use crate::{
     },
     execute_pcode::PcodeHelpers,
     memory::sized_value::SizedValue,
-    pcode_gen::GeneratePcodeError,
+    pcode_gen::{GeneratePcodeError, RegisterTranslator},
     register_manager::RegisterManager,
 };
 
@@ -34,15 +37,42 @@ pub struct DefaultHexagonExecutionHelper {
 }
 
 impl DefaultHexagonExecutionHelper {
+    /// Handle a duplex immediate extenion. This is the case where
+    /// an immediate extension applies to a duplex instruction.
     fn handle_duplex_immext(
         &self,
         backend: &mut HexagonPcodeBackend,
         parse_next: PktLoopParseBits,
-        insn_next: GeneralHexagonInstruction,
         unwrapped_pc: u32,
     ) {
-        // This is only needed for immext
-        if parse_next == PktLoopParseBits::Duplex && !insn_next.is_zero() {
+        // Check section 10.3 on constraints -- "A duplex can contain only one constant-extended
+        // instruction, and it must appear in the Slot 1 position."
+        //
+        // Slot 1 executes _before_ slot 0, so the immediate extension applies to the first instruction
+        // in the duplex.
+        //
+        // The immediate extension instruction in the SLASPEC basically handles things
+        // differently based on if we indicate a duplex immediate extension or not.
+        //
+        // The immediate extension handler uses the `globalset` directive to set the
+        // immediate extension context option at a later point. This later point
+        // (as a memory address indicating the start of the instruction)
+        // is specified by the value in the DuplexNext context option.
+        //
+        // The DuplexNext option is only needed during decoding the
+        // immediate extension, so we can reset it at the start of the
+        // duplex (the next instruction).
+        //
+        // We set the DuplexNext to the PC + 6 (aka the "middle of the
+        // next duplex instruction") because likely due to endianness.  Table 10.4 indicates
+        // Slot 0 is in the lower bytes and Slot 1 is in the higher bytes, and the lower bytes
+        // are parsed first so we need to set the constant extender for the _second_ parsed
+        // duplex instruction.
+        //
+        // This actually leads to duplex instructions being in the opposite order.
+        // Since packets are atomic, the execution semantics don't really matter (whether slot 0/1 executes first)
+        // in this case
+        if parse_next == PktLoopParseBits::Duplex {
             trace!("duplex immext is coming up");
 
             backend.update_context(
@@ -92,6 +122,9 @@ impl DefaultHexagonExecutionHelper {
             }
         }
     }
+
+    /// Hook at the beginning of a packet to determine
+    /// if this packet represents the end of a hardware loop.
     fn detect_hwloop_start_of_packet(
         &mut self,
         backend: &mut HexagonPcodeBackend,
@@ -99,7 +132,10 @@ impl DefaultHexagonExecutionHelper {
         parse_next: PktLoopParseBits,
     ) -> Result<(), GeneratePcodeError> {
         // Hardware loop handling needs to be done here.
-        // There shouldn't be duplexes at the beginning of a hwloop?
+        //
+        // The LC0 and LC1 registers are used as loop counters
+        // for hardware loops. See the beginning of
+        // section 8.2 for more details.
         let lc0 = backend
             .read_register::<u32>(HexagonRegister::Lc0)
             .map_err(|_| GeneratePcodeError::InvalidAddress)?;
@@ -107,6 +143,20 @@ impl DefaultHexagonExecutionHelper {
             .read_register::<u32>(HexagonRegister::Lc1)
             .map_err(|_| GeneratePcodeError::InvalidAddress)?;
 
+        // This uses lc0, lc1, and the first two parse fields
+        // in the packet to determine hwloop status.
+        //
+        // The last instruction in a packet that is at the end of a
+        // hardware loop requires being marked with a context option.
+        // See HardwareLoopStatus::parse and the corresponding struct
+        // for more information on the context option and parsing
+        // logic.
+        //
+        // We do not want to have the "endloop" context option set
+        // after the last instruction in the packet. Since
+        // the endloop context option is always for the end of the packet,
+        // we can clear it at the start of the next packet (see SavedContextOptions
+        // to understand the PacketLocation semantics).
         match HardwareLoopStatus::parse(lc0, lc1, parse_now, parse_next) {
             Some(loop_status) if loop_status != HardwareLoopStatus::NotLastInLoop => {
                 backend.update_context(
@@ -123,24 +173,57 @@ impl DefaultHexagonExecutionHelper {
         Ok(())
     }
 
-    fn match_predicate(vn: &VarnodeData) -> Option<usize> {
-        let pred_start = 0x94;
-        let pred_end = 0x97;
-
-        if vn.space == SpaceName::Register {
-            let mut offset = vn.offset;
-            if vn.offset >= DEST_REG_OFFSET {
-                offset -= DEST_REG_OFFSET;
-            }
-
-            trace!("offset is {offset}");
-
-            if offset >= pred_start && offset <= pred_end {
-                Some((offset - pred_start) as usize)
-            } else {
-                None
-            }
+    fn match_predicate_varnode(vn: &VarnodeData, backend: &HexagonPcodeBackend) -> Option<usize> {
+        // Just check if our varnode's offset is within the range
+        // of the predicate start and end offsets, and sanity check that
+        // the varnode size is 1 byte.
+        if vn.space == SpaceName::Register && vn.size == 1 {
+            Self::match_predicate(vn.offset, backend)
         } else {
+            None
+        }
+    }
+
+    /// Determine whether or not a register varnode
+    /// is one of the four predicate registers.
+    pub(crate) fn match_predicate(reg_offset: u64, backend: &HexagonPcodeBackend) -> Option<usize> {
+        // Each predicate is 1 byte. See
+        // section 2.2.5 for this.
+
+        // NOTE: this assumes that the four predicate registers are contiguous in
+        // the register space, but this should hold true as the four predicate registers
+        // comprise one larger control register C4 (see table 2-2).
+        //
+        // We unwrap since something is seriously wrong if we can't access these values.
+        let pred_start = backend
+            .pcode_generator
+            .get_register(&ArchRegister::Basic(BasicArchRegister::Hexagon(
+                HexagonRegister::P0,
+            )))
+            .expect("can't get p0 register as varnode")
+            .offset;
+        let pred_end = backend
+            .pcode_generator
+            .get_register(&ArchRegister::Basic(BasicArchRegister::Hexagon(
+                HexagonRegister::P3,
+            )))
+            .expect("can't get p0 register as varnode")
+            .offset;
+
+        // This is because we want make some edits on a copy of this value
+        let mut reg_offset = reg_offset;
+
+        if reg_offset >= DEST_REG_OFFSET {
+            reg_offset -= DEST_REG_OFFSET;
+        }
+
+        trace!("reg_offset is {reg_offset}, pred_start is {pred_start}, pred_end is {pred_end}");
+
+        if reg_offset >= pred_start && reg_offset <= pred_end {
+            trace!("returning {}", reg_offset - pred_start);
+            Some((reg_offset - pred_start) as usize)
+        } else {
+            trace!("not returning anything");
             None
         }
     }
@@ -163,10 +246,13 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
     fn isa_pc(&self) -> u64 {
         self.pc.unwrap_or(0)
     }
-    // could probably do the double jump logic here
+
     fn set_isa_pc(&mut self, value: u64, backend: &mut HexagonPcodeBackend) {
         self.pc = Some(value);
 
+        // While we maintain an internal value for the program counter,
+        // we also want to make sure the backing register varnode space
+        // has an accurate PC.
         RegisterManager::write_register(
             backend,
             HexagonRegister::Pc.into(),
@@ -182,7 +268,12 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
         prev_state: &PktState,
         pc: u32,
     ) -> Result<PktState, HexagonFetchDecodeError> {
-        // Duplex always ends the packet
+        // Duplex always ends the packet - section 10.3,
+        // duplexes are in slots 0 and 1, which are the last
+        // 2 slots in a packet.
+        //
+        // As such, we can conclude that the second sub-instruction
+        // in a duplex is the last instruction in a packet.
         match prev_state {
             PktState::FirstDuplex(_) | PktState::PktStartedFirstDuplex(_) => {
                 trace!("the previous instruction was a duplex, ending the packet.");
@@ -197,11 +288,15 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
         self.pc_varnode.offset = pc as u64;
         trace!("got pc is {pc}");
 
+        // We read four instructions, since some decoding requires looking
+        // ahead. Four instructions because every packet in Hexagon is at most
+        // four instructions.
         let insn_data_wide = mmu
             .read_u128_le_virt_code(self.pc_varnode.offset, backend)
             .with_context(|| "couldn't prefetch the next insn from MMU")
             .map_err(|e| HexagonFetchDecodeError::Other(e.into()))?;
 
+        // Extract out the four instructions.
         let insn_data =
             GeneralHexagonInstruction::new_with_raw_value((insn_data_wide & 0xffffffff) as u32);
         let insn_next = GeneralHexagonInstruction::new_with_raw_value(
@@ -214,11 +309,14 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
             ((insn_data_wide >> 96) & 0xffffffff) as u32,
         );
 
+        // Get Parse bits for current and next instruction.
+        // See Section 10.5 for what this is generally used for.
         let parse_data = insn_data.parse();
         let parse_next = insn_next.parse();
 
-        // This should be run every fetch
-        self.handle_duplex_immext(backend, parse_next, insn_next, pc);
+        // This should be run every fetch - check if the next instruction
+        // is a duplex. Currently only used by immediate extension.
+        self.handle_duplex_immext(backend, parse_next, pc);
 
         let insn_array = [insn_data, insn_next, insn_next1, insn_next2];
 
@@ -230,20 +328,35 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
 
         match parse_data {
             PktLoopParseBits::Duplex => match prev_state {
+                // Last instruction was the end of a packet and current instruction is the
+                // first sub-instruction in a duplex that starts a packet.
                 PktState::PktEnded(_) => Ok(PktState::PktStartedFirstDuplex(insn_array)),
+                // This is the first duplex sub-instruction in the sequence of two
+                // duplex instructions.
                 _ => Ok(PktState::FirstDuplex(insn_array)),
             },
             PktLoopParseBits::NotEndOfPacket1 | PktLoopParseBits::NotEndOfPacket2 => {
                 match prev_state {
+                    // We're inside a packet (either second or third instruction).
                     PktState::InsidePacket(_) | PktState::PktStarted(_) => {
                         Ok(PktState::InsidePacket(insn_array))
                     }
+                    // We're the first in a packet. There is no Parse sequence
+                    // to indicate the start of a packet, so we must determine this
+                    // by looking at the previous packet's state.
+                    //
+                    // (see section 10.5 for context)
                     PktState::PktEnded(_) => Ok(PktState::PktStarted(insn_array)),
+
                     _ => unreachable!("invalid packet sequence"),
                 }
             }
             PktLoopParseBits::EndOfPacket => match prev_state {
+                // The end of a packet followed by another end of packet means this
+                // packet has only 1 instruction.
                 PktState::PktEnded(_) => Ok(PktState::PktStandalone(insn_array)),
+                // Other cases indicate this is the end of a packet with
+                // more than 1 instruction.
                 PktState::InsidePacket(_) | PktState::PktStarted(_) => {
                     Ok(PktState::PktEnded(Some(insn_data)))
                 }
@@ -253,8 +366,6 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
     }
 
     fn post_packet_fetch(&mut self, _backend: &mut HexagonPcodeBackend) {}
-
-    // These are key
 
     fn first_pkt(&mut self, backend: &mut HexagonPcodeBackend, pc: u32) {
         backend.update_context(
@@ -303,6 +414,10 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
         Ok(())
     }
 
+    /// This hook runs after pre_insn_fetch but before the instruction
+    /// actually is fetched. Its role is to look through the ICLASS
+    /// field and find each duplex sub-instruction type
+    /// (see manual table 10-4).
     fn pkt_first_duplex(
         &mut self,
         backend: &mut HexagonPcodeBackend,
@@ -334,6 +449,10 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
             _ => unreachable!(),
         };
 
+        // Our SLASPEC requires the "subinsn" context option
+        // to be set to decode a duplex correctly because
+        // the SLASPEC can't find the sub-instruction types
+        // due to lookahead/behind constraints in Sleigh.
         backend.update_context(
             PacketLocation::Now,
             ContextOption::HexagonSubinsn(duplex_slots.0 as u32),
@@ -342,8 +461,11 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
             PacketLocation::NextInstr,
             ContextOption::HexagonSubinsn(duplex_slots.1 as u32),
         );
-        // Clear it after all is done.
-        // Remember, a duplex always ends a packet
+
+        // Clear it after both duplexes.
+        //
+        // Remember, a duplex always ends a packet, so the first instruction
+        // after the two duplexes is the start of a new packet.
         backend.update_context(PacketLocation::PktStart, ContextOption::HexagonSubinsn(0));
 
         Ok(())
@@ -373,7 +495,7 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
             for pcode in insn {
                 trace!("pcode output {:?}", pcode.output);
                 if let Some(vn) = &pcode.output {
-                    if let Some(pred_idx) = Self::match_predicate(vn) {
+                    if let Some(pred_idx) = Self::match_predicate_varnode(vn, backend) {
                         trace!("pred_idx {pred_idx}");
 
                         predicates_written_where[pred_idx] = Some(i);
@@ -402,7 +524,7 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
                         // What predicate is it?
                         let reg = pcode.get_input(1);
                         trace!("register got input to callother {reg:?}");
-                        if let Some(pred_idx) = Self::match_predicate(reg) {
+                        if let Some(pred_idx) = Self::match_predicate_varnode(reg, backend) {
                             trace!("at a newreg with a predicate, which always requires caring about reordering");
 
                             reorder_write_predicates = true;

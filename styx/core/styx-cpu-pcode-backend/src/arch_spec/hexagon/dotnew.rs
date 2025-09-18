@@ -15,11 +15,6 @@ use crate::arch_spec::hexagon::backend::{GeneralHexagonInstruction, Iclass};
 // example of what this looks like). As such, the bit indexes seen here are representative
 // of if bits 0-13 and bits 16-27 were spliced together.
 //
-// Experimentally, by looking at all instruction classes,
-// we determined these are the only with dot-new
-// instruction classes, and also we found the instruction
-// subtypes of these classes that indicate dot-new instructions.
-//
 // All information in this file comes from sections 11.3, 11.4, 11.5, 11.7, and 11.8.
 
 /// ICLASS 0011
@@ -81,6 +76,8 @@ struct IclassNewValueJump {
 }
 
 /// Check hexagon instruction to see if it references a dot-new register.
+/// This does _not_ refer to section 6.1.4 "Dot-new predicates," but rather
+/// section 5.6 regarding new-value stores.
 ///
 /// Since dot-new registers are encoded using offsets from the producing location,
 /// (eg. the new-value register to be used here is the output register from 2 instructions
@@ -99,6 +96,11 @@ struct IclassNewValueJump {
 /// Returns None if not a dot-new instruction.
 pub fn parse_dotnew(insn: GeneralHexagonInstruction) -> Option<u32> {
     let iclass = insn.nonduplex_iclass();
+
+    // Experimentally, by looking at all instruction classes,
+    // we determined these are the only with dot-new
+    // instruction classes, and also we found the instruction
+    // subtypes of these classes that indicate dot-new instructions.
     match iclass {
         // 0b0011
         Iclass::IclassLoadStore => {

@@ -70,7 +70,8 @@ pub enum DuplexInsClass {
 /// Hardware loop status. This is a context option in our slaspec, that indicates to the slaspec
 /// that the current packet is the end of a hardware loop. Depending on whether or not hardware loop 0, hardware loop 1,
 /// or both loops are run, different hardware loop counter registers are reset. The context option "endloop" indicates which
-/// loop ends. The enum contains these options
+/// packet ends a loop. The enum contains these options. The SLASPEC uses this context option to choose whether to continue the
+/// loop by branching to the beginning, or fall through to whatever comes after the loop.
 ///
 /// Determining which loop is being ended depends on the first two instructions in the packet. See Table 10-7 for reference
 /// and HardwareLoopStatus::parse for implementation.

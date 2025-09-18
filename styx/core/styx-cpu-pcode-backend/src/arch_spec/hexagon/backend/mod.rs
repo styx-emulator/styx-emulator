@@ -9,7 +9,7 @@ use smallvec::{smallvec, SmallVec};
 use std::collections::BTreeMap;
 use styx_cpu_type::{
     arch::{
-        backends::{ArchRegister, ArchVariant},
+        backends::{ArchRegister, ArchVariant, BasicArchRegister},
         hexagon::HexagonRegister,
         ArchitectureDef, RegisterValue,
     },
@@ -31,8 +31,11 @@ use styx_processor::{
 use thiserror::Error;
 
 use crate::{
-    arch_spec::hexagon::pkt_semantics::DEST_REG_OFFSET, backend_helper::BackendHelper,
-    get_pcode::GetPcodeError, pcode_gen::GeneratePcodeError, PcodeBackendConfiguration,
+    arch_spec::hexagon::pkt_semantics::DEST_REG_OFFSET,
+    backend_helper::BackendHelper,
+    get_pcode::GetPcodeError,
+    pcode_gen::{GeneratePcodeError, RegisterTranslator},
+    PcodeBackendConfiguration,
 };
 use crate::{
     arch_spec::hexagon_build_arch_spec,
@@ -91,7 +94,7 @@ pub enum OutputRegisterType {
     None,
 }
 
-enum HexagonSingleInstructionAction {
+pub enum HexagonSingleInstructionAction {
     DelayedInterrupt(i32),
     PcChange(u64),
     Rerun,
@@ -360,9 +363,9 @@ impl BackendHelper<(u64, SmallVec<[usize; MAX_PACKET_SIZE]>), Vec<Pcode>> for He
 
     fn find_first_basic_block(
         &mut self,
-        mmu: &mut Mmu,
-        ev: &mut EventController,
-        initial_pc: u64,
+        _mmu: &mut Mmu,
+        _ev: &mut EventController,
+        _initial_pc: u64,
     ) -> u64 {
         unimplemented!()
     }
@@ -394,6 +397,7 @@ impl CpuBackend for HexagonPcodeBackend {
             self.set_pc(sized_value.to_u64().with_context(|| "too big")?)?;
         } else if reg == pc_reg_pair_variant {
             // C9 is PC (hi 4 bytes), C8 is USR (lo 4 bytes)
+            // See table 2-2 for reference.
             let val = sized_value
                 .to_u64()
                 .with_context(|| &"regpair should be (at least) 64 bits")?;
@@ -441,7 +445,6 @@ impl CpuBackend for HexagonPcodeBackend {
             })
     }
 
-    // TODO: fix this
     fn context_save(&mut self) -> Result<(), UnknownError> {
         self.saved_reg_context.clear();
 
@@ -563,7 +566,7 @@ impl HexagonPcodeBackend {
         mmu: &mut Mmu,
         ev: &mut EventController,
         execution_regs_written: &mut SmallVec<[VarnodeData; DEFAULT_REG_ALLOCATION]>,
-        bytes_consumed: u64,
+        _bytes_consumed: u64,
     ) -> Result<Result<HexagonSingleInstructionAction, TargetExitReason>, UnknownError> {
         // execute
         let mut i = 0;
@@ -634,6 +637,8 @@ impl HexagonPcodeBackend {
         }
     }
 
+    /// Used for generating P-codes to copy the banked destination registers
+    /// back over to the main registers at the end of a packet.
     pub fn flush_regs_pcode(
         execution_regs_written: &SmallVec<[VarnodeData; DEFAULT_REG_ALLOCATION]>,
     ) -> Vec<Pcode> {
@@ -671,15 +676,27 @@ impl HexagonPcodeBackend {
         let mut dotnew_regs_written = vec![];
         let mut all_regs_written = vec![];
 
+        // See table 2-1 for mapping Lr => R31. Used for tracking register outputs.
+        let last_general_register = self
+            .pcode_generator
+            .get_register(&ArchRegister::Basic(BasicArchRegister::Hexagon(
+                HexagonRegister::Lr,
+            )))
+            .expect("can't get p0 register as varnode")
+            .offset;
+
         let mut pc = self.pc().unwrap() as u32;
 
         loop {
+            // This basically ensures that we break out of this loop at the end of decoding (after the end of the packet
+            // is parsed).
             match decode_state {
                 PktState::PktEnded(_) | PktState::PktStandalone(_) if total_bytes_consumed > 0 => {
-                    break
+                    break;
                 }
                 _ => {}
             }
+
             let mut execution_helper = self.execution_helper.take().unwrap();
             let ctx_opts = {
                 decode_state = execution_helper
@@ -725,8 +742,10 @@ impl HexagonPcodeBackend {
                         execution_helper
                             .pkt_started(self, insns, pc)
                             .map_err(|e| UnknownError::from_boxed(Box::new(e)))?;
-                        // insns set to none as there will never be a dotnew in a
-                        // standalone one-instruction packe t
+                        // Insns set to none as there will never be a (load-store) dotnew (which is
+                        // what the context option is for) in a standalone one-instruction packet.
+                        //
+                        // See Section 10.10 for reference.
                         execution_helper
                             .pkt_ended(self, None, &dotnew_regs_written, dotnew_total_insns)
                             .map_err(|e| UnknownError::from_boxed(Box::new(e)))?;
@@ -737,14 +756,8 @@ impl HexagonPcodeBackend {
             };
             self.execution_helper = Some(execution_helper);
 
-            // TODO: optimize
+            // TODO: Optimize?
             let mut pcodes = vec![];
-
-            // TODO: Apply context options that were set across this. Because this uses the PcodeBackend behind
-            // the scenes, we might need some sort of dummy generator helper/pc manager implementation that
-            // that internally accesses/uses the current context opts
-            //
-            // Somehow we need to modify this stuff to take in the context options we care about.
 
             let bytes_consumed =
                 get_pcode_at_address(self, pc as u64, &mut pcodes, &ctx_opts?, mmu, ev)?;
@@ -776,15 +789,23 @@ impl HexagonPcodeBackend {
                         trace!("pcode wrote register at {}", outvar_unwrap.offset);
                         regs_in_insn.push(outvar_unwrap.clone());
 
-                        // Dotnew snstructions require registers to be the postfix after R
+                        // Dotnew instructions require registers to be the postfix after R.
+                        //
+                        // It's not clear what documents this explicitly, other than experimenting
+                        // with an assembler. Section 5.3 may provide some insight as well.
 
                         let dotnew_regnum = outvar_unwrap.offset - DEST_REG_OFFSET;
-                        // Permit R* registers or P* registers
-                        if dotnew_regnum <= 28 * 4 {
+
+                        // Permit R* registers or P* registers when tracking output.
+                        if dotnew_regnum <= last_general_register {
                             first_general_reg = OutputRegisterType::General(dotnew_regnum / 4);
-                        } else if (0x94..=0x97).contains(&dotnew_regnum) {
+                        } else if let Some(predicate_number) =
+                            DefaultHexagonExecutionHelper::match_predicate(dotnew_regnum, self)
+                        {
+                            // The i stores the position at which the predicate is at in the pcode
+                            // sequence.
                             first_general_reg =
-                                OutputRegisterType::Predicate(dotnew_regnum - 0x94, i + 1);
+                                OutputRegisterType::Predicate(predicate_number as u64, i + 1);
                         }
                     }
                 }
