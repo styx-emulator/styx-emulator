@@ -23,7 +23,7 @@ pub fn build() -> ArchSpecBuilder<sla::Hexagon, HexagonPcodeBackend> {
     let mut spec = ArchSpecBuilder::default();
 
     // Generator + pc manager. For now use the default pc manager
-    spec.set_generator(GeneratorHelper::Empty(EmptyGeneratorHelper::default()));
+    spec.set_generator(EmptyGeneratorHelper::default().into());
 
     spec.call_other_manager
         .add_handler_other_sla(HexagonUserOps::Newreg, NewReg {})
