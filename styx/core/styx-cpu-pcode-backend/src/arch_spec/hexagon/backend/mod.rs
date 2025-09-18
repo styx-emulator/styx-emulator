@@ -713,8 +713,15 @@ impl HexagonPcodeBackend {
                     self.first_packet = false;
                 }
 
-                // At this point, the context opts have "now" cleared, and everything else fine
+                // At this point, the context opts have the "now" field cleared,
+                // and everything else (eg. context options that were indicated previously
+                // to be set now) can be put into the context option list that will
+                // ultimately be sent to sleigh.
                 self.saved_context_opts.setup_context_opts(&decode_state);
+
+                // Stuff after this still add to the list of context options that should be set "now,"
+                // but any other context option locations that are indicated will only reflect for
+                // future instructions.
 
                 let res = match decode_state {
                     PktState::PktStarted(insns) => execution_helper.pkt_started(self, insns, pc),
@@ -752,6 +759,9 @@ impl HexagonPcodeBackend {
                     }),
                 };
                 res.map_err(|e| UnknownError::from_boxed(Box::new(e)))?;
+
+                // This moves from the "now" context option time to the buffer of other already staged
+                // context options from `setup_context_opts`.
                 self.saved_context_opts.get_context_opts()
             };
             self.execution_helper = Some(execution_helper);
@@ -764,15 +774,19 @@ impl HexagonPcodeBackend {
 
             trace!("instruction consumed {bytes_consumed} bytes and produced pcodes {pcodes:?}");
 
-            // Start common postfetch
+            // Start common postfetch. This is used for new-value offset computation,
+            // since the offsets do not include constant extenders. See section
+            // 10.10 for some details.
             let is_immext = {
-                // End packets do not matter
                 match decode_state {
                     PktState::PktStarted(insn_data)
                     | PktState::InsidePacket(insn_data)
                     | PktState::PktStartedFirstDuplex(insn_data) => {
                         insn_data[0].nonduplex_iclass() == Iclass::Immext
                     }
+                    // The end packets don't matter because a constant extender
+                    // always comes before an instruction, so a constant extender can't
+                    // end a packet. See section 10.9.
                     PktState::PktStandalone(_)
                     | PktState::FirstDuplex(_)
                     | PktState::PktEnded(_) => false,
@@ -813,6 +827,10 @@ impl HexagonPcodeBackend {
 
             all_regs_written.push(first_general_reg.clone());
 
+            // Effectively, we do not want to count constant extenders
+            // in the new-value registers written throughout the packet.
+            //
+            // See section 10.10.
             if !is_immext {
                 dotnew_total_insns += 1;
                 dotnew_regs_written.push(first_general_reg);
@@ -821,7 +839,6 @@ impl HexagonPcodeBackend {
             full_pcodes.push(pcodes);
             // End common postfetch
 
-            // TODO: change
             let mut execution_helper = self.execution_helper.take().unwrap();
             {
                 execution_helper.post_insn_fetch(bytes_consumed, self);
@@ -837,8 +854,6 @@ impl HexagonPcodeBackend {
             total_bytes_consumed += bytes_consumed;
         }
 
-        // This hook may be useful for register flushing/banking
-
         let mut execution_helper = self.execution_helper.take().unwrap();
         {
             execution_helper.post_packet_fetch(self);
@@ -847,10 +862,13 @@ impl HexagonPcodeBackend {
             execution_helper.sequence(self, &full_pcodes, &mut ordering);
 
             // Now that sequencing is done, it is time to deal with predicate ANDing.
+            // Predicate ANDing basically means that if the same predicate register
+            // is written more than once in the same packet, all the output values are logically
+            // ANDed together. See section 6.1.3 - Auto-AND predicates.
             //
             // If the current output reg is a predicate register,
             // and this register is also present in the all_regs_written, then
-            // we are in a predicate AND situation
+            // we are in a predicate AND situation.
             let mut predicates_found = [false, false, false, false];
             for i in &ordering {
                 let first_general_reg = &all_regs_written[*i];
