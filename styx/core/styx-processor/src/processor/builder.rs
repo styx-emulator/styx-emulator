@@ -269,11 +269,12 @@ impl<'a> ProcessorBuilder<'a> {
         bundle: ProcessorBundle,
         builder: Box<dyn ProcessorImpl>,
     ) -> Result<Processor, UnknownError> {
-        let resolved_port = self
-            .port
-            .resolve()
-            .with_context(|| "could not resolve the ipc port to build the processor")?;
         let mut runtime = self.runtime;
+
+        let ipc_resolved_port = runtime
+            .handle()
+            .block_on(self.port.resolve())
+            .with_context(|| "could not resolve the ipc port to build the processor")?;
 
         let mut cpu = bundle.cpu;
         let mut mmu = bundle.mmu;
@@ -303,7 +304,13 @@ impl<'a> ProcessorBuilder<'a> {
                 .context("failed to add initial processor hooks")?;
         }
 
-        let mut building_processor = BuildingProcessor::new(&mut core, &mut runtime, &self.config);
+        let mut building_processor = BuildingProcessor {
+            core: &mut core,
+            runtime: &mut runtime,
+            config: &self.config,
+            routes: Default::default(),
+            ipc_connection: IPCConnection::local_from_port(ipc_resolved_port.port()),
+        };
 
         self.executor.init(&mut building_processor)?;
         let executor = Executor::new(self.executor);
@@ -331,8 +338,12 @@ impl<'a> ProcessorBuilder<'a> {
             )?;
         }
 
-        let port = resolved_port.port();
-        start_ipc(building_processor.routes, runtime.handle(), resolved_port)?;
+        let ipc_port_number = ipc_resolved_port.port();
+        start_ipc(
+            building_processor.routes,
+            runtime.handle(),
+            ipc_resolved_port,
+        )?;
 
         // transfer ownership of peripherals to event controller
         for peripheral in peripherals {
@@ -346,7 +357,7 @@ impl<'a> ProcessorBuilder<'a> {
             core,
             meta: ProcMeta {},
             plugins,
-            port,
+            port: ipc_port_number,
         };
 
         Ok(system)
@@ -394,27 +405,50 @@ fn autobots_load_up(
     Ok(())
 }
 
+#[derive(Clone, Copy)]
+pub struct IPCConnection {
+    port: u16,
+}
+
+impl IPCConnection {
+    pub(crate) fn local_from_port(port: u16) -> Self {
+        Self { port }
+    }
+    pub fn port(&self) -> u16 {
+        self.port
+    }
+
+    pub fn socket_addr(&self) -> std::net::SocketAddr {
+        use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+
+        SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), self.port())
+    }
+}
+
 pub struct BuildingProcessor<'a> {
     pub core: &'a mut ProcessorCore,
     pub runtime: &'a mut ProcessorRuntime,
     pub routes: RoutesBuilder,
     pub config: &'a Config,
+    pub ipc_connection: IPCConnection,
 }
 
-impl<'a> BuildingProcessor<'a> {
-    pub fn new(
-        core: &'a mut ProcessorCore,
-        runtime: &'a mut ProcessorRuntime,
-        config: &'a Config,
-    ) -> Self {
-        Self {
-            core,
-            runtime,
-            routes: Default::default(),
-            config,
-        }
-    }
-}
+// impl<'a> BuildingProcessor<'a> {
+//     pub fn new(
+//         core: &'a mut ProcessorCore,
+//         runtime: &'a mut ProcessorRuntime,
+//         config: &'a Config,
+//         ipc_connection: IPCConnection,
+//     ) -> Self {
+//         Self {
+//             core,
+//             runtime,
+//             routes: Default::default(),
+//             config,
+//             ipc_connection,
+//         }
+//     }
+// }
 
 /// A wrapper type for constraints surrounding port selection.
 #[derive(Default, Clone, Copy, Debug, serde::Deserialize)]
@@ -432,7 +466,7 @@ impl IPCPort {
         Self(Some(port))
     }
 
-    pub(crate) fn resolve(self) -> Result<ResolvedIPCPort, UnknownError> {
+    pub(crate) async fn resolve(self) -> Result<ResolvedIPCPort, UnknownError> {
         // default to port `0`, we will let the OS choose a random port
         // and then set an internal record of the port in use
         let port = self.0.unwrap_or(0);

@@ -24,6 +24,7 @@ members = [
   "./incubation/styx-cow",
   "./incubation/styx-macros-args",
   "./incubation/styx-be-arm-processor",
+  "./incubation/styx-pcs",
   "./incubation/styx-uconf",
   "./incubation/styx-uconf-cli",
   "./data/test-binaries",
@@ -260,6 +261,7 @@ lazy-regex = "3.4.1"
 termimad = "0.33.0"
 fdt = "0.1.5"
 inventory = "0.3.21"
+itertools = "0.14.0"
 
 # data structures
 bilge = "0.2.0"

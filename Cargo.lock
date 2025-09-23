@@ -6525,6 +6525,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "styx-pcs"
+version = "1.2.0"
+dependencies = [
+ "async-stream",
+ "async-trait",
+ "bytes",
+ "derive_more 1.0.0",
+ "inventory",
+ "itertools 0.14.0",
+ "serde",
+ "serde_yaml",
+ "styx-core",
+ "styx-workspace-hack",
+ "thiserror 2.0.12",
+ "tokio",
+ "tokio-stream",
+ "tonic",
+ "tower-service",
+]
+
+[[package]]
 name = "styx-peripheral-clients"
 version = "1.2.0"
 dependencies = [

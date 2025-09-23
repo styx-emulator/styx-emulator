@@ -1,1 +1,1 @@
-mod client_plugin;
+mod client;
