@@ -1,0 +1,30 @@
+[package]
+name = "styx-pcs"
+edition.workspace = true
+rust-version.workspace = true
+version.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+
+[dependencies]
+styx-core = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+serde_yaml = { workspace = true }
+inventory = { workspace = true }
+itertools = { workspace = true }
+derive_more = { workspace = true }
+bytes = { workspace = true }
+
+# async / tokio
+async-trait = { workspace = true }
+async-stream = { workspace = true }
+tonic = { workspace = true }
+tokio = { workspace = true }
+tokio-stream = { workspace = true }
+tower-service = { workspace = true }
+
+styx-workspace-hack = { version = "0.1", path = "../../styx/workspace-hack" }
