@@ -101,7 +101,17 @@ pub enum HexagonSingleInstructionAction {
     None,
 }
 
-// We need an enum dispatch before we start using generics for dyn ExecutionHelper
+struct HexagonFetchDecodeInfo {
+    total_bytes_consumed: u64,
+    ordering: SmallVec<[usize; MAX_PACKET_SIZE]>,
+}
+
+struct HexagonExecuteSingleInfo {
+    // This represents the total number of instructions within a packet
+    // Not used currently.
+    _total_instrs_within_packet_executed: u64,
+    ordering: SmallVec<[usize; MAX_PACKET_SIZE]>,
+}
 
 #[derive(Debug)]
 pub struct HexagonPcodeBackend {
@@ -209,7 +219,7 @@ impl RegisterCallbackCpu<HexagonPcodeBackend> for HexagonPcodeBackend {
     }
 }
 
-impl BackendHelper<(u64, SmallVec<[usize; MAX_PACKET_SIZE]>), Vec<Pcode>> for HexagonPcodeBackend {
+impl BackendHelper<HexagonExecuteSingleInfo, Vec<Pcode>> for HexagonPcodeBackend {
     fn pre_execute_hooks(
         &mut self,
         mmu: &mut Mmu,
@@ -233,15 +243,14 @@ impl BackendHelper<(u64, SmallVec<[usize; MAX_PACKET_SIZE]>), Vec<Pcode>> for He
         pcodes: &mut Vec<Vec<Pcode>>,
         mmu: &mut Mmu,
         ev: &mut EventController,
-    ) -> Result<Result<(u64, SmallVec<[usize; MAX_PACKET_SIZE]>), TargetExitReason>, UnknownError>
-    {
+    ) -> Result<Result<HexagonExecuteSingleInfo, TargetExitReason>, UnknownError> {
         let mut branched_pc: Option<u64> = None;
         let mut delayed_irqn: Option<i32> = None;
         let mut total_instrs_executed = 0;
         let mut execution_regs_written: SmallVec<[VarnodeData; DEFAULT_REG_ALLOCATION]> =
             smallvec![];
 
-        let (bytes_consumed, ordering) = match self.fetch_decode_packet(pcodes, mmu, ev) {
+        let fetch_decode_info = match self.fetch_decode_packet(pcodes, mmu, ev) {
             Ok(data) => match data {
                 Ok(data) => data,
                 Err(exit_reason) => return Ok(Err(exit_reason)),
@@ -275,8 +284,8 @@ impl BackendHelper<(u64, SmallVec<[usize; MAX_PACKET_SIZE]>), Vec<Pcode>> for He
         };
 
         let mut i = 0;
-        while i < ordering.len() {
-            let pcode_instrs = &pcodes[ordering[i]];
+        while i < fetch_decode_info.ordering.len() {
+            let pcode_instrs = &pcodes[fetch_decode_info.ordering[i]];
             trace!("executing single instruction pcodes: {pcode_instrs:?}");
             // this should actually do the fetching for each individual packet.
             // TODO: move everything that happens within one one execution. call this function something else,
@@ -286,7 +295,7 @@ impl BackendHelper<(u64, SmallVec<[usize; MAX_PACKET_SIZE]>), Vec<Pcode>> for He
                 mmu,
                 ev,
                 &mut execution_regs_written,
-                bytes_consumed,
+                fetch_decode_info.total_bytes_consumed,
             )? {
                 Ok(HexagonSingleInstructionAction::DelayedInterrupt(irqn)) => {
                     delayed_irqn = Some(irqn);
@@ -321,7 +330,7 @@ impl BackendHelper<(u64, SmallVec<[usize; MAX_PACKET_SIZE]>), Vec<Pcode>> for He
             mmu,
             ev,
             &mut execution_regs_written,
-            bytes_consumed,
+            fetch_decode_info.total_bytes_consumed,
         )? {
             // Only handle if there was actually an IRQ request
             Ok(HexagonSingleInstructionAction::DelayedInterrupt(irqn)) => {
@@ -335,7 +344,7 @@ impl BackendHelper<(u64, SmallVec<[usize; MAX_PACKET_SIZE]>), Vec<Pcode>> for He
         {
             let next_pc = match branched_pc {
                 Some(pc) => pc,
-                None => execution_helper_outer.isa_pc() + bytes_consumed,
+                None => execution_helper_outer.isa_pc() + fetch_decode_info.total_bytes_consumed,
             };
 
             trace!("telling execution helper to bank move forward pc to {next_pc:x}");
@@ -350,7 +359,10 @@ impl BackendHelper<(u64, SmallVec<[usize; MAX_PACKET_SIZE]>), Vec<Pcode>> for He
             HookManager::trigger_interrupt_hook(self, mmu, ev, irqn)?;
         }
 
-        Ok(Ok((total_instrs_executed, ordering)))
+        Ok(Ok(HexagonExecuteSingleInfo {
+            _total_instrs_within_packet_executed: total_instrs_executed,
+            ordering: fetch_decode_info.ordering,
+        }))
     }
 
     fn set_last_was_branch(&mut self, last_was_branch: bool) {
@@ -435,8 +447,13 @@ impl CpuBackend for HexagonPcodeBackend {
     ) -> Result<ExecutionReport, UnknownError> {
         self.execute_helper(mmu, event_controller, count)
             .map(|mut i| {
-                i.1.last_packet_order = Some(i.0.unwrap().1);
-                i.1
+                // Add the packet order to the execution report
+                // so that we can check it in test cases
+                i.report.last_packet_order = match i.execute_single_info {
+                    Some(execute_single_info) => Some(execute_single_info.ordering),
+                    None => None,
+                };
+                i.report
             })
     }
 
@@ -487,12 +504,6 @@ impl CpuBackend for HexagonPcodeBackend {
 }
 
 impl HexagonPcodeBackend {
-    fn stop_request_check_and_reset(&mut self) -> bool {
-        let res = self.stop_requested;
-        self.stop_requested = false;
-        res
-    }
-
     fn pc_register(&self) -> styx_cpu_type::arch::CpuRegister {
         self.arch_def.registers().pc()
     }
@@ -657,10 +668,7 @@ impl HexagonPcodeBackend {
         full_pcodes: &mut Vec<Vec<Pcode>>,
         mmu: &mut Mmu,
         ev: &mut EventController,
-    ) -> Result<
-        Result<(u64, SmallVec<[usize; MAX_PACKET_SIZE]>), TargetExitReason>,
-        HexagonFetchDecodeError,
-    > {
+    ) -> Result<Result<HexagonFetchDecodeInfo, TargetExitReason>, HexagonFetchDecodeError> {
         self.regs_written.clear();
         full_pcodes.clear();
 
@@ -938,7 +946,10 @@ impl HexagonPcodeBackend {
         }
         self.execution_helper = Some(execution_helper);
 
-        Ok(Ok((total_bytes_consumed, ordering)))
+        Ok(Ok(HexagonFetchDecodeInfo {
+            total_bytes_consumed,
+            ordering,
+        }))
     }
 }
 

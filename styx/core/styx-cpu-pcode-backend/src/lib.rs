@@ -20,6 +20,7 @@ use self::{
     pcode_gen::GhidraPcodeGenerator,
     register_manager::RegisterManager,
 };
+pub use arch_spec::HexagonPcodeBackend;
 use arch_spec::{build_arch_spec, ArchPcManager, GeneratorHelp, GeneratorHelper, PcManager};
 use call_other::CallOtherManager;
 use derivative::Derivative;
@@ -265,16 +266,6 @@ impl PcodeBackend {
 
     fn pc_register(&self) -> styx_cpu_type::arch::CpuRegister {
         self.arch_def.registers().pc()
-    }
-
-    /// Clears stop_requested and returns the previous result.
-    ///
-    /// Use this instead of checking the raw value stop_requested to avoid bugs in forgetting to
-    /// reset it.
-    fn stop_request_check_and_reset(&mut self) -> bool {
-        let res = self.stop_requested;
-        self.stop_requested = false;
-        res
     }
 }
 
@@ -525,7 +516,7 @@ impl CpuBackend for PcodeBackend {
         count: u64,
     ) -> Result<ExecutionReport, UnknownError> {
         self.execute_helper(mmu, event_controller, count)
-            .map(|t| t.1)
+            .map(|t| t.report)
     }
 
     fn pc(&mut self) -> Result<u64, UnknownError> {

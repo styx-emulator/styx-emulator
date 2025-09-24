@@ -21,12 +21,6 @@ pub struct GeneralHexagonInstruction {
     duplex_iclass: u4,
 }
 
-impl GeneralHexagonInstruction {
-    pub fn is_zero(&self) -> bool {
-        self.raw_value() == 0
-    }
-}
-
 /// The non-duplex iclass values for Hexagon
 ///
 /// The following information comes from QEMU's target/hexagon/imported/iclass.def

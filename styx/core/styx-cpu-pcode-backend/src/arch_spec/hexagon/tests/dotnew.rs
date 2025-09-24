@@ -63,7 +63,6 @@ fn test_dotnew_basic_cases(
     8, 1; "branch not taken"
 )]
 fn test_dotnew_jump(r1_set: u32, insns_to_run: u64) {
-    const SRC_MEMLOC: u32 = 0x300;
     let (mut cpu, mut mmu, mut ev) = setup_objdump(
         r#"
         0:	23 40 00 78	78004023 { 	r3 = #0x1

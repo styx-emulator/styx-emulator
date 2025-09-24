@@ -15,7 +15,7 @@ pub use styx_processor::{
 
 pub(crate) use crate::RegisterManager;
 use crate::{
-    memory::{sized_value::SizedValue, space_manager::HasSpaceManager},
+    memory::sized_value::SizedValue,
     pcode_gen::RegisterTranslator,
     register_manager::{RegisterCallbackCpu, RegisterHandleError},
 };
@@ -113,30 +113,6 @@ pub fn get_isa_pc(cpu: &mut HexagonPcodeBackend) -> u32 {
         .unwrap() as u32;
     trace!("get_isa_pc returns {pc:x}");
     pc
-}
-
-// this probably shouldn't ever be used other than in tests
-
-pub fn read_dst_reg(
-    backend: &mut HexagonPcodeBackend,
-    reg: HexagonRegister,
-) -> Result<SizedValue, RegisterHandleError> {
-    let arch_reg: ArchRegister = reg.into();
-    let (spc, gen) = backend.borrow_space_gen();
-
-    let vnode = gen.get_register(&arch_reg).map(|i| {
-        // Have to clone bc we modify
-        let mut i = i.clone();
-        i.offset += DEST_REG_OFFSET;
-        i
-    });
-
-    match vnode {
-        Some(ref varnode) => Ok(spc
-            .read(varnode)
-            .with_context(|| format!("error reading {reg:?} @ {vnode:?} from space"))?),
-        None => Err(RegisterHandleError::CannotHandleRegister(arch_reg)),
-    }
 }
 
 // TODO:

@@ -62,7 +62,7 @@ pub fn build_space_manager<T: CpuBackend + 'static>(
     space_manager
 }
 
-/// The backend helper has common functionality (that has significant overlap) for different PcodeBackends
+// The backend helper has common functionality (that has significant overlap) for different PcodeBackends
 
 pub fn pre_execute_hooks<T: CpuBackend + HasHookManager>(
     cpu: &mut T,
@@ -77,7 +77,16 @@ pub fn pre_execute_hooks<T: CpuBackend + HasHookManager>(
     Ok(())
 }
 
+pub struct BackendHelperExecuteInfo<T> {
+    pub report: ExecutionReport,
+    pub execute_single_info: Option<T>,
+}
+
 pub trait BackendHelper<T, Q>: CpuBackend + HasHookManager + Sized {
+    /// Clears stop_requested and returns the previous result.
+    ///
+    /// Use this instead of checking the raw value stop_requested to avoid bugs in forgetting to
+    /// reset it.
     fn stop_request_check_and_reset(&mut self) -> bool {
         let res = self.stop_requested();
         self.set_stop_requested(false);
@@ -104,17 +113,17 @@ pub trait BackendHelper<T, Q>: CpuBackend + HasHookManager + Sized {
         mmu: &mut Mmu,
         event_controller: &mut EventController,
         count: u64,
-    ) -> Result<(Option<T>, ExecutionReport), UnknownError> {
+    ) -> Result<BackendHelperExecuteInfo<T>, UnknownError> {
         let mut state = MachineState::new(count);
         trace!("Starting pcode machine with max_count={count}");
 
         // Stop if requested in between ticks
         if self.stop_request_check_and_reset() {
             // self.is_stopped
-            return Ok((
-                None,
-                ExecutionReport::new(TargetExitReason::HostStopRequest, 0),
-            ));
+            return Ok(BackendHelperExecuteInfo {
+                report: ExecutionReport::new(TargetExitReason::HostStopRequest, 0),
+                execute_single_info: None,
+            });
         }
         self.set_stop_requested(false);
         let mut current_stop = state.check_done();
@@ -149,10 +158,10 @@ pub trait BackendHelper<T, Q>: CpuBackend + HasHookManager + Sized {
             match self.execute_single(&mut pcodes, mmu, event_controller)? {
                 Ok(val) => last_val = Some(val),
                 Err(reason) => {
-                    return Ok((
-                        None,
-                        ExecutionReport::new(reason, state.current_instruction_count),
-                    ));
+                    return Ok(BackendHelperExecuteInfo {
+                        execute_single_info: None,
+                        report: ExecutionReport::new(reason, state.current_instruction_count),
+                    });
                 }
             }
 
@@ -172,7 +181,10 @@ pub trait BackendHelper<T, Q>: CpuBackend + HasHookManager + Sized {
         }
         let exit_reason = current_stop.unwrap();
         trace!("Exiting due to {exit_reason:?}");
-        Ok((last_val, exit_reason))
+        Ok(BackendHelperExecuteInfo {
+            execute_single_info: last_val,
+            report: exit_reason,
+        })
     }
 
     /// Run on every "new basic block" meaning after every jump or at the start of execution.

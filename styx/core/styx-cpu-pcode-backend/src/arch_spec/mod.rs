@@ -193,7 +193,7 @@ pub fn build_arch_spec(arch: &ArchVariant, endian: ArchEndian) -> ArchSpec<Pcode
 
 pub fn hexagon_build_arch_spec(
     arch: &ArchVariant,
-    endian: ArchEndian,
+    _endian: ArchEndian,
 ) -> ArchSpec<HexagonPcodeBackend> {
     match arch {
         #[cfg(feature = "arch_hexagon")]
