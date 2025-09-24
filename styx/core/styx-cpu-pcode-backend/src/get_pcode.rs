@@ -73,6 +73,9 @@ impl TryFrom<GetPcodeError> for PcodeFetchException {
     }
 }
 
+/// For use with a PcodeBackend (and not other PcodeBackends). This function wraps
+/// `get_pcode_at_address`, and extracts the needed context options and current PC,
+/// which require `PcodeBackend`-specific function calls.
 fn get_pcode_for_pcode_backend(
     cpu: &mut PcodeBackend,
     pcodes: &mut Vec<Pcode>,
@@ -87,7 +90,7 @@ fn get_pcode_for_pcode_backend(
     get_pcode_at_address(cpu, addr, pcodes, &ctx_opts, mmu, ev)
 }
 
-/// thin wrapper to [GhidraPcodeGenerator::get_pcode].
+/// thin wrapper to [pcode_gen::get_pcode].
 pub fn get_pcode_at_address<B: CpuBackend + HasPcodeGenerator<InnerCpuBackend = B> + 'static>(
     cpu: &mut B,
     addr: u64,
