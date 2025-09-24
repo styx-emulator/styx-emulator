@@ -218,6 +218,7 @@ struct FourInsnTestCase {
 #[test_case(3, 2, 39943, 993, 109, 0, 9982, 145; "r0 gt r1, r2 gt r3, r4 gt r5, r6 gt r7")]
 #[test_case(1, 2, 9008, 993, 109, 0, 9982, 145; "r0 lt r1, r2 gt r3, r4 gt r5, r6 gt r7")]
 #[test_case(100, 2, 9, 993, 109, 0, 9982, 145; "r0 gt r1, r2 lt r3, r4 gt r5, r6 gt r7")]
+#[allow(clippy::too_many_arguments)]
 fn test_four(r0: u32, r1: u32, r2: u32, r3: u32, r4: u32, r5: u32, r6: u32, r7: u32) {
     let tests = [
         FourInsnTestCase {
@@ -409,6 +410,7 @@ fn test_four(r0: u32, r1: u32, r2: u32, r3: u32, r4: u32, r5: u32, r6: u32, r7: 
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn test_four_helper(
     objdump: &str,
     r0: u32,

@@ -29,11 +29,11 @@ pub fn test_conditional_simple(r0: u32, r1: u32, r2: u32, r3: u32) {
 
     let r5 = cpu.read_register::<u32>(HexagonRegister::R5).unwrap();
 
-    if (r2 == r3) && (r0 == r1) {
+    // If the first branch is true (r2 == r3), irregardless
+    // of whether r0 == r1 or not, the first branch to 0x10 will be taken.
+    if r2 == r3 {
         assert_eq!(r5, 90);
-    } else if r2 == r3 {
-        assert_eq!(r5, 90);
-    } else if r0 == r1 {
+    } else if (r2 != r3) && (r0 == r1) {
         assert_eq!(r5, 40);
     } else {
         assert_eq!(r5, 20);

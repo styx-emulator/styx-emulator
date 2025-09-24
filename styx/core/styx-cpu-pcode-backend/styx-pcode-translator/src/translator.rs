@@ -371,7 +371,7 @@ mod hexagon_tests {
         let machine_code = get_asm(asm);
 
         // For debugging purposes.
-        println!("asm {} code {:x?}", asm, machine_code);
+        println!("asm {asm} code {machine_code:x?}");
 
         let loader = VectorLoader {
             start,
@@ -412,14 +412,14 @@ mod hexagon_tests {
         let mut pcodes = vec![];
         let bytes_used = translator.get_pcode(start, &mut pcodes, ()).unwrap();
 
-        println!("(packet) First part of packet {:?}", pcodes);
+        println!("(packet) First part of packet {pcodes:?}");
         assert_eq!(pcodes.len(), 1);
         assert_eq!(bytes_used, 4);
 
         let bytes_used = translator
             .get_pcode(start + bytes_used, &mut pcodes, ())
             .unwrap();
-        println!("(packet) Full packet {:?}", pcodes);
+        println!("(packet) Full packet {pcodes:?}");
 
         // Cumulative length
         assert_eq!(pcodes.len(), 4);
@@ -440,7 +440,7 @@ mod hexagon_tests {
         let mut pcodes = vec![];
         let bytes_used = translator.get_pcode(start, &mut pcodes, ()).unwrap();
 
-        println!("(duplex) First part of duplex pcode is {:?}", pcodes);
+        println!("(duplex) First part of duplex pcode is {pcodes:?}");
         assert_eq!(pcodes.len(), 1);
         assert_eq!(bytes_used, 2);
 
@@ -448,10 +448,7 @@ mod hexagon_tests {
             .get_pcode(start + bytes_used, &mut pcodes, ())
             .unwrap();
 
-        println!(
-            "(duplex) Full pcode for both instructions in duplex is {:?}",
-            pcodes
-        );
+        println!("(duplex) Full pcode for both instructions in duplex is {pcodes:?}",);
         assert_eq!(pcodes.len(), 2);
         assert_eq!(bytes_used, 2);
     }
@@ -487,7 +484,7 @@ mod hexagon_tests {
             .get_pcode(start + bytes_used, &mut pcodes, ())
             .unwrap();
 
-        println!("(immediate test) pcodes is now {:?}", pcodes);
+        println!("(immediate test) pcodes is now {pcodes:?}");
         assert_eq!(pcodes.len(), 1);
         assert_eq!(bytes_used, 4);
     }

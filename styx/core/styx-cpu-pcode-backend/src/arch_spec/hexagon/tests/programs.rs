@@ -46,12 +46,12 @@ pub fn array_manipulation() {
 
     let mut arr = [0u8; 4];
     // Read out 4 element array
-    for i in 0..4 {
+    for (i, item) in arr.iter_mut().enumerate() {
         let addr = arr2_memloc + i as u64;
         let val = mmu.read_u8_le_virt_data(addr, &mut cpu).unwrap();
 
         trace!("read {val} at memory address 0x{addr:x}");
-        arr[i] = val;
+        *item = val;
     }
 
     let max = cpu.read_register::<u32>(HexagonRegister::R5).unwrap();

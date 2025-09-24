@@ -47,7 +47,7 @@ const SAVED_OPTION_LEN: usize = 20;
 /// `setup_context_opts`, but then based on information at the start of the packet we may want to set information
 /// for the _next_ start of packet (but at the same time keep adding to context options for *now*). Separating `setup_context_opts`
 /// and `get_context_opts` achieves this.
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct SavedContextOpts {
     start: SmallVec<[ContextOption; SAVED_OPTION_LEN]>,
     end: SmallVec<[ContextOption; SAVED_OPTION_LEN]>,
@@ -55,18 +55,6 @@ pub struct SavedContextOpts {
     now: SmallVec<[ContextOption; SAVED_OPTION_LEN]>,
 
     setup_context_opts: Option<SmallVec<[ContextOption; CONTEXT_OPTION_LEN]>>,
-}
-
-impl Default for SavedContextOpts {
-    fn default() -> Self {
-        Self {
-            start: SmallVec::new(),
-            end: SmallVec::new(),
-            next_instr: SmallVec::new(),
-            now: SmallVec::new(),
-            setup_context_opts: None,
-        }
-    }
 }
 
 impl SavedContextOpts {

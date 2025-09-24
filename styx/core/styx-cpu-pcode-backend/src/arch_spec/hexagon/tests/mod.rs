@@ -3,9 +3,7 @@ pub use crate::arch_spec::arch::hexagon::HexagonRegister;
 pub use keystone_engine::Keystone;
 pub use log::trace;
 pub use regex::Regex;
-use styx_cpu_type::arch::backends::ArchRegister;
 pub use styx_cpu_type::{arch::hexagon::HexagonVariants, Arch, ArchEndian, TargetExitReason};
-use styx_errors::anyhow::Context;
 pub use styx_pcode_translator::sla::hexagon_reg_to_str;
 pub use styx_processor::{
     cpu::CpuBackend,
@@ -14,14 +12,9 @@ pub use styx_processor::{
 };
 
 pub(crate) use crate::RegisterManager;
-use crate::{
-    memory::sized_value::SizedValue,
-    pcode_gen::RegisterTranslator,
-    register_manager::{RegisterCallbackCpu, RegisterHandleError},
-};
 pub use styx_processor::cpu::CpuBackendExt;
 
-use super::{backend::HexagonPcodeBackend, pkt_semantics::DEST_REG_OFFSET};
+use super::backend::HexagonPcodeBackend;
 
 mod banking;
 mod branching;

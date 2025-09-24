@@ -39,6 +39,7 @@ impl CallOtherCpu<PcodeBackend> for PcodeBackend {}
 impl CallOtherCpu<HexagonPcodeBackend> for HexagonPcodeBackend {}
 
 type HandlerIndex = u64;
+
 pub trait CallOtherCallback<T: CpuBackend>: Debug + Send + Sync {
     fn handle(
         &mut self,
@@ -148,6 +149,7 @@ impl<Cpu: CpuBackend + 'static> CallOtherManager<Cpu> {
     /// `inputs` should be all the Varnodes excluding the first input denoting the CallOther index.
     ///
     /// The returned Option should be written to the output varnode in the CallOther operation.
+    #[allow(clippy::too_many_arguments)]
     pub fn trigger(
         cpu: &mut dyn CallOtherCpu<Cpu>,
         call_other_manager: &mut CallOtherManager<Cpu>,
