@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use super::generator_helper::EmptyGeneratorHelper;
 use super::ArchSpecBuilder;
-use super::GeneratorHelper;
 use super::HexagonPcodeBackend;
 
 pub mod backend;
@@ -23,7 +22,7 @@ pub fn build() -> ArchSpecBuilder<sla::Hexagon, HexagonPcodeBackend> {
     let mut spec = ArchSpecBuilder::default();
 
     // Generator + pc manager. For now use the default pc manager
-    spec.set_generator(EmptyGeneratorHelper::default().into());
+    spec.set_generator(EmptyGeneratorHelper.into());
 
     spec.call_other_manager
         .add_handler_other_sla(HexagonUserOps::Newreg, NewReg {})

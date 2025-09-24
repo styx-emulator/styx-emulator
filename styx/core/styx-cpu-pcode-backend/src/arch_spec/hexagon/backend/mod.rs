@@ -30,6 +30,7 @@ use styx_processor::{
 };
 use thiserror::Error;
 
+use crate::execute_pcode;
 use crate::{
     arch_spec::hexagon::pkt_semantics::DEST_REG_OFFSET,
     backend_helper::BackendHelper,
@@ -51,7 +52,6 @@ use crate::{
     register_manager::{HasRegisterManager, RegisterCallbackCpu},
     GhidraPcodeGenerator, HasConfig, RegisterManager, MAX_PACKET_SIZE,
 };
-use crate::{execute_pcode, ArchPcManager};
 use crate::{PCodeStateChange, DEFAULT_REG_ALLOCATION};
 use derive_more::Debug;
 
@@ -406,13 +406,8 @@ impl CpuBackend for HexagonPcodeBackend {
             let lo = (val & 0xffffffff) as u32;
 
             self.set_pc(hi)?;
-            RegisterManager::write_register(
-                self,
-                HexagonRegister::Usr.into(),
-                lo.try_into()
-                    .with_context(|| &"couldn't turn c8 lo value into sizedvalue")?,
-            )
-            .with_context(|| "could not write_register_raw")?;
+            RegisterManager::write_register(self, HexagonRegister::Usr.into(), lo.into())
+                .with_context(|| "could not write_register_raw")?;
         } else {
             RegisterManager::write_register(self, reg, sized_value)
                 .with_context(|| "could not write_register_raw")?;
@@ -523,7 +518,7 @@ impl HexagonPcodeBackend {
         let endian = pcode_generator.endian();
         let space_manager = backend_helper::build_space_manager(&pcode_generator);
 
-        let arch_def: Box<dyn ArchitectureDef> = arch_variant.clone().into();
+        let arch_def: Box<dyn ArchitectureDef> = arch_variant.into();
 
         let hook_manager = HookManager::new();
 
@@ -562,7 +557,7 @@ impl HexagonPcodeBackend {
     /// Execute a single instruction
     pub fn execute_single_instr(
         &mut self,
-        pcodes: &Vec<Pcode>,
+        pcodes: &[Pcode],
         mmu: &mut Mmu,
         ev: &mut EventController,
         execution_regs_written: &mut SmallVec<[VarnodeData; DEFAULT_REG_ALLOCATION]>,
@@ -733,7 +728,7 @@ impl HexagonPcodeBackend {
                         dotnew_total_insns,
                     ),
                     PktState::FirstDuplex(insns) => execution_helper.pkt_first_duplex(self, insns),
-                    PktState::PktStartedFirstDuplex(insns) => Ok({
+                    PktState::PktStartedFirstDuplex(insns) => {
                         execution_helper
                             .pkt_first_duplex(self, insns)
                             .map_err(|e| {
@@ -744,8 +739,10 @@ impl HexagonPcodeBackend {
                         execution_helper.pkt_started(self, insns, pc).map_err(|e| {
                             HexagonFetchDecodeError::Other(UnknownError::from_boxed(Box::new(e)))
                         })?;
-                    }),
-                    PktState::PktStandalone(insns) => Ok({
+
+                        Ok(())
+                    }
+                    PktState::PktStandalone(insns) => {
                         execution_helper
                             .pkt_started(self, insns, pc)
                             .map_err(|e| UnknownError::from_boxed(Box::new(e)))?;
@@ -756,7 +753,8 @@ impl HexagonPcodeBackend {
                         execution_helper
                             .pkt_ended(self, None, &dotnew_regs_written, dotnew_total_insns)
                             .map_err(|e| UnknownError::from_boxed(Box::new(e)))?;
-                    }),
+                        Ok(())
+                    }
                 };
                 res.map_err(|e| UnknownError::from_boxed(Box::new(e)))?;
 
@@ -859,7 +857,7 @@ impl HexagonPcodeBackend {
             execution_helper.post_packet_fetch(self);
 
             // TODO: remove this allocation, and turn this into an option that can be taken and replaced
-            execution_helper.sequence(self, &full_pcodes, &mut ordering);
+            execution_helper.sequence(self, full_pcodes, &mut ordering);
 
             // Now that sequencing is done, it is time to deal with predicate ANDing.
             // Predicate ANDing basically means that if the same predicate register
@@ -978,7 +976,7 @@ pub trait HexagonExecutionHelper: derive_more::Debug + Send {
         &mut self,
         backend: &mut HexagonPcodeBackend,
         instr: Option<GeneralHexagonInstruction>,
-        dotnew_regs_written: &Vec<OutputRegisterType>,
+        dotnew_regs_written: &[OutputRegisterType],
         dotnew_instructions: u32,
     ) -> Result<(), GeneratePcodeError>;
     fn pkt_first_duplex(
@@ -992,7 +990,7 @@ pub trait HexagonExecutionHelper: derive_more::Debug + Send {
     fn sequence(
         &mut self,
         backend: &mut HexagonPcodeBackend,
-        pkt: &Vec<Vec<Pcode>>,
+        pkt: &[Vec<Pcode>],
         ordering: &mut SmallVec<[usize; 4]>,
     );
 }

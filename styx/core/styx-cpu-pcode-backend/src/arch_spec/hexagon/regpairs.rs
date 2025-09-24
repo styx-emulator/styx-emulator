@@ -500,17 +500,8 @@ impl<T: CpuBackend> RegisterCallback<T> for VectorRegpairQuadStub {
     }
 }
 
-// TODO: vector register pairs
-
-pub fn add_register_pair_handlers<S>(spec: &mut ArchSpecBuilder<S, HexagonPcodeBackend>) {
-    let register_manager = &mut spec.register_manager;
-    for reg in REGPAIR_MAP.keys() {
-        trace!("adding regpair handler for {reg}");
-        register_manager
-            .add_handler(*reg, RegpairHandler)
-            .expect("couldn't add regpair handler");
-    }
-}
+// TODO: vector register pairs. We don't support vector instructions right now,
+// and the register manager won't work during live execution, so this is pointless right now.
 
 pub fn add_vector_register_pair_handlers<S>(spec: &mut ArchSpecBuilder<S, HexagonPcodeBackend>) {
     let register_manager = &mut spec.register_manager;

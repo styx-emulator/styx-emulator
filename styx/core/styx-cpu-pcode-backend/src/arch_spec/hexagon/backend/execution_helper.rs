@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use log::{error, trace};
+use log::trace;
 use styx_cpu_type::arch::{
     backends::{ArchRegister, BasicArchRegister},
-    hexagon::{variants::HexagonGeneralRegistersWithHvx, HexagonRegister},
+    hexagon::HexagonRegister,
 };
-use styx_errors::{anyhow::Context, UnknownError};
-use styx_pcode::pcode::{Opcode, SpaceName, VarnodeData};
+use styx_errors::anyhow::Context;
+use styx_pcode::pcode::{Opcode, Pcode, SpaceName, VarnodeData};
 use styx_pcode_translator::ContextOption;
 use styx_processor::{cpu::CpuBackendExt, memory::Mmu};
 
@@ -89,7 +89,7 @@ impl DefaultHexagonExecutionHelper {
         &mut self,
         insn_data: GeneralHexagonInstruction,
         backend: &mut HexagonPcodeBackend,
-        dotnew_regs_written: &Vec<OutputRegisterType>,
+        dotnew_regs_written: &[OutputRegisterType],
         dotnew_instructions: u32,
     ) {
         match dotnew::parse_dotnew(insn_data) {
@@ -294,7 +294,7 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
         let insn_data_wide = mmu
             .read_u128_le_virt_code(self.pc_varnode.offset, backend)
             .with_context(|| "couldn't prefetch the next insn from MMU")
-            .map_err(|e| HexagonFetchDecodeError::Other(e.into()))?;
+            .map_err(HexagonFetchDecodeError::Other)?;
 
         // Extract out the four instructions.
         let insn_data =
@@ -403,7 +403,7 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
         &mut self,
         backend: &mut HexagonPcodeBackend,
         insn: Option<GeneralHexagonInstruction>,
-        dotnew_regs_written: &Vec<OutputRegisterType>,
+        dotnew_regs_written: &[OutputRegisterType],
         dotnew_instructions: u32,
     ) -> Result<(), GeneratePcodeError> {
         // A dotnew instruction will always come at the end of a packet.
@@ -471,7 +471,7 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
         Ok(())
     }
 
-    fn post_packet_execute(&mut self, backend: &mut HexagonPcodeBackend) {
+    fn post_packet_execute(&mut self, _backend: &mut HexagonPcodeBackend) {
         trace!("post packet execute called");
     }
 
@@ -480,7 +480,7 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
     fn sequence(
         &mut self,
         backend: &mut HexagonPcodeBackend,
-        pkt: &Vec<Vec<styx_pcode::pcode::Pcode>>,
+        pkt: &[Vec<Pcode>],
         ordering: &mut smallvec::SmallVec<[usize; 4]>,
     ) {
         trace!("starting sequencer");
@@ -538,8 +538,8 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
             );
         }
 
-        for i in 0..pkt.len() {
-            if remains[i] {
+        for (i, insn_should_be_added) in remains.iter().enumerate().take(pkt.len()) {
+            if *insn_should_be_added {
                 trace!("insn {i} remains!");
                 ordering.push(i);
             }
