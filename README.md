@@ -13,8 +13,7 @@ Styx is under active development and does not currently follow Semantic Versioni
 
 ### Official
 
-- Docs Website: <https://docs.styx-emulator.org>
-- Documentation Site: <https://docs.styx-emulator.org>
+- Documentation: <https://docs.styx-emulator.org>
 - Github: <https://github.com/styx-emulator>
 - Mastodon: <https://infosec.exchange/@styx_emulator>
 - Twitter/X: <https://x.com/styx_emulator>
