@@ -127,7 +127,7 @@ impl From<ArmVariants> for ArmMetaVariants {
             ArmVariants::ArmCortexR5 => ArmCortexR5 {}.into(),
             ArmVariants::ArmCortexR5F => ArmCortexR5F {}.into(),
             ArmVariants::ArmCortexA7 => ArmCortexA7 {}.into(),
-            ArmVariants::ArmCortexA8 => ArmCortexA7 {}.into(),
+            ArmVariants::ArmCortexA8 => ArmCortexA8 {}.into(),
             ArmVariants::ArmCortexA9 => ArmCortexA9 {}.into(),
             ArmVariants::ArmCortexA15 => ArmCortexA15 {}.into(),
             ArmVariants::ArmTi925T => ArmTi925T {}.into(),
