@@ -71,14 +71,17 @@ Documentation Contents
    :maxdepth: 1
 
    user/bindings
-   user/unicorn_replacement
    user/processors
    user/unified_configuration
+   user/unicorn_replacement
    user/styx_trace
    user/using_a_processor
    user/adding_a_processor
    user/using_multiple_processors
    user/backends
+   user/custom_backends
+   user/hooks
+   user/plugins
    user/new_architectures
    user/new_architectures_pcode
    user/adding_test_binaries
