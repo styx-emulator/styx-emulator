@@ -12,12 +12,12 @@ After completing the :ref:`installing` of ``Styx`` as a dependency of your crate
 
 
 .. literalinclude:: ../../examples/raw-processor/src/main.rs
-    :lines: 26-
+    :lines: 2-
     :linenos:
     :language: rust
 
-Note that line 17,18,19 are optional plugins, where the ``ProcessorTracingPlugin``
-provides easy avenues to get output from processors, and the ``*MemoryFautlPlugins``
+Note that line 20,21,22 are optional plugins, where the ``ProcessorTracingPlugin``
+provides easy avenues to get output from processors, and the ``*MemoryFaultPlugins``
 provide an easy ability to stop when a memory releated error occurs in the
 ``TargetProgram``.
 
@@ -75,4 +75,4 @@ And a similar use via the python API:
 .. literalinclude:: ../../styx/bindings/styx-py-api/examples/simple-stm32f107/main.py
     :language: python
     :linenos:
-    :lines: 27-
+    :lines: 26-
