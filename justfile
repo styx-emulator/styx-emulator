@@ -157,3 +157,17 @@ rust-fetch:
     cargo fetch --manifest-path ./styx/bindings/Cargo.toml
 
 setup: python-deps rust-deps rust-fetch
+
+# Build the Docker container for development (takes docker platform as arg)
+build-docker platform="linux/amd64":
+    #!/bin/bash -e
+    RUST_VERSION=$(cat .rust-version)
+    docker build -t styx-ci -f ./util/docker/ci.Dockerfile --platform {{platform}} --build-arg RUST_VERSION=$RUST_VERSION .
+
+# Run just commands inside the Docker container
+docker *ARGS:
+    docker run --rm -it -v "$(pwd):/workspace" -w /workspace -e PATH="/root/.cargo/bin:$PATH" localhost/styx-ci just {{ARGS}}
+
+# Pass all arguments to cargo
+cargo *ARGS:
+    cargo {{ARGS}}
