@@ -53,6 +53,9 @@
 //! 2. To tell which address range an address belongs to we convert the resulting vector of 1s and 0s into a bit
 //!    k and then use the trailing zero count intrinsic to quickly determine which index is a 1
 //!
+#![cfg(target_arch = "x86_64")]
+#![cfg(target_feature = "avx2")]
+#![cfg(target_feature = "bmi1")]
 use crate::tlb::cache::TlbCache32;
 
 use std::arch::x86_64;
@@ -112,8 +115,6 @@ impl TlbCache32 for FastTlbCache4 {
 }
 
 impl FastTlbCache4 {
-    #[target_feature(enable = "avx2")]
-    #[target_feature(enable = "bmi1")]
     unsafe fn tlb_lookup(&self, v_addr: u32) -> Option<usize> {
         unsafe {
             let low_vec =
@@ -195,8 +196,6 @@ impl TlbCache32 for FastTlbCache8 {
 }
 
 impl FastTlbCache8 {
-    #[target_feature(enable = "avx2")]
-    #[target_feature(enable = "bmi1")]
     unsafe fn tlb_lookup(&self, v_addr: u32) -> Option<usize> {
         unsafe {
             let low_vec =
@@ -270,8 +269,6 @@ impl TlbCache32 for FastTlbCache64 {
 }
 
 impl FastTlbCache64 {
-    #[target_feature(enable = "avx2")]
-    #[target_feature(enable = "bmi1")]
     unsafe fn lookup(&self, v_addr: u32) -> Option<usize> {
         unsafe {
             // chunk our 64 entry array into 8 pieces and search each sequentially
