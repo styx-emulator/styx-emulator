@@ -773,6 +773,7 @@ impl Arch {
             Self::SuperH => BasicArchRegister::SuperH(SuperHRegister::Pc),
             Self::Msp430 => BasicArchRegister::Msp430(Msp430Register::Pc),
             Self::Msp430X => BasicArchRegister::Msp430X(Msp430XRegister::Pc),
+            Self::Hexagon => BasicArchRegister::Hexagon(HexagonRegister::Pc),
             _ => panic!("Need to add PC register for arch"),
         }
     }
@@ -817,6 +818,10 @@ impl Arch {
             ),
             Self::Msp430 => BasicArchRegister::Msp430(
                 Msp430Register::from_str(reg_name)
+                    .unwrap_or_else(|_| panic!("Unsupported register {reg_name}")),
+            ),
+            Self::Hexagon => BasicArchRegister::Hexagon(
+                HexagonRegister::from_str(reg_name)
                     .unwrap_or_else(|_| panic!("Unsupported register {reg_name}")),
             ),
             _ => panic!("Unsupported architecure: {self:?}"),
