@@ -27,6 +27,23 @@ pub trait Validator: Send + Sync + 'static {
 /// Contains all the IO gRPC implementations.
 pub mod io {
     pub mod uart {
+
+        #[derive(Debug)]
+        pub enum SubscribeDirection {
+            Rx = 0,
+            Tx = 1,
+            Both = 2,
+        }
+        impl From<Option<subscribe_request::Direction>> for SubscribeDirection {
+            fn from(value: Option<subscribe_request::Direction>) -> Self {
+                match value.unwrap() {
+                    subscribe_request::Direction::Rx(_) => Self::Rx,
+                    subscribe_request::Direction::Tx(_) => Self::Tx,
+                    subscribe_request::Direction::Both(_) => Self::Both,
+                }
+            }
+        }
+
         tonic::include_proto!("uart");
         /// CPU to peripheral direction
         pub const TX_DIRECTION: Option<subscribe_request::Direction> =
