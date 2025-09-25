@@ -48,9 +48,21 @@
 //! Zone fields are currently not supported, afaik nothing really uses them and it would just be a waste of time to implement right now.
 mod cache;
 mod record;
+// SIMD-optimized TLB cache implementations - currently only x86_64 is implemented
+#[cfg(all(
+    target_arch = "x86_64",
+    target_feature = "avx2",
+    target_feature = "bmi1"
+))]
 mod simd_cache;
 
-use cache::{SortedTlbCache, TlbCache32, UnsortedRoundRobinTlbCache};
+use cache::TlbCache32;
+#[cfg(not(all(
+    target_arch = "x86_64",
+    target_feature = "avx2",
+    target_feature = "bmi1"
+)))]
+use cache::{SortedTlbCache, UnsortedRoundRobinTlbCache};
 use record::TlbRecord;
 use styx_core::errors::UnknownError;
 
@@ -60,8 +72,11 @@ use styx_core::memory::{
 use styx_core::prelude::log::warn;
 use styx_core::prelude::*;
 
-#[cfg(target_feature = "avx2")]
-#[cfg(target_feature = "bmi1")]
+#[cfg(all(
+    target_arch = "x86_64",
+    target_feature = "avx2",
+    target_feature = "bmi1"
+))]
 use simd_cache::{FastTlbCache4, FastTlbCache64, FastTlbCache8};
 
 const UNIFIED_TLB_CAPACITY: usize = 64;
@@ -92,34 +107,58 @@ pub struct Ppc405Tlb {
     /// holds the actual tlb data for each of the caches
     tlb_data: [TlbRecord; TOTAL_TLB_CAPACITY],
 
-    /// various arrays for searching in each cache
-    #[cfg(not(target_feature = "avx2"))]
-    #[cfg(not(target_feature = "bmi1"))]
+    // Various arrays for searching in each cache,
+    // first the non-simd, then the simd-accelerated versions
+    #[cfg(not(all(
+        target_arch = "x86_64",
+        target_feature = "avx2",
+        target_feature = "bmi1"
+    )))]
     unified_tlb: SortedTlbCache<64>,
-    #[cfg(not(target_feature = "avx2"))]
-    #[cfg(not(target_feature = "bmi1"))]
+    #[cfg(not(all(
+        target_arch = "x86_64",
+        target_feature = "avx2",
+        target_feature = "bmi1"
+    )))]
     instruction_tlb: UnsortedRoundRobinTlbCache<4>,
-    #[cfg(not(target_feature = "avx2"))]
-    #[cfg(not(target_feature = "bmi1"))]
+    #[cfg(not(all(
+        target_arch = "x86_64",
+        target_feature = "avx2",
+        target_feature = "bmi1"
+    )))]
     data_tlb: UnsortedRoundRobinTlbCache<8>,
 
-    #[cfg(target_feature = "avx2")]
-    #[cfg(target_feature = "bmi1")]
+    // Now the simd
+    #[cfg(all(
+        target_arch = "x86_64",
+        target_feature = "avx2",
+        target_feature = "bmi1"
+    ))]
     unified_tlb: FastTlbCache64,
-    #[cfg(target_feature = "avx2")]
-    #[cfg(target_feature = "bmi1")]
+    #[cfg(all(
+        target_arch = "x86_64",
+        target_feature = "avx2",
+        target_feature = "bmi1"
+    ))]
     instruction_tlb: FastTlbCache4,
-    #[cfg(target_feature = "avx2")]
-    #[cfg(target_feature = "bmi1")]
+    #[cfg(all(
+        target_arch = "x86_64",
+        target_feature = "avx2",
+        target_feature = "bmi1"
+    ))]
     data_tlb: FastTlbCache8,
 }
 
 impl Ppc405Tlb {
+    #[allow(clippy::needless_return)]
     pub fn new() -> Self {
-        #[cfg(target_feature = "avx2")]
-        #[cfg(target_feature = "bmi1")]
+        #[cfg(all(
+            target_arch = "x86_64",
+            target_feature = "avx2",
+            target_feature = "bmi1"
+        ))]
         {
-            Self {
+            return Self {
                 inst_relocate_enabled: false,
                 data_relocate_enabled: false,
                 current_pid: 0,
@@ -127,13 +166,16 @@ impl Ppc405Tlb {
                 unified_tlb: FastTlbCache64::new(0),
                 instruction_tlb: FastTlbCache4::new(64),
                 data_tlb: FastTlbCache8::new(68),
-            }
+            };
         }
 
-        #[cfg(not(target_feature = "avx2"))]
-        #[cfg(not(target_feature = "bmi1"))]
+        #[cfg(not(all(
+            target_arch = "x86_64",
+            target_feature = "avx2",
+            target_feature = "bmi1"
+        )))]
         {
-            Self {
+            return Self {
                 // translation disabled on reset
                 inst_relocate_enabled: false,
                 data_relocate_enabled: false,
@@ -144,7 +186,7 @@ impl Ppc405Tlb {
                 unified_tlb: SortedTlbCache::new(0),
                 instruction_tlb: UnsortedRoundRobinTlbCache::new(64),
                 data_tlb: UnsortedRoundRobinTlbCache::new(68),
-            }
+            };
         }
     }
 
