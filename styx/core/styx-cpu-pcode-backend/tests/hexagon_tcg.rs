@@ -10,9 +10,9 @@
 #![cfg(feature = "hexagon-binutils-tests")]
 #![cfg(not(feature = "disable-hexagon-tests"))] // hack for when using `--all-features`
 
-use styx_cpu_pcode_backend::PcodeBackend;
+use styx_cpu_pcode_backend::HexagonPcodeBackend;
 use styx_cpu_type::{
-    arch::blackfin::{BlackfinRegister, BlackfinVariants},
+    arch::hexagon::{HexagonRegister, HexagonVariants},
     Arch, ArchEndian, TargetExitReason,
 };
 use styx_hexagon_testdata::{binutils_tests, TestData};
@@ -88,9 +88,9 @@ fn test_binutils_unittests(test: TestData) {
     styx_util::logging::init_logging();
 
     // TODO change to hexagon
-    let mut backend = PcodeBackend::new_engine(
-        Arch::Blackfin,
-        BlackfinVariants::Bf512,
+    let mut backend = HexagonPcodeBackend::new_engine(
+        Arch::Hexagon,
+        HexagonVariants::QDSP6V66,
         ArchEndian::LittleEndian,
     );
     let mut mmu = Mmu::default_region_store();
@@ -98,6 +98,12 @@ fn test_binutils_unittests(test: TestData) {
 
     // Load elf into memory and initial registers
     load_elf(&mut backend, &mut mmu, test.bytes());
+
+    // Initialize stack.
+    // WARN: Not clear if this will overlap with other memory regions
+    let stack_base = 0x20000;
+    let stack_size = 0x2000;
+    initialize_stack(&mut backend, &mut mmu, stack_base, stack_size);
 
     // Stop on interrupt
     let interrupt_stop_hook = |mut backend: CoreHandle, _irqn| {
@@ -111,7 +117,7 @@ fn test_binutils_unittests(test: TestData) {
     // TODO change to hexagon register
     // write non-zero value to r0 to avoid false pass
     backend
-        .write_register(BlackfinRegister::R0, 0x1337u32)
+        .write_register(HexagonRegister::R0, 0x1337u32)
         .unwrap();
 
     let exit_reason = backend.execute(&mut mmu, &mut ev, 0x10000).unwrap();
@@ -123,14 +129,14 @@ fn test_binutils_unittests(test: TestData) {
 
     // TODO change to hexagon register
     assert_eq!(
-        backend.read_register::<u32>(BlackfinRegister::R0).unwrap(),
+        backend.read_register::<u32>(HexagonRegister::R0).unwrap(),
         0,
         "Test failed! Did not call pass."
     )
 }
 
 fn load_description(
-    backend: &mut PcodeBackend,
+    backend: &mut HexagonPcodeBackend,
     mmu: &mut Mmu,
     mut program_load_description: MemoryLoaderDesc,
 ) {
@@ -156,10 +162,28 @@ fn load_description(
     }
 }
 /// Loads program memory regions and initial registers (e.g. entry address)
-fn load_elf(backend: &mut PcodeBackend, mmu: &mut Mmu, program: &[u8]) {
+fn load_elf(backend: &mut HexagonPcodeBackend, mmu: &mut Mmu, program: &[u8]) {
     let program_load_description = styx_loader::ElfLoader::default()
         .load_bytes(program.to_owned().into(), Default::default())
         .unwrap();
 
     load_description(backend, mmu, program_load_description)
+}
+
+/// Creates a stack at stack_base with a couple extra bytes of headroom. Based on Blackfin implementation
+fn initialize_stack(
+    backend: &mut HexagonPcodeBackend,
+    mmu: &mut Mmu,
+    stack_base: u64,
+    stack_size: u64,
+) {
+    mmu.memory_map(
+        stack_base - stack_size,
+        stack_size + 0x10, // A little extra for backend's extra reads
+        MemoryPermissions::all(),
+    )
+    .unwrap();
+    backend
+        .write_register(HexagonRegister::Sp, stack_base as u32)
+        .unwrap();
 }
