@@ -4,7 +4,7 @@ use std::{
     env,
     fs::File,
     io::{BufWriter, Write},
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 use styx_pcode_sleigh_backend::Sleigh;
 
@@ -331,6 +331,12 @@ pub fn apply_file_patches_in_place(
         })
 }
 
+fn read_to_str_normalised<P: AsRef<Path>>(path: P) -> std::io::Result<String> {
+    // Failsafe normalise line ends -> LR due to Diffy issue.
+    // Reference: https://github.com/bmwill/diffy/issues/20
+    std::fs::read_to_string(path).map(|s| s.replace("\r\n", "\n"))
+}
+
 pub fn apply_file_patch(
     patch_path: impl AsRef<std::path::Path>,
     original_path: impl AsRef<std::path::Path>,
@@ -346,7 +352,7 @@ pub fn apply_file_patch(
     }
 
     // Parse the patch
-    let patch_string = std::fs::read_to_string(patch_path)?;
+    let patch_string = read_to_str_normalised(patch_path)?;
     let patch = diffy::Patch::from_str(&patch_string).map_err(|err| {
         std::io::Error::new(
             std::io::ErrorKind::InvalidData,
@@ -355,7 +361,7 @@ pub fn apply_file_patch(
     })?;
 
     // Read the original file
-    let content = std::fs::read_to_string(original_path)?;
+    let content = read_to_str_normalised(original_path)?;
 
     // Apply the patch
     let patched_content = diffy::apply(&content, &patch).map_err(|err| {
