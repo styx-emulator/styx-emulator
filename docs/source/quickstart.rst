@@ -3,12 +3,49 @@
 Quickstart
 ==========
 
+.. card:: Get Started in Minutes
+   :class-header: sd-bg-primary sd-text-white sd-font-weight-bold
+   :class-card: sd-border-0
+
+   Follow this guide to create your first Styx emulator after :ref:`installing` Styx.
+
+.. tab-set::
+
+   .. tab-item:: Linux
+
+      .. code-block:: bash
+
+         # make a new example
+         cargo new examples/my-new-example
+
+         # build the codebase
+         just build
+
+   .. tab-item:: Docker Setup
+
+      .. code-block:: bash
+
+         # Build the Docker container
+         just build-docker
+
+         # make a new example
+         cargo new examples/my-new-example
+
+         # Run commands in Docker
+         just docker build
+
 .. _quickstart_raw_processor:
 
 RawProcessor
-############
+------------
 
-After completing the :ref:`installing` of ``Styx`` as a dependency of your crate, the simplest quickstart in Rust is probably the following:
+.. admonition:: Simple Start
+   :class: note
+
+   The RawProcessor is perfect for quick prototyping and testing. It provides a flexible
+   processor without peripherals or event controllers.
+
+After completing the :ref:`installing` of ``Styx`` as a dependency of your crate, here's a simple quickstart:
 
 
 .. literalinclude:: ../../examples/raw-processor/src/main.rs
@@ -16,11 +53,10 @@ After completing the :ref:`installing` of ``Styx`` as a dependency of your crate
     :linenos:
     :language: rust
 
-Note that line 20,21,22 are optional plugins, where the ``ProcessorTracingPlugin``
-provides easy avenues to get output from processors, and the ``*MemoryFaultPlugins``
-provide an easy ability to stop when a memory releated error occurs in the
+Note that plugins are optional, where the ``ProcessorTracingPlugin``
+provides easy avenues to get output from processors, and the ``[**]MemoryFaultPlugins``
+provide an easy ability to stop when a memory related error occurs in the
 ``TargetProgram``.
-
 
 The parameterized loader is a convenient way to layer input data into ``Styx``,
 and provides an approachable way to use all of the other loaders eg. ELF, binary

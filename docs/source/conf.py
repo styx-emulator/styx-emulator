@@ -51,11 +51,15 @@ extensions = [
     "sphinx_copybutton",
     "sphinx_immaterial",
     "sphinxnotes.strike",
+    "sphinx_design",
     "sphinx_substitution_extensions",
 ]
 
 templates_path = ["_templates"]
 exclude_patterns = []
+
+# MyST configuration for sphinx_substitution_extensions
+myst_enable_extensions = []
 
 sphinxemoji_style = "twemoji"
 
