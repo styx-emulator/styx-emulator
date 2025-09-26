@@ -8,7 +8,7 @@ use thiserror::Error;
 // file descriptor name, required for memfd_create
 // string "styx-cow" as bytes
 // doing it this way because currently unable to declare a CString constant
-const FD_NAME: *const i8 = [115, 116, 121, 120, 95, 99, 111, 119, 0].as_ptr();
+const FD_NAME: *const u8 = [115, 116, 121, 120, 95, 99, 111, 119, 0].as_ptr();
 
 // null pointer constant used in the 'mmap' calls
 const NULL: *mut c_void = std::ptr::null_mut();

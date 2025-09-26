@@ -57,6 +57,9 @@ extensions/trace-webapp/envoy/local-envoy.yaml
 corpus/
 crashes/
 
+# macOS
+.DS_Store
+
 # virtual env
 venv
 

@@ -48,6 +48,12 @@
 //! Zone fields are currently not supported, afaik nothing really uses them and it would just be a waste of time to implement right now.
 mod cache;
 mod record;
+// SIMD-optimized TLB cache implementations - currently only x86_64 is implemented
+#[cfg(all(
+    target_arch = "x86_64",
+    target_feature = "avx2",
+    target_feature = "bmi1"
+))]
 mod simd_cache;
 
 use cache::{SortedTlbCache, TlbCache32, UnsortedRoundRobinTlbCache};
@@ -60,8 +66,11 @@ use styx_core::memory::{
 use styx_core::prelude::log::warn;
 use styx_core::prelude::*;
 
-#[cfg(target_feature = "avx2")]
-#[cfg(target_feature = "bmi1")]
+#[cfg(all(
+    target_arch = "x86_64",
+    target_feature = "avx2",
+    target_feature = "bmi1"
+))]
 use simd_cache::{FastTlbCache4, FastTlbCache64, FastTlbCache8};
 
 const UNIFIED_TLB_CAPACITY: usize = 64;
@@ -92,23 +101,30 @@ pub struct Ppc405Tlb {
     /// holds the actual tlb data for each of the caches
     tlb_data: [TlbRecord; TOTAL_TLB_CAPACITY],
 
-    /// various arrays for searching in each cache
+    // Various arrays for searching in each cache,
+    // first the non-simd, then the simd-accelerated versions
+    #[cfg(not(target_arch = "x86_64"))]
     #[cfg(not(target_feature = "avx2"))]
     #[cfg(not(target_feature = "bmi1"))]
     unified_tlb: SortedTlbCache<64>,
+    #[cfg(not(target_arch = "x86_64"))]
     #[cfg(not(target_feature = "avx2"))]
     #[cfg(not(target_feature = "bmi1"))]
     instruction_tlb: UnsortedRoundRobinTlbCache<4>,
+    #[cfg(not(target_arch = "x86_64"))]
     #[cfg(not(target_feature = "avx2"))]
     #[cfg(not(target_feature = "bmi1"))]
     data_tlb: UnsortedRoundRobinTlbCache<8>,
 
+    #[cfg(target_arch = "x86_64")]
     #[cfg(target_feature = "avx2")]
     #[cfg(target_feature = "bmi1")]
     unified_tlb: FastTlbCache64,
+    #[cfg(target_arch = "x86_64")]
     #[cfg(target_feature = "avx2")]
     #[cfg(target_feature = "bmi1")]
     instruction_tlb: FastTlbCache4,
+    #[cfg(target_arch = "x86_64")]
     #[cfg(target_feature = "avx2")]
     #[cfg(target_feature = "bmi1")]
     data_tlb: FastTlbCache8,
@@ -116,6 +132,7 @@ pub struct Ppc405Tlb {
 
 impl Ppc405Tlb {
     pub fn new() -> Self {
+        #[cfg(target_arch = "x86_64")]
         #[cfg(target_feature = "avx2")]
         #[cfg(target_feature = "bmi1")]
         {
@@ -130,6 +147,7 @@ impl Ppc405Tlb {
             }
         }
 
+        #[cfg(not(target_arch = "x86_64"))]
         #[cfg(not(target_feature = "avx2"))]
         #[cfg(not(target_feature = "bmi1"))]
         {
