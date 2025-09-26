@@ -9,7 +9,7 @@ use crate::{
     cpu::{CpuBackend, DummyBackend},
     event_controller::{DummyEventController, EventControllerImpl, Peripheral},
     memory::Mmu,
-    processor::BuildingProcessor,
+    processor::{BuildingProcessor, Config},
 };
 
 /// Contains the uninitialized parts needed to create a
@@ -41,10 +41,11 @@ impl Default for ProcessorBundle {
     }
 }
 
-pub struct BuildProcessorImplArgs {
+pub struct BuildProcessorImplArgs<'a> {
     pub runtime: Handle,
     pub backend: Backend,
     pub exception: ExceptionBehavior,
+    pub config: &'a Config,
 }
 
 /// Provides behavior to build and initialize a processor.

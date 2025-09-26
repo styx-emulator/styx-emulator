@@ -21,6 +21,7 @@ use crate::{
     executor::{DefaultExecutor, Executor, ExecutorImpl},
     hooks::StyxHook,
     plugins::{collection::PluginsContainer, UninitPlugin},
+    processor::{config::Config, ProcessorConfig},
     runtime::ProcessorRuntime,
 };
 
@@ -81,6 +82,7 @@ pub struct ProcessorBuilder<'a> {
     cpu_backend: Backend,
     exception_behavior: ExceptionBehavior,
     hooks: Vec<StyxHook>,
+    config: Config,
 }
 impl<'a> Default for ProcessorBuilder<'a> {
     fn default() -> Self {
@@ -95,6 +97,7 @@ impl<'a> Default for ProcessorBuilder<'a> {
             cpu_backend: Backend::default(),
             exception_behavior: ExceptionBehavior::default(),
             hooks: Vec::new(),
+            config: Config::default(),
         }
     }
 }
@@ -225,6 +228,12 @@ impl<'a> ProcessorBuilder<'a> {
         self
     }
 
+    /// Overwrites a config parameter.
+    pub fn add_config<C: ProcessorConfig>(mut self, config: C) -> Self {
+        self.config.add_config(config);
+        self
+    }
+
     /// Builds the processor and initializes it.
     ///
     /// Required components:
@@ -244,6 +253,7 @@ impl<'a> ProcessorBuilder<'a> {
             runtime: self.runtime.handle(),
             backend: self.cpu_backend,
             exception: self.exception_behavior,
+            config: &self.config,
         };
         let processor = builder.build(&args)?;
         self.build_inner(processor, builder)
@@ -260,6 +270,11 @@ impl<'a> ProcessorBuilder<'a> {
         builder: Box<dyn ProcessorImpl>,
     ) -> Result<Processor, UnknownError> {
         let mut runtime = self.runtime;
+
+        let ipc_resolved_port = runtime
+            .handle()
+            .block_on(self.port.resolve())
+            .with_context(|| "could not resolve the ipc port to build the processor")?;
 
         let mut cpu = bundle.cpu;
         let mut mmu = bundle.mmu;
@@ -281,8 +296,6 @@ impl<'a> ProcessorBuilder<'a> {
             &mut core,
         )?;
 
-        let executor = Executor::new(self.executor);
-
         let mut peripherals = bundle.peripherals;
 
         for hook in self.hooks {
@@ -291,7 +304,16 @@ impl<'a> ProcessorBuilder<'a> {
                 .context("failed to add initial processor hooks")?;
         }
 
-        let mut building_processor = BuildingProcessor::new(&mut core, &mut runtime);
+        let mut building_processor = BuildingProcessor {
+            core: &mut core,
+            runtime: &mut runtime,
+            config: &self.config,
+            routes: Default::default(),
+            ipc_connection: IPCConnection::local_from_port(ipc_resolved_port.port()),
+        };
+
+        self.executor.init(&mut building_processor)?;
+        let executor = Executor::new(self.executor);
 
         debug!("initializing plugins");
         let mut plugins = self
@@ -316,7 +338,12 @@ impl<'a> ProcessorBuilder<'a> {
             )?;
         }
 
-        let port = start_ipc(building_processor.routes, runtime.handle(), self.port)?;
+        let ipc_port_number = ipc_resolved_port.port();
+        start_ipc(
+            building_processor.routes,
+            runtime.handle(),
+            ipc_resolved_port,
+        )?;
 
         // transfer ownership of peripherals to event controller
         for peripheral in peripherals {
@@ -330,7 +357,7 @@ impl<'a> ProcessorBuilder<'a> {
             core,
             meta: ProcMeta {},
             plugins,
-            port,
+            port: ipc_port_number,
         };
 
         Ok(system)
@@ -378,21 +405,50 @@ fn autobots_load_up(
     Ok(())
 }
 
+#[derive(Clone, Copy)]
+pub struct IPCConnection {
+    port: u16,
+}
+
+impl IPCConnection {
+    pub(crate) fn local_from_port(port: u16) -> Self {
+        Self { port }
+    }
+    pub fn port(&self) -> u16 {
+        self.port
+    }
+
+    pub fn socket_addr(&self) -> std::net::SocketAddr {
+        use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+
+        SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), self.port())
+    }
+}
+
 pub struct BuildingProcessor<'a> {
     pub core: &'a mut ProcessorCore,
     pub runtime: &'a mut ProcessorRuntime,
     pub routes: RoutesBuilder,
+    pub config: &'a Config,
+    pub ipc_connection: IPCConnection,
 }
 
-impl<'a> BuildingProcessor<'a> {
-    pub fn new(core: &'a mut ProcessorCore, runtime: &'a mut ProcessorRuntime) -> Self {
-        Self {
-            core,
-            runtime,
-            routes: Default::default(),
-        }
-    }
-}
+// impl<'a> BuildingProcessor<'a> {
+//     pub fn new(
+//         core: &'a mut ProcessorCore,
+//         runtime: &'a mut ProcessorRuntime,
+//         config: &'a Config,
+//         ipc_connection: IPCConnection,
+//     ) -> Self {
+//         Self {
+//             core,
+//             runtime,
+//             routes: Default::default(),
+//             config,
+//             ipc_connection,
+//         }
+//     }
+// }
 
 /// A wrapper type for constraints surrounding port selection.
 #[derive(Default, Clone, Copy, Debug, serde::Deserialize)]
@@ -409,6 +465,31 @@ impl IPCPort {
     pub fn specific(port: u16) -> Self {
         Self(Some(port))
     }
+
+    pub(crate) async fn resolve(self) -> Result<ResolvedIPCPort, UnknownError> {
+        // default to port `0`, we will let the OS choose a random port
+        // and then set an internal record of the port in use
+        let port = self.0.unwrap_or(0);
+
+        // TODO don't need to from_std here
+        let std_listener = std::net::TcpListener::bind(format!("0.0.0.0:{port}"))?;
+        std_listener.set_nonblocking(true)?;
+        let listener = TcpListener::from_std(std_listener)?; // grab a tcp listener
+        Ok(ResolvedIPCPort(listener))
+    }
+}
+
+pub(crate) struct ResolvedIPCPort(pub(crate) TcpListener);
+
+impl ResolvedIPCPort {
+    pub(crate) fn port(&self) -> u16 {
+        // I have never seen .local_addr() error, don't think this will happen
+        // otherwise we can make this return a result
+        self.0
+            .local_addr()
+            .expect("local addr was not successful")
+            .port()
+    }
 }
 
 impl From<u16> for IPCPort {
@@ -418,21 +499,14 @@ impl From<u16> for IPCPort {
 }
 
 /// Start tonic server on async thread and returns the chosen port.
-fn start_ipc(routes: RoutesBuilder, runtime: Handle, port: IPCPort) -> Result<u16, UnknownError> {
-    // default to port `0`, we will let the OS choose a random port
-    // and then set an internal record of the port in use
-    let port = port.0.unwrap_or(0);
+fn start_ipc(
+    routes: RoutesBuilder,
+    runtime: Handle,
+    port: ResolvedIPCPort,
+) -> Result<(), UnknownError> {
+    info!("Processor IPC server listening on port {}", port.port());
 
-    // grab a tcp listener
-    let tcp_listener = runtime
-        .block_on(async move {
-            // create the tcp listener
-            TcpListener::bind(format!("0.0.0.0:{port}")).await
-        })
-        .with_context(|| format!("could not bind to port {port}"))?;
-    let port = tcp_listener.local_addr()?.port();
-
-    info!("Processor IPC server listening on port {port}");
+    let ResolvedIPCPort(tcp_listener) = port;
 
     // spawn ipc on async runtime
     runtime.spawn(async move {
@@ -442,6 +516,5 @@ fn start_ipc(routes: RoutesBuilder, runtime: Handle, port: IPCPort) -> Result<u1
             .await
             .unwrap()
     });
-
-    Ok(port)
+    Ok(())
 }

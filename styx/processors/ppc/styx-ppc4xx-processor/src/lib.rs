@@ -20,6 +20,7 @@ use styx_core::cpu::arch::ppc32::Ppc32Variants;
 use styx_core::cpu::BackendNotSupported;
 use styx_core::cpu::PcodeBackend;
 use styx_core::memory::physical::PhysicalMemoryVariant;
+use styx_core::prelude::core_configs::ConfigBackend;
 use styx_core::prelude::*;
 use styx_peripherals::uart::{UartController, UartInterface};
 use timers::Timers;
@@ -58,14 +59,20 @@ impl PowerPC405Builder {
 
 impl ProcessorImpl for PowerPC405Builder {
     fn build(&self, args: &BuildProcessorImplArgs) -> Result<ProcessorBundle, UnknownError> {
-        let mut cpu = if let Backend::Pcode = args.backend {
+        let backend = args
+            .config
+            .get_config::<ConfigBackend>()
+            .map(|a| a.0)
+            .unwrap_or(args.backend);
+
+        let mut cpu = if let Backend::Pcode = backend {
             Box::new(PcodeBackend::new_engine_config(
                 Ppc32Variants::Ppc405,
                 ArchEndian::BigEndian,
                 &args.into(),
             ))
         } else {
-            return Err(BackendNotSupported(args.backend))
+            return Err(BackendNotSupported(backend))
                 .context("ppc405 processor only supports pcode backend");
         };
 

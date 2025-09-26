@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+service PCS {
+
+  rpc SendMessage(Message) returns (Empty) {}
+  rpc Subscribe(stream Message) returns (stream Message) {}
+}
+
+message Message {
+  // from
+  uint64 id = 1;
+  bytes data = 2;
+}
+message Empty {}

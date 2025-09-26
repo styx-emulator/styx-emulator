@@ -15,6 +15,7 @@ styx-cpu-type = { path = "../styx-cpu-type" }
 styx-memory-type = { path = "../styx-memory-type" }
 styx-loader = { path = "../styx-loader" }
 styx-sync = { path = "../styx-sync" }
+styx-macros = { path = "../styx-macros" }
 
 as-any = { workspace = true }
 num = { workspace = true }

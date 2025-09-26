@@ -46,6 +46,7 @@ use styx_processor::{
     cpu::{CpuBackend, ExecutionReport, ReadRegisterError, WriteRegisterError},
     event_controller::{EventController, ExceptionNumber},
     memory::{MemoryOperation, MemoryType, Mmu},
+    processor::ProcessorConfig,
 };
 use types::*;
 
@@ -185,7 +186,9 @@ pub struct PcodeBackendConfiguration {
     pub exception: ExceptionBehavior,
 }
 
-impl From<&BuildProcessorImplArgs> for PcodeBackendConfiguration {
+impl ProcessorConfig for PcodeBackendConfiguration {}
+
+impl From<&BuildProcessorImplArgs<'_>> for PcodeBackendConfiguration {
     fn from(value: &BuildProcessorImplArgs) -> Self {
         PcodeBackendConfiguration {
             exception: value.exception,

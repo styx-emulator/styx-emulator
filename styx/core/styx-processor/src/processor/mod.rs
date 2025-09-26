@@ -9,6 +9,8 @@
 //! interact with the processor while it is running.
 //!
 mod builder;
+mod config;
+pub use config::*;
 use std::fmt::Debug;
 
 pub use builder::*;
