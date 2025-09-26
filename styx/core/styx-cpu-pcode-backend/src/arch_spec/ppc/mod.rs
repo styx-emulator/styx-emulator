@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
-use crate::PcodeBackend;
+use smallvec::SmallVec;
+use styx_pcode::pcode::VarnodeData;
+
+use crate::{PcodeBackend, DEFAULT_REG_ALLOCATION};
 
 use super::{
     pc_manager::{apply_difference, PcOverflow},
@@ -10,7 +13,7 @@ use super::{
 pub mod call_other;
 pub mod ppc4xx;
 
-fn ppc_common<Sla>(spec: &mut super::ArchSpecBuilder<Sla>) {
+fn ppc_common<Sla>(spec: &mut super::ArchSpecBuilder<Sla, PcodeBackend>) {
     spec.set_pc_manager(StandardPpcPcManager::default().into());
 
     // "Do nothing" generator helper.
@@ -23,7 +26,7 @@ fn ppc_common<Sla>(spec: &mut super::ArchSpecBuilder<Sla>) {
 ///
 /// I think *technically* this is incorrect however ppc code cannot read from
 /// the pc so not needed.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct StandardPpcPcManager {
     isa_pc: u64,
     internal_pc: u64,
@@ -38,7 +41,7 @@ impl ArchPcManager for StandardPpcPcManager {
         self.internal_pc
     }
 
-    fn set_internal_pc(&mut self, value: u64, _backend: &mut PcodeBackend) {
+    fn set_internal_pc(&mut self, value: u64, _backend: &mut PcodeBackend, _from_branch: bool) {
         // i128 here is used so we don't overflow on cast
         let difference = (value as i128 - self.internal_pc as i128) & (!1);
 
@@ -58,6 +61,8 @@ impl ArchPcManager for StandardPpcPcManager {
         &mut self,
         bytes_consumed: u64,
         _backend: &mut PcodeBackend,
+        _regs_written: &mut SmallVec<[VarnodeData; DEFAULT_REG_ALLOCATION]>,
+        _total_pcodes: usize,
     ) -> Result<(), PcOverflow> {
         self.internal_pc = self
             .internal_pc

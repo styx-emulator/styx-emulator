@@ -119,6 +119,7 @@ pub mod ffi {
         include!("bridge.hh");
         // Types needed in ffi2 (extern Rust OR extern C++)
         type Address;
+        unsafe fn new_address(addr_spc: *mut AddrSpace, offset: u64) -> UniquePtr<Address>;
         fn getOffset(self: &Address) -> u64;
 
         type AddrSpace;
@@ -152,6 +153,14 @@ pub mod ffi {
         ) -> UniquePtr<Sleigh>;
         fn getRegisterProxy<'a>(sleigh: &'a Sleigh, reg: &CxxString) -> Result<&'a VarnodeData>;
         fn initialize(self: Pin<&mut Sleigh>, dom: Pin<&mut DocumentStorage>) -> Result<()>;
+        fn setContextVariableCached(
+            self: Pin<&mut Sleigh>,
+            str: &CxxString,
+            addr_lo: &Address,
+            addr_hi: &Address,
+            value: u32,
+        );
+
         type SleighBase;
         fn getUserOps(sleigh: &Sleigh) -> UniquePtr<CxxVector<UserOpData>>;
         fn getRegisters(sleigh: &Sleigh) -> UniquePtr<CxxVector<RegisterData>>;
@@ -169,7 +178,12 @@ pub mod ffi {
         type ContextInternal;
         fn new_context_internal() -> UniquePtr<ContextInternal>;
         type ContextDatabase;
-        fn setVariableDefault(self: Pin<&mut ContextDatabase>, str: &CxxString, value: u32);
+        fn setVariable(
+            self: Pin<&mut ContextDatabase>,
+            str: &CxxString,
+            addr: &Address,
+            value: u32,
+        );
 
         type LoadImage;
         type RustLoadImageProxy;

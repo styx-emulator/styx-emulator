@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
 mod arch_spec;
+mod backend_helper;
 mod call_other;
 mod execute_pcode;
 mod get_pcode;
@@ -10,23 +11,24 @@ mod register_manager;
 mod types;
 
 use crate::get_pcode::{fetch_pcode, is_branching_instruction};
+use backend_helper::BackendHelper;
+use smallvec::smallvec;
 
 use self::{
     hooks::HookManager,
-    memory::{
-        blob_store::BlobStore, hash_store::HashStore, sized_value::SizedValue, space::Space,
-        space_manager::SpaceManager,
-    },
+    memory::{sized_value::SizedValue, space_manager::SpaceManager},
     pcode_gen::GhidraPcodeGenerator,
     register_manager::RegisterManager,
 };
-use arch_spec::{build_arch_spec, ArchPcManager, PcManager};
+pub use arch_spec::HexagonPcodeBackend;
+use arch_spec::{build_arch_spec, ArchPcManager, GeneratorHelp, GeneratorHelper, PcManager};
 use call_other::CallOtherManager;
 use derivative::Derivative;
 use log::trace;
 use memory::{mmu_store::MmuSpace, space_manager::VarnodeError};
 use pcode_gen::GeneratePcodeError;
-use std::collections::{BTreeMap, HashMap};
+use rustc_hash::FxHashMap;
+use std::collections::BTreeMap;
 use styx_cpu_type::{
     arch::{
         arm::SpecialArmRegister,
@@ -40,12 +42,12 @@ use styx_errors::{
     styx_cpu::StyxCpuBackendError,
     UnknownError,
 };
-use styx_pcode::pcode::{Pcode, SpaceName, VarnodeData};
+use styx_pcode::pcode::{Pcode, VarnodeData};
 use styx_processor::{
     core::{builder::BuildProcessorImplArgs, ExceptionBehavior},
     cpu::{CpuBackend, ExecutionReport, ReadRegisterError, WriteRegisterError},
     event_controller::{EventController, ExceptionNumber},
-    memory::{MemoryOperation, MemoryType, Mmu},
+    memory::Mmu,
 };
 use types::*;
 
@@ -53,6 +55,10 @@ use types::*;
 ///
 /// increased from 20000 because ARM64 has too many registers
 const REGISTER_SPACE_SIZE: usize = 80000;
+pub(crate) const MAX_PACKET_SIZE: usize = 4;
+// If each instruction in a packet writes 2 registers (max number written in a packet?)
+// then we should allocate for 8 registers
+pub(crate) const DEFAULT_REG_ALLOCATION: usize = MAX_PACKET_SIZE * 2;
 
 #[derive(Debug, PartialEq)]
 pub(crate) enum PCodeStateChange {
@@ -99,44 +105,6 @@ impl MachineState {
     }
 }
 
-/// Run on every "new basic block" meaning after every jump or at the start of execution.
-fn handle_basic_block_hooks(
-    initial_pc: u64,
-    cpu: &mut PcodeBackend,
-    mmu: &mut Mmu,
-    ev: &mut EventController,
-) -> Result<(), UnknownError> {
-    let block_hook_count = cpu.hook_manager.block_hook_count()?;
-    // Only run basic block hook finding if we have at least one block hook.
-    if block_hook_count > 0 {
-        let mut pcodes = Vec::with_capacity(16);
-
-        // Maximum amount of bytes to search for the next branch.
-        // This is necessary because it can continue the search through the whole address space.
-        let max_search = 1000;
-        let mut instruction_pc = initial_pc;
-
-        // Does not matter if this is a branch instruction since it could be the beginning of
-        // execution.
-        let (_, bytes) = is_branching_instruction(cpu, &mut pcodes, initial_pc, mmu, ev);
-        instruction_pc += bytes;
-
-        let mut stop_search = false;
-        while !stop_search {
-            let (is_branch, bytes) =
-                is_branching_instruction(cpu, &mut pcodes, instruction_pc, mmu, ev);
-
-            // Stop search if we found a branch OR we've gone over our max search
-            stop_search = is_branch || (instruction_pc - initial_pc) > max_search;
-            instruction_pc += bytes
-        }
-        let total_block_size = instruction_pc - initial_pc;
-
-        HookManager::trigger_block_hook(cpu, mmu, ev, initial_pc, total_block_size as u32)?;
-    }
-    Ok(())
-}
-
 /// The Pcode Cpu Backend
 ///
 /// # Behaviors
@@ -153,21 +121,36 @@ fn handle_basic_block_hooks(
 /// same TLB exception.
 ///
 #[derive(Derivative)]
+#[derivative(Eq, PartialEq, Hash, Debug, Clone, Copy)]
+pub enum SharedStateKey {
+    HexagonPktStart,
+    // For dotnew/hasnew - immext and such instructions shall be ignored
+    HexagonTrueInsnCount,
+    // Stores destination register in an instruction
+    HexagonInsnRegDest(usize),
+    // Is the current instruction immext?
+    HexagonCurrentInsnImmext,
+    // Keep track of the regs that currently are written
+    HexagonWrittenRegs,
+}
+
+#[derive(Derivative)]
 #[derivative(Debug)]
 pub struct PcodeBackend {
     space_manager: SpaceManager,
-    pcode_generator: GhidraPcodeGenerator,
+    pcode_generator: GhidraPcodeGenerator<Self>,
     hook_manager: HookManager,
     /// Was there a stop requested through [CpuBackend::stop()]?
     ///
     /// This should be accessed through [Self::stop_request_check_and_reset()] to ensure it is
     /// cleared after handling.
     stop_requested: bool,
+
     #[derivative(Debug = "ignore")]
     arch_def: Box<dyn ArchitectureDef>,
     endian: ArchEndian,
-    call_other_manager: CallOtherManager,
-    register_manager: RegisterManager,
+    call_other_manager: Option<CallOtherManager<Self>>,
+    register_manager: RegisterManager<Self>,
     pc_manager: Option<PcManager>,
 
     /// Was the last instruction a branch instruction?
@@ -175,7 +158,16 @@ pub struct PcodeBackend {
     pcode_config: PcodeBackendConfiguration,
 
     // holds saved register state
-    saved_context: BTreeMap<ArchRegister, RegisterValue>,
+    saved_reg_context: BTreeMap<ArchRegister, RegisterValue>,
+    // we could use an enum with the previous map but it's easier to just
+    // make a separate saved context
+    saved_shared_state_context: FxHashMap<SharedStateKey, u128>,
+    saved_pc_manager: Option<PcManager>,
+    saved_generator_helper: Option<Box<GeneratorHelper>>,
+    // we may want to make this an enum dispatch at some point,
+    // and u128 is chosen to avoid space issues with storing
+    // registers that may be different sizes on different platforms
+    pub shared_state: FxHashMap<SharedStateKey, u128>,
 }
 
 #[derive(Debug, Default, Clone)]
@@ -223,43 +215,7 @@ impl PcodeBackend {
         let pcode_generator = spec.generator;
 
         let endian = pcode_generator.endian();
-
-        let mut spaces: HashMap<_, _> = pcode_generator.spaces().collect();
-        let default = spaces
-            .remove(&pcode_generator.default_space())
-            .expect("no default space in spaces");
-
-        let default_space = MmuSpace::new(default);
-
-        let mut space_manager = SpaceManager::new(
-            pcode_generator.endian(),
-            pcode_generator.default_space(),
-            default_space,
-        );
-        for (space_name, space_info) in spaces {
-            let space_memory = match space_name {
-                // This is where we define the backing store for each of the spaces added to the
-                // machine, based on their space name. The Ram space is already added above as the
-                // default space and has the [StyxStore] memory storage and the
-                // [SpaceName::Constant] store added by default.
-
-                // Currently this allocates giant vectors which makes space reads/writes very fast
-                // but also theoretically takes a lot of memory. However, Linux's paging system
-                // allows us to allocate lots of memory without actually using any physical memory
-                // until we access it.
-
-                // This might blow if something writes to all addresses.
-                SpaceName::Register => Some(BlobStore::new(REGISTER_SPACE_SIZE).unwrap().into()),
-                SpaceName::Ram => None, // Default space already added with [StyxStore]
-                SpaceName::Constant => None, // Constant space already added from SpaceManager
-                SpaceName::Unique => Some(BlobStore::new(u32::MAX as usize).unwrap().into()),
-                SpaceName::Other(_) => Some(HashStore::<1>::new().into()),
-            };
-            if let Some(space_memory) = space_memory {
-                let new_space = Space::from_parts(space_info, space_memory);
-                space_manager.insert_space(space_name, new_space).unwrap();
-            }
-        }
+        let space_manager = backend_helper::build_space_manager(&pcode_generator);
 
         // derive the styx architecture metadata from the enum passed in
         // the first `.into()` converts into the `ArchVariant`,
@@ -278,12 +234,19 @@ impl PcodeBackend {
             space_manager,
             pcode_generator,
             endian,
-            call_other_manager: call_other,
+            call_other_manager: Some(call_other),
             register_manager,
-            pc_manager: Some(spec.pc_manager),
+            pc_manager: Some(
+                spec.pc_manager
+                    .expect("arch spec didn't contain pc manager"),
+            ),
             last_was_branch: false,
             pcode_config: config.clone(),
-            saved_context: BTreeMap::default(),
+            saved_reg_context: BTreeMap::default(),
+            saved_shared_state_context: FxHashMap::default(),
+            saved_pc_manager: None,
+            saved_generator_helper: None,
+            shared_state: FxHashMap::default(),
         }
     }
 
@@ -299,6 +262,77 @@ impl PcodeBackend {
     /// Invalid spaces, incorrect offsets, and incorrect sizes will result in an Err.
     pub fn write(&mut self, varnode: &VarnodeData, data: SizedValue) -> Result<(), VarnodeError> {
         self.space_manager.write(varnode, data)
+    }
+
+    fn pc_register(&self) -> styx_cpu_type::arch::CpuRegister {
+        self.arch_def.registers().pc()
+    }
+}
+
+impl BackendHelper<u64, Pcode> for PcodeBackend {
+    /// Helper
+    fn find_first_basic_block(
+        &mut self,
+        mmu: &mut Mmu,
+        ev: &mut EventController,
+        initial_pc: u64,
+    ) -> u64 {
+        let mut pcodes = Vec::with_capacity(16);
+
+        // Maximum amount of bytes to search for the next branch.
+        // This is necessary because it can continue the search through the whole address space.
+        let max_search = 1000;
+        let mut instruction_pc = initial_pc;
+
+        // Does not matter if this is a branch instruction since it could be the beginning of
+        // execution.
+
+        let mut helper = self.pcode_generator.helper.take().unwrap();
+        let ctx_opts = helper.pre_fetch(self).unwrap();
+        self.pcode_generator.helper = Some(helper);
+
+        let (_, bytes) =
+            is_branching_instruction(self, &mut pcodes, &ctx_opts, initial_pc, mmu, ev);
+        instruction_pc += bytes;
+
+        let mut stop_search = false;
+        while !stop_search {
+            let mut helper = self.pcode_generator.helper.take().unwrap();
+            let ctx_opts = helper.pre_fetch(self).unwrap();
+            self.pcode_generator.helper = Some(helper);
+
+            let (is_branch, bytes) =
+                is_branching_instruction(self, &mut pcodes, &ctx_opts, instruction_pc, mmu, ev);
+
+            // Stop search if we found a branch OR we've gone over our max search
+            stop_search = is_branch || (instruction_pc - initial_pc) > max_search;
+            instruction_pc += bytes
+        }
+
+        instruction_pc
+    }
+    fn pre_execute_hooks(
+        &mut self,
+        mmu: &mut Mmu,
+        ev: &mut EventController,
+    ) -> Result<(), UnknownError> {
+        // Trigger code hooks for this address
+        // This is done before pcode generation allowing for the
+        // current instruction to be modified in memory, not sure if this is correct behavior.
+        let mut pc_manager = self.pc_manager.take().unwrap();
+        pc_manager.pre_code_hook(self);
+        self.pc_manager = Some(pc_manager);
+
+        let pc = self.pc_manager.as_mut().unwrap().internal_pc();
+        backend_helper::pre_execute_hooks(self, pc, mmu, ev)
+    }
+
+    fn stop_requested(&self) -> bool {
+        self.stop_requested
+    }
+
+    fn set_stop_requested(&mut self, stop_requested: bool) {
+        self.stop_requested = stop_requested;
     }
 
     /// Execute a single machine instruction.
@@ -318,7 +352,9 @@ impl PcodeBackend {
 
         // fetch_pcode handles triggering hooks based on exception handler
         // Err(exit_reason) indicates an exception makes us pause so we should honor that
-        let bytes_consumed = match fetch_pcode(self, pcodes, mmu, ev) {
+        let fetch_result = fetch_pcode(self, pcodes, mmu, ev);
+
+        let bytes_consumed = match fetch_result {
             Ok(success) => success,
             Err(err) => match err {
                 get_pcode::FetchPcodeError::TargetExit(target_exit_reason) => {
@@ -347,13 +383,32 @@ impl PcodeBackend {
         let total_pcodes = pcodes.len();
 
         let mut delayed_irqn: Option<i32> = None;
+        let mut regs_written = smallvec![];
+
         while i < total_pcodes {
             let current_pcode = &pcodes[i];
             trace!(
                 "Executing Pcode ({}/{total_pcodes}) {current_pcode:?}",
                 i + 1
             );
-            match execute_pcode::execute_pcode(current_pcode, self, mmu, ev) {
+
+            let isa_pc = self.pc_manager.as_ref().unwrap().isa_pc();
+
+            let mut call_other = self.call_other_manager.take().unwrap();
+
+            let execute_result = execute_pcode::execute_pcode(
+                current_pcode,
+                self,
+                mmu,
+                ev,
+                &mut call_other,
+                isa_pc,
+                &mut regs_written,
+            );
+
+            self.call_other_manager = Some(call_other);
+
+            match execute_result {
                 PCodeStateChange::Fallthrough => i += 1,
                 PCodeStateChange::DelayedInterrupt(irqn) => {
                     // interrupt will *probably* branch execution
@@ -372,7 +427,7 @@ impl PcodeBackend {
                     trace!("Pcode state change absolute jump new PC=0x{new_pc:X}");
                     self.last_was_branch = true;
                     let mut pc_manager = self.pc_manager.take().unwrap();
-                    pc_manager.set_internal_pc(new_pc, self);
+                    pc_manager.set_internal_pc(new_pc, self, true);
                     self.pc_manager = Some(pc_manager);
                     return Ok(Ok(bytes_consumed)); // Don't increment PC, jump to next instruction
                 }
@@ -386,7 +441,9 @@ impl PcodeBackend {
             }
         }
         let mut pc_manager = self.pc_manager.take().unwrap();
-        let pc_post_execute_res = pc_manager.post_execute(bytes_consumed, self);
+        let pc_post_execute_res =
+            pc_manager.post_execute(bytes_consumed, self, &mut regs_written, total_pcodes);
+
         self.pc_manager = Some(pc_manager);
         if pc_post_execute_res.is_err() {
             return Err(anyhow!("pc overflowed in pcode backend during post execute. you can modify the pc manager to wrap or prevent overflow if this is desired behavior"));
@@ -398,38 +455,12 @@ impl PcodeBackend {
         Ok(Ok(bytes_consumed))
     }
 
-    fn pre_execute_hooks(
-        &mut self,
-        mmu: &mut Mmu,
-        ev: &mut EventController,
-    ) -> Result<(), UnknownError> {
-        // Trigger code hooks for this address
-        // This is done before pcode generation allowing for the
-        // current instruction to be modified in memory, not sure if this is correct behavior.
-        let mut pc_manager = self.pc_manager.take().unwrap();
-        pc_manager.pre_code_hook(self);
-        self.pc_manager = Some(pc_manager);
-
-        let pc = self.pc_manager.as_mut().unwrap().internal_pc();
-        let physical_pc = mmu.translate_va(pc, MemoryOperation::Read, MemoryType::Code, self);
-        if let Ok(physical_pc) = physical_pc {
-            HookManager::trigger_code_hook(self, mmu, ev, physical_pc)?;
-        } // no code hook if translate errors, we will catch then on instruction fetch
-        Ok(())
+    fn set_last_was_branch(&mut self, last_was_branch: bool) {
+        self.last_was_branch = last_was_branch;
     }
 
-    fn pc_register(&self) -> styx_cpu_type::arch::CpuRegister {
-        self.arch_def.registers().pc()
-    }
-
-    /// Clears stop_requested and returns the previous result.
-    ///
-    /// Use this instead of checking the raw value stop_requested to avoid bugs in forgetting to
-    /// reset it.
-    fn stop_request_check_and_reset(&mut self) -> bool {
-        let res = self.stop_requested;
-        self.stop_requested = false;
-        res
+    fn last_was_branch(&mut self) -> bool {
+        self.last_was_branch
     }
 }
 
@@ -442,6 +473,7 @@ impl CpuBackend for PcodeBackend {
                 .map_err(|err| StyxCpuBackendError::GenericError(err.into()))
                 .context("could not read_register_raw")?
         };
+
         if let ArchRegister::Special(SpecialArchRegister::Arm(SpecialArmRegister::CoProcessor(r))) =
             reg
         {
@@ -483,66 +515,8 @@ impl CpuBackend for PcodeBackend {
         event_controller: &mut EventController,
         count: u64,
     ) -> Result<ExecutionReport, UnknownError> {
-        let mut state = MachineState::new(count);
-        trace!("Starting pcode machine with max_count={count}");
-
-        // Stop if requested in between ticks
-        if self.stop_request_check_and_reset() {
-            // self.is_stopped
-            return Ok(ExecutionReport::new(TargetExitReason::HostStopRequest, 0));
-        }
-        self.stop_requested = false;
-        let mut current_stop = state.check_done();
-        let mut pcodes = Vec::with_capacity(20);
-
-        self.last_was_branch = false;
-        while current_stop.is_none() {
-            // call code hooks, can change pc/execution path
-            self.pre_execute_hooks(mmu, event_controller)
-                .with_context(|| "pre execute hooks failed")
-                .unwrap();
-
-            // Stop if requested in code hook
-            if self.stop_request_check_and_reset() {
-                // self.is_stopped
-                current_stop = Some(ExecutionReport::new(
-                    TargetExitReason::HostStopRequest,
-                    state.current_instruction_count,
-                ));
-                continue;
-            }
-
-            if self.last_was_branch {
-                handle_basic_block_hooks(self.pc().unwrap(), self, mmu, event_controller)?;
-
-                self.last_was_branch = false;
-            }
-
-            pcodes.clear();
-            if let Err(reason) = self.execute_single(&mut pcodes, mmu, event_controller)? {
-                return Ok(ExecutionReport::new(
-                    reason,
-                    state.current_instruction_count,
-                ));
-            }
-
-            current_stop = state.increment_instruction_count();
-            let stop_requested = self.stop_request_check_and_reset();
-            trace!("current stop bool: {stop_requested}");
-            current_stop = current_stop.or({
-                if stop_requested {
-                    Some(ExecutionReport::new(
-                        TargetExitReason::HostStopRequest,
-                        state.current_instruction_count,
-                    ))
-                } else {
-                    None
-                }
-            })
-        }
-        let exit_reason = current_stop.unwrap();
-        trace!("Exiting due to {exit_reason:?}");
-        Ok(exit_reason)
+        self.execute_helper(mmu, event_controller, count)
+            .map(|t| t.report)
     }
 
     fn pc(&mut self) -> Result<u64, UnknownError> {
@@ -551,7 +525,10 @@ impl CpuBackend for PcodeBackend {
 
     fn set_pc(&mut self, value: u64) -> Result<(), UnknownError> {
         let mut pc_manager = self.pc_manager.take().unwrap();
-        pc_manager.set_internal_pc(value, self);
+        // NOTE: if set_pc starts being called from a branching location,
+        // then we need to be more nuanced here.
+        // TODO: decide whether we should pass from_branch here as well
+        pc_manager.set_internal_pc(value, self, false);
         let isa_pc = SizedValue::from_u128(pc_manager.isa_pc() as u128, 4);
         self.pc_manager = Some(pc_manager);
         let pc_reg_variant = self.pc_register().variant();
@@ -564,30 +541,47 @@ impl CpuBackend for PcodeBackend {
     }
 
     fn context_save(&mut self) -> Result<(), UnknownError> {
-        self.saved_context.clear();
+        self.saved_reg_context.clear();
+        self.saved_shared_state_context.clear();
 
         for register in self.architecture().registers().registers() {
             // we need to do this because not every processor supports all of the valid registers defined by the architecture
             if let Ok(val) = self.read_register_raw(register.variant()) {
-                self.saved_context.insert(register.variant(), val);
+                self.saved_reg_context.insert(register.variant(), val);
             }
         }
+
+        for (state_key, val) in self.shared_state.iter() {
+            self.saved_shared_state_context.insert(*state_key, *val);
+        }
+
+        self.saved_pc_manager = self.pc_manager.clone();
+        self.saved_generator_helper = self.pcode_generator.helper.clone();
 
         Ok(())
     }
 
     fn context_restore(&mut self) -> Result<(), UnknownError> {
-        if self.saved_context.is_empty() {
+        if self.saved_reg_context.is_empty() {
             return Err(anyhow!("attempting to restore from nothing"));
         }
 
-        let context = std::mem::take(&mut self.saved_context);
+        let reg_context = std::mem::take(&mut self.saved_reg_context);
 
-        for register in context.keys() {
-            self.write_register_raw(*register, *context.get(register).unwrap())?;
+        for register in reg_context.keys() {
+            self.write_register_raw(*register, *reg_context.get(register).unwrap())?;
         }
 
-        let _ = std::mem::replace(&mut self.saved_context, context);
+        // Copy saved shared state into the current shared state
+        for (state_key, val) in self.saved_shared_state_context.iter() {
+            self.shared_state.insert(*state_key, *val);
+        }
+        self.saved_shared_state_context.clear();
+
+        let _ = std::mem::replace(&mut self.saved_reg_context, reg_context);
+
+        self.pc_manager = self.saved_pc_manager.clone();
+        self.pcode_generator.helper = self.saved_generator_helper.clone();
 
         Ok(())
     }

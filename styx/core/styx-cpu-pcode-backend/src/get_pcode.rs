@@ -1,21 +1,25 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use log::{debug, trace};
+use smallvec::SmallVec;
 use styx_cpu_type::TargetExitReason;
 use styx_errors::{anyhow::Context, UnknownError};
 use styx_pcode::pcode::Pcode;
+use styx_pcode_translator::ContextOption;
 use styx_processor::{
     core::{FetchException, HandleExceptionAction},
     cpu::CpuBackend,
     event_controller::{EventController, ExceptionNumber},
-    hooks::MemFaultData,
+    hooks::{MemFaultData, Resolution},
     memory::{MemoryOperationError, MemoryPermissions, Mmu, MmuOpError},
 };
 use tap::TryConv;
 use thiserror::Error;
 
 use crate::{
-    hooks::HookManager, ArchPcManager, GeneratePcodeError, GhidraPcodeGenerator, HasConfig,
-    PcodeBackend,
+    arch_spec::{GeneratorHelp, CONTEXT_OPTION_LEN},
+    hooks::{HasHookManager, HookManager},
+    pcode_gen::{self, HasPcodeGenerator},
+    ArchPcManager, GeneratePcodeError, HasConfig, PcodeBackend,
 };
 
 #[derive(Error, Debug)]
@@ -29,7 +33,7 @@ pub(crate) enum GetPcodeError {
 }
 
 #[derive(Clone, Copy)]
-enum PcodeFetchException {
+pub(crate) enum PcodeFetchException {
     ProtectedMemoryFetch { have: MemoryPermissions },
     UnmappedMemoryFetch,
     InvalidInstruction,
@@ -69,31 +73,33 @@ impl TryFrom<GetPcodeError> for PcodeFetchException {
     }
 }
 
-/// thin wrapper to [GhidraPcodeGenerator::get_pcode].
-fn get_pcode_at_address(
+/// For use with a PcodeBackend (and not other PcodeBackends). This function wraps
+/// `get_pcode_at_address`, and extracts the needed context options and current PC,
+/// which require `PcodeBackend`-specific function calls.
+fn get_pcode_for_pcode_backend(
     cpu: &mut PcodeBackend,
-    addr: u64,
     pcodes: &mut Vec<Pcode>,
     mmu: &mut Mmu,
     ev: &mut EventController,
 ) -> Result<u64, GetPcodeError> {
-    GhidraPcodeGenerator::get_pcode(cpu, addr, pcodes, mmu, ev)
+    let addr = cpu.pc_manager.as_mut().unwrap().internal_pc();
+    let mut helper = cpu.pcode_generator.helper.take().unwrap();
+    let ctx_opts = helper.pre_fetch(cpu).unwrap();
+    cpu.pcode_generator.helper = Some(helper);
+
+    get_pcode_at_address(cpu, addr, pcodes, &ctx_opts, mmu, ev)
 }
 
-/// Grab the pcodes at the current program counter
-fn get_pcode_at_pc(
-    cpu: &mut PcodeBackend,
+/// thin wrapper to [pcode_gen::get_pcode].
+pub fn get_pcode_at_address<B: CpuBackend + HasPcodeGenerator<InnerCpuBackend = B> + 'static>(
+    cpu: &mut B,
+    addr: u64,
+    pcodes: &mut Vec<Pcode>,
+    context_options: &SmallVec<[ContextOption; CONTEXT_OPTION_LEN]>,
     mmu: &mut Mmu,
     ev: &mut EventController,
-    pcodes: &mut Vec<Pcode>,
 ) -> Result<u64, GetPcodeError> {
-    // pc in separate expression so pc_manager lock is dropped before executing code hook
-    let pc = cpu
-        .pc_manager
-        .as_ref()
-        .context("pc manager is None, this indicates a bug in the pcode backend")?
-        .internal_pc();
-    get_pcode_at_address(cpu, pc, pcodes, mmu, ev)
+    pcode_gen::get_pcode(cpu, addr, pcodes, context_options, mmu, ev)
 }
 
 #[derive(Error, Debug)]
@@ -106,32 +112,19 @@ pub(crate) enum FetchPcodeError {
     Other(#[from] UnknownError),
 }
 
-/// Fetches bytes from memory, translates into pcode, and digests into backend friendly errors.
+/// Handle a GetPcodeError by calling the registered hooks.
 ///
-/// A top level `Err(UnknownError)` indicates a fatal error.
-///
-/// A Ok(Err(exit_reason)) indicates the fetch_pcode triggered an exception and the emulator should
-/// pause with the given exception.
-///
-/// A Ok(Ok(u64)) indicates pcodes were successfully fetched and `n` bytes were read.
-///
-/// On success, `pcodes` will have the translated pcodes appended to it.
-pub(crate) fn fetch_pcode(
-    cpu: &mut PcodeBackend,
-    pcodes: &mut Vec<Pcode>,
+/// We need this separate of fetch_pcode since our Hexagon backend
+/// may want to restart its packet-fetching process after this, as opposed to
+/// simply fetching again.
+pub(crate) fn handle_pcode_exception<
+    B: CpuBackend + HasConfig + HasHookManager + HasPcodeGenerator<InnerCpuBackend = B> + 'static,
+>(
+    cpu: &mut B,
     mmu: &mut Mmu,
     ev: &mut EventController,
-) -> Result<u64, FetchPcodeError> {
-    // attempt to fetch and translate pcodes
-    let result = get_pcode_at_pc(cpu, mmu, ev, pcodes);
-    // if success, then return early
-    let result_err = match result {
-        Ok(success) => return Ok(success),
-        Err(err) => err,
-    };
-
-    // now we know we encountered an error.
-    // this could be an exception that we have to handle or a fatal error
+    result_err: GetPcodeError,
+) -> Result<(TargetExitReason, Resolution), FetchPcodeError> {
     debug!("try_get_pcode error/exception occurred, attempting to recover. Error: {result_err:?}");
     if let GetPcodeError::MmuOpErr(MmuOpError::TlbException(irqn)) = &result_err {
         // tlb exception yahoo!
@@ -157,34 +150,66 @@ pub(crate) fn fetch_pcode(
 
     let pc = cpu.pc()?;
     // now it's only target handling, so we pass to hooks
-    let did_fix = match exception {
-        PcodeFetchException::ProtectedMemoryFetch { have } => {
-            // Size of 16 here because we don't know the target instruction size and the pcode
-            // translator reads 16 bytes to translate pcodes
-            HookManager::trigger_protection_fault_hook(
-                cpu,
-                mmu,
-                ev,
-                pc,
-                16,
-                have,
-                MemFaultData::Read,
-            )?
-        }
-        PcodeFetchException::InvalidInstruction => {
-            HookManager::trigger_invalid_instruction_hook(cpu, mmu, ev)?
-        }
-        PcodeFetchException::UnmappedMemoryFetch => {
-            // Size of 16 here because we don't know the target instruction size and the pcode
-            // translator reads 16 bytes to translate pcodes
-            HookManager::trigger_unmapped_fault_hook(cpu, mmu, ev, pc, 16, MemFaultData::Read)?
-        }
+    Ok((
+        target_exit_reason,
+        match exception {
+            PcodeFetchException::ProtectedMemoryFetch { have } => {
+                // Size of 16 here because we don't know the target instruction size and the pcode
+                // translator reads 16 bytes to translate pcodes
+                HookManager::trigger_protection_fault_hook(
+                    cpu,
+                    mmu,
+                    ev,
+                    pc,
+                    16,
+                    have,
+                    MemFaultData::Read,
+                )?
+            }
+            PcodeFetchException::InvalidInstruction => {
+                HookManager::trigger_invalid_instruction_hook(cpu, mmu, ev)?
+            }
+            PcodeFetchException::UnmappedMemoryFetch => {
+                // Size of 16 here because we don't know the target instruction size and the pcode
+                // translator reads 16 bytes to translate pcodes
+                HookManager::trigger_unmapped_fault_hook(cpu, mmu, ev, pc, 16, MemFaultData::Read)?
+            }
+        },
+    ))
+}
+
+/// Fetches bytes from memory, translates into pcode, and digests into backend friendly errors.
+///
+/// A top level `Err(UnknownError)` indicates a fatal error.
+///
+/// A Ok(Err(exit_reason)) indicates the fetch_pcode triggered an exception and the emulator should
+/// pause with the given exception.
+///
+/// A Ok(Ok(u64)) indicates pcodes were successfully fetched and `n` bytes were read.
+///
+/// On success, `pcodes` will have the translated pcodes appended to it.
+pub(crate) fn fetch_pcode(
+    cpu: &mut PcodeBackend,
+    pcodes: &mut Vec<Pcode>,
+    mmu: &mut Mmu,
+    ev: &mut EventController,
+) -> Result<u64, FetchPcodeError> {
+    // attempt to fetch and translate pcodes
+    let result = get_pcode_for_pcode_backend(cpu, pcodes, mmu, ev);
+    // if success, then return early
+    let result_err = match result {
+        Ok(success) => return Ok(success),
+        Err(err) => err,
     };
+
+    // now we know we encountered an error.
+    // this could be an exception that we have to handle or a fatal error
+    let (target_exit_reason, did_fix) = handle_pcode_exception(cpu, mmu, ev, result_err)?;
 
     // if we fixed, try get pcodes again and error if another error occurs.
     trace!("did_fix: {did_fix:?}");
     if did_fix.fixed() {
-        let result = get_pcode_at_pc(cpu, mmu, ev, pcodes);
+        let result = get_pcode_for_pcode_backend(cpu, pcodes, mmu, ev);
         match result {
             Ok(bytes_consumed) => Ok(bytes_consumed),
             Err(get_pcode_err) => {
@@ -202,14 +227,17 @@ pub(crate) fn fetch_pcode(
 
 /// Generates instruction at address and returns true if branching or if unable to generate (e.g.
 /// unmapped memory).
-pub(crate) fn is_branching_instruction(
-    cpu: &mut PcodeBackend,
+pub(crate) fn is_branching_instruction<
+    B: CpuBackend + HasConfig + HasPcodeGenerator<InnerCpuBackend = B> + 'static,
+>(
+    cpu: &mut B,
     pcodes: &mut Vec<Pcode>,
+    context_options: &SmallVec<[ContextOption; CONTEXT_OPTION_LEN]>,
     address: u64,
     mmu: &mut Mmu,
     ev: &mut EventController,
 ) -> (bool, u64) {
-    let bytes = match get_pcode_at_address(cpu, address, pcodes, mmu, ev) {
+    let bytes = match get_pcode_at_address(cpu, address, pcodes, context_options, mmu, ev) {
         Ok(success) => success,
         _ => {
             // Failed decompile, end of basic block

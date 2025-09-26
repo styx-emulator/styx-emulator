@@ -71,6 +71,7 @@ const VarnodeData &getRegisterProxy(const Sleigh &sleigh, const std::string &reg
     return sleigh.getRegister(register_name);
 }
 
+
 RegisterData::RegisterData(const std::string& name, const VarnodeData& varnode_data)
     : name(name), varnode_data(varnode_data) {}
 

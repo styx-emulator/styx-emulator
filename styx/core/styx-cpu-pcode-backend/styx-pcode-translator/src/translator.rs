@@ -154,11 +154,10 @@ impl<L: Loader + LoaderRequires + 'static> PcodeTranslator<L> {
         self.sleigh.endian()
     }
 
-    pub fn set_context_option(&mut self, option: ContextOption) {
+    pub fn set_context_option(&mut self, option: &ContextOption) {
         // FIXME check validity (e.g. does this sla have this variable)
         let (variable_name, variable_value) = option.value();
-        self.sleigh
-            .set_variable_default(variable_name, variable_value)
+        self.sleigh.set_variable(variable_name, variable_value)
     }
 
     pub fn user_ops(&self) -> &[UserOpInfo] {
@@ -166,15 +165,77 @@ impl<L: Loader + LoaderRequires + 'static> PcodeTranslator<L> {
     }
 }
 
-#[derive(Debug)]
+// Clone is required to allow context options to be
+// copied around in the hexagon pcode helper.
+#[derive(Debug, Copy, Clone)]
 pub enum ContextOption {
     ThumbMode(bool),
+
+    /// Mark the start of a Hexagon packet
+    HexagonPktStart(u32),
+    /// Mark the end of a Hexagon packet
+    HexagonPktNext(u32),
+    /// Mark what variant of the Hexagon duplex subinstruction we have
+    // at the current duplex. See Table 10-5/Section 10.3 for details.
+    HexagonSubinsn(u32),
+    /// Stores the current immediate extender value for Hexagon. This is set
+    /// in the SLASPEC when an immediate extender is found. This is
+    /// used in the instruction after the immediate extension. See section
+    /// 10.9. The SLASPEC largely manages this; we only have to set it once
+    /// at the beginning of execution.
+    HexagonImmext(u32),
+    /// Used to indicate to SLASPEC what general-purpose register
+    /// is referenced in this dot-new instruction.
+    ///
+    /// See arch_spec::hexagon::dotnew::parse_dotnew for more info.
+    HexagonDotnew(u32),
+    /// Used in conjunction with HexagonDotnew to mark that
+    /// an instruction has a dot-new value. Since HexagonDotnew
+    /// can have 0 or 1 as values (corresponding to R0 or R1),
+    /// we need another context option to indicate whether
+    /// a dot-new value is present in the first place, before
+    /// looking at the actual register.
+    ///
+    /// See Section 10.10 and 5.6 for reference. Section 6.1.4
+    /// is a different type of dot-new instruction.
+    HexagonHasnew(u32),
+    /// Indicates the end of a hardware loop, and specifies the
+    /// type (0, 1, or both 01) of hardware loop that is ending.
+    ///
+    /// See section 11.2 on end loop instructions for more details
+    /// and section 8.2.
+    HexagonEndloop(u32),
+    /// Used exclusively internally in SLASPEC for different stages
+    /// within decoding.
+    HexagonPhase(u32),
+    /// Used to indicate to a constant extender if the next
+    /// instruction is a duplex. See 10.3 constraints.
+    HexagonDuplexNext(u32),
+    /// Used for some sort of instruction reordering within the SLASPEC.
+    /// However, we handle this ourselves, and instructions with
+    /// part1/part2 have a standalone concatenated version.
+    HexagonPart1(u32),
+    /// Used for some sort of instruction reordering within the SLASPEC.
+    /// However, we handle this ourselves, and instructions with
+    /// part1/part2 have a standalone concatenated version.
+    HexagonPart2(u32),
 }
 
 impl ContextOption {
     fn value(&self) -> (&'static str, u32) {
         match self {
             ContextOption::ThumbMode(enabled) => ("TMode", *enabled as u32),
+            ContextOption::HexagonImmext(value) => ("immext", *value),
+            ContextOption::HexagonPktStart(value) => ("pkt_start", *value),
+            ContextOption::HexagonPktNext(value) => ("pkt_next", *value),
+            ContextOption::HexagonSubinsn(value) => ("subinsn", *value),
+            ContextOption::HexagonEndloop(value) => ("endloop", *value),
+            ContextOption::HexagonDotnew(value) => ("dotnew", *value),
+            ContextOption::HexagonHasnew(value) => ("hasnew", *value),
+            ContextOption::HexagonPhase(value) => ("phase", *value),
+            ContextOption::HexagonDuplexNext(value) => ("duplex_next", *value),
+            ContextOption::HexagonPart1(value) => ("part1", *value),
+            ContextOption::HexagonPart2(value) => ("part2", *value),
         }
     }
 }
@@ -249,7 +310,7 @@ mod arm_tests {
             load_image,
         )
         .unwrap();
-        translator.set_context_option(ContextOption::ThumbMode(true));
+        translator.set_context_option(&ContextOption::ThumbMode(true));
 
         let mut pcodes = Vec::new();
         let bytes_used = translator.get_pcode(start, &mut pcodes, ()).unwrap();
@@ -270,12 +331,183 @@ mod arm_tests {
             load_image,
         )
         .unwrap();
-        translator.set_context_option(ContextOption::ThumbMode(true));
+        translator.set_context_option(&ContextOption::ThumbMode(true));
 
         let mut pcodes = Vec::new();
         let result = translator.get_pcode(start, &mut pcodes, ());
         assert!(matches!(result, Err(SleighTranslateError::BadDataError)));
     }
+}
+
+#[cfg(test)]
+#[cfg(feature = "arch_hexagon")]
+mod hexagon_tests {
+    use keystone_engine::Keystone;
+    use styx_cpu_type::arch::{
+        backends::ArchVariant,
+        hexagon::{variants::QDSP6V66, HexagonMetaVariants},
+    };
+    use styx_pcode_sleigh_backend::VectorLoader;
+
+    use super::PcodeTranslator;
+    use crate::ContextOption;
+
+    fn get_asm(instr: &str) -> Vec<u8> {
+        // Assemble instructions
+        // Processor default to thumb so we use that
+        let ks = Keystone::new(
+            keystone_engine::Arch::HEXAGON,
+            keystone_engine::Mode::BIG_ENDIAN,
+        )
+        .expect("Could not initialize Keystone engine");
+        let asm = ks
+            .asm(instr.to_owned(), 0x1000)
+            .expect("Could not assemble");
+        asm.bytes
+    }
+
+    fn manual_test_decompile(asm: &str) -> (u64, PcodeTranslator<VectorLoader>) {
+        let start = 0x1000;
+        let machine_code = get_asm(asm);
+
+        // For debugging purposes.
+        println!("asm {asm} code {machine_code:x?}");
+
+        let loader = VectorLoader {
+            start,
+            data: machine_code,
+        };
+
+        (
+            start,
+            PcodeTranslator::new::<styx_sla::Hexagon>(
+                &ArchVariant::Hexagon(HexagonMetaVariants::QDSP6V66(QDSP6V66 {})),
+                loader,
+            )
+            .unwrap(),
+        )
+    }
+
+    fn auto_test_decompile(asm: &str, expected_bytes_used: u64, expected_pcodes_len: usize) {
+        let (start, mut translator) = manual_test_decompile(asm);
+        // TODO: how to pass context options from the individual tests?
+        translator.set_context_option(&ContextOption::HexagonImmext(0xffffffff));
+
+        let mut pcodes = Vec::new();
+        let bytes_used = translator.get_pcode(start, &mut pcodes, ()).unwrap();
+
+        assert_eq!(bytes_used, expected_bytes_used);
+        assert_eq!(pcodes.len(), expected_pcodes_len);
+    }
+
+    // TODO: fix this
+    #[cfg_attr(miri, ignore)]
+    #[test]
+    fn test_decompile_hexagon_packet() {
+        let (start, mut translator) =
+            manual_test_decompile("{ R1 = memh(R0); R5 = add(R4, R30); }");
+
+        translator.set_context_option(&ContextOption::HexagonImmext(0xffffffff));
+
+        let mut pcodes = vec![];
+        let bytes_used = translator.get_pcode(start, &mut pcodes, ()).unwrap();
+
+        println!("(packet) First part of packet {pcodes:?}");
+        assert_eq!(pcodes.len(), 1);
+        assert_eq!(bytes_used, 4);
+
+        let bytes_used = translator
+            .get_pcode(start + bytes_used, &mut pcodes, ())
+            .unwrap();
+        println!("(packet) Full packet {pcodes:?}");
+
+        // Cumulative length
+        assert_eq!(pcodes.len(), 4);
+        assert_eq!(bytes_used, 4);
+    }
+
+    // Hexagon duplex instructions basically encode 2 instructions in 32 bits
+    #[cfg_attr(miri, ignore)]
+    #[test]
+    fn test_decompile_hexagon_duplex() {
+        let (start, mut translator) = manual_test_decompile("{ R2 = R3; R3 = R2; }");
+        translator.set_context_option(&ContextOption::HexagonImmext(0xffffffff));
+        translator.set_context_option(&ContextOption::HexagonSubinsn(1));
+
+        // TODO: assert that immext is right
+        // The first get_pcode call will set immext, and won't return any pcodes
+
+        let mut pcodes = vec![];
+        let bytes_used = translator.get_pcode(start, &mut pcodes, ()).unwrap();
+
+        println!("(duplex) First part of duplex pcode is {pcodes:?}");
+        assert_eq!(pcodes.len(), 1);
+        assert_eq!(bytes_used, 2);
+
+        let bytes_used = translator
+            .get_pcode(start + bytes_used, &mut pcodes, ())
+            .unwrap();
+
+        println!("(duplex) Full pcode for both instructions in duplex is {pcodes:?}",);
+        assert_eq!(pcodes.len(), 2);
+        assert_eq!(bytes_used, 2);
+    }
+
+    #[cfg_attr(miri, ignore)]
+    #[test]
+    fn test_decompile_hexagon_simple() {
+        auto_test_decompile("{ R0 = add(R0, R1); }", 4, 1);
+    }
+
+    #[cfg_attr(miri, ignore)]
+    #[test]
+    fn test_decompile_hexagon_immediate() {
+        // This is 0x12345678 in hex, for now, because
+        // I can't figure out how to write an immediate in hex
+
+        // The first four bytes used in immediate would be to set the context register
+        // then the next four are for the actual instruction
+        let (start, mut translator) = manual_test_decompile("{ R0 = add(R0, #305419896); }");
+        translator.set_context_option(&ContextOption::HexagonImmext(0xffffffff));
+
+        // TODO: assert that immext is right
+        // The first get_pcode call will set immext, and won't return any pcodes
+
+        let mut pcodes = vec![];
+        let bytes_used = translator.get_pcode(start, &mut pcodes, ()).unwrap();
+
+        assert_eq!(pcodes.len(), 0);
+        assert_eq!(bytes_used, 4);
+
+        // This will be the actual instruction, now that immext is set
+        let bytes_used = translator
+            .get_pcode(start + bytes_used, &mut pcodes, ())
+            .unwrap();
+
+        println!("(immediate test) pcodes is now {pcodes:?}");
+        assert_eq!(pcodes.len(), 1);
+        assert_eq!(bytes_used, 4);
+    }
+
+    // TODO: test hardware loop, and decompile error.
+
+    /*#[cfg_attr(miri, ignore)]
+    #[test]
+    fn test_decompile_error() {
+        let start = 0x1000;
+        let data = vec![0xFFu8; 4];
+        let load_image = VectorLoader { start, data };
+        let mut translator = PcodeTranslator::new::<styx_sla::Arm7Le>(
+            &ArchVariant::Arm(ArmMetaVariants::ArmCortexA7(ArmCortexA7 {})),
+            load_image,
+        )
+        .unwrap();
+        translator.set_context_option(ContextOption::ThumbMode(true));
+
+        let mut pcodes = Vec::new();
+        let result = translator.get_pcode(start, &mut pcodes, ());
+        assert!(matches!(result, Err(SleighTranslateError::BadDataError)));
+    }*/
 }
 
 #[cfg(test)]

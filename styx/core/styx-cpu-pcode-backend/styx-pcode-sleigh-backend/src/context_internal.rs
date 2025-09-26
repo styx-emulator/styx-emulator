@@ -10,11 +10,21 @@ pub struct ContextInternal {
 }
 
 impl ContextInternal {
-    pub fn set_variable_default(&mut self, name: impl AsRef<str>, value: u32) {
+    pub fn _set_variable(
+        &mut self,
+        name: impl AsRef<str>,
+        addr_space: *mut ffi::AddrSpace,
+        addr_off: u64,
+        value: u32,
+    ) {
         let name = name.as_ref();
         cxx::let_cxx_string!(name_cxx = name);
         let context_db: Pin<&mut ffi::ContextDatabase> = self.obj.upcast_mut();
-        context_db.setVariableDefault(&name_cxx, value);
+        let addr = unsafe { ffi::new_address(addr_space, addr_off) };
+        // TODO: don't unwrap
+        // TODO: deallocate
+        context_db.setVariable(&name_cxx, addr.as_ref().unwrap(), value);
+        // invalidate the cache here
     }
 }
 

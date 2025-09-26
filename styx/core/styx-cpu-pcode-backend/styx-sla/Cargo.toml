@@ -32,6 +32,7 @@ default = [
   "arch_mips32",
   "arch_mips64",
   "arch_msp430",
+  "arch_hexagon",
 ]
 arch_arm = []
 arch_aarch64 = []
@@ -42,3 +43,4 @@ arch_m32r = []
 arch_mips32 = []
 arch_mips64 = []
 arch_msp430 = []
+arch_hexagon = []

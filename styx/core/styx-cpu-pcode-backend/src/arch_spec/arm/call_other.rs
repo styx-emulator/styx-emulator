@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use super::helpers::StackPointerManager;
 use crate::{
-    call_other::{CallOtherCallback, CallOtherHandleError},
+    call_other::{CallOtherCallback, CallOtherCpu, CallOtherHandleError},
     memory::sized_value::SizedValue,
-    PCodeStateChange, PcodeBackend,
+    PCodeStateChange,
 };
 use log::{trace, warn};
 use styx_cpu_type::arch::arm::{arm_coproc_registers, ArmRegister, CoProcessorValue};
@@ -20,16 +20,16 @@ const SVC_IRQN: i32 = -5;
 
 #[derive(Debug, Default)]
 pub struct SoftwareInterruptCallOther;
-impl CallOtherCallback for SoftwareInterruptCallOther {
+impl<T: CpuBackend> CallOtherCallback<T> for SoftwareInterruptCallOther {
     fn handle(
         &mut self,
-        backend: &mut PcodeBackend,
+        backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         inputs: &[VarnodeData],
         _output: Option<&VarnodeData>,
     ) -> Result<PCodeStateChange, CallOtherHandleError> {
-        let input_value = backend.read(&inputs[0]).unwrap();
+        let input_value = backend.space_manager().read(&inputs[0]).unwrap();
 
         let interrupt_number = input_value.to_u128().unwrap();
         let interrupt_number: i32 = interrupt_number.try_into().unwrap();
@@ -42,10 +42,10 @@ impl CallOtherCallback for SoftwareInterruptCallOther {
 
 #[derive(Debug)]
 pub struct EnableIRQInterrupts;
-impl CallOtherCallback for EnableIRQInterrupts {
+impl<T: CpuBackend> CallOtherCallback<T> for EnableIRQInterrupts {
     fn handle(
         &mut self,
-        backend: &mut PcodeBackend,
+        backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         inputs: &[VarnodeData],
@@ -55,7 +55,7 @@ impl CallOtherCallback for EnableIRQInterrupts {
 
         let primask_value = inputs
             .first()
-            .map(|i| backend.read(i).unwrap().to_u128().unwrap())
+            .map(|i| backend.space_manager().read(i).unwrap().to_u128().unwrap())
             .unwrap_or(0);
         backend
             .write_register(ArmRegister::Primask, primask_value as u32)
@@ -67,10 +67,10 @@ impl CallOtherCallback for EnableIRQInterrupts {
 
 #[derive(Debug)]
 pub struct DisableIRQInterrupts;
-impl CallOtherCallback for DisableIRQInterrupts {
+impl<T: CpuBackend> CallOtherCallback<T> for DisableIRQInterrupts {
     fn handle(
         &mut self,
-        backend: &mut PcodeBackend,
+        backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         _inputs: &[VarnodeData],
@@ -86,10 +86,10 @@ impl CallOtherCallback for DisableIRQInterrupts {
 
 #[derive(Debug)]
 pub struct EnableFIQInterrupts;
-impl CallOtherCallback for EnableFIQInterrupts {
+impl<T: CpuBackend> CallOtherCallback<T> for EnableFIQInterrupts {
     fn handle(
         &mut self,
-        backend: &mut PcodeBackend,
+        backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         inputs: &[VarnodeData],
@@ -99,7 +99,7 @@ impl CallOtherCallback for EnableFIQInterrupts {
 
         let faultmask_value = inputs
             .first()
-            .map(|i| backend.read(i).unwrap().to_u128().unwrap())
+            .map(|i| backend.space_manager().read(i).unwrap().to_u128().unwrap())
             .unwrap_or(0);
         backend
             .write_register(ArmRegister::Faultmask, faultmask_value as u32)
@@ -111,10 +111,10 @@ impl CallOtherCallback for EnableFIQInterrupts {
 
 #[derive(Debug)]
 pub struct DisableFIQInterrupts;
-impl CallOtherCallback for DisableFIQInterrupts {
+impl<T: CpuBackend> CallOtherCallback<T> for DisableFIQInterrupts {
     fn handle(
         &mut self,
-        backend: &mut PcodeBackend,
+        backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         _inputs: &[VarnodeData],
@@ -134,16 +134,16 @@ impl CallOtherCallback for DisableFIQInterrupts {
 /// ‘numerically equal or higher (lower urgency!) than the BASEPRI value’.
 #[derive(Debug)]
 pub struct SetBasePriority;
-impl CallOtherCallback for SetBasePriority {
+impl<T: CpuBackend> CallOtherCallback<T> for SetBasePriority {
     fn handle(
         &mut self,
-        backend: &mut PcodeBackend,
+        backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         inputs: &[VarnodeData],
         _output: Option<&VarnodeData>,
     ) -> Result<PCodeStateChange, CallOtherHandleError> {
-        let new_base_priority = backend.read(&inputs[0]).unwrap();
+        let new_base_priority = backend.space_manager().read(&inputs[0]).unwrap();
         warn!(
             "Base priority tried to be set to {new_base_priority} at 0x{:X}",
             backend.pc().unwrap()
@@ -160,10 +160,10 @@ impl CallOtherCallback for SetBasePriority {
 
 #[derive(Debug)]
 pub struct IsPrivileged;
-impl CallOtherCallback for IsPrivileged {
+impl<T: CpuBackend> CallOtherCallback<T> for IsPrivileged {
     fn handle(
         &mut self,
-        backend: &mut PcodeBackend,
+        backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         _inputs: &[VarnodeData],
@@ -178,10 +178,10 @@ impl CallOtherCallback for IsPrivileged {
 
 #[derive(Debug)]
 pub struct SetMainStackPointer;
-impl CallOtherCallback for SetMainStackPointer {
+impl<T: CpuBackend> CallOtherCallback<T> for SetMainStackPointer {
     fn handle(
         &mut self,
-        backend: &mut PcodeBackend,
+        backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         inputs: &[VarnodeData],
@@ -190,7 +190,12 @@ impl CallOtherCallback for SetMainStackPointer {
         let input = inputs
             .first()
             .expect("no new main stack pointer given to call other invocation");
-        let new_msp = backend.read(input).unwrap().to_u128().unwrap() as u32;
+        let new_msp = backend
+            .space_manager()
+            .read(input)
+            .unwrap()
+            .to_u128()
+            .unwrap() as u32;
         trace!(
             "Setting Master Stack Pointer to 0x{new_msp:X} at pc=0x{:X}",
             backend.pc().unwrap()
@@ -205,10 +210,10 @@ pub struct SetProcessStackPointer {
     #[allow(dead_code)] // TODO: remove
     pub stack_pointer_manager: Arc<StackPointerManager>,
 }
-impl CallOtherCallback for SetProcessStackPointer {
+impl<T: CpuBackend> CallOtherCallback<T> for SetProcessStackPointer {
     fn handle(
         &mut self,
-        backend: &mut PcodeBackend,
+        backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         inputs: &[VarnodeData],
@@ -216,7 +221,12 @@ impl CallOtherCallback for SetProcessStackPointer {
     ) -> Result<PCodeStateChange, CallOtherHandleError> {
         debug_assert_eq!(inputs.len(), 1);
         debug_assert!(_output.is_none());
-        let new_psp = backend.read(&inputs[0]).unwrap().to_u128().unwrap() as u32;
+        let new_psp = backend
+            .space_manager()
+            .read(&inputs[0])
+            .unwrap()
+            .to_u128()
+            .unwrap() as u32;
         trace!(
             "Setting Process Stack Pointer to 0x{new_psp:X} at pc=0x{:X}",
             backend.pc().unwrap()
@@ -230,10 +240,10 @@ impl CallOtherCallback for SetProcessStackPointer {
 
 #[derive(Debug)]
 pub struct GetMainStackPointer;
-impl CallOtherCallback for GetMainStackPointer {
+impl<T: CpuBackend> CallOtherCallback<T> for GetMainStackPointer {
     fn handle(
         &mut self,
-        backend: &mut PcodeBackend,
+        backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         inputs: &[VarnodeData],
@@ -247,7 +257,7 @@ impl CallOtherCallback for GetMainStackPointer {
             backend.read_register::<u32>(ArmRegister::Msp).unwrap() as u128,
             output.size as u8,
         );
-        backend.write(output, value).unwrap();
+        backend.space_manager().write(output, value).unwrap();
         Ok(PCodeStateChange::Fallthrough)
     }
 }
@@ -257,10 +267,10 @@ pub struct GetProcessStackPointer {
     #[allow(dead_code)] // TODO: remove
     pub stack_pointer_manager: Arc<StackPointerManager>,
 }
-impl CallOtherCallback for GetProcessStackPointer {
+impl<T: CpuBackend> CallOtherCallback<T> for GetProcessStackPointer {
     fn handle(
         &mut self,
-        backend: &mut PcodeBackend,
+        backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         inputs: &[VarnodeData],
@@ -274,7 +284,7 @@ impl CallOtherCallback for GetProcessStackPointer {
             backend.read_register::<u32>(ArmRegister::Psp).unwrap() as u128,
             output.size as u8,
         );
-        backend.write(output, value).unwrap();
+        backend.space_manager().write(output, value).unwrap();
 
         Ok(PCodeStateChange::Fallthrough)
     }
@@ -293,10 +303,10 @@ const fn map_varnode_offset_to_coproc_num(offset: u64) -> u8 {
 #[derive(Debug)]
 pub struct CoprocMovefromControl;
 
-impl CallOtherCallback for CoprocMovefromControl {
+impl<T: CpuBackend> CallOtherCallback<T> for CoprocMovefromControl {
     fn handle(
         &mut self,
-        cpu: &mut PcodeBackend,
+        cpu: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         inputs: &[VarnodeData],
@@ -323,10 +333,10 @@ impl CallOtherCallback for CoprocMovefromControl {
 #[derive(Debug)]
 pub struct CoprocMovetoControl;
 
-impl CallOtherCallback for CoprocMovetoControl {
+impl<T: CpuBackend> CallOtherCallback<T> for CoprocMovetoControl {
     fn handle(
         &mut self,
-        cpu: &mut PcodeBackend,
+        cpu: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         inputs: &[VarnodeData],
@@ -355,10 +365,10 @@ pub struct CoprocMovefromPeripheralSystem;
 /// `Rd = coproc_movefrom_Peripheral_System(t_opc2,t_crm,t_op1);`
 ///
 /// see <https://developer.arm.com/documentation/100511/0401/system-control/register-summary/cp15-system-control-registers-grouped-by-crn-order>
-impl CallOtherCallback for CoprocMovefromPeripheralSystem {
+impl<T: CpuBackend> CallOtherCallback<T> for CoprocMovefromPeripheralSystem {
     fn handle(
         &mut self,
-        cpu: &mut PcodeBackend,
+        cpu: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         inputs: &[VarnodeData],
@@ -392,10 +402,10 @@ impl CallOtherCallback for CoprocMovefromPeripheralSystem {
 /// coprocessor_movefromRt(t_cpn,t_op1,t_opc2,CRn,CRm);
 #[derive(Debug)]
 pub struct CoprocessorMovefromRt;
-impl CallOtherCallback for CoprocessorMovefromRt {
+impl<T: CpuBackend> CallOtherCallback<T> for CoprocessorMovefromRt {
     fn handle(
         &mut self,
-        cpu: &mut PcodeBackend,
+        cpu: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         inputs: &[VarnodeData],

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use super::memory::sized_value::SizedValue;
-use crate::memory::space_manager::SpaceManager;
-use crate::pcode_gen::RegisterTranslator;
+use crate::arch_spec::HexagonPcodeBackend;
+use crate::memory::space_manager::{HasSpaceManager, SpaceManager};
+use crate::pcode_gen::{GhidraPcodeGenerator, HasPcodeGenerator, RegisterTranslator};
 use crate::PcodeBackend;
 use log::trace;
 use std::collections::HashMap;
@@ -9,6 +10,7 @@ use std::fmt::Debug;
 use styx_cpu_type::arch::backends::ArchRegister;
 use styx_errors::anyhow::Context;
 use styx_errors::UnknownError;
+use styx_processor::cpu::CpuBackend;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -42,15 +44,23 @@ pub enum RegisterHandleError {
 
 /// Convenience new type for a Arc'd [RegisterCallback].
 #[derive(Debug)]
-pub struct RegisterHandler(pub Box<dyn RegisterCallback>);
+pub struct RegisterHandler<T: CpuBackend>(pub Box<dyn RegisterCallback<T>>);
 
-impl<T: RegisterCallback + 'static> From<T> for RegisterHandler {
+impl<T: RegisterCallback<PcodeBackend> + 'static> From<T> for RegisterHandler<PcodeBackend> {
     fn from(value: T) -> Self {
         RegisterHandler(Box::new(value))
     }
 }
 
-pub trait RegisterCallback: Debug + Send + Sync {
+impl<T: RegisterCallback<HexagonPcodeBackend> + 'static> From<T>
+    for RegisterHandler<HexagonPcodeBackend>
+{
+    fn from(value: T) -> Self {
+        RegisterHandler(Box::new(value))
+    }
+}
+
+pub trait RegisterCallback<T: CpuBackend>: Debug + Send + Sync {
     /// Given a styx [ArchRegister], read the value with correct size.
     ///
     /// The default behavior for reading register is defined in [`default_register_read()`] and
@@ -64,7 +74,7 @@ pub trait RegisterCallback: Debug + Send + Sync {
     fn read(
         &mut self,
         register: ArchRegister,
-        cpu: &mut PcodeBackend,
+        cpu: &mut dyn RegisterCallbackCpu<T>,
     ) -> Result<SizedValue, RegisterHandleError>;
 
     /// Given a styx [ArchRegister], read the value with correct size.
@@ -81,7 +91,7 @@ pub trait RegisterCallback: Debug + Send + Sync {
         &mut self,
         register: ArchRegister,
         value: SizedValue,
-        cpu: &mut PcodeBackend,
+        cpu: &mut dyn RegisterCallbackCpu<T>,
     ) -> Result<(), RegisterHandleError>;
 }
 
@@ -91,12 +101,32 @@ pub trait RegisterCallback: Debug + Send + Sync {
 /// register.
 ///
 /// Handles can be triggered but not added or deleted.
-#[derive(Debug, Default)]
-pub(crate) struct RegisterManager {
-    handlers: HashMap<ArchRegister, RegisterHandler>,
+#[derive(Debug)]
+pub(crate) struct RegisterManager<T: CpuBackend> {
+    handlers: HashMap<ArchRegister, RegisterHandler<T>>,
 }
 
-impl RegisterManager {
+impl<T: CpuBackend> Default for RegisterManager<T> {
+    fn default() -> Self {
+        Self {
+            handlers: HashMap::new(),
+        }
+    }
+}
+
+pub(crate) trait HasRegisterManager {
+    type InnerCpuBackend: CpuBackend;
+    fn register_manager(&mut self) -> &mut RegisterManager<Self::InnerCpuBackend>;
+}
+
+impl HasRegisterManager for PcodeBackend {
+    type InnerCpuBackend = PcodeBackend;
+    fn register_manager(&mut self) -> &mut RegisterManager<Self::InnerCpuBackend> {
+        &mut self.register_manager
+    }
+}
+
+impl<T: CpuBackend> RegisterManager<T> {
     /// Used by the Styx api to read a register from the manager, fallible.
     ///
     /// First, the manager is searched for custom register handlers. The custom handler is used to
@@ -107,21 +137,22 @@ impl RegisterManager {
     /// In either case, the resulting [`SizedValue`] is checked for size consistency and will return
     /// a RegisterHandleError::ReadMismatchedSize otherwise.
     pub(crate) fn read_register(
-        cpu: &mut PcodeBackend,
+        cpu: &mut dyn RegisterCallbackCpu<T>,
         register: ArchRegister,
     ) -> Result<SizedValue, RegisterHandleError> {
         // Try to handle with added handler
-        let first_handler = cpu.register_manager.handlers.remove(&register);
+        let first_handler = cpu.register_manager().handlers.remove(&register);
         let res = match first_handler {
             Some(mut first_handler) => {
                 let res = first_handler.0.read(register, cpu);
-                cpu.register_manager
+                cpu.register_manager()
                     .handlers
                     .insert(register, first_handler);
                 res
             }
             None => {
-                default_register_read(register, &mut cpu.space_manager, &mut cpu.pcode_generator)
+                let (spc, gen) = cpu.borrow_space_gen();
+                default_register_read(register, spc, gen)
             }
         };
         let res = res?;
@@ -151,18 +182,18 @@ impl RegisterManager {
     /// [`default_register_write()`]. Otherwise, it is the custom register handler's job to ensure
     /// the register is correctly stored.
     pub(crate) fn write_register(
-        cpu: &mut PcodeBackend,
+        cpu: &mut dyn RegisterCallbackCpu<T>,
         register: ArchRegister,
         value: SizedValue,
     ) -> Result<(), RegisterHandleError> {
         trace!("Triggering write_register index {register}.",);
 
         // Try to handle with added handler
-        let first_handler = cpu.register_manager.handlers.remove(&register);
+        let first_handler = cpu.register_manager().handlers.remove(&register);
         let first_result = match first_handler {
             Some(mut first_handler) => {
                 let res = first_handler.0.write(register, value, cpu);
-                cpu.register_manager
+                cpu.register_manager()
                     .handlers
                     .insert(register, first_handler);
                 res
@@ -176,12 +207,10 @@ impl RegisterManager {
             Ok(value) => Ok(value),
             // Not found... try again with default handler
             Err(err) => match err {
-                RegisterHandleError::CannotHandleRegister(_) => default_register_write(
-                    register,
-                    value,
-                    &mut cpu.space_manager,
-                    &mut cpu.pcode_generator,
-                ),
+                RegisterHandleError::CannotHandleRegister(_) => {
+                    let (spc, gen) = cpu.borrow_space_gen();
+                    default_register_write(register, value, spc, gen)
+                }
                 _ => Err(err),
             },
         }
@@ -190,7 +219,7 @@ impl RegisterManager {
     pub fn add_handler(
         &mut self,
         register: impl Into<ArchRegister>,
-        callback: impl Into<RegisterHandler>,
+        callback: impl Into<RegisterHandler<T>>,
     ) -> Result<(), AddRegisterHandlerError> {
         let index = register.into();
         match self.handlers.get(&index) {
@@ -205,7 +234,9 @@ impl RegisterManager {
     }
 
     #[allow(unused)]
-    pub fn registers(&self) -> std::collections::hash_map::Keys<'_, ArchRegister, RegisterHandler> {
+    pub fn registers(
+        &self,
+    ) -> std::collections::hash_map::Keys<'_, ArchRegister, RegisterHandler<T>> {
         self.handlers.keys()
     }
 }
@@ -271,11 +302,26 @@ impl MappedRegister {
     }
 }
 
-impl RegisterCallback for MappedRegister {
+pub(crate) trait RegisterCallbackCpu<T: CpuBackend>:
+    CpuBackend
+    + HasSpaceManager
+    + HasPcodeGenerator<InnerCpuBackend = T>
+    + HasRegisterManager<InnerCpuBackend = T>
+{
+    fn borrow_space_gen(&mut self) -> (&mut SpaceManager, &mut GhidraPcodeGenerator<T>);
+}
+
+impl RegisterCallbackCpu<PcodeBackend> for PcodeBackend {
+    fn borrow_space_gen(&mut self) -> (&mut SpaceManager, &mut GhidraPcodeGenerator<PcodeBackend>) {
+        (&mut self.space_manager, &mut self.pcode_generator)
+    }
+}
+
+impl<T: CpuBackend> RegisterCallback<T> for MappedRegister {
     fn read(
         &mut self,
         _register: ArchRegister,
-        cpu: &mut PcodeBackend,
+        cpu: &mut dyn RegisterCallbackCpu<T>,
     ) -> Result<SizedValue, RegisterHandleError> {
         RegisterManager::read_register(cpu, self.upstream)
     }
@@ -284,9 +330,39 @@ impl RegisterCallback for MappedRegister {
         &mut self,
         _register: ArchRegister,
         value: SizedValue,
-        cpu: &mut PcodeBackend,
+        cpu: &mut dyn RegisterCallbackCpu<T>,
     ) -> Result<(), RegisterHandleError> {
-        RegisterManager::write_register(cpu, self.upstream, value)
+        {
+            let register = self.upstream;
+            trace!("Triggering write_register index {register}.",);
+
+            // Try to handle with added handler
+            let first_handler = cpu.register_manager().handlers.remove(&register);
+            let first_result = match first_handler {
+                Some(mut first_handler) => {
+                    let res = first_handler.0.write(register, value, cpu);
+                    cpu.register_manager()
+                        .handlers
+                        .insert(register, first_handler);
+                    res
+                }
+                None => Err(RegisterHandleError::CannotHandleRegister(register)),
+            };
+
+            // Try again with default handler
+            match first_result {
+                // Already handled! pass on value
+                Ok(value) => Ok(value),
+                // Not found... try again with default handler
+                Err(err) => match err {
+                    RegisterHandleError::CannotHandleRegister(_) => {
+                        let (spc, gen) = cpu.borrow_space_gen();
+                        default_register_write(register, value, spc, gen)
+                    }
+                    _ => Err(err),
+                },
+            }
+        }
     }
 }
 
@@ -325,11 +401,11 @@ mod tests {
     /// RegisterCallback for testing that reads `0` with the specified size (self.0)
     #[derive(Debug)]
     struct RegisterCallbackCustomSize(u8);
-    impl RegisterCallback for RegisterCallbackCustomSize {
+    impl<T: CpuBackend> RegisterCallback<T> for RegisterCallbackCustomSize {
         fn read(
             &mut self,
             _register: ArchRegister,
-            _cpu: &mut PcodeBackend,
+            _cpu: &mut dyn RegisterCallbackCpu<T>,
         ) -> Result<SizedValue, RegisterHandleError> {
             Ok(SizedValue::from_u128(0, self.0))
         }
@@ -338,7 +414,7 @@ mod tests {
             &mut self,
             _register: ArchRegister,
             _value: SizedValue,
-            _cpu: &mut PcodeBackend,
+            _cpu: &mut dyn RegisterCallbackCpu<T>,
         ) -> Result<(), RegisterHandleError> {
             todo!("RegisterCallbackCustomSize only supports reads for testing")
         }

@@ -7,6 +7,7 @@ use crate::{
     sleigh_obj::{DeriveParent, SleighObj},
 };
 use cxx::{CxxVector, UniquePtr};
+use std::pin::Pin;
 use std::{collections::HashMap, path::Path};
 use styx_cpu_type::ArchEndian;
 use styx_pcode::pcode::{Pcode, SpaceInfo, SpaceName, VarnodeData};
@@ -162,8 +163,16 @@ impl<L> Sleigh<L> {
         }
     }
 
-    pub fn set_variable_default(&mut self, variable: &str, value: u32) {
-        self._context.set_variable_default(variable, value);
+    pub fn set_variable(&mut self, variable: &str, value: u32) {
+        let space_manager: &ffi::AddrSpaceManager = self.obj.upcast_ref();
+        let default_code_space = space_manager.getDefaultCodeSpace();
+
+        cxx::let_cxx_string!(variable_cxx = variable);
+        let sleigh: Pin<&mut ffi::Sleigh> = self.obj.as_mut();
+        // safety: this should get dropped?
+        let addr_lo = unsafe { ffi::new_address(default_code_space, 0) };
+        let addr_hi = unsafe { ffi::new_address(default_code_space, u64::MAX) };
+        sleigh.setContextVariableCached(&variable_cxx, &addr_lo, &addr_hi, value);
     }
 
     /// Get a map between a register's varnode offset and name.

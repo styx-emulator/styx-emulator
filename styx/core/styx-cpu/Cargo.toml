@@ -14,6 +14,7 @@ default = [
   "arch_mips64",
   "arch_ppc",
   "arch_superh",
+  "arch_hexagon",
 ]
 arch_arm = ["styx-cpu-pcode-backend/arch_arm"]
 arch_aarch64 = ["styx-cpu-pcode-backend/arch_aarch64"]
@@ -22,6 +23,7 @@ arch_m32r = ["styx-cpu-pcode-backend/arch_m32r"]
 arch_mips64 = ["styx-cpu-pcode-backend/arch_mips64"]
 arch_ppc = ["styx-cpu-pcode-backend/arch_ppc"]
 arch_superh = ["styx-cpu-pcode-backend/arch_superh"]
+arch_hexagon = ["styx-cpu-pcode-backend/arch_hexagon"]
 unicorn-backend = [
   "dep:styx-cpu-unicorn-backend",
   "styx-cpu-type/unicorn-backend",

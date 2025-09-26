@@ -1,17 +1,20 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use styx_pcode_translator::sla::{Aarch64, Aarch64UserOps};
 
-use crate::arch_spec::{
-    aarch64::call_other::{
-        NeonAddvCallother, NeonBifCallother, NeonBitCallother, NeonBslCallother,
-        NeonCmtestCallother, NeonCntCallother, NeonFcmeqCallother, NeonFcmgeCallother,
-        NeonFcmgtCallother, NeonFcmleCallother, NeonFcmltCallother, NeonFminnmCallother,
-        NeonRev64Callother,
+use crate::{
+    arch_spec::{
+        aarch64::call_other::{
+            NeonAddvCallother, NeonBifCallother, NeonBitCallother, NeonBslCallother,
+            NeonCmtestCallother, NeonCntCallother, NeonFcmeqCallother, NeonFcmgeCallother,
+            NeonFcmgtCallother, NeonFcmleCallother, NeonFcmltCallother, NeonFminnmCallother,
+            NeonRev64Callother,
+        },
+        ArchSpecBuilder,
     },
-    ArchSpecBuilder,
+    PcodeBackend,
 };
 
-pub fn build() -> ArchSpecBuilder<Aarch64> {
+pub fn build() -> ArchSpecBuilder<Aarch64, PcodeBackend> {
     let mut spec = ArchSpecBuilder::default();
 
     spec.set_pc_manager(super::StandardPcManager::default().into());

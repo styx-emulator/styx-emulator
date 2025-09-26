@@ -5,10 +5,12 @@ mod call_other;
 mod register;
 
 use register::AnalogRegister;
+use smallvec::SmallVec;
 use styx_cpu_type::arch::blackfin::BlackfinRegister;
+use styx_pcode::pcode::VarnodeData;
 use styx_pcode_translator::sla::{self, BlackfinUserOps};
 
-use crate::PcodeBackend;
+use crate::{PcodeBackend, DEFAULT_REG_ALLOCATION};
 
 use super::{
     pc_manager::{apply_difference, PcOverflow},
@@ -16,7 +18,7 @@ use super::{
 };
 
 /// Program Counter manager for Blackfin processors.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct StandardPcManager {
     isa_pc: u64,
     internal_pc: u64,
@@ -31,7 +33,7 @@ impl ArchPcManager for StandardPcManager {
         self.internal_pc
     }
 
-    fn set_internal_pc(&mut self, value: u64, _backend: &mut PcodeBackend) {
+    fn set_internal_pc(&mut self, value: u64, _backend: &mut PcodeBackend, _from_branch: bool) {
         // i128 here is used so we don't overflow on cast
         let difference = (value as i128 - self.internal_pc as i128) & (!1);
 
@@ -51,6 +53,8 @@ impl ArchPcManager for StandardPcManager {
         &mut self,
         bytes_consumed: u64,
         _backend: &mut PcodeBackend,
+        _regs_written: &mut SmallVec<[VarnodeData; DEFAULT_REG_ALLOCATION]>,
+        _total_pcodes: usize,
     ) -> Result<(), PcOverflow> {
         self.internal_pc = self
             .internal_pc
@@ -61,7 +65,7 @@ impl ArchPcManager for StandardPcManager {
     }
 }
 
-fn blackfin_common(spec: &mut ArchSpecBuilder<sla::Blackfin>) {
+fn blackfin_common(spec: &mut ArchSpecBuilder<sla::Blackfin, PcodeBackend>) {
     spec.set_pc_manager(StandardPcManager::default().into());
 
     // Standard "do-nothing" generator helper

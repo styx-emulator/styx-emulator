@@ -2,12 +2,19 @@
 
 use std::str::FromStr;
 
+use super::call_other::{
+    CoprocMovefromControl, CoprocMovefromPeripheralSystem, CoprocMovetoControl,
+    CoprocessorMovefromRt,
+};
+use crate::memory::sized_value::SizedValue;
+use crate::register_manager::{RegisterCallbackCpu, RegisterHandleError};
 use crate::{
     arch_spec::{
         arm::{armv7_common, armv7a_common},
         ArchSpecBuilder,
     },
     register_manager::{RegisterCallback, RegisterHandler},
+    PcodeBackend,
 };
 use styx_cpu_type::arch::{
     arm::{arm_coproc_registers, SpecialArmRegister},
@@ -15,11 +22,7 @@ use styx_cpu_type::arch::{
 };
 use styx_pcode::sla::SlaUserOps;
 use styx_pcode_translator::sla::{Arm7Be, Arm7Le, Arm7LeUserOps};
-
-use super::call_other::{
-    CoprocMovefromControl, CoprocMovefromPeripheralSystem, CoprocMovetoControl,
-    CoprocessorMovefromRt,
-};
+use styx_processor::cpu::CpuBackend;
 
 #[derive(Debug, Default)]
 struct CoProcRegisterHandler {
@@ -28,13 +31,12 @@ struct CoProcRegisterHandler {
     sctlr: u32,
 }
 
-impl RegisterCallback for CoProcRegisterHandler {
+impl<T: CpuBackend> RegisterCallback<T> for CoProcRegisterHandler {
     fn read(
         &mut self,
-        register: styx_cpu_type::arch::backends::ArchRegister,
-        _cpu: &mut crate::PcodeBackend,
-    ) -> Result<crate::memory::sized_value::SizedValue, crate::register_manager::RegisterHandleError>
-    {
+        register: ArchRegister,
+        _cpu: &mut dyn RegisterCallbackCpu<T>,
+    ) -> Result<SizedValue, RegisterHandleError> {
         if let ArchRegister::Special(SpecialArchRegister::Arm(SpecialArmRegister::CoProcessor(r))) =
             register
         {
@@ -53,10 +55,10 @@ impl RegisterCallback for CoProcRegisterHandler {
 
     fn write(
         &mut self,
-        register: styx_cpu_type::arch::backends::ArchRegister,
-        value: crate::memory::sized_value::SizedValue,
-        _cpu: &mut crate::PcodeBackend,
-    ) -> Result<(), crate::register_manager::RegisterHandleError> {
+        register: ArchRegister,
+        value: SizedValue,
+        _cpu: &mut dyn RegisterCallbackCpu<T>,
+    ) -> Result<(), RegisterHandleError> {
         if let ArchRegister::Special(SpecialArchRegister::Arm(SpecialArmRegister::CoProcessor(r))) =
             register
         {
@@ -83,7 +85,7 @@ impl RegisterCallback for CoProcRegisterHandler {
     }
 }
 
-pub fn build<S: SlaUserOps<UserOps: FromStr>>() -> ArchSpecBuilder<S> {
+pub fn build<S: SlaUserOps<UserOps: FromStr>>() -> ArchSpecBuilder<S, PcodeBackend> {
     let mut spec = ArchSpecBuilder::default();
 
     spec.register_manager
@@ -131,10 +133,10 @@ pub fn build<S: SlaUserOps<UserOps: FromStr>>() -> ArchSpecBuilder<S> {
     spec
 }
 
-pub fn build_le() -> ArchSpecBuilder<Arm7Le> {
+pub fn build_le() -> ArchSpecBuilder<Arm7Le, PcodeBackend> {
     build()
 }
 
-pub fn build_be() -> ArchSpecBuilder<Arm7Be> {
+pub fn build_be() -> ArchSpecBuilder<Arm7Be, PcodeBackend> {
     build()
 }

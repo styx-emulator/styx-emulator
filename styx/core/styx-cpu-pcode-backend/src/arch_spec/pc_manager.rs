@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::PcodeBackend;
+use crate::{PcodeBackend, DEFAULT_REG_ALLOCATION};
 use enum_dispatch::enum_dispatch;
+use smallvec::SmallVec;
 use std::fmt::Debug;
+use styx_pcode::pcode::VarnodeData;
 
 #[cfg(feature = "arch_aarch64")]
 use super::aarch64;
@@ -30,7 +32,10 @@ use super::mips_common;
 ///
 /// Each architecture should implement the [ArchPcManager] trait and supply it to the pcode machine.
 #[enum_dispatch(ArchPcManager)]
-#[derive(Debug)]
+// We derive Clone here because the PcManager
+// is saved and restored in context_save and
+// context_restore using .clone().
+#[derive(Debug, Clone)]
 pub enum PcManager {
     #[cfg(feature = "arch_aarch64")]
     Aarch64(aarch64::StandardPcManager),
@@ -78,7 +83,7 @@ pub(crate) trait ArchPcManager: Debug {
     fn set_isa_pc(&mut self, value: u64, backend: &mut PcodeBackend);
     /// Sets the internal program counter to `value`. NOTE: the ISA counter must be kept in sync
     /// with this counter!
-    fn set_internal_pc(&mut self, value: u64, backend: &mut PcodeBackend) {
+    fn set_internal_pc(&mut self, value: u64, backend: &mut PcodeBackend, _from_branch: bool) {
         self.set_isa_pc(value, backend)
     }
 
@@ -104,6 +109,8 @@ pub(crate) trait ArchPcManager: Debug {
         &mut self,
         _bytes_consumed: u64,
         _backend: &mut PcodeBackend,
+        _regs_written: &mut SmallVec<[VarnodeData; DEFAULT_REG_ALLOCATION]>,
+        _total_pcodes: usize,
     ) -> Result<(), PcOverflow> {
         Ok(())
     }

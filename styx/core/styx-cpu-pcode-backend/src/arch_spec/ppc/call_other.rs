@@ -4,8 +4,8 @@ use styx_pcode::pcode;
 use styx_processor::{cpu::CpuBackend, event_controller::EventController, memory::Mmu};
 
 use crate::{
-    call_other::{CallOtherCallback, CallOtherHandleError},
-    PCodeStateChange, PcodeBackend,
+    call_other::{CallOtherCallback, CallOtherCpu, CallOtherHandleError},
+    PCodeStateChange,
 };
 
 const SVC_IRQN: i32 = 8;
@@ -13,10 +13,10 @@ const RFI_WORKAROUND_ADDRESS: u64 = 0x99999998;
 
 #[derive(Debug)]
 pub struct SystemCall;
-impl CallOtherCallback for SystemCall {
+impl<T: CpuBackend> CallOtherCallback<T> for SystemCall {
     fn handle(
         &mut self,
-        _backend: &mut PcodeBackend,
+        _backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         _inputs: &[pcode::VarnodeData],
@@ -40,10 +40,10 @@ impl CallOtherCallback for SystemCall {
 /// ```
 #[derive(Debug)]
 pub struct ReturnFromInterrupt;
-impl CallOtherCallback for ReturnFromInterrupt {
+impl<T: CpuBackend> CallOtherCallback<T> for ReturnFromInterrupt {
     fn handle(
         &mut self,
-        cpu: &mut PcodeBackend,
+        cpu: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         inputs: &[pcode::VarnodeData],
@@ -57,9 +57,9 @@ impl CallOtherCallback for ReturnFromInterrupt {
             return Err(CallOtherHandleError::Other("invalid output".into()));
         };
 
-        let srr1 = cpu.space_manager.read(srr1_varnode).unwrap();
+        let srr1 = cpu.space_manager().read(srr1_varnode).unwrap();
         debug!("return from interrupt @ 0x{pc:X}");
-        cpu.space_manager.write(new_msr_varnode, srr1).unwrap();
+        cpu.space_manager().write(new_msr_varnode, srr1).unwrap();
         // pcode change pc for us
         // temporary workaround for post interrupt actions
         // this will cause an invalid instruction hook to get called, which gets us a
