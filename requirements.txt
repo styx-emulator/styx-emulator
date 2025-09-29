@@ -8,8 +8,6 @@ sphinxemoji==0.3.1
 sphinxcontrib-mermaid==0.9.2
 sphinx-copybutton==0.5.2
 sphinxnotes-strike==1.2.1
-angr==9.2.113
-angr_targets @ git+https://github.com/angr/angr-targets.git
 sphinx-substitution-extensions==2025.1.2
 west>=1.4.0
 sphinx-lint==1.0.0
