@@ -18,7 +18,6 @@ derivative = { workspace = true }
 num_enum = { workspace = true }
 enum-map = { workspace = true }
 tokio = { workspace = true }
-tokio-timerfd = { workspace = true }
 tokio-stream = { workspace = true }
 styx-workspace-hack = { version = "0.1", path = "../../../workspace-hack" }
 futures = { workspace = true }

@@ -9,8 +9,7 @@ use std::{
 use derivative::Derivative;
 use styx_core::prelude::*;
 use timer::*;
-use tokio_stream::StreamExt;
-use tokio_timerfd::Interval;
+use tokio::time;
 use tracing::{debug, warn};
 
 use styx_blackfin_sys::bf512 as sys;
@@ -29,10 +28,10 @@ pub struct Timers {
     running: bool,
 }
 async fn timer_loop(status: TimerLoopStatus) {
-    let mut interval = Interval::new_interval(Duration::from_millis(100)).unwrap();
+    let mut interval = time::interval(Duration::from_millis(100));
     loop {
         // sleep for our sleep time
-        interval.next().await.unwrap().unwrap();
+        interval.tick().await;
         status.triggered.store(true, Ordering::Relaxed);
     }
 }

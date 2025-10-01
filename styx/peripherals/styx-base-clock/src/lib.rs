@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use futures::stream::StreamExt;
 use std::time::Duration;
 use styx_core::sync::{cell::RefCell, sync::atomic::AtomicBool};
-use tokio_timerfd::Interval;
+use tokio::time;
 
 /// All types wanting to consume a clock need to implement this
 /// trait
@@ -53,14 +52,14 @@ impl TickSource {
     /// while enabled, continuously ticks sysclk
     pub async fn run(&mut self) {
         self.enabled = true.into();
-        let mut interval = Interval::new_interval(self.duration).unwrap();
+        let mut interval = time::interval(self.duration);
 
         while self
             .enabled
             .load(styx_core::sync::sync::atomic::Ordering::Relaxed)
         {
             // wait
-            interval.next().await.unwrap().unwrap();
+            interval.tick().await;
 
             // increase self.tick_count
             *self.tick_count.borrow_mut() += 1;

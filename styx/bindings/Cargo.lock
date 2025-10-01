@@ -4784,10 +4784,9 @@ dependencies = [
 name = "styx-base-clock"
 version = "1.2.0"
 dependencies = [
- "futures",
  "styx-core",
  "styx-workspace-hack",
- "tokio-timerfd",
+ "tokio",
 ]
 
 [[package]]
@@ -4807,7 +4806,6 @@ dependencies = [
  "tap",
  "tokio",
  "tokio-stream",
- "tokio-timerfd",
  "tonic",
  "tracing",
 ]
@@ -5178,7 +5176,6 @@ dependencies = [
  "thiserror 2.0.12",
  "tokio",
  "tokio-stream",
- "tokio-timerfd",
  "tonic",
  "tracing",
 ]
@@ -5943,15 +5940,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "timerfd"
-version = "1.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "84e482e368cf7efa2c8b570f476e5b9fd9fd5e9b9219fc567832b05f13511091"
-dependencies = [
- "rustix 0.38.44",
-]
-
-[[package]]
 name = "tinystr"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6027,19 +6015,6 @@ dependencies = [
  "pin-project-lite",
  "tokio",
  "tokio-util",
-]
-
-[[package]]
-name = "tokio-timerfd"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "87eecdae9a9b793843b1df7a64bc136f203443c1ca9889b3c4a39590afa51094"
-dependencies = [
- "futures-core",
- "libc",
- "slab",
- "timerfd",
- "tokio",
 ]
 
 [[package]]

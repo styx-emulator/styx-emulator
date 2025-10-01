@@ -307,7 +307,6 @@ async-trait = "0.1.83"
 async-stream = "0.3.6"
 tower-service = "0.3.3"
 tokio-stream = { version = "0.1.16", features = ["full"] }
-tokio-timerfd = "0.2.0"
 tokio-util = "0.7.12"
 async-fs = "2.1.2"
 
