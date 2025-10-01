@@ -173,7 +173,7 @@ expect-test = "1.5.0"
 
 # logging
 tracing = "0.1.40"
-tracing-subscriber = { version = "0.3.18", features = [
+tracing-subscriber = { version = "0.3.20", features = [
   "fmt",
   "registry",
   "env-filter",
