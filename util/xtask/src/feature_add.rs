@@ -350,6 +350,11 @@ baz = []
             create_sub_dir(&mut tmp_dir, "haw").unwrap();
             create_cargo_file(&tmp_dir, (!branch).then_some(&mut master_list)).unwrap();
 
+            // Canonicalize all paths in master_list to handle symlinks (e.g., /var -> /private/var on macOS)
+            master_list = master_list
+                .into_iter()
+                .map(|p| p.canonicalize().expect("Failed to canonicalize path"))
+                .collect();
             master_list.sort();
 
             let target: PathBuf = match branch {
