@@ -26,7 +26,7 @@ impl EthernetPort for EthernetControllerService {
     ) -> tonic::Result<tonic::Response<Empty>> {
         let (_, _, packet) = request.into_parts();
 
-        log::debug!("<gRPC> Ethernet interface received data: {:?}", packet);
+        log::debug!("<gRPC> Ethernet interface received data: {packet:?}");
         self.rx.send(packet).unwrap();
 
         Ok(tonic::Response::new(Empty {}))

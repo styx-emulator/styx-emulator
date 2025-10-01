@@ -284,11 +284,7 @@ impl io::spi::spi_port_server::SpiPort for SPIControllerService {
         let port = &req.port;
         let contents = &req.chip_select;
 
-        log::trace!(
-            "<gRPC> SPI port {} slave csel received data: {:?}",
-            port,
-            contents
-        );
+        log::trace!("<gRPC> SPI port {port} slave csel received data: {contents:?}",);
 
         let port = self.grpc_port_to_inner_port(*port)?;
         // we were able to find the port they wanted to subscribe to,
@@ -305,11 +301,7 @@ impl io::spi::spi_port_server::SpiPort for SPIControllerService {
         let port = subscribe_request.port;
         let dev_name = subscribe_request.device_name;
 
-        log::trace!(
-            "<gRPC> SPI port {} master csel is being subscribed to by {}",
-            port,
-            dev_name,
-        );
+        log::trace!("<gRPC> SPI port {port} master csel is being subscribed to by {dev_name}",);
 
         let port = self.grpc_port_to_inner_port(port)?;
         let mut stream = port.from_master_csel.resubscribe();
@@ -341,11 +333,7 @@ impl io::spi::spi_port_server::SpiPort for SPIControllerService {
         let port = &req.port;
         let contents = &req.data;
 
-        log::trace!(
-            "<gRPC> SPI port {} slave mosi received data: {:?}",
-            port,
-            contents
-        );
+        log::trace!("<gRPC> SPI port {port} slave mosi received data: {contents:?}",);
 
         let port = self.grpc_port_to_inner_port(*port)?;
         // we were able to find the port they wanted to subscribe to,
@@ -362,11 +350,7 @@ impl io::spi::spi_port_server::SpiPort for SPIControllerService {
         let port = subscribe_request.port;
         let dev_name = subscribe_request.device_name;
 
-        log::trace!(
-            "<gRPC> SPI port {} master mosi is being subscribed to by {}",
-            port,
-            dev_name,
-        );
+        log::trace!("<gRPC> SPI port {port} master mosi is being subscribed to by {dev_name}",);
 
         let port = self.grpc_port_to_inner_port(port)?;
         let mut stream = port.from_master_mosi.resubscribe();
@@ -399,11 +383,7 @@ impl io::spi::spi_port_server::SpiPort for SPIControllerService {
         let port = subscribe_request.port;
         let dev_name = subscribe_request.device_name;
 
-        log::trace!(
-            "<gRPC> SPI port {} slave miso is being subscribed to by {}",
-            port,
-            dev_name,
-        );
+        log::trace!("<gRPC> SPI port {port} slave miso is being subscribed to by {dev_name}",);
 
         let port = self.grpc_port_to_inner_port(port)?;
         let mut stream = port.from_slave_miso.resubscribe();
@@ -432,11 +412,7 @@ impl io::spi::spi_port_server::SpiPort for SPIControllerService {
         let port = &req.port;
         let contents = &req.data;
 
-        log::trace!(
-            "<gRPC> SPI port {} master miso received data: {:?}",
-            port,
-            contents
-        );
+        log::trace!("<gRPC> SPI port {port} master miso received data: {contents:?}",);
 
         let port = self.grpc_port_to_inner_port(*port)?;
 

@@ -34,7 +34,7 @@ fn generate_adr(base: &str, name: String) -> anyhow::Result<()> {
     // make sure the root is a directory and not a file
     // canonicalize to resolve symlink
     if !root.canonicalize()?.is_dir() {
-        bail!("{:?} is not a directory", root);
+        bail!("{root:?} is not a directory");
     }
 
     // get the next number

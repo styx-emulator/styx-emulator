@@ -52,8 +52,7 @@ impl Peripherals {
             Ok(&mut self.peripherals[*i])
         } else {
             Err(anyhow!(
-                "exception number does not belong to any peripheral: {:}",
-                exn
+                "exception number does not belong to any peripheral: {exn:?}",
             ))
         }
     }

@@ -88,11 +88,7 @@ pub fn update(target: String, check: bool) -> anyhow::Result<()> {
     // been updated
     if changed_files {
         let suffix = if check { "would have " } else { "" };
-        bail!(
-            "Updating rust-version to {}, {}changed files",
-            target,
-            suffix,
-        )
+        bail!("Updating rust-version to {target}, {suffix}changed files",)
     } else {
         Ok(())
     }
