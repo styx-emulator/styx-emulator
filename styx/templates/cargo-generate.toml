@@ -1,0 +1,32 @@
+[template]
+cargo_generate_version = ">=0.10.0"
+ignore = [
+  "CI.md",
+  "README.md",
+  "QUICKSTART.md",
+  "scripts/test-templates-local.sh",
+]
+
+[placeholders.component_type]
+type = "string"
+prompt = "What type of component are you creating?"
+choices = ["processor", "event-controller", "peripheral", "plugin"]
+default = "processor"
+
+[placeholders.is_in_tree]
+type = "bool"
+prompt = "Is this an in-tree component (part of the Styx workspace)?"
+default = false
+
+[placeholders.component_name]
+type = "string"
+prompt = "What is the name of your component? (e.g., stm32f407, my-uart, my-plugin)"
+
+[placeholders.component_description]
+type = "string"
+prompt = "Brief description of your component"
+default = "A Styx component"
+
+[hooks]
+pre = ["pre-script.rhai"]
+post = ["post-script.rhai"]

@@ -1,0 +1,54 @@
+[package]
+name = "{{crate_name}}"
+{% if is_in_tree %}version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "{{component_description}}"
+license.workspace = true
+{% else %}version = "0.1.0"
+edition = "2021"
+authors = ["Your Name <your@email>"]
+description = "{{component_description}}"
+license = "BSD-2-Clause"
+{% endif %}
+
+[dependencies]
+{% if component_type == "processor" %}# NOTE: Update this path based on where you place your component:
+# - For processors: styx-core = { path = "../../../core" }
+# - For components in styx repo: adjust path as needed
+# - For external repos: styx-core = { git = "https://github.com/styx-emulator/styx-emulator", branch = "main" }
+styx-core = { path = "../../core" }
+anyhow = "1.0"
+thiserror = "1.0"
+tracing = "0.1"
+{% elsif component_type == "event-controller" %}# NOTE: Update this path based on where you place your component:
+# - For event-controllers: styx-core = { path = "../../../core" }
+# - For components in styx repo: adjust path as needed
+# - For external repos: styx-core = { git = "https://github.com/styx-emulator/styx-emulator", branch = "main" }
+styx-core = { path = "../../core" }
+as-any = "0.3"
+thiserror = "1.0"
+tracing = "0.1"
+{% elsif component_type == "peripheral" %}# NOTE: Update this path based on where you place your component:
+# - For peripherals: styx-core = { path = "../../core" }
+# - For components in styx repo: adjust path as needed
+# - For external repos: styx-core = { git = "https://github.com/styx-emulator/styx-emulator", branch = "main" }
+styx-core = { path = "../../core" }
+as-any = "0.3"
+async-trait = "0.1"
+derivative = "2.2"
+thiserror = "1.0"
+tokio = { version = "1", features = ["sync"] }
+tokio-stream = "0.1"
+tonic = "0.11"
+tracing = "0.1"
+{% elsif component_type == "plugin" %}# NOTE: Update this path based on where you place your component:
+# - For plugins: styx-core = { path = "../../core" }
+# - For components in styx repo: adjust path as needed
+# - For external repos: styx-core = { git = "https://github.com/styx-emulator/styx-emulator", branch = "main" }
+styx-core = { path = "../../core" }
+thiserror = "1.0"
+tracing = "0.1"
+{% endif %}
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }

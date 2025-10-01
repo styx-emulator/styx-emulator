@@ -1,0 +1,53 @@
+name: template-validation
+
+# Run on PRs that touch templates or pushes to main
+on:
+  pull_request:
+    paths:
+      - 'styx/templates/**'
+      - '.github/workflows/template-validation.yml'
+      - 'styx/templates/scripts/test-templates.sh'
+  push:
+    branches:
+      - main
+    paths:
+      - 'styx/templates/**'
+      - '.github/workflows/template-validation.yml'
+      - 'styx/templates/scripts/test-templates.sh'
+  # Allow manual triggering
+  workflow_dispatch:
+
+concurrency:
+  # Cancels pending runs when a PR gets updated
+  group: ${{ github.head_ref || github.run_id }}-${{ github.actor }}-${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  validate-templates:
+    name: Validate cargo-generate templates
+    runs-on: self-hosted
+
+    steps:
+    - name: Checkout source code
+      uses: actions/checkout@v4
+
+    - name: Setup Rust toolchain
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+      with:
+        cache: false
+
+    - name: Install cargo-generate
+      shell: bash
+      run: |
+        cargo install cargo-generate --version 0.21.0 --locked || true
+
+    - name: Run template validation script
+      shell: bash
+      run: |
+        ./styx/templates/scripts/test-templates-local.sh
+
+    - name: Cleanup
+      shell: bash
+      if: always()
+      run: |
+        rm -rf /tmp/styx-template-tests-*
