@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
+#![cfg(target_os = "linux")]
+
 use libc::{c_void, close, dup, ftruncate, memfd_create, mmap, mremap, munmap};
 use libc::{MAP_FAILED, MAP_PRIVATE, MAP_SHARED, MREMAP_MAYMOVE, PROT_READ, PROT_WRITE};
 use std::io::Error;
