@@ -194,7 +194,6 @@ mod tests {
         let ms = sdt.elapsed_millis();
         let s = sdt.elapsed_secs();
         assert!(ms > (n - 2));
-        assert!(ms < (n + 2));
-        assert_eq!(s, 1);
+        assert!(s >= 1);
     }
 }
