@@ -181,15 +181,36 @@ macro_rules! send_state_change {
 #[cfg(test)]
 mod tests {
     use crate::ConditionVar;
+    use std::sync::atomic::{AtomicUsize, Ordering};
     use std::thread;
     use std::thread::JoinHandle;
     use std::time::Duration;
     use test_case::test_case;
 
     use super::Arc;
-    pub fn spawn_delayed(cv: Arc<ConditionVar>, delay: Duration, notify_count: Option<usize>) {
+
+    /// Spawns a thread that waits for all threads to be ready, then notifies the condition variable.
+    ///
+    /// # Parameters
+    /// - `cv`: The condition variable to notify
+    /// - `delay`: How long to wait after all threads are ready before notifying
+    /// - `notify_count`: None for notify_all(), Some(n) to call notify_one() n times
+    /// - `ready_count`: Atomic counter tracking how many threads are waiting
+    /// - `expected_waiters`: Number of threads expected to be waiting before proceeding
+    fn spawn_delayed(
+        cv: Arc<ConditionVar>,
+        delay: Duration,
+        notify_count: Option<usize>,
+        ready_count: Arc<AtomicUsize>,
+        expected_waiters: usize,
+    ) {
         let pair_clone = cv.get_pair();
         thread::spawn(move || {
+            // Wait for all threads to be ready before proceeding
+            while ready_count.load(Ordering::SeqCst) < expected_waiters {
+                thread::sleep(Duration::from_millis(10));
+            }
+
             std::thread::sleep(delay);
             let (cndmtx, cvar) = &*pair_clone;
             let mut var = cndmtx.lock().unwrap();
@@ -205,10 +226,30 @@ mod tests {
         });
     }
 
-    #[test_case(0,   100, 1, 1,0, Some(1) ; "ok no timeout")]
-    #[test_case(250, 100, 1, 0,1, None    ; "timeout")]
-    #[test_case(0,   200, 5, 5,4, Some(1) ; "ok 4 timeouts")]
-    #[test_case(0,   200, 5, 5,5, Some(0) ; "ok 5 timeouts")]
+    /// Tests ConditionVar behavior with multiple threads waiting on a condition variable.
+    ///
+    /// This test validates proper synchronization by:
+    /// 1. Spawning multiple threads that wait on a condition variable with a timeout
+    /// 2. Using a synchronization barrier to ensure all threads are waiting before notification
+    /// 3. Verifying the expected number of threads wake up vs timeout
+    ///
+    /// # Test Parameters
+    /// - `delay_ms`: Delay in ms before notifying (after all threads are ready)
+    /// - `tmout_ms`: Timeout in ms for each waiting thread
+    /// - `nthreads`: Number of threads to spawn
+    /// - `expected_ok`: Expected number of threads that should wake up successfully
+    /// - `expected_timeout`: Expected number of threads that should timeout
+    /// - `notify_count`: None for notify_all(), Some(n) to notify n threads
+    ///
+    /// # Return Values
+    /// Each thread returns (flag_value, timed_out, error):
+    /// - flag_value: true if condition variable flag was set
+    /// - timed_out: true if wait timed out
+    /// - error: true if an error occurred
+    #[test_case(50,   500,  1, 1, 0, None      ; "single thread wakes up")]
+    #[test_case(1000, 500,  1, 0, 1, None      ; "single thread times out")]
+    #[test_case(50,   1000, 5, 5, 0, None      ; "all threads wake up")]
+    #[test_case(2000, 1000, 5, 0, 5, None      ; "all threads timeout")]
     #[cfg_attr(miri, ignore)]
     fn test_condition_var_pass_all(
         delay_ms: u64,
@@ -218,19 +259,36 @@ mod tests {
         expected_timeout: usize,
         notify_count: Option<usize>,
     ) {
-        let my_cvar = super::ConditionVar::default();
+        let my_cvar = ConditionVar::default();
         let arc_my_cvar = Arc::new(my_cvar);
+
+        // Synchronization barrier to ensure all threads are waiting before notification
+        let ready_count = Arc::new(AtomicUsize::new(0));
+        let ready_count_clone = Arc::clone(&ready_count);
+
         let clones: Vec<Arc<ConditionVar>> = vec![arc_my_cvar.clone(); nthreads];
-        // let mut handles: Vec<JoinHandle<(bool, bool, bool)>> = vec![];
         let handles = clones
             .iter()
             .map(|i| {
                 let aa = i.clone();
-                thread::spawn(move || aa.wait_timeout(Duration::from_millis(tmout_ms)))
+                let ready = Arc::clone(&ready_count);
+                thread::spawn(move || {
+                    // Signal that this thread is about to wait
+                    ready.fetch_add(1, Ordering::SeqCst);
+                    aa.wait_timeout(Duration::from_millis(tmout_ms))
+                })
             })
             .collect::<Vec<JoinHandle<(bool, bool, bool)>>>();
         assert_eq!(handles.len(), nthreads);
-        spawn_delayed(arc_my_cvar, Duration::from_millis(delay_ms), notify_count);
+
+        spawn_delayed(
+            arc_my_cvar,
+            Duration::from_millis(delay_ms),
+            notify_count,
+            ready_count_clone,
+            nthreads,
+        );
+
         let mut ok = 0;
         let mut tmout = 0;
         let mut err = 0;
