@@ -9,6 +9,11 @@
 # Exit on any error
 set -e
 
+if [ -z "$STYX_ROOT" ]; then
+    echo "STYX_ROOT not set, is your .env loaded? (run direnv allow .)"
+    exit 1
+fi
+
 LOCAL_DIR="${STYX_ROOT}/.local"
 mkdir -p "${LOCAL_DIR}"
 if git check-ignore -q "${LOCAL_DIR}" ; then
