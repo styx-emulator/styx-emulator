@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: BSD-2-Clause
-#![cfg(target_os = "linux")]
-
+#[cfg(target_os = "linux")]
 use styx_cow::Cow;
 
 use std::time::Instant;
@@ -9,6 +8,7 @@ const SIZE: usize = 1024 * 1024;
 
 use criterion::black_box;
 
+#[cfg(target_os = "linux")]
 #[inline(never)]
 fn cow() -> (Cow, Cow) {
     let mut region = Cow::new(SIZE).unwrap();
@@ -36,6 +36,8 @@ fn copy() -> (Vec<u8>, Vec<u8>) {
 
 fn main() {
     let mut t = Instant::now();
+
+    #[cfg(target_os = "linux")]
     let (a, b) = black_box(cow());
     println!("cow elapsed: {:?}", t.elapsed());
 
@@ -43,5 +45,7 @@ fn main() {
     let (x, y) = black_box(copy());
     println!("non cow elapsed: {:?}", t.elapsed());
 
-    println!("{:?}, {:?}, {:?}, {:?}", a.len(), b.len(), x.len(), y.len());
+    #[cfg(target_os = "linux")]
+    print!("{:?}, {:?}, ", a.len(), b.len());
+    println!("{:?}, {:?}", x.len(), y.len());
 }

@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+#[cfg(target_os = "linux")]
 use styx_cow::Cow;
 
 fn non_cow(size: usize) -> (Vec<u8>, Vec<u8>) {
@@ -14,6 +15,7 @@ fn non_cow(size: usize) -> (Vec<u8>, Vec<u8>) {
     (region, region2)
 }
 
+#[cfg(target_os = "linux")]
 fn cow(size: usize) -> (Cow, Cow) {
     let mut region = Cow::new(size).unwrap();
 
@@ -53,6 +55,8 @@ pub fn criterion_bench(c: &mut Criterion) {
                 let (_a, _b) = black_box(non_cow(size));
             });
         });
+
+        #[cfg(target_os = "linux")]
         group.bench_with_input(BenchmarkId::new("new method", size), size, |b, &size| {
             b.iter(|| {
                 let (mut x, mut y) = black_box(cow(size));
