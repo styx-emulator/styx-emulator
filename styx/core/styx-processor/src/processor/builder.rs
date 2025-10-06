@@ -36,9 +36,11 @@ enum TargetProgramSource<'a> {
 }
 
 impl<'a> TargetProgramSource<'a> {
-    pub fn bytes(self) -> Result<Cow<'a, [u8]>, std::io::Error> {
+    pub fn bytes(self) -> Result<Cow<'a, [u8]>, styx_errors::UnknownError> {
         match self {
-            TargetProgramSource::File(file_name) => std::fs::read(file_name).map(Cow::Owned),
+            TargetProgramSource::File(ref file_name) => std::fs::read(file_name)
+                .map(Cow::Owned)
+                .with_context(|| format!("Failed to read target program from file {file_name}")),
             TargetProgramSource::Memory(cow) => Ok(cow),
         }
     }
@@ -356,7 +358,7 @@ fn autobots_load_up(
     // loader hints?
     let mut memory_desc = loader
         .load_bytes(source_bytes, hints)
-        .context("failed to let loader load bytes")?;
+        .context("Loader failed to load bytes")?;
 
     // todo these should be more compatible
     let regions = memory_desc.take_memory_regions();

@@ -211,7 +211,8 @@ impl Loader for ParameterizedLoader {
                     // FIXME: We will ultimately need to support rebasing an ELF. Until then, we
                     // cannot do anything with the base address.
                     let path = Path::new(&elf_record.file);
-                    let data = fs::read(path)?;
+                    let data = fs::read(path)
+                        .with_context(|| format!("Failed to read ELF file {}", path.display()))?;
                     let mut elf_desc: MemoryLoaderDesc =
                         load_elf(&ElfLoaderConfig::default(), &data, HashMap::new()).unwrap();
 
@@ -223,7 +224,8 @@ impl Loader for ParameterizedLoader {
                 LoadRecordType::FileRaw(raw_record) => {
                     // Load the raw file into memory using the raw file loader.
                     let path = Path::new(&raw_record.file);
-                    let data = fs::read(path)?;
+                    let data = fs::read(path)
+                        .with_context(|| format!("Failed to read raw file {}", path.display()))?;
                     match raw_record.perms {
                         Some(perms) => {
                             let mut raw_desc: MemoryLoaderDesc =
