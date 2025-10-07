@@ -7,6 +7,31 @@
 
 use tonic::Status;
 
+/// Convenience trait for an expected field.
+pub trait ExpectField {
+    type Target;
+
+    #[allow(clippy::result_large_err)]
+    fn expect_field(self) -> Result<Self::Target, Status>;
+}
+
+impl<T: 'static> ExpectField for Option<T> {
+    type Target = T;
+
+    /// Expects that the target is [`Some`], otherwise return [`Err`] with an informative [`Status`].
+    fn expect_field(self) -> Result<Self::Target, Status> {
+        match self {
+            Some(inner) => Ok(inner),
+            None => {
+                let name = std::any::type_name::<T>();
+                Err(Status::invalid_argument(format!(
+                    "field {name} missing from gRPC request"
+                )))
+            }
+        }
+    }
+}
+
 /// ToArg vec supports the ability to serialize into a vector or string
 /// to support [`clap`] argument parsing and generation.
 pub trait ToArgVec {
