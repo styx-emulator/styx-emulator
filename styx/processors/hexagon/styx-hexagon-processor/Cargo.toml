@@ -9,13 +9,9 @@ version.workspace = true
 workspace = true
 
 [dependencies]
-# Styx dependencies
 styx-core = { workspace = true }
-styx-workspace-hack = { version = "0.1", path = "../../../workspace-hack" }
+styx-peripherals = { path = "../../../peripherals" }
 
-# Third party dependencies
-serde = { workspace = true }
-bitbybit = { workspace = true }
-arbitrary-int = { workspace = true }
+styx-workspace-hack = { version = "0.1", path = "../../../workspace-hack" }
 
 [features]

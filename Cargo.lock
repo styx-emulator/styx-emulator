@@ -6256,11 +6256,8 @@ dependencies = [
 name = "styx-hexagon-processor"
 version = "1.2.0"
 dependencies = [
- "arbitrary-int",
- "bitbybit",
- "serde",
  "styx-core",
- "styx-workspace-hack",
+ "styx-peripherals",
 ]
 
 [[package]]
