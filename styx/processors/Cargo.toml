@@ -29,6 +29,7 @@ styx-cyclonev-processor = { path = "./arm/styx-cyclonev-processor" }
 styx-powerquicci-processor = { path = "./ppc/styx-powerquicci-processor" }
 styx-ppc4xx-processor = { path = "./ppc/styx-ppc4xx-processor" }
 styx-blackfin-processor = { path = "./bfin/styx-blackfin-processor" }
+styx-hexagon-processor = { path = "./hexagon/styx-hexagon-processor" }
 styx-superh2a-processor = { path = "./superh/styx-superh2a-processor" }
 styx-core = { workspace = true }
 styx-event-controllers = { path = "../event-controllers" }
