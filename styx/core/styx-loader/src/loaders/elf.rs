@@ -3,6 +3,7 @@
 
 use crate::{Loader, LoaderHints, MemoryLoaderDesc, StyxLoaderError};
 use goblin::elf::Elf;
+use log::trace;
 use std::borrow::Cow;
 use styx_cpu_type::arch::{Arch, ArchEndian};
 use styx_errors::anyhow::Context;
@@ -198,6 +199,8 @@ pub(crate) fn load_elf(
 
             // get the data for the source tests
             let src_mem_range = (ph.p_offset as usize)..((ph.p_offset + src_size) as usize);
+            trace!("range is {:x?}", src_mem_range);
+
             let mut src_data = data
                 .get(src_mem_range)
                 .ok_or_else(|| {
@@ -226,7 +229,7 @@ pub(crate) fn load_elf(
 
             // add region to collection
             let region = MemoryRegion::new_with_data(base_address, dst_size, perms, src_data)?;
-            log::trace!("Adding {region:?}");
+            log::trace!("Adding {region:x?}");
             regions.push(region);
         }
     }

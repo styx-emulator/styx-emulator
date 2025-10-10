@@ -6322,6 +6322,7 @@ dependencies = [
 name = "styx-hexagon-processor"
 version = "1.2.0"
 dependencies = [
+ "serde",
  "styx-core",
  "styx-peripherals",
  "styx-workspace-hack",
