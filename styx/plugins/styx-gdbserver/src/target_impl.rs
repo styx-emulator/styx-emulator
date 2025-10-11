@@ -936,7 +936,7 @@ where
             // get the actual number of bytes we can copy
             let output_len = length;
             let input_len = data_len - offset as usize; // length of data to copy
-            let len_copy = input_len.min(output_len);
+            let len_copy = input_len.min(output_len).min(buf.len());
 
             // perform the memcpy
             let input_start = offset as usize;

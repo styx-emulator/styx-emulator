@@ -17194,22 +17194,24 @@ gp: reloc is epsilon [ reloc = 0; ] {
 <done_7>
 }
 
-:J2_call J2_call_r22_2 is phase = 1 & Parse != 0b00 & subinsn = 0 & b0 = 0 & b25 = 1 & b26 = 0 & b27 = 1 & b28 = 1 & b29 = 0 & b30 = 1 & b31 = 0 & J2_call_r22_2 {
+:J2_call J2_call_r22_2 is pkt_next & phase = 1 & Parse != 0b00 & subinsn = 0 & b0 = 0 & b25 = 1 & b26 = 0 & b27 = 1 & b28 = 1 & b29 = 0 & b30 = 1 & b31 = 0 & J2_call_r22_2 {
+  D_R31 = pkt_next;
   call J2_call_r22_2;
 }
 
-:J2_callt J2_callt_Pu4 J2_callt_r15_2 is phase = 1 & Parse != 0b00 & subinsn = 0 & b11 = 0 & b21 = 0 & b24 = 1 & b25 = 0 & b26 = 1 & b27 = 1 & b28 = 1 & b29 = 0 & b30 = 1 & b31 = 0 & J2_callt_Pu4 & J2_callt_r15_2 {
+:J2_callt J2_callt_Pu4 J2_callt_r15_2 is pkt_next & phase = 1 & Parse != 0b00 & subinsn = 0 & b11 = 0 & b21 = 0 & b24 = 1 & b25 = 0 & b26 = 1 & b27 = 1 & b28 = 1 & b29 = 0 & b30 = 1 & b31 = 0 & J2_callt_Pu4 & J2_callt_r15_2 {
   local tmp0:1;
   tmp0 = J2_callt_Pu4;
   if (tmp0) goto <t_branch_2>;
   goto <done_2>;
 <t_branch_2>
+  D_R31 = pkt_next;
   call J2_callt_r15_2;
   goto <done_2>;
 <done_2>
 }
 
-:J2_callf J2_callf_Pu4 J2_callf_r15_2 is phase = 1 & Parse != 0b00 & subinsn = 0 & b11 = 0 & b21 = 1 & b24 = 1 & b25 = 0 & b26 = 1 & b27 = 1 & b28 = 1 & b29 = 0 & b30 = 1 & b31 = 0 & J2_callf_Pu4 & J2_callf_r15_2 {
+:J2_callf J2_callf_Pu4 J2_callf_r15_2 is pkt_next & phase = 1 & Parse != 0b00 & subinsn = 0 & b11 = 0 & b21 = 1 & b24 = 1 & b25 = 0 & b26 = 1 & b27 = 1 & b28 = 1 & b29 = 0 & b30 = 1 & b31 = 0 & J2_callf_Pu4 & J2_callf_r15_2 {
   local tmp0:1;
   tmp0 = ! J2_callf_Pu4;
   local tmp1:1;
@@ -17217,27 +17219,30 @@ gp: reloc is epsilon [ reloc = 0; ] {
   if (tmp1) goto <t_branch_3>;
   goto <done_3>;
 <t_branch_3>
+  D_R31 = pkt_next;
   call J2_callf_r15_2;
   goto <done_3>;
 <done_3>
 }
 
-:J2_callr J2_callr_Rs32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b21 = 1 & b22 = 0 & b23 = 1 & b24 = 0 & b25 = 0 & b26 = 0 & b27 = 0 & b28 = 1 & b29 = 0 & b30 = 1 & b31 = 0 & J2_callr_Rs32 {
+:J2_callr J2_callr_Rs32 is pkt_next & phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b21 = 1 & b22 = 0 & b23 = 1 & b24 = 0 & b25 = 0 & b26 = 0 & b27 = 0 & b28 = 1 & b29 = 0 & b30 = 1 & b31 = 0 & J2_callr_Rs32 {
+  D_R31 = pkt_next;
   call [J2_callr_Rs32];
 }
 
-:J2_callrt J2_callrt_Pu4 J2_callrt_Rs32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b21 = 0 & b22 = 0 & b23 = 0 & b24 = 1 & b25 = 0 & b26 = 0 & b27 = 0 & b28 = 1 & b29 = 0 & b30 = 1 & b31 = 0 & J2_callrt_Pu4 & J2_callrt_Rs32 {
+:J2_callrt J2_callrt_Pu4 J2_callrt_Rs32 is pkt_next & phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b21 = 0 & b22 = 0 & b23 = 0 & b24 = 1 & b25 = 0 & b26 = 0 & b27 = 0 & b28 = 1 & b29 = 0 & b30 = 1 & b31 = 0 & J2_callrt_Pu4 & J2_callrt_Rs32 {
   local tmp0:1;
   tmp0 = J2_callrt_Pu4;
   if (tmp0) goto <t_branch_2>;
   goto <done_2>;
 <t_branch_2>
+  D_R31 = pkt_next;
   call [J2_callrt_Rs32];
   goto <done_2>;
 <done_2>
 }
 
-:J2_callrf J2_callrf_Pu4 J2_callrf_Rs32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b21 = 1 & b22 = 0 & b23 = 0 & b24 = 1 & b25 = 0 & b26 = 0 & b27 = 0 & b28 = 1 & b29 = 0 & b30 = 1 & b31 = 0 & J2_callrf_Pu4 & J2_callrf_Rs32 {
+:J2_callrf J2_callrf_Pu4 J2_callrf_Rs32 is pkt_next & phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b21 = 1 & b22 = 0 & b23 = 0 & b24 = 1 & b25 = 0 & b26 = 0 & b27 = 0 & b28 = 1 & b29 = 0 & b30 = 1 & b31 = 0 & J2_callrf_Pu4 & J2_callrf_Rs32 {
   local tmp0:1;
   tmp0 = ! J2_callrf_Pu4;
   local tmp1:1;
@@ -17245,6 +17250,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   if (tmp1) goto <t_branch_3>;
   goto <done_3>;
 <t_branch_3>
+  D_R31 = pkt_next;
   call [J2_callrf_Rs32];
   goto <done_3>;
 <done_3>

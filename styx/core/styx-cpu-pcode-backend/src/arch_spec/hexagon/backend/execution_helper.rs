@@ -4,7 +4,10 @@ use styx_cpu_type::arch::hexagon::HexagonRegister;
 use styx_errors::anyhow::Context;
 use styx_pcode::pcode::{Opcode, Pcode, SpaceName, VarnodeData};
 use styx_pcode_translator::ContextOption;
-use styx_processor::{cpu::CpuBackendExt, memory::Mmu};
+use styx_processor::{
+    cpu::{CpuBackend, CpuBackendExt},
+    memory::Mmu,
+};
 
 use super::{
     decode_info::{DuplexInsClass, PktLoopParseBits},
@@ -118,6 +121,40 @@ impl DefaultHexagonExecutionHelper {
                 trace!("dotnew: this isn't a dotnew insn")
             }
         }
+    }
+
+    /// Hook at the beginning of a packet to determine
+    /// what the next packet start is. This is important
+    /// for if a call is in the packet, as the packet
+    /// must set the link register to the start of the next packet.
+    ///
+    /// Section 11.4 "Call subroutine" details this.
+    fn detect_pkt_next(
+        &mut self,
+        backend: &mut HexagonPcodeBackend,
+        instrs: &[GeneralHexagonInstruction; 4],
+    ) -> Result<(), GeneratePcodeError> {
+        for (i, insn_value) in instrs.iter().enumerate() {
+            // Only a duplex or the "end of packet" parse bits
+            // end a packet. The instruction immediately after
+            // is the start of a packet.
+            //
+            // For reference, see section 10.3, duplexes are slot 0 and 1.
+            // See also section 10.5, describes the different parse bits referenced below.
+            if matches!(
+                insn_value.parse(),
+                PktLoopParseBits::Duplex | PktLoopParseBits::EndOfPacket
+            ) {
+                // Each instruction is 4 bytes, and we want the instruction immediately following this.
+                let pc_offset_next = self.pc.unwrap() as u32 + (i as u32 + 1) * 4;
+                backend.update_context(
+                    PacketLocation::Now,
+                    ContextOption::HexagonPktNext(pc_offset_next),
+                );
+                break;
+            }
+        }
+        Ok(())
     }
 
     /// Hook at the beginning of a packet to determine
@@ -385,6 +422,7 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
         let parse_next = instrs[1].parse();
 
         self.detect_hwloop_start_of_packet(backend, parse_now, parse_next)?;
+        self.detect_pkt_next(backend, &instrs)?;
 
         backend.update_context(PacketLocation::Now, ContextOption::HexagonPktStart(pc));
         Ok(())
