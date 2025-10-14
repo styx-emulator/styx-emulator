@@ -51,8 +51,8 @@ pub enum MemoryType {
 ///
 /// For a processor ready default use [`Mmu::default_region_store()`].
 pub struct Mmu {
-    pub(crate) tlb: Box<dyn TlbImpl>,
-    pub(crate) memory: MemoryBackend,
+    pub tlb: Box<dyn TlbImpl>,
+    pub memory: MemoryBackend,
 }
 
 impl Default for Mmu {

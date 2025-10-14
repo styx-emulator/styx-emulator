@@ -33,6 +33,8 @@ pub fn build() -> ArchSpecBuilder<sla::Hexagon, HexagonPcodeBackend> {
     system::dcache::add_dcache_callothers(&mut spec);
     system::l2::add_l2_callothers(&mut spec);
     system::interrupt::add_interrupt_callothers(&mut spec);
+    system::isync::add_isync_callothers(&mut spec);
+    system::mem::add_mem_callothers(&mut spec);
 
     regpairs::add_vector_register_pair_handlers(&mut spec);
 
