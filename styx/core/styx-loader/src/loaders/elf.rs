@@ -45,17 +45,29 @@ impl From<ElfMachine> for Arch {
     }
 }
 
+/// Used in [`ElfLoaderConfig`] to dertermin which member to use for styx memory region address.
+#[derive(Debug)]
+pub enum SegmentAddr {
+    /// Use p_vaddr for segment address.
+    Vaddr,
+    /// Use p_paddr for segment address.
+    Paddr,
+}
+
 /// Configure the [`ElfLoader`].
 #[derive(Debug)]
 pub struct ElfLoaderConfig {
     /// Log a warning if the provided ELF has no loadable segments. Defaults to true.
     pub warn_no_loadable_segments: bool,
+    /// Use this `p_paddr` or `p_vaddr` for region start address. Defaults to `p_vaddr`.
+    pub segment_addr_preference: SegmentAddr,
 }
 
 impl Default for ElfLoaderConfig {
     fn default() -> Self {
         Self {
             warn_no_loadable_segments: true,
+            segment_addr_preference: SegmentAddr::Vaddr,
         }
     }
 }
@@ -66,13 +78,27 @@ impl Default for ElfLoaderConfig {
 /// is technically limited by some nifty auto-coversion [`From`] trait
 /// impl's, namely [`From<ElfMachine> for Arch`], and [`styx_cpu_type::Arch::pc`].
 ///
-/// # Available Hint's
+/// ## Available Hints
+///
 /// - if provided, an `endian` hint of type [`styx_cpu_type::ArchEndian`] can be provided,
 ///   it will not override the header, but will warn you if there is a disagreement
 /// - if provided, an `arch` hint of type [`styx_cpu_type::Arch`] can be provided,
 ///   it will not override the header, but will warn you if there is a disagreement
 /// - if provided, a `pc` hint of type [`u64`] can be provided, this *will* override
 ///   the header.
+///
+/// ## p_paddr vs p_vaddr
+///
+/// By default, memory regions are gathered from PT_LOAD segements with their start
+/// address taken from `p_vaddr`.
+///
+/// Note that in general we load firmware files, so the `p_vaddr` and the
+/// `p_paddr` should both be set to the same exact value. And elf's in general
+/// don't need to sent `p_paddr`.
+///
+/// To change this behavior, modify [`ElfLoaderConfig`]'s `segement_addr_preference`.
+///
+/// ## TODO
 ///
 /// TODO: test all the hints
 /// TODO: add integration tests for this loader
@@ -158,11 +184,10 @@ pub(crate) fn load_elf(
         // 0 and to follow the segment's initialized area.
         // The file size may not be larger than the memory size.
         if ph.p_type == goblin::elf::program_header::PT_LOAD {
-            // note that in general we load firmware files,
-            // so the `p_vaddr` and the `p_paddr` should both
-            // be set to the same exact value. And elf's in
-            // general don't need to sent `p_paddr`.
-            let base_address: u64 = ph.p_vaddr;
+            let base_address = match config.segment_addr_preference {
+                SegmentAddr::Vaddr => ph.p_vaddr,
+                SegmentAddr::Paddr => ph.p_paddr,
+            };
 
             // number of bytes to copy from the file
             let src_size: u64 = ph.p_filesz;

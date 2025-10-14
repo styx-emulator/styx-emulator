@@ -1285,16 +1285,6 @@ dependencies = [
 
 [[package]]
 name = "deranged"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c9e6a11ca8224451684bc0d7d5a7adbf8f2fd6887261a1cfc3c0432f9d4068e"
-dependencies = [
- "powerfmt",
- "serde",
-]
-
-[[package]]
-name = "deranged"
 version = "0.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a41953f86f8a05768a6cda24def994fd2f424b04ec5c719cf89989779f199071"
@@ -2590,12 +2580,6 @@ checksum = "7f78c730aaa7d0b9336a299029ea49f9ee53b0ed06e9202e8cb7db9bae7b8c82"
 dependencies = [
  "cc",
 ]
-
-[[package]]
-name = "linux-raw-sys"
-version = "0.4.15"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d26c52dbd32dccf2d10cac7725f8eae5296885fb5703b261f7d0a0739ec807ab"
 
 [[package]]
 name = "linux-raw-sys"
@@ -4012,19 +3996,6 @@ dependencies = [
 
 [[package]]
 name = "rustix"
-version = "0.38.44"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fdb5bc1ae2baa591800df16c9ca78619bf65c0488b41b96ccec5d11220d8c154"
-dependencies = [
- "bitflags 2.9.4",
- "errno",
- "libc",
- "linux-raw-sys 0.4.15",
- "windows-sys 0.59.0",
-]
-
-[[package]]
-name = "rustix"
 version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cd15f8a2c5551a84d56efdc1cd049089e409ac19a3072d5037a17fd70719ff3e"
@@ -4032,7 +4003,7 @@ dependencies = [
  "bitflags 2.9.4",
  "errno",
  "libc",
- "linux-raw-sys 0.11.0",
+ "linux-raw-sys",
  "windows-sys 0.61.1",
 ]
 
@@ -5749,11 +5720,10 @@ dependencies = [
  "crossbeam-utils",
  "darling",
  "darling_core",
- "deranged 0.4.0",
+ "deranged",
  "displaydoc",
  "either",
  "event-listener",
- "foldhash 0.1.5",
  "form_urlencoded",
  "futures",
  "futures-channel",
@@ -5763,7 +5733,6 @@ dependencies = [
  "generic-array",
  "getrandom 0.3.3",
  "half",
- "hashbrown 0.15.5",
  "itertools 0.13.0",
  "libc",
  "log",
@@ -5785,12 +5754,12 @@ dependencies = [
  "regex",
  "regex-automata",
  "regex-syntax",
- "rustix 0.38.44",
- "rustix 1.1.2",
+ "rustix",
  "sea-orm",
  "sea-query",
  "sea-query-binder",
  "serde",
+ "serde_core",
  "serde_json",
  "signal-hook",
  "signal-hook-mio",
@@ -5802,17 +5771,18 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "tokio-util",
- "toml_datetime 0.6.11",
- "toml_edit 0.22.27",
+ "toml_datetime 0.7.2",
+ "toml_parser",
  "tracing",
  "tracing-core",
- "url",
  "uuid",
  "winapi",
  "windows 0.51.1",
- "windows-sys 0.48.0",
  "windows-sys 0.52.0",
  "windows-sys 0.59.0",
+ "windows-sys 0.60.2",
+ "windows-sys 0.61.1",
+ "winnow",
 ]
 
 [[package]]
@@ -5887,7 +5857,7 @@ dependencies = [
  "fastrand",
  "getrandom 0.3.3",
  "once_cell",
- "rustix 1.1.2",
+ "rustix",
  "windows-sys 0.61.1",
 ]
 
@@ -5955,7 +5925,7 @@ version = "0.3.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "91e7d9e3bb61134e77bde20dd4825b97c010155709965fedf0f49bb138e52a9d"
 dependencies = [
- "deranged 0.5.4",
+ "deranged",
  "itoa",
  "libc",
  "num-conv",
