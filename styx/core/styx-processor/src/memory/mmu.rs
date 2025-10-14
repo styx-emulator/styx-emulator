@@ -65,14 +65,8 @@ pub enum MemoryType {
 ///
 /// In tests, [`Mmu::default_flat()`] or [`Mmu::with_regions()`] should suffice.
 pub struct Mmu {
-    /// [`TlbImpl`] instance for this cpu.
     pub tlb: Box<dyn TlbImpl>,
-    /// Shared physical memory backend.
-    ///
-    /// At the moment this is `pub` and so technically users are free to clone.
-    /// If we ever want to collect all the `Arc<MemoryBackend>` from each CPU
-    /// to get a `&mut MemoryBackend` then we will have to provide helper methods to access this.
-    pub memory: Arc<MemoryBackend>,
+    pub memory: MemoryBackend,
 }
 
 impl Default for Mmu {

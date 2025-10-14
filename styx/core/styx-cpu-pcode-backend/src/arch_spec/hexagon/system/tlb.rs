@@ -5,7 +5,10 @@ use arbitrary_int::*;
 use derive_more::FromStr;
 use log::{debug, trace};
 use styx_errors::anyhow::Context;
-use styx_pcode::{pcode::VarnodeData, sla::SlaUserOps};
+use styx_pcode::{
+    pcode::{AddressSpaceName, SpaceName, VarnodeData},
+    sla::SlaUserOps,
+};
 use styx_pcode_translator::sla::HexagonUserOps;
 use styx_processor::{
     cpu::{CpuBackend, CpuBackendExt},
@@ -297,7 +300,6 @@ impl<T: CpuBackend> CallOtherCallback<T> for Ctlbw {
     }
 }
 
-/// FIXME: multicore (per-core tlb?)
 #[derive(Debug)]
 pub struct TlbWrite {}
 impl<T: CpuBackend> CallOtherCallback<T> for TlbWrite {
