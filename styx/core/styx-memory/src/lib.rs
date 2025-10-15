@@ -12,7 +12,33 @@ use zstd::{decode_all, encode_all};
 
 /// Container struct representing multiple [`MemoryRegion`]'s.
 /// Keeps a running tally of the min and max address while adding
-/// new [`MemoryRegion`]'s to the [`MemoryBank`] for faster queries
+/// new [`MemoryRegion`]'s to the [`MemoryBank`] for faster queries.
+///
+/// # Usage
+/// Construct a default and add as needed, or construct a [`MemoryBank`]
+/// from a collection of [`MemoryRegion`]'s you already have.
+///
+/// ```rust
+/// use styx_memory::{MemoryBank, MemoryRegion, MemoryPermissions as Perms};
+///
+/// // Method 1: Default construction and add regions one by one
+/// let bank = MemoryBank::default();
+/// bank.add_region(MemoryRegion::new(0x1000, 0x1000, Perms::READ | Perms::WRITE).unwrap()).unwrap();
+/// bank.add_region(MemoryRegion::new(0x3000, 0x1000, Perms::READ | Perms::EXEC).unwrap()).unwrap();
+///
+/// assert!(bank.contains_address(0x1000));
+/// assert!(bank.contains_address(0x3500));
+///
+/// // Method 2: Construct from a Vec of MemoryRegion using TryFrom
+/// let regions = vec![
+///     MemoryRegion::new(0x1000, 0x1000, Perms::READ | Perms::WRITE).unwrap(),
+///     MemoryRegion::new(0x3000, 0x1000, Perms::READ | Perms::EXEC).unwrap(),
+/// ];
+/// let bank2 = MemoryBank::try_from(regions).unwrap();
+///
+/// assert!(bank2.contains_address(0x1000));
+/// assert!(bank2.contains_address(0x3500));
+/// ```
 #[derive(Debug)]
 pub struct MemoryBank {
     /// Inner collection of [`MemoryRegion`]'s inside the
@@ -41,10 +67,53 @@ impl Default for MemoryBank {
     }
 }
 
-unsafe impl Send for MemoryBank {}
-unsafe impl Sync for MemoryBank {}
+impl TryFrom<Vec<MemoryRegion>> for MemoryBank {
+    type Error = StyxMemoryError;
+
+    fn try_from(value: Vec<MemoryRegion>) -> Result<MemoryBank, StyxMemoryError> {
+        Self::from_regions_iter(value)
+    }
+}
 
 impl MemoryBank {
+    /// Gets the representative [`MemoryRange`] for the [`MemoryBank`]
+    pub fn get_range(&self) -> Result<MemoryRange, StyxMemoryError> {
+        Ok(MemoryRange::new(self.min_address()?, self.max_address()?))
+    }
+
+    /// Constructs a [`MemoryBank`] from an [`Iterator`] like container
+    /// of [`MemoryRegion`]'s. The regions are added sequentially, and
+    /// if any region fails to be added (e.g., due to overlapping with
+    /// an existing region), an error is returned.
+    ///
+    /// ```rust
+    /// use styx_memory::{MemoryBank, MemoryRegion, MemoryPermissions as Perms};
+    ///
+    /// let regions = vec![
+    ///     MemoryRegion::new(0x1000, 0x1000, Perms::READ | Perms::WRITE).unwrap(),
+    ///     MemoryRegion::new(0x3000, 0x1000, Perms::READ | Perms::EXEC).unwrap(),
+    /// ];
+    ///
+    /// let bank = MemoryBank::from_regions_iter(regions.clone()).unwrap();
+    /// // equivalently:
+    /// let bank2 = MemoryBank::try_from(regions).unwrap();
+    /// assert!(bank.contains_address(0x1000));
+    /// assert!(bank.contains_address(0x3000));
+    /// # assert!(bank2.contains_address(0x1000));
+    /// # assert!(bank2.contains_address(0x3000));
+    /// ```
+    pub fn from_regions_iter(
+        regions: impl IntoIterator<Item = MemoryRegion>,
+    ) -> Result<Self, StyxMemoryError> {
+        let bank = MemoryBank::default();
+
+        for region in regions.into_iter() {
+            bank.add_region(region)?;
+        }
+
+        Ok(bank)
+    }
+
     /// Get's the current minimum address represented in the
     /// [`MemoryBank`], if there are no [`MemoryRegion`]'s in the
     /// [`MemoryBank`] then this methods returns an error
@@ -792,8 +861,25 @@ impl MemoryRange {
         Self(start, end)
     }
 
-    /// Gets the first element of the tuple to return the start
-    /// address in the [`MemoryRange`]
+    /// Construct a new [`MemoryRange`] given a base address and size.
+    /// Returns [`StyxMemoryError::SizeTooLarge`] when base + size overflows `u64`
+    ///
+    /// ```rust
+    /// use styx_memory::MemoryRange;
+    ///
+    ///
+    /// let range = MemoryRange::new_with_size(0x1000, 0x10).unwrap();
+    /// assert_eq!(range.end(), 0x100F);
+    /// ```
+    pub fn new_with_size(base: u64, size: u64) -> Result<Self, StyxMemoryError> {
+        if base.checked_add(size).is_some() {
+            Ok(Self::new(base, base + size - 1))
+        } else {
+            Err(StyxMemoryError::SizeTooLarge(size))
+        }
+    }
+
+    /// Gets the start address of the [`MemoryRange`]
     ///
     /// ```rust
     /// use styx_memory::MemoryRange;
@@ -805,8 +891,19 @@ impl MemoryRange {
         self.0
     }
 
-    /// Gets the second element of the tuple to return the ending
-    /// address in the [`MemoryRange`]
+    /// Gets the base address of the [`MemoryRange`]
+    ///
+    /// ```rust
+    /// use styx_memory::MemoryRange;
+    ///
+    /// let mem_range = MemoryRange::new(0x4000, 0x4fff);
+    /// assert_eq!(mem_range.base(), 0x4000);
+    /// ```
+    pub fn base(&self) -> u64 {
+        self.0
+    }
+
+    /// Gets the last valid address in the [`MemoryRange`]
     ///
     /// ```rust
     /// use styx_memory::MemoryRange;
@@ -829,6 +926,22 @@ impl MemoryRange {
     pub fn size(&self) -> u64 {
         // plus 1 because we are address inclusive on the range
         1 + self.1 - self.0
+    }
+
+    /// Checks if the provided range is contained in the current range
+    ///
+    /// ```rust
+    /// use styx_memory::MemoryRange;
+    ///
+    /// let range1 = MemoryRange::new(0x1000, 0x1010);
+    /// let range2 = MemoryRange::new(0x1001, 0x1002);
+    ///
+    /// assert!(range1.contains_range(&range2));
+    /// # let range3 = MemoryRange::new(0x1001, 0x1080);
+    /// # assert!(!range1.contains_range(&range3));
+    /// ```
+    pub fn contains_range(&self, range: &MemoryRange) -> bool {
+        range.start() >= self.start() && range.end() <= self.end()
     }
 }
 
@@ -892,6 +1005,29 @@ impl PartialOrd for MemoryRegion {
 }
 
 impl MemoryRegion {
+    /// Returns a representative [`MemoryRange`] for the current [`MemoryRegion`]
+    pub fn get_range(&self) -> MemoryRange {
+        MemoryRange::new(self.base, self.end())
+    }
+
+    /// Checks if the current [`MemoryRegion`] contains the
+    /// requested range
+    ///
+    /// ```rust
+    /// use styx_memory::{MemoryRegion, MemoryRange};
+    /// # use styx_memory::MemoryPermissions;
+    ///
+    /// let region = MemoryRegion::new(0x1000, 0x10, MemoryPermissions::RW).unwrap();
+    /// let range1 = MemoryRange::new(0x1001, 0x1002);
+    ///
+    /// assert!(region.contains_range(&range1));
+    /// # let range2 = MemoryRange::new(0x1001, 0x1080);
+    /// # assert!(!region.contains_range(&range2));
+    /// ```
+    pub fn contains_range(&self, range: &MemoryRange) -> bool {
+        self.get_range().contains_range(range)
+    }
+
     /// Reads contents of the [`MemoryRegion`] and saves it
     fn context_save(&mut self) -> Result<(), StyxMemoryError> {
         self.saved_context =

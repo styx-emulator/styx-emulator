@@ -133,8 +133,8 @@ fn test_elf_ihex_range_consistency() {
     let elf_regions = elf_desc.take_memory_regions();
     let ihex_regions = ihex_desc.take_memory_regions();
 
-    let elf_bank = MemoryBank::from_regions_vec(elf_regions);
-    let ihex_bank = MemoryBank::from_regions_vec(ihex_regions);
+    let elf_bank = MemoryBank::from_regions_iter(elf_regions).unwrap();
+    let ihex_bank = MemoryBank::from_regions_iter(ihex_regions).unwrap();
 
     let elf_range = elf_bank.get_range().unwrap();
     let ihex_range = ihex_bank.get_range().unwrap();
