@@ -3,7 +3,7 @@
 use anyhow::anyhow;
 pub use decode_info::{GeneralHexagonInstruction, Iclass};
 use execution_helper::DefaultHexagonExecutionHelper;
-use log::trace;
+use log::{info, trace};
 pub use saved_context_opts::SavedContextOpts;
 use smallvec::{smallvec, SmallVec};
 use std::collections::BTreeMap;
@@ -110,16 +110,24 @@ pub enum HexagonSingleInstructionAction {
     None,
 }
 
+#[derive(Clone, Debug, Default)]
 struct HexagonFetchDecodeInfo {
     total_bytes_consumed: u64,
     ordering: SmallVec<[usize; MAX_PACKET_SIZE]>,
 }
 
+#[derive(Default)]
 struct HexagonExecuteSingleInfo {
     // This represents the total number of instructions within a packet
     // Not used currently.
     _total_instrs_within_packet_executed: u64,
     ordering: SmallVec<[usize; MAX_PACKET_SIZE]>,
+}
+
+#[derive(Debug, Default)]
+struct CachedFetchDecodeResult {
+    pcodes: Vec<Vec<Pcode>>,
+    info: HexagonFetchDecodeInfo,
 }
 
 #[derive(Debug)]
@@ -156,6 +164,10 @@ pub struct HexagonPcodeBackend {
     // this is the offset from the register space start to the first predicate register
     hexagon_predicate_start: u64,
     hexagon_predicate_end: u64,
+
+    // Used for performance, P-code translation is quite slow
+    // Maps PC to pcodes and other info for running hexagon code
+    cache: BTreeMap<u32, CachedFetchDecodeResult>,
 }
 
 impl Hookable for HexagonPcodeBackend {
@@ -581,6 +593,7 @@ impl HexagonPcodeBackend {
             saved_reg_context: BTreeMap::new(),
             hexagon_predicate_start,
             hexagon_predicate_end,
+            cache: BTreeMap::new(),
         }
     }
     /// Indicate when we should update the context reg
@@ -705,6 +718,30 @@ impl HexagonPcodeBackend {
     ) -> Result<Result<HexagonFetchDecodeInfo, TargetExitReason>, HexagonFetchDecodeError> {
         full_pcodes.clear();
 
+        let mut pc = self.pc().unwrap() as u32;
+        let initial_pc = pc;
+
+        // Flush the cache if we cross a page boundary (assuming 4K pages), for now.
+        if let Some((k, _)) = self.cache.first_key_value() {
+            // The page boundary has changed
+            if k & !0xfff != initial_pc & !0xfff {
+                info!(
+                    "invalidating pcode cache, cache at page {k:x} and pc at page {initial_pc:x}"
+                );
+                self.cache.clear()
+            }
+        }
+
+        // Fast path: check the pcode cache.
+        // NOTE: bit inefficient for now, need to stop copying and maybe move to reference counting.
+        // That might be a bit of a lift, so we'll do copying, which will at least be a bit faster.
+        //
+        if let Some(cached_pcodes) = self.cache.get(&pc) {
+            trace!("hexagon pcode cache: fast path got {pc:x} and pcodes {cached_pcodes:#?}");
+            full_pcodes.extend(cached_pcodes.pcodes.clone());
+            return Ok(Ok(cached_pcodes.info.clone()));
+        }
+
         let mut ordering: SmallVec<[usize; 4]> = SmallVec::new();
         let mut decode_state = PktState::PktEnded(None);
         let mut total_bytes_consumed = 0;
@@ -720,8 +757,6 @@ impl HexagonPcodeBackend {
             )))
             .expect("can't get p0 register as varnode")
             .offset;
-
-        let mut pc = self.pc().unwrap() as u32;
 
         loop {
             // This basically ensures that we break out of this loop at the end of decoding (after the end of the packet
@@ -983,12 +1018,24 @@ impl HexagonPcodeBackend {
                 }
             }
         }
+
         self.execution_helper = Some(execution_helper);
 
-        Ok(Ok(HexagonFetchDecodeInfo {
+        // Cache before we return
+        let info = HexagonFetchDecodeInfo {
             total_bytes_consumed,
             ordering,
-        }))
+        };
+
+        self.cache.insert(
+            initial_pc,
+            CachedFetchDecodeResult {
+                pcodes: full_pcodes.clone(),
+                info: info.clone(),
+            },
+        );
+
+        Ok(Ok(info))
     }
 }
 

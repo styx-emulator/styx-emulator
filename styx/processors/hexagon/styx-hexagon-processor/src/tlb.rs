@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use arbitrary_int::*;
 use bitbybit::bitfield;
+use std::collections::BTreeMap;
 use styx_core::{
     errors::UnknownError,
     memory::{
@@ -47,6 +48,8 @@ struct Pte {
 
 pub struct HexagonTlb {
     entries: [Pte; MAX_TLB_ENTRIES],
+    // mapping of u64 entry to u64 entry
+    cache: BTreeMap<u64, u64>,
     enable_code_translation: bool,
     enable_data_translation: bool,
 }
@@ -75,6 +78,7 @@ impl HexagonTlb {
             enable_code_translation: false,
             enable_data_translation: false,
             entries: [Pte::new_with_raw_value(0); MAX_TLB_ENTRIES],
+            cache: BTreeMap::new(),
         }
     }
 
@@ -117,8 +121,16 @@ impl TlbImpl for HexagonTlb {
         memory_type: MemoryType,
         processor: &mut TlbProcessor,
     ) -> TlbTranslateResult {
+        let page_number_mask = !((1 << PAGE_SIZE_BITS) - 1);
+        let vpn_page_masked = virt_addr & page_number_mask;
         if !self.enable_code_translation && !self.enable_data_translation {
+            // Physical memory mode
             Ok(virt_addr)
+        } else if let Some(&ppn_addr) = self.cache.get(&vpn_page_masked) {
+            let va_off_mask = (1 << PAGE_SIZE_BITS) - 1;
+            let p_addr = ppn_addr + (virt_addr & va_off_mask);
+            trace!("fast path: translated {virt_addr:x} to {p_addr:x}");
+            Ok(p_addr)
         } else {
             let virt_addr = virt_addr as u32;
 
@@ -130,7 +142,6 @@ impl TlbImpl for HexagonTlb {
                 // It appears that tlb entries have varying page sizes that are encoded
 
                 let page_type = Self::get_entry_page_type(ent);
-                let vpn_shift = PAGE_SIZE_BITS;
 
                 let va_vpn = (virt_addr as u64) & !PAGE_MASK[page_type];
                 let va_offset = virt_addr as u64 & PAGE_MASK[page_type];
@@ -144,6 +155,9 @@ impl TlbImpl for HexagonTlb {
                         .0
                         & !PAGE_MASK[page_type];
                     let pa = ppd_mask + va_offset;
+
+                    // TODO: invalidate the cache
+                    self.cache.insert(vpn_page_masked, pa & page_number_mask);
 
                     trace!("va {virt_addr:x} ppd_mask {ppd_mask:x} pa {pa:x}");
                     return Ok(pa);

@@ -2,7 +2,7 @@
 use num_derive::FromPrimitive;
 
 /// P-code Opcode.
-#[derive(Debug, FromPrimitive, PartialEq, Eq)]
+#[derive(Clone, Debug, FromPrimitive, PartialEq, Eq)]
 pub enum Opcode {
     ///< Copy one operand to another
     Copy = 1,
