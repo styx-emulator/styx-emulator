@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use arbitrary_int::*;
 use bitbybit::bitfield;
+use std::collections::BTreeMap;
 use styx_core::{
     errors::UnknownError,
     memory::{
@@ -45,6 +46,8 @@ struct Pte {
 
 pub struct HexagonTlb {
     entries: [Pte; MAX_TLB_ENTRIES],
+    // mapping of u64 entry to u64 entry
+    cache: BTreeMap<u64, u64>,
     enable_code_translation: bool,
     enable_data_translation: bool,
 }
@@ -55,6 +58,7 @@ impl HexagonTlb {
             enable_code_translation: false,
             enable_data_translation: false,
             entries: [Pte::new_with_raw_value(0); MAX_TLB_ENTRIES],
+            cache: BTreeMap::new(),
         }
     }
 }
@@ -87,8 +91,16 @@ impl TlbImpl for HexagonTlb {
         memory_type: MemoryType,
         processor: &mut TlbProcessor,
     ) -> TlbTranslateResult {
+        let page_number_mask = !((1 << PAGE_SIZE_BITS) - 1);
+        let vpn_page_masked = virt_addr & page_number_mask;
         if !self.enable_code_translation && !self.enable_data_translation {
+            // Physical memory mode
             Ok(virt_addr)
+        } else if let Some(&ppn_addr) = self.cache.get(&vpn_page_masked) {
+            let va_off_mask = (1 << PAGE_SIZE_BITS) - 1;
+            let p_addr = ppn_addr + (virt_addr & va_off_mask);
+            trace!("fast path: translated {virt_addr:x} to {p_addr:x}");
+            Ok(p_addr)
         } else {
             let virt_addr = virt_addr as u32;
             // 4k page
@@ -103,17 +115,26 @@ impl TlbImpl for HexagonTlb {
                 let ppd = u64::from((ent.ppd() >> 5)).overflowing_shl(16).0;
                 let ent_vpn = u32::from(ent.vpn()) >> 4;
 
-                info!("ent vpn {:x} real vpn {:x}", ent_vpn, vpn);
-                info!(
-                    "ent ppd {:x} shift ppd {:x} off {:x}",
-                    ent.ppd(),
-                    ppd,
-                    offset
-                );
-                if ent_vpn == vpn {
-                    let pa = u64::from(ppd + offset as u64);
-                    info!("translated {virt_addr:x} to {pa:x}");
-                    return Ok(pa as u64);
+                let page_type = Self::get_entry_page_type(ent);
+
+                let va_vpn = (virt_addr as u64) & !PAGE_MASK[page_type];
+                let va_offset = virt_addr as u64 & PAGE_MASK[page_type];
+
+                let ent_vpn = u64::from(ent.vpn()) << PAGE_SIZE_BITS;
+
+                trace!("ent vpn {ent_vpn:x} real vpn {va_vpn:x} va_offset {va_offset:x}",);
+                if va_vpn == ent_vpn {
+                    let ppd_mask = u64::from(ent.ppd() >> 1)
+                        .overflowing_shl(PAGE_SIZE_BITS as u32)
+                        .0
+                        & !PAGE_MASK[page_type];
+                    let pa = ppd_mask + va_offset;
+
+                    // TODO: invalidate the cache
+                    self.cache.insert(vpn_page_masked, pa & page_number_mask);
+
+                    trace!("va {virt_addr:x} ppd_mask {ppd_mask:x} pa {pa:x}");
+                    return Ok(pa);
                 }
             }
 
