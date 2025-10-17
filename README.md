@@ -20,7 +20,7 @@ Styx is under active development and does not currently follow Semantic Versioni
 
 ### Unofficial
 
-**Note**: Unofficial communities are not moderated by or affiliated with Kudu Dynamics, LLC.
+**Note**: Unofficial communities are not moderated by nor affiliated with Kudu Dynamics, LLC.
 
 - Discord: <https://discord.gg/styx-emulator>
 
