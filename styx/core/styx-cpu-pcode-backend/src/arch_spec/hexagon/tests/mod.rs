@@ -31,6 +31,7 @@ mod programs;
 mod reg_postfix;
 mod regpair;
 mod sequencing;
+mod system;
 
 pub fn setup_asm(
     asm_str: &str,

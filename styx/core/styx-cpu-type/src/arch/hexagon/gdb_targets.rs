@@ -11,11 +11,45 @@ use styx_util::gdb_xml::{HEXAGON_CORE, HEXAGON_HVX};
 
 lazy_static! {
     // This mapping was generated from XML files in
-    // https://github.com/quic/qemu/blob/hex-next/
+    // https://github.com/quic/qemu/tree/hex-next/gdb-xml
     // and by reading how these XML files are used in
     // https://github.com/quic/qemu/blob/hex-next/target/hexagon/cpu.c,
     // https://github.com/quic/qemu/blob/hex-next/target/hexagon/gdbstub.c, and
     // https://github.com/quic/qemu/blob/hex-next/gdbstub/gdbstub.c
+
+    // The following is an explanation of how the mappings work and how the XML was generated:
+    //
+    // Suppose we have 32 general purpose regs, and 16 system registers in a
+    // made-up ISA.
+    //
+    // There are separate arrays of core/system registers (this split is called a GDB feature), which are read in
+    // from the XML files. The ordering of registers for each type is generated from a Python script. You can generate this
+    // by running `python scripts/feature_to_c.py gdb-xml/hexagon-*`. If you run this, it generates an array of GDBFeature.
+    // Each GDBFeature contains the file name (eg. hexagon-hvx.xml), the XML contents, the name of the "gdb feature," an
+    // array of the registers defined in that file, and the length of that array.
+    //
+    // The backend adds each array of register types to a bigger array (cpu->gdb_regs) in a certain order using gdb_register_coprocessor.
+    // Eg. a backend may choose to add hexagon-core.xml, hexagon-sys.xml and hexagon-hvx.xml to the gdb_regs. See
+    // https://github.com/quic/qemu/blob/hex-next/target/hexagon/cpu.c#L491, https://github.com/quic/qemu/blob/hex-next/gdbstub/gdbstub.c#L604,
+    // and https://github.com/quic/qemu/blob/hex-next/gdbstub/gdbstub.c#L555.
+    //
+    // When QEMU goes to read/write a register at the request of GDB (gdb specifies the register number,
+    // which is what we need), it looks at the registers that were added to cpu->gdb_regs. So, after the core
+    // registers and gdb_register_coprocessor, might have general register names [0..31] in an array, and [0, 15] for sys
+    // regs (in the made-up ISA). If we requested register 33, we would basically look to see if this is within the first
+    // 32 registers (assume the core registers added first and sys registers added second) and if not subtract 32 from our
+    // register request (so now we are at 1), then look at the second array of sys regs, specifically at the second register
+    // in that array. As such, we would get the second register in this [0..15]. See
+    // https://github.com/quic/qemu/blob/hex-next/gdbstub/gdbstub.c#L532 for details.
+    //
+    // So 0..31 would be mapped to the ordering of registers in the array inside the GDBFeature,
+    // then 32..47 has the ordering of registers in the systems registers for the corresponding GDBFeature, etc.
+    //
+    // To understand where I got the Hexagon mappings from, run the python script mentioned above,
+    // then look at the output and look at the arrays for the separate system/hvx/core regs. Also, looks
+    // like from https://github.com/quic/qemu/blob/hex-next/target/hexagon/cpu.c#L491 that first we have core
+    // (core is added/initialized elsewhere), then HVX, then system registers.
+
     pub static ref HEXAGON_CORE_CPU_REGISTER_MAP: BTreeMap<usize, CpuRegister> = BTreeMap::from([
         (0, HexagonRegister::R0.register()),
         (1, HexagonRegister::R1.register()),
@@ -155,39 +189,80 @@ lazy_static! {
         (166, HexagonRegister::Duck.register()),
         (167, HexagonRegister::Chicken.register()),
         (168, HexagonRegister::Commit1t.register()),
+        (169, HexagonRegister::Commit2t.register()),
+        (170, HexagonRegister::Commit3t.register()),
+        (171, HexagonRegister::Commit4t.register()),
+        (172, HexagonRegister::Commit5t.register()),
+        (173, HexagonRegister::Commit6t.register()),
+        (174, HexagonRegister::Pcycle1t.register()),
+        (175, HexagonRegister::Pcycle2t.register()),
+        (176, HexagonRegister::Pcycle3t.register()),
+        (177, HexagonRegister::Pcycle4t.register()),
+        (178, HexagonRegister::Pcycle5t.register()),
+        (179, HexagonRegister::Pcycle6t.register()),
+        (180, HexagonRegister::StfInst.register()),
+        (181, HexagonRegister::IsdbCmd.register()),
+        (182, HexagonRegister::IsdbVer.register()),
+        (183, HexagonRegister::BrkptInfo.register()),
+        (184, HexagonRegister::Rgdr3.register()),
+        (185, HexagonRegister::Commit7t.register()),
+        (186, HexagonRegister::Commit8t.register()),
+        (187, HexagonRegister::Pcycle7t.register()),
+        (188, HexagonRegister::Pcycle8t.register()),
+        (189, HexagonRegister::Commit9t.register()),
+        (190, HexagonRegister::Commit10t.register()),
+        (191, HexagonRegister::Commit11t.register()),
+        (192, HexagonRegister::Commit12t.register()),
+        (193, HexagonRegister::Commit13t.register()),
+        (194, HexagonRegister::Commit14t.register()),
+        (195, HexagonRegister::Commit15t.register()),
+        (196, HexagonRegister::Commit16t.register()),
+        (197, HexagonRegister::Pcycle9t.register()),
+        (198, HexagonRegister::Pcycle10t.register()),
+        (199, HexagonRegister::Pcycle11t.register()),
+        (200, HexagonRegister::Pcycle12t.register()),
+        (201, HexagonRegister::Pcycle13t.register()),
+        (202, HexagonRegister::Pcycle14t.register()),
+        (203, HexagonRegister::Pcycle15t.register()),
+        (204, HexagonRegister::Pcycle16t.register()),
+        (205, HexagonRegister::Ipend.register()),
+        (206, HexagonRegister::Iad.register()),
+        (207, HexagonRegister::IsdbSt1.register()),
+        (208, HexagonRegister::IsdbSt2.register()),
+        (209, HexagonRegister::BrkptInfo1.register()),
         // Guest registers
-        (169, HexagonRegister::Gelr.register()),
-        (170, HexagonRegister::Gsr.register()),
-        (171, HexagonRegister::Gosp.register()),
-        (172, HexagonRegister::GbadVa.register()),
-        (173, HexagonRegister::Gcommit1t.register()),
-        (174, HexagonRegister::Gcommit2t.register()),
-        (175, HexagonRegister::Gcommit3t.register()),
-        (176, HexagonRegister::Gcommit4t.register()),
-        (177, HexagonRegister::Gcommit5t.register()),
-        (178, HexagonRegister::Gcommit6t.register()),
-        (179, HexagonRegister::Gpcycle1t.register()),
-        (180, HexagonRegister::Gpcycle2t.register()),
-        (181, HexagonRegister::Gpcycle3t.register()),
-        (182, HexagonRegister::Gpcycle4t.register()),
-        (183, HexagonRegister::Gpcycle5t.register()),
-        (184, HexagonRegister::Gpcycle6t.register()),
-        (185, HexagonRegister::Gpmucnt4.register()),
-        (186, HexagonRegister::Gpmucnt5.register()),
-        (187, HexagonRegister::Gpmucnt6.register()),
-        (188, HexagonRegister::Gpmucnt7.register()),
-        (189, HexagonRegister::Gcommit7t.register()),
-        (190, HexagonRegister::Gcommit8t.register()),
-        (191, HexagonRegister::Gpcycle7t.register()),
-        (192, HexagonRegister::Gpcycle8t.register()),
-        (193, HexagonRegister::Gpcyclelo.register()),
-        (194, HexagonRegister::Gpcyclehi.register()),
-        (195, HexagonRegister::Gpmucnt0.register()),
-        (196, HexagonRegister::Gpmucnt1.register()),
-        (197, HexagonRegister::Gpmucnt2.register()),
-        (198, HexagonRegister::Gpmucnt3.register()),
-        (199, HexagonRegister::G30.register()),
-        (200, HexagonRegister::G31.register())
+        (210, HexagonRegister::Gelr.register()),
+        (211, HexagonRegister::Gsr.register()),
+        (212, HexagonRegister::Gosp.register()),
+        (213, HexagonRegister::GbadVa.register()),
+        (214, HexagonRegister::Gcommit1t.register()),
+        (215, HexagonRegister::Gcommit2t.register()),
+        (216, HexagonRegister::Gcommit3t.register()),
+        (217, HexagonRegister::Gcommit4t.register()),
+        (218, HexagonRegister::Gcommit5t.register()),
+        (219, HexagonRegister::Gcommit6t.register()),
+        (220, HexagonRegister::Gpcycle1t.register()),
+        (221, HexagonRegister::Gpcycle2t.register()),
+        (222, HexagonRegister::Gpcycle3t.register()),
+        (223, HexagonRegister::Gpcycle4t.register()),
+        (224, HexagonRegister::Gpcycle5t.register()),
+        (225, HexagonRegister::Gpcycle6t.register()),
+        (226, HexagonRegister::Gpmucnt4.register()),
+        (227, HexagonRegister::Gpmucnt5.register()),
+        (228, HexagonRegister::Gpmucnt6.register()),
+        (229, HexagonRegister::Gpmucnt7.register()),
+        (230, HexagonRegister::Gcommit7t.register()),
+        (231, HexagonRegister::Gcommit8t.register()),
+        (232, HexagonRegister::Gpcycle7t.register()),
+        (233, HexagonRegister::Gpcycle8t.register()),
+        (234, HexagonRegister::Gpcyclelo.register()),
+        (235, HexagonRegister::Gpcyclehi.register()),
+        (236, HexagonRegister::Gpmucnt0.register()),
+        (237, HexagonRegister::Gpmucnt1.register()),
+        (238, HexagonRegister::Gpmucnt2.register()),
+        (239, HexagonRegister::Gpmucnt3.register()),
+        (240, HexagonRegister::G30.register()),
+        (241, HexagonRegister::G31.register()),
     ]);
 
     static ref HEXAGON_HVX_REGISTER_MAP: BTreeMap<usize, CpuRegister> = BTreeMap::from([

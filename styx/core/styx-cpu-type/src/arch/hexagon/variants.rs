@@ -12,24 +12,6 @@ use derive_more::Display;
 use styx_sync::lazy_static;
 
 lazy_static! {
-    pub static ref HEXAGON_SYSTEM_GUEST_REGS: [CpuRegister; 16] = [
-        HexagonRegister::S65.register(),
-        HexagonRegister::S66.register(),
-        HexagonRegister::S67.register(),
-        HexagonRegister::S68.register(),
-        HexagonRegister::S69.register(),
-        HexagonRegister::S70.register(),
-        HexagonRegister::S71.register(),
-        HexagonRegister::S72.register(),
-        HexagonRegister::S73.register(),
-        HexagonRegister::S74.register(),
-        HexagonRegister::S75.register(),
-        HexagonRegister::S76.register(),
-        HexagonRegister::S77.register(),
-        HexagonRegister::S78.register(),
-        HexagonRegister::S79.register(),
-        HexagonRegister::S80.register(),
-    ];
     pub static ref HEXAGON_DEST_PREDICATES: [CpuRegister; 4] = [
         HexagonRegister::DestP0.register(),
         HexagonRegister::DestP1.register(),
@@ -141,7 +123,6 @@ impl CpuRegisterBank for HexagonGeneralRegisters {
             .values()
             .cloned()
             .collect::<Vec<_>>();
-        regs.extend_from_slice(HEXAGON_SYSTEM_GUEST_REGS.as_slice());
         regs.extend_from_slice(HEXAGON_DEST_PREDICATES.as_slice());
         regs.extend_from_slice(HEXAGON_REGPAIRS.as_slice());
         regs
@@ -167,7 +148,6 @@ impl CpuRegisterBank for HexagonGeneralRegistersWithHvx {
             .values()
             .cloned()
             .collect::<Vec<_>>();
-        regs.extend_from_slice(HEXAGON_SYSTEM_GUEST_REGS.as_slice());
         regs.extend_from_slice(HEXAGON_DEST_PREDICATES.as_slice());
         regs.extend_from_slice(HEXAGON_REGPAIRS.as_slice());
         regs

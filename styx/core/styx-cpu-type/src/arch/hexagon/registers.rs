@@ -192,22 +192,47 @@ create_basic_register_enums!(
     (Duck, 32),       // S62
     (Chicken, 32),    // S63
     (Commit1t, 32),   // S64
-    (S65, 32),        // S65
-    (S66, 32),        // S66
-    (S67, 32),        // S67
-    (S68, 32),        // S68
-    (S69, 32),        // S69
-    (S70, 32),        // S70
-    (S71, 32),        // S71
-    (S72, 32),        // S72
-    (S73, 32),        // S73
-    (S74, 32),        // S74
-    (S75, 32),        // S75
-    (S76, 32),        // S76
-    (S77, 32),        // S77
-    (S78, 32),        // S78
-    (S79, 32),        // S79
-    (S80, 32),        // S80
+    (Commit2t, 32),   // S65
+    (Commit3t, 32),   // S66
+    (Commit4t, 32),   // S67
+    (Commit5t, 32),   // S68
+    (Commit6t, 32),   // S69
+    (Pcycle1t, 32),   // S70
+    (Pcycle2t, 32),   // S71
+    (Pcycle3t, 32),   // S72
+    (Pcycle4t, 32),   // S73
+    (Pcycle5t, 32),   // S74
+    (Pcycle6t, 32),   // S75
+    (StfInst, 32),    // S76
+    (IsdbCmd, 32),    // S77
+    (IsdbVer, 32),    // S78
+    (BrkptInfo, 32),  // S79
+    (Rgdr3, 32),      // S80
+    (Commit7t, 32),   // S81
+    (Commit8t, 32),   // S82
+    (Pcycle7t, 32),   // S83
+    (Pcycle8t, 32),   // S84
+    (Commit9t, 32),   // S85
+    (Commit10t, 32),  // S86
+    (Commit11t, 32),  // S87
+    (Commit12t, 32),  // S88
+    (Commit13t, 32),  // S89
+    (Commit14t, 32),  // S90
+    (Commit15t, 32),  // S91
+    (Commit16t, 32),  // S92
+    (Pcycle9t, 32),   // S93
+    (Pcycle10t, 32),  // S94
+    (Pcycle11t, 32),  // S95
+    (Pcycle12t, 32),  // S96
+    (Pcycle13t, 32),  // S97
+    (Pcycle14t, 32),  // S98
+    (Pcycle15t, 32),  // S99
+    (Pcycle16t, 32),  // S100
+    (Ipend, 32),      // S101
+    (Iad, 32),        // S102
+    (IsdbSt1, 32),    // S103
+    (IsdbSt2, 32),    // S104
+    (BrkptInfo1, 32), // S105
     // System register pairs
     (SGP1SGP0, 64),
     (S3S2, 64),

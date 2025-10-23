@@ -219,35 +219,35 @@ lazy_static! {
             ),
             (
                 HexagonRegister::S65S64,
-                (HexagonRegister::S65, HexagonRegister::Commit1t)
+                (HexagonRegister::Commit2t, HexagonRegister::Commit1t)
             ),
             (
                 HexagonRegister::S67S66,
-                (HexagonRegister::S67, HexagonRegister::S66)
+                (HexagonRegister::Commit4t, HexagonRegister::Commit3t)
             ),
             (
                 HexagonRegister::S69S68,
-                (HexagonRegister::S69, HexagonRegister::S68)
+                (HexagonRegister::Commit6t, HexagonRegister::Commit5t)
             ),
             (
                 HexagonRegister::S71S70,
-                (HexagonRegister::S71, HexagonRegister::S70)
+                (HexagonRegister::Pcycle2t, HexagonRegister::Pcycle1t)
             ),
             (
                 HexagonRegister::S73S72,
-                (HexagonRegister::S73, HexagonRegister::S72)
+                (HexagonRegister::Pcycle4t, HexagonRegister::Pcycle3t)
             ),
             (
                 HexagonRegister::S75S74,
-                (HexagonRegister::S75, HexagonRegister::S74)
+                (HexagonRegister::Pcycle6t, HexagonRegister::Pcycle5t)
             ),
             (
                 HexagonRegister::S77S76,
-                (HexagonRegister::S77, HexagonRegister::S76)
+                (HexagonRegister::IsdbCmd, HexagonRegister::StfInst)
             ),
             (
                 HexagonRegister::S79S78,
-                (HexagonRegister::S79, HexagonRegister::S78)
+                (HexagonRegister::BrkptInfo, HexagonRegister::IsdbVer)
             ),
             (
                 HexagonRegister::G1G0,

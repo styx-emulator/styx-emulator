@@ -621,6 +621,47 @@ mod hexagon {
             HexagonRegister::Duck => "S62",
             HexagonRegister::Chicken => "S63",
             HexagonRegister::Commit1t => "S64",
+            HexagonRegister::Commit2t => "S65",
+            HexagonRegister::Commit3t => "S66",
+            HexagonRegister::Commit4t => "S67",
+            HexagonRegister::Commit5t => "S68",
+            HexagonRegister::Commit6t => "S69",
+            HexagonRegister::Pcycle1t => "S70",
+            HexagonRegister::Pcycle2t => "S71",
+            HexagonRegister::Pcycle3t => "S72",
+            HexagonRegister::Pcycle4t => "S73",
+            HexagonRegister::Pcycle5t => "S74",
+            HexagonRegister::Pcycle6t => "S75",
+            HexagonRegister::StfInst => "S76",
+            HexagonRegister::IsdbCmd => "S77",
+            HexagonRegister::IsdbVer => "S78",
+            HexagonRegister::BrkptInfo => "S79",
+            HexagonRegister::Rgdr3 => "S80",
+            HexagonRegister::Commit7t => "S81",
+            HexagonRegister::Commit8t => "S82",
+            HexagonRegister::Pcycle7t => "S83",
+            HexagonRegister::Pcycle8t => "S84",
+            HexagonRegister::Commit9t => "S85",
+            HexagonRegister::Commit10t => "S86",
+            HexagonRegister::Commit11t => "S87",
+            HexagonRegister::Commit12t => "S88",
+            HexagonRegister::Commit13t => "S89",
+            HexagonRegister::Commit14t => "S90",
+            HexagonRegister::Commit15t => "S91",
+            HexagonRegister::Commit16t => "S92",
+            HexagonRegister::Pcycle9t => "S93",
+            HexagonRegister::Pcycle10t => "S94",
+            HexagonRegister::Pcycle11t => "S95",
+            HexagonRegister::Pcycle12t => "S96",
+            HexagonRegister::Pcycle13t => "S97",
+            HexagonRegister::Pcycle14t => "S98",
+            HexagonRegister::Pcycle15t => "S99",
+            HexagonRegister::Pcycle16t => "S100",
+            HexagonRegister::Ipend => "S101",
+            HexagonRegister::Iad => "S102",
+            HexagonRegister::IsdbSt1 => "S103",
+            HexagonRegister::IsdbSt2 => "S104",
+            HexagonRegister::BrkptInfo1 => "S105",
             HexagonRegister::SGP1SGP0 => "SGP1SGP0",
             HexagonRegister::Timer => "S57S56",
             HexagonRegister::Pcycle => "S31S30",
@@ -661,22 +702,6 @@ mod hexagon {
             | HexagonRegister::S75S74
             | HexagonRegister::S77S76
             | HexagonRegister::S79S78 => default_name,
-            HexagonRegister::S65
-            | HexagonRegister::S66
-            | HexagonRegister::S67
-            | HexagonRegister::S68
-            | HexagonRegister::S69
-            | HexagonRegister::S70
-            | HexagonRegister::S71
-            | HexagonRegister::S72
-            | HexagonRegister::S73
-            | HexagonRegister::S74
-            | HexagonRegister::S75
-            | HexagonRegister::S76
-            | HexagonRegister::S77
-            | HexagonRegister::S78
-            | HexagonRegister::S79
-            | HexagonRegister::S80 => default_name,
             HexagonRegister::Gelr => "G0",
             HexagonRegister::Gsr => "G1",
             HexagonRegister::Gosp => "G2",
