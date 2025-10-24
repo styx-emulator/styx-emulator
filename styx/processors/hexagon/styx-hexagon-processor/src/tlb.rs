@@ -51,32 +51,50 @@ pub struct HexagonTlb {
     // mapping of u64 entry to u64 entry
     cache: BTreeMap<u64, u64>,
     enable_code_translation: bool,
-    enable_data_translation: bool,
+    enable_translation: bool,
 }
 
 const PAGE_SIZE_BITS: u64 = 12;
 // From https://github.com/quic/qemu/blob/3921c6eed6bd7c670eff633fe829e18607125969/hw/hexagon/hexagon_tlb.c
 const PAGE_MASK: [u64; 13] = [
+    // 12 bits
     0x0fff,
+    // 14 bits
     0x3fff,
+    // 16 bits
     0xffff,
+    // 18 bits
     0x3ffff,
+    // 20 bits
     0xfffff,
+    // 22 bits
     0x3fffff,
+    // 24 bits
     0xffffff,
+    // 26 bits
     0x3ffffff,
+    // 28 bits
     0xfffffff,
+    // 30 bits
     0x3fffffff,
+    // 32 bits
     0xffffffff,
+    // 34 bits
     0x3ffffffff,
+    // 36 bits
     0xfffffffff,
 ];
 
+/// N.B. It appears that Hexagon uses the words MMU and TLB interchangeably,
+/// as the the TLB-related instructions (tlbw, tlbr, etc.) store the page tables,
+/// translate, and presumably cache as well.
+///
+/// Sources: 11.9.2 "TLB read/write/probe operations" and QEMU sources.
 impl HexagonTlb {
     pub fn new() -> Self {
         Self {
             enable_code_translation: false,
-            enable_data_translation: false,
+            enable_translation: false,
             entries: [Pte::new_with_raw_value(0); MAX_TLB_ENTRIES],
             cache: BTreeMap::new(),
         }
@@ -94,26 +112,97 @@ impl HexagonTlb {
 }
 
 impl TlbImpl for HexagonTlb {
+    /// This seems to be a von Neumann architecture and not Harvard architecture,
+    /// so enabling data translation will also enable code address translation.
     fn enable_data_address_translation(&mut self) -> Result<(), UnknownError> {
-        self.enable_data_translation = true;
+        self.enable_translation = true;
         Ok(())
     }
 
+    /// This seems to be a von Neumann architecture and not Harvard architecture,
+    /// so disabling data translation will also disable code address translation.
     fn disable_data_address_translation(&mut self) -> Result<(), UnknownError> {
-        self.enable_data_translation = false;
+        self.enable_translation = false;
         Ok(())
     }
 
+    /// This seems to be a von Neumann architecture and not Harvard architecture,
+    /// so enabling code translation will also enable data address translation.
     fn enable_code_address_translation(&mut self) -> Result<(), UnknownError> {
-        self.enable_code_translation = true;
+        self.enable_translation = true;
         Ok(())
     }
 
+    /// This seems to be a von Neumann architecture and not Harvard architecture,
+    /// so disabling code translation will also disable cata address translation.
     fn disable_code_address_translation(&mut self) -> Result<(), UnknownError> {
-        self.enable_code_translation = false;
+        self.enable_translation = false;
         Ok(())
     }
 
+    /// Hexagon TLB translation.
+    ///
+    /// The crux of the logic for this function is implemented in
+    /// https://github.com/quic/qemu/blob/bcain/tlb_obj/hw/hexagon/hexagon_tlb.c.
+    ///
+    /// It is worth noting that the default address translation algorithm for QUIC's QEMU fork,
+    /// located at https://github.com/quic/qemu/blob/hex-next/target/hexagon/hex_mmu.c, does not
+    /// align with the page table entries that are inserted and are present in tested Hexagon
+    /// firmware.
+    ///
+    /// Address translation in Hexagon, as such, works as follows.
+    ///
+    /// At least in testing, it appears that the page size is 4K,
+    /// which translates to having the lowest 12 bits indicate the offset. However,
+    /// when translating an address in Hexagon, the page translation algorithm looks at
+    /// the number of trailing zeroes to determine the actual page number + offset
+    /// masks.
+    ///
+    /// To make this more clear, let's look at an example.
+    ///
+    /// Some ground rules: there are three page table entries, all valid, all
+    /// with the correct permissions. The parts of the page table entry we care about are the
+    /// PPD (physical page descriptor) and the VPN (the virtual page number).
+    ///
+    /// - Entry 0: VPN is 0x89104, PPD is 0x112202
+    /// - Entry 1: VPN is 0x1d25c, PPD is 0x022308
+    /// - Entry 2: VPN is 0x1d21c, PPD is 0x03a490
+    ///
+    /// First, we receive a virtual address. For the sake of example, let's say this
+    /// is 0x1d23c210. The way we match the VA to PA is by iterating through the page table
+    /// entries, finding a mask based on the number of trailing zeroes in the PPD, and then
+    /// matching the input VA to the VPN based on this mask.
+    ///
+    /// **Iteration 0:** PPD is 0x112202. This has exactly 1 trailing zero, which means
+    /// in our mask table, this corresponds to mask 0x3fff, which is 14 bits for the offset.
+    /// Our mask for the "page number" is the inverse of this, 0xffffc000. There is a chance that
+    /// some of the bits in the actual VPN entry may get cleared by this, which is intentional.
+    ///
+    /// The idea with the VPN is we shift left by 12, yielding 0x89104000, then mask with
+    /// 0xffffc000, yielding the same. Now, we do the same mask for the VA, yielding
+    /// 0x1d23c000 (itself).  Now, comparing the two masked values, they don't match, and
+    /// we move on.
+    ///
+    /// **Iteration 1**: PPD is 0x022308. There are *three* trailing zeroes, so we choose mask
+    /// 0xffff. Now, we wish to mask the (shifted left) VPN and VA with the inverse, which is 0xffff0000.
+    /// The VA masked is 0x1d230000. The VPN shfited left is 0x1d25c000, and masked it is 0x1d250000.
+    /// We see that 0x1d230000 != 0x1d250000, so this isn't a match. Onwards.
+    ///
+    /// **Iteration 3:** PPD is 0x03a490. As before, we have *three* trailing zeroes, so our mask is
+    /// 0x3ffff and our inverse is 0xfffc0000. Now, the VPN shifted is 0x1d21c000, with the mask, it's 0x
+    /// 0x1d200000. Our VA masked is 0x1d20000 as well. It's a match!
+    ///
+    /// Now we can go ahead and translate our PA. We obtain our offset with the original mask:
+    /// 0x1d23c210 & 0x3ffff = 0x3c210.
+    ///
+    /// To get the "base" from our PPD, we must shift right by one and then shift left by 12
+    /// (0x03a490 >> 1) << 12 = 0x1d248000. Finally, we add our offset to this base:
+    /// 0x1d248000 + 0x3c210 = 0x1d284210.
+    ///
+    /// And that's our PA.
+    ///
+    /// TODO: figure out the 34 and 36-bit masks.
+    /// TODO: permissions checks, ASID checks
     fn translate_va(
         &mut self,
         virt_addr: u64,
@@ -123,7 +212,8 @@ impl TlbImpl for HexagonTlb {
     ) -> TlbTranslateResult {
         let page_number_mask = !((1 << PAGE_SIZE_BITS) - 1);
         let vpn_page_masked = virt_addr & page_number_mask;
-        if !self.enable_code_translation && !self.enable_data_translation {
+
+        if !self.enable_translation {
             // Physical memory mode
             Ok(virt_addr)
         } else if let Some(&ppn_addr) = self.cache.get(&vpn_page_masked) {
@@ -142,9 +232,10 @@ impl TlbImpl for HexagonTlb {
                 // It appears that tlb entries have varying page sizes that are encoded
 
                 let page_type = Self::get_entry_page_type(ent);
+                let page_mask = PAGE_MASK[page_type];
 
-                let va_vpn = (virt_addr as u64) & !PAGE_MASK[page_type];
-                let va_offset = virt_addr as u64 & PAGE_MASK[page_type];
+                let va_vpn = (virt_addr as u64) & !page_mask;
+                let va_offset = virt_addr as u64 & page_mask;
 
                 let ent_vpn = u64::from(ent.vpn()) << PAGE_SIZE_BITS;
 
@@ -153,7 +244,7 @@ impl TlbImpl for HexagonTlb {
                     let ppd_mask = u64::from(ent.ppd() >> 1)
                         .overflowing_shl(PAGE_SIZE_BITS as u32)
                         .0
-                        & !PAGE_MASK[page_type];
+                        & !page_mask;
                     let pa = ppd_mask + va_offset;
 
                     // TODO: invalidate the cache
@@ -170,6 +261,10 @@ impl TlbImpl for HexagonTlb {
         }
     }
 
+    /// TODO: exception handling
+    ///
+    /// manual doesn't seem to define what to do when the index is junk - should we just
+    /// fill it with zeroes?
     fn tlb_write(&mut self, idx: usize, data: u64, flags: u32) -> Result<(), TlbTranslateError> {
         let pte = Pte::new_with_raw_value(data);
         self.entries[idx] = pte;
@@ -182,16 +277,50 @@ impl TlbImpl for HexagonTlb {
         Ok(())
     }
 
+    /// TODO: exception handling
+    ///
+    /// manual doesn't seem to define what to do when the index is junk - should we just
+    /// fill it with zeroes?
     fn tlb_read(&self, idx: usize, flags: u32) -> Result<u64, TlbTranslateError> {
-        todo!()
+        if idx >= MAX_TLB_ENTRIES {
+            Err(TlbTranslateError::Other(UnknownError::msg(format!(
+                "specified tlb entry at {idx} doesn't exist, cannot read"
+            ))))
+        } else {
+            Ok(self.entries[idx].raw_value())
+        }
     }
 
     /// This is only used for ASID in our implementation
+    /// 11.9.2 "TLB read/write/probe operations"
+    ///
+    /// The TLBINVASID instruction "invalidates all TLB entries with the Global bit not
+    /// set and with the ASID matching the Rs[26:20] operand." What is passed is a 32-bit
+    /// flags value where **the lower 7 bits are the ASID.**
+    ///
+    /// NOTE: Any bits above the 7th bit will be ignored.
     fn invalidate_all(&mut self, flags: u32) -> Result<(), UnknownError> {
-        todo!()
+        for ent in self.entries.iter_mut() {
+            if ent.asid() == flags.into() && !ent.g() {
+                // Set the valid bit to false.
+                ent.set_v(false);
+            }
+        }
+        Ok(())
     }
 
+    /// TODO: exception handling
+    ///
+    /// manual doesn't seem to define what to do when the index is junk - should we just
+    /// fill it with zeroes?
     fn invalidate(&mut self, idx: usize) -> Result<(), UnknownError> {
-        todo!()
+        if idx >= MAX_TLB_ENTRIES {
+            Err(UnknownError::msg(format!(
+                "specified tlb entry at index {idx} doesn't exist, cannot invalidate"
+            )))
+        } else {
+            self.entries[idx].set_v(false);
+            Ok(())
+        }
     }
 }
