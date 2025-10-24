@@ -129,7 +129,6 @@ pub struct HexagonPcodeBackend {
     // to get rid of this, but if we ever re-allocate these vectors to be larger
     // we can "use" this larger allocation later if needed.
     saved_context_opts: SavedContextOpts,
-    regs_written: Vec<Vec<VarnodeData>>,
 
     execution_helper: Option<DefaultHexagonExecutionHelper>,
 
@@ -566,7 +565,6 @@ impl HexagonPcodeBackend {
 
         Self {
             saved_context_opts: SavedContextOpts::default(),
-            regs_written: Vec::with_capacity(10),
             saved_execution_helper: None,
             execution_helper: Some(execution_helper),
             first_packet: true,
@@ -705,7 +703,6 @@ impl HexagonPcodeBackend {
         mmu: &mut Mmu,
         ev: &mut EventController,
     ) -> Result<Result<HexagonFetchDecodeInfo, TargetExitReason>, HexagonFetchDecodeError> {
-        self.regs_written.clear();
         full_pcodes.clear();
 
         let mut ordering: SmallVec<[usize; 4]> = SmallVec::new();
@@ -891,7 +888,6 @@ impl HexagonPcodeBackend {
             self.execution_helper = Some(execution_helper);
 
             self.saved_context_opts.advance_instr();
-            self.regs_written.push(regs_in_insn);
 
             total_bytes_consumed += bytes_consumed;
         }

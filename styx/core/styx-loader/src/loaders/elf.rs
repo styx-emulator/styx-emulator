@@ -36,7 +36,6 @@ impl From<ElfMachine> for Arch {
             EM_MICROBLAZE => Arch::Microblaze,
             EM_RISCV => Arch::Riscv,
             EM_SH => Arch::SuperH,
-            EM_QDSP6 => Arch::Hexagon,
             EM_AVR | EM_AVR32 => Arch::Avr,
             EM_QDSP6 => Arch::Hexagon,
             arch => panic!(

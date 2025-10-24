@@ -126,8 +126,9 @@ impl<T: CpuBackend> CallOtherCallback<T> for CswiHandler {
 pub struct CiadHandler;
 impl<T: CpuBackend> CallOtherCallback<T> for CiadHandler {
     /// Implement CIAD (clear interrupt auto disable)
+    /// NOTE: the implementation of this may change when we implement the interrupt controller.
     ///
-    /// See [CswiHandler::handle], the same note applies here.
+    /// See [CswiHandler::handle], the same note about implementation applies here.
     fn handle(
         &mut self,
         backend: &mut dyn CallOtherCpu<T>,
