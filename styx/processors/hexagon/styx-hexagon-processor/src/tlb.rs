@@ -301,7 +301,7 @@ impl TlbImpl for HexagonTlb {
     /// NOTE: Any bits above the 7th bit will be ignored.
     fn invalidate_all(&mut self, flags: u32) -> Result<(), UnknownError> {
         for ent in self.entries.iter_mut() {
-            if ent.asid() == flags.into() && !ent.g() {
+            if ent.asid().value() == flags as u8 && !ent.g() {
                 // Set the valid bit to false.
                 ent.set_v(false);
             }
