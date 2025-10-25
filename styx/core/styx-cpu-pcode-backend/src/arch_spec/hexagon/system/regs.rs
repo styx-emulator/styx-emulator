@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: BSD-2-Clause
-
+//! System registers represented as bitfields.
+//!
+//! Info in this file is from target/hexagon/reg_fields_def.h.inc in QEMU,
+//! in the fork hex-next from github.com/quic/qemu
 use arbitrary_int::*;
 use bitbybit::bitfield;
 
-/// System registers represented as bitfields.
-///
-/// Info in this file is from target/hexagon/reg_fields_def.h.inc in QEMU,
-/// in the fork hex-next from github.com/quic/qemu
-
 /// System Status Register
+/// Source: 11.9.3 "Trap" refers to SSR as "System Status Register."
 #[bitfield(u32)]
 #[derive(Debug)]
 pub struct Ssr {
@@ -47,7 +46,8 @@ pub struct Ssr {
     xe: bool,
 }
 
-/// System Configuration register
+/// System Configuration Register
+/// There's no source for this, but the abbreviation seems sufficiently obvious.
 #[bitfield(u32)]
 #[derive(Debug)]
 pub struct Syscfg {
@@ -134,7 +134,7 @@ pub struct Usr {
     fpinpe: bool,
 }
 
-/// Interrupt pending and auto disable register.
+/// Interrupt pending, and interrupt auto disable register.
 ///
 /// See 11.9.2 "Clear interrupt auto disable" and "Cancel pending interrupts"
 /// for more information.
