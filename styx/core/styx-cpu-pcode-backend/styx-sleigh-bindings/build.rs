@@ -70,7 +70,7 @@ const SOURCE_FILES: &[&str] = &[
 
 fn main() {
     cxx_build::bridge("src/lib.rs")
-        .flag_if_supported("-std=c++14") // Ghidra uses c++11, but we need c++14 for make_unique
+        .flag("-std=c++14") // Ghidra uses c++11, but we need c++14 for make_unique
         .include("sleigh/")
         .include("bridge/")
         .include("zlib/")
