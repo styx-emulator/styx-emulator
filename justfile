@@ -29,17 +29,17 @@ SRC_CRATES := `find ./styx/core -mindepth 1 -maxdepth 1 -type d -exec test -e "{
 __IGNORE_CRATES := EXAMPLE_CRATES + " " + INCUBATION_CRATES + " " + GENERATED_CRATES
 
 test-ignore-crates-value:
-    #!/bin/bash -e
+    #!/usr/bin/env -S bash -e
     IGNORE_CRATES=`a=({{ __IGNORE_CRATES }}); echo "${a[@]/#/--exclude }"`
     echo "Ignoring $IGNORE_CRATES"
 
 c-bindings:
-    #!/bin/bash -e
+    #!/usr/bin/env -S bash -e
     cd styx/bindings/styx-c-api
     cargo build --release
 
 python-bindings:
-    #!/bin/bash -e
+    #!/usr/bin/env -S bash -e
     cd styx/bindings/styx-py-api
     maturin build
 
@@ -52,21 +52,21 @@ nogpl-check:
 
 full-cargo-test: cargo-test cargo-doc-test cargo-test-bindings
 cargo-test: cargo-test-deps
-    #!/bin/bash -e
+    #!/usr/bin/env -S bash -e
     IGNORE_CRATES=`a=({{ DB_CONTAINER_CRATES }} {{ MACRO_CRATES }}); echo "${a[@]/#/--exclude }"`
     cargo nextest run --workspace --lib --bins --tests $IGNORE_CRATES # no benches
 
 cargo-test-bindings:
-    #!/bin/bash -e
+    #!/usr/bin/env -S bash -e
     pushd styx/bindings/
     cargo nextest run
 
 cargo-doc-test:
-    #!/bin/bash -e
+    #!/usr/bin/env -S bash -e
     cargo test --doc --workspace --no-fail-fast
 
 llvm-coverage-test:
-    #!/bin/bash -e
+    #!/usr/bin/env -S bash -e
     IGNORE_CRATES=`a=({{ __IGNORE_CRATES }}); echo "${a[@]/#/--exclude }"`
     export RUSTFLAGS="${RUSTFLAGS} -Zlinker-features=-lld"
     export RUSTDOCFLAGS="${RUSTDOCFLAGS} -Zlinker-features=-lld"
@@ -89,14 +89,14 @@ cargo-bench:
     cargo bench
 
 cargo-loom:
-    #!/bin/bash -e
+    #!/usr/bin/env -S bash -e
     export RUSTFLAGS="${RUSTFLAGS} --cfg loom --cfg tokio_unstable -C debug-assertions" # -Dwarnings
     export LOOM_MAX_PREEMPTIONS=2
     export LOOM_MAX_BRANCHES=10000
     cargo test --release --all-features --no-fail-fast loom -- --nocapture
 
 shuttle:
-    #!/bin/bash -e
+    #!/usr/bin/env -S bash -e
     export RUSTFLAGS="${RUSTFLAGS} --cfg shuttle"
     # only tests with `shuttle` in the name will be executed
     cargo test --all-features --no-fail-fast shuttle -- --nocapture
@@ -105,7 +105,7 @@ build:
     cargo build --locked --workspace --all-targets
 
 asan-test:
-    #!/bin/bash -e
+    #!/usr/bin/env -S bash -e
     IGNORE_CRATES=`a=({{ __IGNORE_CRATES }}); echo "${a[@]/#/--exclude }"`
     export RUSTFLAGS="${RUSTFLAGS} -Z sanitizer=address -Z linker-features=-lld --cfg asan "
     cargo +nightly nextest run --target x86_64-unknown-linux-gnu --workspace $IGNORE_CRATES
@@ -116,13 +116,13 @@ clean-target:
     du -sh target/
 
 lint-docs:
-    #!/bin/bash -e
+    #!/usr/bin/env -S bash -e
     set -eou pipefail
 
     RUSTDOCFLAGS='--deny warnings' cargo doc --no-deps --all-features --workspace --bins --lib --examples --keep-going --document-private-items
 
 rust-docs-inner:
-    #!/bin/bash -e
+    #!/usr/bin/env -S bash -e
     IGNORE_CRATES=`a=({{ __IGNORE_CRATES }}); echo "${a[@]/#/--exclude }"`
     cargo doc --all-features --workspace --lib --bins --no-deps --document-private-items $IGNORE_CRATES
     cp -f ./data/misc/redirect.html ./target/doc/index.html
@@ -132,7 +132,7 @@ rust-docs: rust-docs-inner
 
 docs:
     @echo  "Making docs"
-    #!/bin/bash -e
+    #!/usr/bin/env -S bash -e
     . venv/bin/activate && sphinx-build -b html -jauto docs/source/ docs/build/
 
 cargo-test-deps:
@@ -160,7 +160,7 @@ setup: python-deps rust-deps rust-fetch
 
 # Build the Docker container for development (takes docker platform as arg)
 build-docker platform="linux/amd64":
-    #!/bin/bash -e
+    #!/usr/bin/env -S bash -e
     RUST_VERSION=$(cat .rust-version)
     docker build -t styx-ci -f ./util/docker/ci.Dockerfile --platform {{platform}} --build-arg RUST_VERSION=$RUST_VERSION .
 
