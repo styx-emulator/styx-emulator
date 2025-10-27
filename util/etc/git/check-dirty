@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+# Succeeds if working directory is clean, fails and print error
+# if working directory is not clean.
+#
+# Untracked files are considered as a dirty working directory.
+#
+# Usage: util/etc/git/check-dirty
+
+# If git status has content (files are modified)
+if [[ -n $(git status --porcelain) ]]; then
+    echo "Working directory is dirty"
+    git status --porcelain
+	exit 1
+fi

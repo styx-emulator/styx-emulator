@@ -33,6 +33,11 @@ jobs:
       run: |
         just cargo-doc-test
 
+    # Useful for checking if lock files were not committed after change
+    - name: Files are unmodified
+      shell: bash
+      run: util/etc/git/check-dirty
+
     - name: clean
       shell: bash
       run: |
@@ -54,6 +59,11 @@ jobs:
       shell: bash
       run: |
         just cargo-test-bindings
+
+    # Useful for checking if lock files were not committed after change
+    - name: Files are unmodified
+      shell: bash
+      run: util/etc/git/check-dirty
 
     - name: clean
       shell: bash
@@ -79,6 +89,11 @@ jobs:
         sudo apt-get install -y \
           device-tree-compiler
         just cargo-test
+
+    # Useful for checking if lock files were not committed after change
+    - name: Files are unmodified
+      shell: bash
+      run: util/etc/git/check-dirty
 
     - name: clean
       shell: bash
