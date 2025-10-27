@@ -464,6 +464,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitbybit"
+version = "1.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ec187a89ab07e209270175faf9e07ceb2755d984954e58a2296e325ddece2762"
+dependencies = [
+ "arbitrary-int 1.3.0",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.106",
+]
+
+[[package]]
 name = "bitfield-struct"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4882,6 +4894,8 @@ name = "styx-cpu-pcode-backend"
 version = "1.2.0"
 dependencies = [
  "arbitrary-int 1.3.0",
+ "as-any",
+ "bitbybit",
  "bitfield-struct",
  "derivative",
  "derive_more",
@@ -4889,6 +4903,7 @@ dependencies = [
  "half",
  "log",
  "paste",
+ "rustc-hash 2.1.1",
  "smallvec",
  "styx-cpu-type",
  "styx-errors",
@@ -5314,6 +5329,7 @@ name = "styx-pcode-sleigh-backend"
 version = "1.2.0"
 dependencies = [
  "cxx",
+ "log",
  "num",
  "smallvec",
  "styx-cpu-type",
@@ -5440,6 +5456,7 @@ dependencies = [
  "rustc-hash 2.1.1",
  "serde",
  "serde_yaml",
+ "smallvec",
  "static_assertions",
  "styx-cpu-type",
  "styx-errors",
