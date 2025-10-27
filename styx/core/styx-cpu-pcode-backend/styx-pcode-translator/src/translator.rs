@@ -171,9 +171,9 @@ impl<L: Loader + LoaderRequires + 'static> PcodeTranslator<L> {
 pub enum ContextOption {
     ThumbMode(bool),
 
-    /// Mark the start of a Hexagon packet
+    /// Set to the start of the current Hexagon packet
     HexagonPktStart(u32),
-    /// Mark the end of a Hexagon packet
+    /// Always set to the start of the next Hexagon packet
     HexagonPktNext(u32),
     /// Mark what variant of the Hexagon duplex subinstruction we have
     // at the current duplex. See Table 10-5/Section 10.3 for details.

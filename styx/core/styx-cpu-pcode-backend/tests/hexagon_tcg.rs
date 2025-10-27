@@ -87,7 +87,6 @@ use test_case::test_case;
 fn test_binutils_unittests(test: TestData) {
     styx_util::logging::init_logging();
 
-    // TODO change to hexagon
     let mut backend = HexagonPcodeBackend::new_engine(
         Arch::Hexagon,
         HexagonVariants::QDSP6V66,
@@ -114,7 +113,6 @@ fn test_binutils_unittests(test: TestData) {
         .add_hook(StyxHook::interrupt(interrupt_stop_hook))
         .unwrap();
 
-    // TODO change to hexagon register
     // write non-zero value to r0 to avoid false pass
     backend
         .write_register(HexagonRegister::R0, 0x1337u32)
@@ -127,7 +125,6 @@ fn test_binutils_unittests(test: TestData) {
         "Machine did not stop properly."
     );
 
-    // TODO change to hexagon register
     assert_eq!(
         backend.read_register::<u32>(HexagonRegister::R0).unwrap(),
         0,

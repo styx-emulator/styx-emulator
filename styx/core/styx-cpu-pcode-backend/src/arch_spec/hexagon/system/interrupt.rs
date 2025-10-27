@@ -82,10 +82,10 @@ impl<T: CpuBackend> CallOtherCallback<T> for CswiHandler {
     /// seem to define the mask to clear the lower 16 bits of the pending interrupts register,
     /// even though the mask is defined in the manual 11.9.2 "Clear Pending Interrupts" to be
     /// 32 bits.
-    //
+    ///
     /// Other branches, such as bcain/tlb_obj, seem to define a separate register IPEND and IAD
     /// as 32-bit registers. These registers come towards the end of the defined list of registers.
-    //
+    ///
     /// In 11.9.2 "System control register transfer," however, the registers IPEND and IAD
     /// are defined separately as 32-bit values, but in the same place where both QEMU branches
     /// define IPENDAD and VID1, respectively. We have chosen to move IPEND and IAD to the end of

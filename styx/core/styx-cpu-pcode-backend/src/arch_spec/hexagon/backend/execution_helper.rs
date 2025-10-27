@@ -121,9 +121,14 @@ impl DefaultHexagonExecutionHelper {
     }
 
     /// Hook at the beginning of a packet to determine
-    /// what the next packet start is. This is important
-    /// for if a call is in the packet, as the packet
-    /// must set the link register to the start of the next packet.
+    /// what the next packet start is.
+    ///
+    /// Hexagon call instructions must must set the link
+    /// register to the start of the next packet.
+    ///
+    /// To do this, we set the pkt_next context option to
+    /// the value of the next packet, which Sleigh in turn
+    /// uses to set the link register during a call.
     ///
     /// Section 11.4 "Call subroutine" details this.
     fn detect_pkt_next(
