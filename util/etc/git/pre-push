@@ -26,7 +26,7 @@ fi
 DIRTY_WORDS_OUT="${LOCAL_DIR}/check-dirty-words"
 echo "writing dirty words script to '${DIRTY_WORDS_OUT}'"
 cat <<'END' > "${DIRTY_WORDS_OUT}"
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Git pre-push hook for the styx-emulator.
 #

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Check if a styx-emulator configuration of features is gpl or not.
 #
