@@ -4,7 +4,10 @@ use std::cmp::min;
 use arbitrary_int::*;
 use derive_more::FromStr;
 use log::{debug, trace};
-use styx_errors::anyhow::Context;
+use styx_errors::{
+    anyhow::{self, Context},
+    UnknownError,
+};
 use styx_pcode::{
     pcode::{AddressSpaceName, SpaceName, VarnodeData},
     sla::SlaUserOps,
@@ -24,6 +27,14 @@ use crate::{
 use bitbybit::bitfield;
 
 const FLAGS_NONE: u32 = 0;
+
+#[bitfield(u32, Debug)]
+pub struct TLBProbeField {
+    #[bits(0..=19, rw)]
+    vpn: u20,
+    #[bits(20..=26, rw)]
+    asid: u7,
+}
 
 #[derive(Debug)]
 pub struct TlbGenericStub {
@@ -336,6 +347,84 @@ impl<T: CpuBackend> CallOtherCallback<T> for TlbWrite {
                 0,
             )
             .with_context(|| "couldn't write to tlb")?;
+        Ok(PCodeStateChange::Fallthrough)
+    }
+}
+
+#[derive(Debug)]
+pub struct TlbRead {}
+impl<T: CpuBackend> CallOtherCallback<T> for TlbRead {
+    fn handle(
+        &mut self,
+        cpu: &mut dyn CallOtherCpu<T>,
+        mmu: &mut Mmu,
+        _ev: &mut EventController,
+        inputs: &[VarnodeData],
+        output: Option<&VarnodeData>,
+    ) -> Result<PCodeStateChange, CallOtherHandleError> {
+        // 11.9.2 TLB read/write/probe operations
+        // tlbr, input 0 is index
+
+        let index_vn = &inputs[0];
+        let output_vn = output.with_context(|| "couldn't read output varnode in tlbr")?;
+        assert!(index_vn.size == 4);
+
+        let index = cpu
+            .read(index_vn)
+            .with_context(|| "couldn't read tlb index")?;
+
+        trace!("hexagon tlb read request with index {index}");
+
+        let pte = mmu
+            .tlb
+            .tlb_read(
+                index
+                    .to_u64()
+                    .with_context(|| "couldn't convert index to u64")? as usize,
+                FLAGS_NONE,
+            )
+            .with_context(|| "couldn't read from tlb")?;
+
+        // write the entry to the vn
+        cpu.write(output_vn, pte.into())
+            .with_context(|| "couldn't write PTE to output varnode in tlbr")?;
+
+        Ok(PCodeStateChange::Fallthrough)
+    }
+}
+
+#[derive(Debug)]
+pub struct TlbInvAsid {}
+impl<T: CpuBackend> CallOtherCallback<T> for TlbInvAsid {
+    fn handle(
+        &mut self,
+        cpu: &mut dyn CallOtherCpu<T>,
+        mmu: &mut Mmu,
+        _ev: &mut EventController,
+        inputs: &[VarnodeData],
+        output: Option<&VarnodeData>,
+    ) -> Result<PCodeStateChange, CallOtherHandleError> {
+        // 11.9.2 TLB read/write/probe operations
+        // tlbinvasid, read bits 20 to 26 (zero-indexed)
+        // of Rs (varnode 0)
+
+        let asid_vn = &inputs[0];
+        assert!(asid_vn.size == 4);
+
+        let query = TLBProbeField::new_with_raw_value(
+            cpu.read(asid_vn)
+                .with_context(|| "couldn't read tlb asid vn")?
+                .to_u64()
+                .with_context(|| "couldn't convert asid vn to u64")? as u32,
+        );
+
+        trace!("hexagon tlb asid {}", query.asid());
+
+        // we must pass in the bits as unshifted
+        mmu.tlb
+            .invalidate_all(u8::from(query.asid()) as u32)
+            .with_context(|| "couldn't read from tlb")?;
+
         Ok(PCodeStateChange::Fallthrough)
     }
 }
