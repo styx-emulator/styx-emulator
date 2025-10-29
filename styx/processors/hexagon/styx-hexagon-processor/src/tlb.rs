@@ -3,19 +3,25 @@ use arbitrary_int::*;
 use bitbybit::bitfield;
 use std::collections::BTreeMap;
 use styx_core::{
+    arch::hexagon::{register_fields::Ssr, HexagonRegister},
+    cpu::CpuBackendExt,
     errors::UnknownError,
     memory::{
         MemoryOperation, MemoryType, TlbImpl, TlbProcessor, TlbTranslateError, TlbTranslateResult,
     },
-    prelude::log::{error, info, trace},
+    prelude::{
+        log::{error, info, trace},
+        Context,
+    },
 };
 
 // See https://github.com/quic/qemu/blob/hex-next/target/hexagon/cpu.h.
 const MAX_TLB_ENTRIES: usize = 1024;
 
+/// Page table entries
 #[bitfield(u64, debug)]
-struct Pte {
-    // Physical page descriptor
+pub struct Pte {
+    /// Physical page descriptor
     #[bits(0..=23, rw)]
     ppd: u24,
     #[bits(24..=27, rw)]
@@ -212,6 +218,14 @@ impl TlbImpl for HexagonTlb {
     ) -> TlbTranslateResult {
         let page_number_mask = !((1 << PAGE_SIZE_BITS) - 1);
         let vpn_page_masked = virt_addr & page_number_mask;
+        let ssr = Ssr::new_with_raw_value(
+            processor
+                .cpu
+                .read_register::<u32>(HexagonRegister::Ssr)
+                .with_context(|| {
+                    "couldn't read SSR register for ASID during address translation"
+                })?,
+        );
 
         if !self.enable_translation {
             // Physical memory mode
@@ -225,11 +239,31 @@ impl TlbImpl for HexagonTlb {
             let virt_addr = virt_addr as u32;
 
             for ent in &self.entries {
-                if !ent.v() {
+                if !ent.v() || ent.asid() != ssr.asid() {
                     continue;
                 }
 
-                // It appears that tlb entries have varying page sizes that are encoded
+                // Permission checking doesn't happen in monitor mode.
+                // NOTE: not clear if permission checking happens in guest mode.
+                // Need to relearn some stuff about hypervisors.
+                //
+                // See hexagon_cpu_mmu_index function in QEMU (cpu.c)
+                // See hex_tlb_entry_get_perm in QEMU (hexagon_tlb.c/hexagon_mmu.c)
+                if !ssr.monitor_mode() {
+                    if matches!(memory_type, MemoryType::Code) && !ent.x() {
+                        continue;
+                    }
+
+                    match access_type {
+                        MemoryOperation::Read if !ent.r() => {
+                            continue;
+                        }
+                        MemoryOperation::Write if !ent.w() => {
+                            continue;
+                        }
+                        _ => {}
+                    }
+                }
 
                 let page_type = Self::get_entry_page_type(ent);
                 let page_mask = PAGE_MASK[page_type];

@@ -10,18 +10,21 @@ use bitbybit::bitfield;
 /// Source: 11.9.3 "Trap" refers to SSR as "System Status Register."
 #[bitfield(u32)]
 pub struct Ssr {
+    // Looks like bit 15 is reserved
     #[bits(0..=7, rw)]
     cause: u8,
     #[bits(8..=14, rw)]
     asid: u7,
-    // Looks like bit 15 is reserved, or missing.
+    /// User mode?
     #[bit(16, rw)]
     um: bool,
     #[bit(17, rw)]
+    /// Executive?
     ex: bool,
     #[bit(18, rw)]
     ie: bool,
     #[bit(19, rw)]
+    /// Guest mode?
     gm: bool,
     #[bit(20, rw)]
     v0: bool,
@@ -45,8 +48,22 @@ pub struct Ssr {
     xe: bool,
 }
 
-/// System Configuration Register
-/// There's no source for this, but the abbreviation seems sufficiently obvious.
+impl Ssr {
+    /// See sys_in_monitor_mode_ssr (cpu_helper.c)
+    pub fn monitor_mode(&self) -> bool {
+        self.ex() || (!self.ex() && !self.um())
+    }
+    /// See sys_in_guest_mode_ssr (cpu_helper.c)
+    pub fn guest_mode(&self) -> bool {
+        !self.ex() && self.um() && self.gm()
+    }
+    /// See sys_in_user_mode_ssr (cpu_helper.c)
+    pub fn user_mode(&self) -> bool {
+        !self.ex() && self.um() && !self.gm()
+    }
+}
+
+/// System Configuration register
 #[bitfield(u32)]
 pub struct Syscfg {
     #[bit(0, rw)]

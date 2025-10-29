@@ -3,7 +3,7 @@
 use std::str::FromStr;
 
 use log::info;
-use styx_cpu_type::arch::hexagon::HexagonRegister;
+use styx_cpu_type::arch::hexagon::{register_fields::Syscfg, HexagonRegister};
 use styx_errors::anyhow::Context;
 use styx_pcode::{pcode::VarnodeData, sla::SlaUserOps};
 use styx_pcode_translator::sla::HexagonUserOps;
@@ -18,8 +18,6 @@ use crate::{
     call_other::{CallOtherCallback, CallOtherCpu, CallOtherHandleError},
     HexagonPcodeBackend, PCodeStateChange,
 };
-
-use super::regs::Syscfg;
 
 /// Handle the isync instruction, see 11.9.3 "Instruction synchronization."
 ///
@@ -49,6 +47,10 @@ impl<T: CpuBackend> CallOtherCallback<T> for IsyncHandler {
             info!("hexagon: enabling MMU");
             mmu.tlb.enable_code_address_translation()?;
             mmu.tlb.enable_data_address_translation()?;
+        } else {
+            info!("hexagon: disabling MMU");
+            mmu.tlb.disable_code_address_translation()?;
+            mmu.tlb.disable_data_address_translation()?;
         }
 
         Ok(PCodeStateChange::Fallthrough)

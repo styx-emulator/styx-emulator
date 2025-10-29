@@ -6026,6 +6026,7 @@ name = "styx-cpu-type"
 version = "1.2.0"
 dependencies = [
  "arbitrary-int",
+ "bitbybit",
  "derive_more 1.0.0",
  "enum-as-inner",
  "enum_dispatch",

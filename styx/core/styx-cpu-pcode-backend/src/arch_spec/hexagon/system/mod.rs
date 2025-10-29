@@ -5,5 +5,4 @@ pub mod interrupt;
 pub mod isync;
 pub mod l2;
 pub mod mem;
-pub mod regs;
 pub mod tlb;

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use derive_more::FromStr;
 use log::trace;
-use styx_cpu_type::arch::hexagon::HexagonRegister;
+use styx_cpu_type::arch::hexagon::{register_fields::Ssr, HexagonRegister};
 use styx_errors::anyhow::Context;
 use styx_pcode::{
     pcode::{SpaceName, VarnodeData},
@@ -15,7 +15,7 @@ use styx_processor::{
 };
 
 use crate::{
-    arch_spec::{hexagon::system::regs::Ssr, ArchSpecBuilder, HexagonPcodeBackend},
+    arch_spec::{ArchSpecBuilder, HexagonPcodeBackend},
     call_other::{CallOtherCallback, CallOtherCpu, CallOtherHandleError},
     PCodeStateChange,
 };
