@@ -9475,6 +9475,13 @@ attach variables [
 ];
 
 attach variables [
+  SS2_stored_sp_Rtt8
+] [
+  R1R0    R3R2    R5R4    R7R6
+  R17R16  R19R18  R21R20  R23R22
+];
+
+attach variables [
   SA1_combinezr_Rdd8
   SA1_combinerz_Rdd8
   SA1_combine0i_Rdd8
@@ -9482,7 +9489,6 @@ attach variables [
   SA1_combine2i_Rdd8
   SA1_combine3i_Rdd8
   SL2_loadrd_sp_Rdd8
-  SS2_stored_sp_Rtt8
 ] [
   D_R1R0    D_R3R2    D_R5R4    D_R7R6
   D_R17R16  D_R19R18  D_R21R20  D_R23R22
