@@ -25,6 +25,37 @@ pub struct InterruptGenericStub {
     from: &'static str,
 }
 
+/// Look at https://github.com/quic/qemu/blob/hex-next/target/hexagon/cpu_bits.h
+#[repr(i32)]
+pub enum InterruptType {
+    None = -1,
+    Reset = 0,
+    Imprecise = 1,
+    Precise = 0x2,
+    TlbMissX = 0x4,
+    TlbMissRw = 0x6,
+    Trap0 = 0x8,
+    Trap1 = 0x9,
+    Fptrap = 0xb,
+    Debug = 0xc,
+    Int0 = 0x10,
+    Int1 = 0x11,
+    Int2 = 0x12,
+    Int3 = 0x13,
+    Int4 = 0x14,
+    Int5 = 0x15,
+    Int6 = 0x16,
+    Int7 = 0x17,
+    Int8 = 0x18,
+    Int9 = 0x19,
+    IntA = 0x1a,
+    IntB = 0x1b,
+    IntC = 0x1c,
+    IntD = 0x1d,
+    IntE = 0x1e,
+    IntF = 0x1f,
+}
+
 /// Trap instruction, see 11.9.3 Trap.
 /// Hexagon Linux uses this for syscalls.
 ///
@@ -68,7 +99,9 @@ impl<T: CpuBackend> CallOtherCallback<T> for Trap0Handler {
             ssr.raw_value()
         );
 
-        Ok(PCodeStateChange::DelayedInterrupt(exc_no as i32))
+        Ok(PCodeStateChange::DelayedInterrupt(
+            InterruptType::Trap0 as i32,
+        ))
     }
 }
 
@@ -161,6 +194,37 @@ impl<T: CpuBackend> CallOtherCallback<T> for CiadHandler {
     }
 }
 
+/// Return from exception - 11.9.2
+#[derive(Debug)]
+pub struct RteHandler;
+impl<T: CpuBackend> CallOtherCallback<T> for RteHandler {
+    /// Implement RTE (return from exception)
+    fn handle(
+        &mut self,
+        backend: &mut dyn CallOtherCpu<T>,
+        _mmu: &mut Mmu,
+        _ev: &mut EventController,
+        _inputs: &[VarnodeData],
+        _output: Option<&VarnodeData>,
+    ) -> Result<PCodeStateChange, CallOtherHandleError> {
+        let elr = backend
+            .read_register::<u32>(HexagonRegister::Elr)
+            .with_context(|| "couldn't read elr for rte")?;
+        let ssr = Ssr::new_with_raw_value(
+            backend
+                .read_register::<u32>(HexagonRegister::Ssr)
+                .with_context(|| "couldn't read ssr for rte")?,
+        )
+        .with_ex(false);
+
+        backend
+            .write_register(HexagonRegister::Ssr, ssr.raw_value())
+            .with_context(|| "couldn't write ssr with cleared ex for rte")?;
+
+        Ok(PCodeStateChange::InstructionAbsolute(elr as u64))
+    }
+}
+
 impl<T: CpuBackend> CallOtherCallback<T> for InterruptGenericStub {
     fn handle(
         &mut self,
@@ -189,7 +253,7 @@ pub fn add_interrupt_callothers<S: SlaUserOps<UserOps: FromStr>>(
         .unwrap();
 
     spec.call_other_manager
-        .add_handler_other_sla(HexagonUserOps::Rte, InterruptGenericStub { from: "rte" })
+        .add_handler_other_sla(HexagonUserOps::Rte, RteHandler {})
         .unwrap();
 
     spec.call_other_manager

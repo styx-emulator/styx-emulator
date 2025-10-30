@@ -2,19 +2,22 @@
 //! # Styx-Processors
 
 use event_controller::HexagonEventController;
+use styx_core::arch::hexagon::HexagonRegister;
 use styx_core::cpu::arch::hexagon::HexagonVariants;
 use styx_core::cpu::{Arch, Backend};
 use styx_core::loader::LoaderHints;
-use styx_core::memory::{memory_region::MemoryRegion, MemoryPermissions, Mmu};
-use styx_core::prelude::log::trace;
-use styx_core::prelude::{EventControllerImpl, Peripheral};
+use styx_core::memory::physical::PhysicalMemoryVariant;
+use styx_core::memory::{MemoryPermissions, Mmu};
+use styx_core::prelude::log::info;
+use styx_core::prelude::{Context, Peripheral};
 use styx_core::{
     core::{
         builder::{BuildProcessorImplArgs, ProcessorImpl},
         ProcessorBundle,
     },
-    cpu::{ArchEndian, HexagonPcodeBackend},
+    cpu::{ArchEndian, CpuBackendExt, HexagonPcodeBackend},
     errors::{anyhow, UnknownError},
+    hooks::{CoreHandle, Hookable, Resolution, StyxHook},
 };
 use tlb::HexagonTlb;
 
@@ -47,11 +50,54 @@ impl ProcessorImpl for HexagonBuilder {
                 "hexagon processor only supports pcode backend"
             ));
         };
-        let mut mmu = Mmu::new(
-            Box::new(HexagonTlb::new()),
-            PhysicalMemoryVariant::RegionStore,
-            cpu.as_mut(),
-        )?;
+
+        // WARN: this should always be triggered at the end of a packet, after the pc has
+        // been incremented, so the Elr should be set to the pc
+        let interrupt_handler = |handle: CoreHandle, interrupt_number: i32| {
+            // get evb which is the interrupt vector base
+            let evb = handle
+                .cpu
+                .read_register::<u32>(HexagonRegister::Evb)
+                .with_context(|| "couldn't read interrupt vector base")?;
+            let jump_point = evb + (interrupt_number * 4) as u32;
+
+            info!("interrupt jumping to {:x}", jump_point);
+
+            // set elr to pc
+            let pc = handle
+                .cpu
+                .pc()
+                .with_context(|| "couldn't get pc to write to elr")?;
+
+            info!("interrupt setting elr to {:x}", pc);
+
+            handle
+                .cpu
+                .write_register(HexagonRegister::Elr, pc)
+                .with_context(|| "couldn't write old pc to elr")?;
+            handle
+                .cpu
+                .write_register(HexagonRegister::Pc, jump_point)
+                .with_context(|| "couldn't write interrupt jump point to pc")?;
+
+            Ok(())
+        };
+
+        cpu.add_hook(StyxHook::interrupt(interrupt_handler))?;
+
+        let mut mmu = match self.variant {
+            HexagonVariants::QDSP6V62 => Mmu::new(
+                Box::new(HexagonTlb::new()),
+                PhysicalMemoryVariant::RegionStore,
+                cpu.as_mut(),
+            )?,
+            _ => {
+                return Err(UnknownError::msg(
+                    "hexagon variant {self.variant:?} is not supported, only v62 is supported",
+                ))
+            }
+        };
+
         mmu.memory_map(0, 2u64.pow(32), MemoryPermissions::all())?;
 
         let hec = Box::new(HexagonEventController::default());

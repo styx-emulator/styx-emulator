@@ -2,7 +2,7 @@
 
 use std::str::FromStr;
 
-use log::info;
+use log::{info, trace};
 use styx_cpu_type::arch::hexagon::{register_fields::Syscfg, HexagonRegister};
 use styx_errors::anyhow::Context;
 use styx_pcode::{pcode::VarnodeData, sla::SlaUserOps};
@@ -44,11 +44,11 @@ impl<T: CpuBackend> CallOtherCallback<T> for IsyncHandler {
         // Note that syscfg is set for when the MMU is enabled, so we will handle that
         // now.
         if syscfg.mmuen() {
-            info!("hexagon: enabling MMU");
+            info!("hexagon: (re)enabling MMU at {:x?}", cpu.pc());
             mmu.tlb.enable_code_address_translation()?;
             mmu.tlb.enable_data_address_translation()?;
         } else {
-            info!("hexagon: disabling MMU");
+            info!("hexagon: disabling MMU at {:x?}", cpu.pc());
             mmu.tlb.disable_code_address_translation()?;
             mmu.tlb.disable_data_address_translation()?;
         }
@@ -57,10 +57,31 @@ impl<T: CpuBackend> CallOtherCallback<T> for IsyncHandler {
     }
 }
 
-pub fn add_isync_callothers<S: SlaUserOps<UserOps: FromStr>>(
+#[derive(Debug)]
+pub struct SynchtHandler {}
+
+impl<T: CpuBackend> CallOtherCallback<T> for SynchtHandler {
+    fn handle(
+        &mut self,
+        _cpu: &mut dyn CallOtherCpu<T>,
+        _mmu: &mut Mmu,
+        _ev: &mut EventController,
+        _inputs: &[VarnodeData],
+        _output: Option<&VarnodeData>,
+    ) -> Result<PCodeStateChange, CallOtherHandleError> {
+        trace!("syncht stub");
+        Ok(PCodeStateChange::Fallthrough)
+    }
+}
+
+pub fn add_sync_callothers<S: SlaUserOps<UserOps: FromStr>>(
     spec: &mut ArchSpecBuilder<S, HexagonPcodeBackend>,
 ) {
     spec.call_other_manager
         .add_handler_other_sla(HexagonUserOps::Isync, IsyncHandler {})
+        .unwrap();
+
+    spec.call_other_manager
+        .add_handler_other_sla(HexagonUserOps::Syncht, SynchtHandler {})
         .unwrap();
 }

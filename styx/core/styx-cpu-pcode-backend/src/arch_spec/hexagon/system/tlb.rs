@@ -2,20 +2,10 @@
 use arbitrary_int::*;
 use derive_more::FromStr;
 use log::{debug, trace};
-use styx_errors::{
-    anyhow::{self, Context},
-    UnknownError,
-};
-use styx_pcode::{
-    pcode::{AddressSpaceName, SpaceName, VarnodeData},
-    sla::SlaUserOps,
-};
+use styx_errors::anyhow::Context;
+use styx_pcode::{pcode::VarnodeData, sla::SlaUserOps};
 use styx_pcode_translator::sla::HexagonUserOps;
-use styx_processor::{
-    cpu::{CpuBackend, CpuBackendExt},
-    event_controller::EventController,
-    memory::Mmu,
-};
+use styx_processor::{cpu::CpuBackend, event_controller::EventController, memory::Mmu};
 
 use crate::{
     arch_spec::{ArchSpecBuilder, HexagonPcodeBackend},
@@ -49,6 +39,7 @@ impl<T: CpuBackend> CallOtherCallback<T> for TlbGenericStub {
         _output: Option<&VarnodeData>,
     ) -> Result<PCodeStateChange, CallOtherHandleError> {
         debug!("tlb stub called for {}", self.from);
+        unimplemented!();
         Ok(PCodeStateChange::Fallthrough)
     }
 }

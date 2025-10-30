@@ -82,10 +82,57 @@ impl<T: CpuBackend> CallOtherCallback<T> for MemHandler {
     }
 }
 
+// TODO: both the slaspec implementations will need to be reworked when we
+// get multicore, since we will then need a global lock across cores
+//
+// NOTE: there is no locking right now.
+#[derive(Debug)]
+struct MemLockedHandler {}
+
+impl<T: CpuBackend> CallOtherCallback<T> for MemLockedHandler {
+    fn handle(
+        &mut self,
+        cpu: &mut dyn CallOtherCpu<T>,
+        _mmu: &mut Mmu,
+        _ev: &mut EventController,
+        inputs: &[VarnodeData],
+        output: Option<&VarnodeData>,
+    ) -> Result<PCodeStateChange, CallOtherHandleError> {
+        // According to our SLASPEC
+        // input 0 is Rs
+        // input 1 is Rt
+        //
+        // output is the predicate (Pd)
+
+        let rs = &inputs[0];
+        let rt = &inputs[1];
+        let rt_val = cpu
+            .read(rt)
+            .with_context(|| "couldn't read value of Rt in mem_locked store")?;
+
+        cpu.write(rs, rt_val)
+            .with_context(|| "couldn't write Rt to mem addr Rs in mem_locked store")?;
+
+        let pd = output.with_context(|| "couldn't unwrap predicate output of mem_locked store")?;
+        cpu.write(pd, 1u32.into())
+            .with_context(|| "couldn't write Pd in mem_locked store")?;
+
+        Ok(PCodeStateChange::Fallthrough)
+    }
+}
+
 pub fn add_mem_callothers<S: SlaUserOps<UserOps: FromStr>>(
     spec: &mut ArchSpecBuilder<S, HexagonPcodeBackend>,
 ) {
     spec.call_other_manager
         .add_handler_other_sla(HexagonUserOps::MemwPhys, MemHandler {})
+        .unwrap();
+
+    spec.call_other_manager
+        .add_handler_other_sla(HexagonUserOps::MemwLocked, MemLockedHandler {})
+        .unwrap();
+
+    spec.call_other_manager
+        .add_handler_other_sla(HexagonUserOps::MemdLocked, MemLockedHandler {})
         .unwrap();
 }
