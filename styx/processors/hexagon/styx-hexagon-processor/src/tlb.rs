@@ -172,8 +172,11 @@ impl TlbImpl for HexagonTlb {
                 }
             }
 
-            error!("couldn't translate {virt_addr:x}");
-            // lol what
+            error!(
+                "couldn't translate {virt_addr:x} at pc {:x?}",
+                processor.cpu.pc()
+            );
+            //
             Err(TlbTranslateError::Other(UnknownError::msg("tlb failed")))
         }
     }

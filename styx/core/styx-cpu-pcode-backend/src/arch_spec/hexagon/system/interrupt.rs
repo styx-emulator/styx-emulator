@@ -25,9 +25,8 @@ pub struct InterruptGenericStub {
     from: &'static str,
 }
 
-/// Look at <https://github.com/quic/qemu/blob/hex-next/target/hexagon/cpu_bits.h>
+/// Look at https://github.com/quic/qemu/blob/hex-next/target/hexagon/cpu_bits.h
 #[repr(i32)]
-#[allow(unused)]
 pub enum InterruptType {
     None = -1,
     Reset = 0,
@@ -225,6 +224,33 @@ impl<T: CpuBackend> CallOtherCallback<T> for CiadHandler {
 pub struct RteHandler;
 impl<T: CpuBackend> CallOtherCallback<T> for RteHandler {
     /// Implement RTE (return from exception)
+    fn handle(
+        &mut self,
+        backend: &mut dyn CallOtherCpu<T>,
+        _mmu: &mut Mmu,
+        _ev: &mut EventController,
+        _inputs: &[VarnodeData],
+        _output: Option<&VarnodeData>,
+    ) -> Result<PCodeStateChange, CallOtherHandleError> {
+        let elr = backend
+            .read_register::<u32>(HexagonRegister::Elr)
+            .with_context(|| "couldn't read elr for rte")?;
+        let ssr = Ssr::new_with_raw_value(
+            backend
+                .read_register::<u32>(HexagonRegister::Ssr)
+                .with_context(|| "couldn't read ssr for rte")?,
+        )
+        .with_ex(false);
+
+        backend
+            .write_register(HexagonRegister::Ssr, ssr.raw_value())
+            .with_context(|| "couldn't write ssr with cleared ex for rte")?;
+
+        Ok(PCodeStateChange::InstructionAbsolute(elr as u64))
+    }
+}
+
+impl<T: CpuBackend> CallOtherCallback<T> for InterruptGenericStub {
     fn handle(
         &mut self,
         backend: &mut dyn CallOtherCpu<T>,
