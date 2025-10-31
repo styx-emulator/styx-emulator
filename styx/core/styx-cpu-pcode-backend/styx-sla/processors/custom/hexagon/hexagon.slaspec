@@ -42388,7 +42388,13 @@ gp: reloc is epsilon [ reloc = 0; ] {
 
 :A2_negsat A2_negsat_Rd32 A2_negsat_Rs32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b5 = 0 & b6 = 1 & b7 = 1 & b21 = 0 & b22 = 0 & b23 = 1 & b24 = 0 & b25 = 0 & b26 = 1 & b27 = 1 & b28 = 0 & b29 = 0 & b30 = 0 & b31 = 1 & A2_negsat_Rd32 & A2_negsat_Rs32 unimpl
 
-:A2_abs A2_abs_Rd32 A2_abs_Rs32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b5 = 0 & b6 = 0 & b7 = 1 & b21 = 0 & b22 = 0 & b23 = 1 & b24 = 0 & b25 = 0 & b26 = 1 & b27 = 1 & b28 = 0 & b29 = 0 & b30 = 0 & b31 = 1 & A2_abs_Rd32 & A2_abs_Rs32 unimpl
+:A2_abs A2_abs_Rd32 A2_abs_Rs32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b5 = 0 & b6 = 0 & b7 = 1 & b21 = 0 & b22 = 0 & b23 = 1 & b24 = 0 & b25 = 0 & b26 = 1 & b27 = 1 & b28 = 0 & b29 = 0 & b30 = 0 & b31 = 1 & A2_abs_Rd32 & A2_abs_Rs32 {
+  local tmp0:4;
+  local tmp1:4;
+  tmp0 = A2_abs_Rs32 s>> 31;
+  tmp1 = tmp0 ^ A2_abs_Rs32;
+  A2_abs_Rd32 = tmp1 - tmp0;
+}
 
 :A2_abssat A2_abssat_Rd32 A2_abssat_Rs32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b5 = 1 & b6 = 0 & b7 = 1 & b21 = 0 & b22 = 0 & b23 = 1 & b24 = 0 & b25 = 0 & b26 = 1 & b27 = 1 & b28 = 0 & b29 = 0 & b30 = 0 & b31 = 1 & A2_abssat_Rd32 & A2_abssat_Rs32 unimpl
 
