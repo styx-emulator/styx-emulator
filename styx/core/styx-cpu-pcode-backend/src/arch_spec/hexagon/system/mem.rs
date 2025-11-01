@@ -93,7 +93,7 @@ impl<T: CpuBackend> CallOtherCallback<T> for MemLockedHandler {
     fn handle(
         &mut self,
         cpu: &mut dyn CallOtherCpu<T>,
-        _mmu: &mut Mmu,
+        mmu: &mut Mmu,
         _ev: &mut EventController,
         inputs: &[VarnodeData],
         output: Option<&VarnodeData>,
@@ -105,13 +105,26 @@ impl<T: CpuBackend> CallOtherCallback<T> for MemLockedHandler {
         // output is the predicate (Pd)
 
         let rs = &inputs[0];
+        let rs_val = cpu
+            .read(rs)
+            .with_context(|| "couldn't read memory address in Rs for mem_locked store")?
+            .to_u64()
+            .with_context(|| "couldn't convert Rs mem addr to u64")?;
+
         let rt = &inputs[1];
         let rt_val = cpu
             .read(rt)
             .with_context(|| "couldn't read value of Rt in mem_locked store")?;
+        let rt_u64 = rt_val
+            .to_u64()
+            .with_context(|| "couldn't convert Rd write value to u64")?;
 
-        cpu.write(rs, rt_val)
-            .with_context(|| "couldn't write Rt to mem addr Rs in mem_locked store")?;
+        match rt_val.size() {
+            4 => mmu.write_u32_le_virt_data(rs_val, rt_u64 as u32, cpu),
+            8 => mmu.write_u64_le_virt_data(rs_val, rt_u64, cpu),
+            _ => unreachable!("invalid mem_locked size: rt_val is not 4 bytes or 8 bytes"),
+        }
+        .with_context(|| "couldn't write Rt to *Rs")?;
 
         let pd = output.with_context(|| "couldn't unwrap predicate output of mem_locked store")?;
         cpu.write(pd, 1u32.into())
