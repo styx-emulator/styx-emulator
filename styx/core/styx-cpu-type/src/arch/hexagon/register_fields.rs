@@ -19,8 +19,9 @@ pub struct Ssr {
     #[bit(16, rw)]
     um: bool,
     #[bit(17, rw)]
-    /// Executive?
+    /// exception
     ex: bool,
+    /// interrupt enabled
     #[bit(18, rw)]
     ie: bool,
     #[bit(19, rw)]

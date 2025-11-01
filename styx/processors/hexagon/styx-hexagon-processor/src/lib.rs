@@ -2,6 +2,7 @@
 //! # Styx-Processors
 
 use event_controller::HexagonEventController;
+use styx_core::arch::hexagon::register_fields::Ssr;
 use styx_core::arch::hexagon::HexagonRegister;
 use styx_core::cpu::arch::hexagon::HexagonVariants;
 use styx_core::cpu::{Arch, Backend};
@@ -54,6 +55,29 @@ impl ProcessorImpl for HexagonBuilder {
         // WARN: this should always be triggered at the end of a packet, after the pc has
         // been incremented, so the Elr should be set to the pc
         let interrupt_handler = |handle: CoreHandle, interrupt_number: i32| {
+            // get cause, if the cause is 0 then we need to do the angel stuff
+            let ssr = Ssr::new_with_raw_value(
+                handle
+                    .cpu
+                    .read_register::<u32>(HexagonRegister::Ssr)
+                    .with_context(|| "couldn't read ssr in interrupt")?,
+            );
+
+            if ssr.cause() == 0 {
+                let swi_no = handle
+                    .cpu
+                    .read_register::<u32>(HexagonRegister::R0)
+                    .with_context(|| "couldn't read r0 in interrupt")?;
+                let arg = handle
+                    .cpu
+                    .read_register::<u32>(HexagonRegister::R1)
+                    .with_context(|| "couldn't read r1 in interrupt")?;
+
+                if swi_no == 0x43 {
+                    print!("{}", arg as u8 as char);
+                }
+            }
+
             // get evb which is the interrupt vector base
             let evb = handle
                 .cpu
