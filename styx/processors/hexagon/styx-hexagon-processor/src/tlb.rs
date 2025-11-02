@@ -18,6 +18,14 @@ use styx_core::{
 // See https://github.com/quic/qemu/blob/hex-next/target/hexagon/cpu.h.
 const MAX_TLB_ENTRIES: usize = 1024;
 
+#[bitfield(u32, Debug)]
+pub struct TLBProbeField {
+    #[bits(0..=19, rw)]
+    vpn: u20,
+    #[bits(20..=26, rw)]
+    asid: u7,
+}
+
 /// Page table entries
 #[bitfield(u64, debug)]
 pub struct Pte {
@@ -337,8 +345,11 @@ impl TlbImpl for HexagonTlb {
     ///
     /// NOTE: Any bits above the 7th bit will be ignored.
     fn invalidate_all(&mut self, flags: u32) -> Result<(), UnknownError> {
+        let probe_field = TLBProbeField::new_with_raw_value(flags);
+
+        trace!("tlbinvasid invalidate for asid {:x}", probe_field.asid());
         for ent in self.entries.iter_mut() {
-            if ent.asid().value() == flags as u8 && !ent.g() {
+            if ent.asid() == probe_field.asid() && !ent.g() {
                 // Set the valid bit to false.
                 ent.set_v(false);
             }
@@ -359,5 +370,25 @@ impl TlbImpl for HexagonTlb {
             self.entries[idx].set_v(false);
             Ok(())
         }
+    }
+
+    fn tlb_search(&self, flags: u32) -> Option<u64> {
+        let probe_field = TLBProbeField::new_with_raw_value(flags);
+
+        trace!(
+            "tlb search with asid {:x} vpn {:x}",
+            probe_field.asid(),
+            probe_field.vpn()
+        );
+
+        // match on VPN and ASID
+        for ent in self.entries.iter() {
+            if ent.asid() == probe_field.asid() && ent.vpn() == probe_field.vpn() {
+                trace!("tlb search got entry {:x?}", ent);
+                return Some(ent.raw_value());
+            }
+        }
+
+        return None;
     }
 }
