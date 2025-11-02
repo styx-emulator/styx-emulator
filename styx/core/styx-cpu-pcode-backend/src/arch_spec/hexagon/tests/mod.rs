@@ -26,6 +26,7 @@ mod duplex;
 mod general;
 mod hwloop;
 mod immediate;
+mod mem;
 mod packet;
 mod predicate_anding;
 mod programs;

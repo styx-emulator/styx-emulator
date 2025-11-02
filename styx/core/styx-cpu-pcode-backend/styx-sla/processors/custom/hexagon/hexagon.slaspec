@@ -17433,7 +17433,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   EA = tmp0;
   local tmp1:1;
   tmp1 = *:1 EA;
-  L2_loadrb_io_Rd32 = zext(tmp1);
+  L2_loadrb_io_Rd32 = sext(tmp1);
 }
 
 :L4_loadrb_ur L4_loadrb_ur_Rd32 L4_loadrb_ur_Rt32 L4_loadrb_ur_u2 L4_loadrb_ur_U6 is phase = 1 & Parse != 0b00 & subinsn = 0 & b12 = 1 & b21 = 0 & b22 = 0 & b23 = 0 & b24 = 1 & b25 = 0 & b26 = 1 & b27 = 1 & b28 = 1 & b29 = 0 & b30 = 0 & b31 = 1 & L4_loadrb_ur_Rd32 & L4_loadrb_ur_Rt32 & L4_loadrb_ur_u2 & L4_loadrb_ur_U6 {
@@ -17445,7 +17445,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   EA = tmp1;
   local tmp2:1;
   tmp2 = *:1 EA;
-  L4_loadrb_ur_Rd32 = zext(tmp2);
+  L4_loadrb_ur_Rd32 = sext(tmp2);
 }
 
 :L4_loadrb_ap L4_loadrb_ap_Rd32 L4_loadrb_ap_Re32 L4_loadrb_ap_Re32d L4_loadrb_ap_U6 is phase = 1 & Parse != 0b00 & subinsn = 0 & b12 = 1 & b13 = 0 & b21 = 0 & b22 = 0 & b23 = 0 & b24 = 1 & b25 = 1 & b26 = 0 & b27 = 1 & b28 = 1 & b29 = 0 & b30 = 0 & b31 = 1 & L4_loadrb_ap_Rd32 & L4_loadrb_ap_Re32 & L4_loadrb_ap_Re32d & L4_loadrb_ap_U6 {
@@ -17453,7 +17453,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   EA = L4_loadrb_ap_U6;
   local tmp0:1;
   tmp0 = *:1 EA;
-  L4_loadrb_ap_Rd32 = zext(tmp0);
+  L4_loadrb_ap_Rd32 = sext(tmp0);
   L4_loadrb_ap_Re32d = L4_loadrb_ap_U6;
 }
 
@@ -17467,7 +17467,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   L2_loadrb_pr_Rx32d = tmp1;
   local tmp2:1;
   tmp2 = *:1 EA;
-  L2_loadrb_pr_Rd32 = zext(tmp2);
+  L2_loadrb_pr_Rd32 = sext(tmp2);
 }
 
 :L2_loadrb_pbr L2_loadrb_pbr_Rd32 L2_loadrb_pbr_Rx32 L2_loadrb_pbr_Rx32d L2_loadrb_pbr_Mu2 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b7 = 0 & b12 = 0 & b21 = 0 & b22 = 0 & b23 = 0 & b24 = 1 & b25 = 1 & b26 = 1 & b27 = 1 & b28 = 1 & b29 = 0 & b30 = 0 & b31 = 1 & L2_loadrb_pbr_Rd32 & L2_loadrb_pbr_Rx32 & L2_loadrb_pbr_Rx32d & L2_loadrb_pbr_Mu2 {
@@ -17480,7 +17480,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   L2_loadrb_pbr_Rx32d = tmp1;
   local tmp2:1;
   tmp2 = *:1 EA;
-  L2_loadrb_pbr_Rd32 = zext(tmp2);
+  L2_loadrb_pbr_Rd32 = sext(tmp2);
 }
 
 :L2_loadrb_pi L2_loadrb_pi_Rd32 L2_loadrb_pi_Rx32 L2_loadrb_pi_Rx32d L2_loadrb_pi_s4_0 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b12 = 0 & b13 = 0 & b21 = 0 & b22 = 0 & b23 = 0 & b24 = 1 & b25 = 1 & b26 = 0 & b27 = 1 & b28 = 1 & b29 = 0 & b30 = 0 & b31 = 1 & L2_loadrb_pi_Rd32 & L2_loadrb_pi_Rx32 & L2_loadrb_pi_Rx32d & L2_loadrb_pi_s4_0 {
@@ -17491,7 +17491,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   L2_loadrb_pi_Rx32d = tmp0;
   local tmp1:1;
   tmp1 = *:1 EA;
-  L2_loadrb_pi_Rd32 = zext(tmp1);
+  L2_loadrb_pi_Rd32 = sext(tmp1);
 }
 
 :L2_loadrb_pci L2_loadrb_pci_Rd32 L2_loadrb_pci_Rx32 L2_loadrb_pci_Rx32d L2_loadrb_pci_Mu2 L2_loadrb_pci_s4_0 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b9 = 0 & b12 = 0 & b21 = 0 & b22 = 0 & b23 = 0 & b24 = 1 & b25 = 0 & b26 = 0 & b27 = 1 & b28 = 1 & b29 = 0 & b30 = 0 & b31 = 1 & L2_loadrb_pci_Rd32 & L2_loadrb_pci_Rx32 & L2_loadrb_pci_Rx32d & L2_loadrb_pci_Mu2 & L2_loadrb_pci_s4_0 unimpl
@@ -17577,7 +17577,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   EA = tmp0;
   local tmp1:2;
   tmp1 = *:2 EA;
-  L2_loadrh_io_Rd32 = zext(tmp1);
+  L2_loadrh_io_Rd32 = sext(tmp1);
 }
 
 :L4_loadrh_ur L4_loadrh_ur_Rd32 L4_loadrh_ur_Rt32 L4_loadrh_ur_u2 L4_loadrh_ur_U6 is phase = 1 & Parse != 0b00 & subinsn = 0 & b12 = 1 & b21 = 0 & b22 = 1 & b23 = 0 & b24 = 1 & b25 = 0 & b26 = 1 & b27 = 1 & b28 = 1 & b29 = 0 & b30 = 0 & b31 = 1 & L4_loadrh_ur_Rd32 & L4_loadrh_ur_Rt32 & L4_loadrh_ur_u2 & L4_loadrh_ur_U6 {
@@ -17589,7 +17589,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   EA = tmp1;
   local tmp2:2;
   tmp2 = *:2 EA;
-  L4_loadrh_ur_Rd32 = zext(tmp2);
+  L4_loadrh_ur_Rd32 = sext(tmp2);
 }
 
 :L4_loadrh_ap L4_loadrh_ap_Rd32 L4_loadrh_ap_Re32 L4_loadrh_ap_Re32d L4_loadrh_ap_U6 is phase = 1 & Parse != 0b00 & subinsn = 0 & b12 = 1 & b13 = 0 & b21 = 0 & b22 = 1 & b23 = 0 & b24 = 1 & b25 = 1 & b26 = 0 & b27 = 1 & b28 = 1 & b29 = 0 & b30 = 0 & b31 = 1 & L4_loadrh_ap_Rd32 & L4_loadrh_ap_Re32 & L4_loadrh_ap_Re32d & L4_loadrh_ap_U6 {
@@ -17597,7 +17597,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   EA = L4_loadrh_ap_U6;
   local tmp0:2;
   tmp0 = *:2 EA;
-  L4_loadrh_ap_Rd32 = zext(tmp0);
+  L4_loadrh_ap_Rd32 = sext(tmp0);
   L4_loadrh_ap_Re32d = L4_loadrh_ap_U6;
 }
 
@@ -17611,7 +17611,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   L2_loadrh_pr_Rx32d = tmp1;
   local tmp2:2;
   tmp2 = *:2 EA;
-  L2_loadrh_pr_Rd32 = zext(tmp2);
+  L2_loadrh_pr_Rd32 = sext(tmp2);
 }
 
 :L2_loadrh_pbr L2_loadrh_pbr_Rd32 L2_loadrh_pbr_Rx32 L2_loadrh_pbr_Rx32d L2_loadrh_pbr_Mu2 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b7 = 0 & b12 = 0 & b21 = 0 & b22 = 1 & b23 = 0 & b24 = 1 & b25 = 1 & b26 = 1 & b27 = 1 & b28 = 1 & b29 = 0 & b30 = 0 & b31 = 1 & L2_loadrh_pbr_Rd32 & L2_loadrh_pbr_Rx32 & L2_loadrh_pbr_Rx32d & L2_loadrh_pbr_Mu2 {
@@ -17624,7 +17624,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   L2_loadrh_pbr_Rx32d = tmp1;
   local tmp2:2;
   tmp2 = *:2 EA;
-  L2_loadrh_pbr_Rd32 = zext(tmp2);
+  L2_loadrh_pbr_Rd32 = sext(tmp2);
 }
 
 :L2_loadrh_pi L2_loadrh_pi_Rd32 L2_loadrh_pi_Rx32 L2_loadrh_pi_Rx32d L2_loadrh_pi_s4_1 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b12 = 0 & b13 = 0 & b21 = 0 & b22 = 1 & b23 = 0 & b24 = 1 & b25 = 1 & b26 = 0 & b27 = 1 & b28 = 1 & b29 = 0 & b30 = 0 & b31 = 1 & L2_loadrh_pi_Rd32 & L2_loadrh_pi_Rx32 & L2_loadrh_pi_Rx32d & L2_loadrh_pi_s4_1 {
@@ -17635,7 +17635,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   L2_loadrh_pi_Rx32d = tmp0;
   local tmp1:2;
   tmp1 = *:2 EA;
-  L2_loadrh_pi_Rd32 = zext(tmp1);
+  L2_loadrh_pi_Rd32 = sext(tmp1);
 }
 
 :L2_loadrh_pci L2_loadrh_pci_Rd32 L2_loadrh_pci_Rx32 L2_loadrh_pci_Rx32d L2_loadrh_pci_Mu2 L2_loadrh_pci_s4_1 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b9 = 0 & b12 = 0 & b21 = 0 & b22 = 1 & b23 = 0 & b24 = 1 & b25 = 0 & b26 = 0 & b27 = 1 & b28 = 1 & b29 = 0 & b30 = 0 & b31 = 1 & L2_loadrh_pci_Rd32 & L2_loadrh_pci_Rx32 & L2_loadrh_pci_Rx32d & L2_loadrh_pci_Mu2 & L2_loadrh_pci_s4_1 unimpl
@@ -22096,7 +22096,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   EA = tmp1;
   local tmp2:1;
   tmp2 = *:1 EA;
-  L4_loadrb_rr_Rd32 = zext(tmp2);
+  L4_loadrb_rr_Rd32 = sext(tmp2);
 }
 
 :L2_ploadrbt_io L2_ploadrbt_io_Rd32 L2_ploadrbt_io_Pt4 L2_ploadrbt_io_Rs32 L2_ploadrbt_io_u6_0 is phase = 1 & Parse != 0b00 & subinsn = 0 & b13 = 0 & b21 = 0 & b22 = 0 & b23 = 0 & b24 = 1 & b25 = 0 & b26 = 0 & b27 = 0 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 0 & L2_ploadrbt_io_Rd32 & L2_ploadrbt_io_Pt4 & L2_ploadrbt_io_Rs32 & L2_ploadrbt_io_u6_0 {
@@ -22768,7 +22768,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   EA = tmp1;
   local tmp2:2;
   tmp2 = *:2 EA;
-  L4_loadrh_rr_Rd32 = zext(tmp2);
+  L4_loadrh_rr_Rd32 = sext(tmp2);
 }
 
 :L2_ploadrht_io L2_ploadrht_io_Rd32 L2_ploadrht_io_Pt4 L2_ploadrht_io_Rs32 L2_ploadrht_io_u6_1 is phase = 1 & Parse != 0b00 & subinsn = 0 & b13 = 0 & b21 = 0 & b22 = 1 & b23 = 0 & b24 = 1 & b25 = 0 & b26 = 0 & b27 = 0 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 0 & L2_ploadrht_io_Rd32 & L2_ploadrht_io_Pt4 & L2_ploadrht_io_Rs32 & L2_ploadrht_io_u6_1 {
