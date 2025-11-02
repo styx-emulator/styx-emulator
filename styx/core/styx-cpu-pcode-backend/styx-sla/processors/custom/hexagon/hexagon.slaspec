@@ -17459,6 +17459,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   EA = L4_loadrb_ap_U6;
   local tmp0:1;
   tmp0 = *:1 EA;
+  L4_loadrb_ap_Rd32 = sext(tmp0);
   L4_loadrb_ap_Re32d = L4_loadrb_ap_U6;
   L4_loadrb_ap_Rd32 = sext(tmp0);
 }
@@ -17603,6 +17604,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   EA = L4_loadrh_ap_U6;
   local tmp0:2;
   tmp0 = *:2 EA;
+  L4_loadrh_ap_Rd32 = sext(tmp0);
   L4_loadrh_ap_Re32d = L4_loadrh_ap_U6;
   L4_loadrh_ap_Rd32 = sext(tmp0);
 }
