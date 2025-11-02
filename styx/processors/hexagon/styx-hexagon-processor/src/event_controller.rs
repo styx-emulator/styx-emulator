@@ -21,7 +21,7 @@ impl EventControllerImpl for HexagonEventController {
         _mmu: &mut Mmu,
         _peripherals: &mut Peripherals,
     ) -> Result<InterruptExecuted, UnknownError> {
-        warn!("unimplemneted");
+        trace!("event controller next unimplemented");
         Ok(InterruptExecuted::NotExecuted)
     }
 
