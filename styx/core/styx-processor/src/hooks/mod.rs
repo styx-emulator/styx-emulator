@@ -143,12 +143,19 @@ use std::fmt::Debug;
 ///
 #[non_exhaustive]
 pub enum StyxHook {
-    /// Code hook callback function. Whenever the program counter has a value
+    /// Code hook callback function. Whenever the program counter reaches the physical address
     /// inside the [AddressRange], the callback will be executed.
     ///
     /// This callback is executed before the instruction caught has been
     /// executed by the guest.
     Code(AddressRange, Box<dyn CodeHook>),
+
+    /// Virtual Code hook callback function. Whenever the program counter has a value
+    /// inside the [AddressRange], the callback will be executed.
+    ///
+    /// This callback is executed before the instruction caught has been
+    /// executed by the guest.
+    CodeVirtual(AddressRange, Box<dyn CodeHook>),
 
     /// Basic block hook callback function. Whenever a basic block is entered
     /// the callback will be executed.
@@ -182,17 +189,25 @@ pub enum StyxHook {
     UnmappedFault(AddressRange, Box<dyn UnmappedFaultHook>),
 
     /// Insert a callback that will be invoked every time the guest performs a
-    /// memory read in the [AddressRange].
+    /// memory read in the physical [AddressRange].
     ///
     /// This callback is executed after the target issues the read but before
     /// the data is transferred anywhere, giving the hook the ability to modify
     /// the data after the target requests it and before the target receives it.
     /// Simply modify the bytes in the mutable slice passed in the callback.
-    ///
     MemoryRead(AddressRange, Box<dyn MemoryReadHook>),
 
     /// Insert a callback that will be invoked every time the guest performs a
-    /// memory write in the [AddressRange].
+    /// memory read in the virtual [AddressRange].
+    ///
+    /// This callback is executed after the target issues the read but before
+    /// the data is transferred anywhere, giving the hook the ability to modify
+    /// the data after the target requests it and before the target receives it.
+    /// Simply modify the bytes in the mutable slice passed in the callback.
+    MemoryReadVirtual(AddressRange, Box<dyn MemoryReadHook>),
+
+    /// Insert a callback that will be invoked every time the guest performs a
+    /// memory write in the physical [AddressRange].
     ///
     /// This callback is executed before the data written by the guest has been
     /// committed to memory.
@@ -202,8 +217,20 @@ pub enum StyxHook {
     /// not persist after the callback. A workaround is to add a read callback
     /// on the same address and modify the read value from the target address there.
     /// </div>
-    ///
     MemoryWrite(AddressRange, Box<dyn MemoryWriteHook>),
+
+    /// Insert a callback that will be invoked every time the guest performs a
+    /// memory write in the Virtual [AddressRange].
+    ///
+    /// This callback is executed before the data written by the guest has been
+    /// committed to memory.
+    ///
+    /// <div class="warning">
+    /// Data written to the address that triggered the callback will
+    /// not persist after the callback. A workaround is to add a read callback
+    /// on the same address and modify the read value from the target address there.
+    /// </div>
+    MemoryWriteVirtual(AddressRange, Box<dyn MemoryWriteHook>),
 
     /// Interrupt hook callback function. Whenever an interrupt is
     /// encountered, `callback` will be executed.
@@ -267,6 +294,7 @@ impl Debug for StyxHook {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             StyxHook::Code(range, _hook) => write!(f, "CodeHook({range:X?})"),
+            StyxHook::CodeVirtual(range, _hook) => write!(f, "CodeVirtualHook({range:X?})"),
             StyxHook::Block(_hook) => write!(f, "BlockHook"),
             StyxHook::ProtectionFault(range, _hook) => {
                 write!(f, "ProtectionFault({range:X?})")
@@ -277,8 +305,14 @@ impl Debug for StyxHook {
             StyxHook::MemoryRead(range, _hook) => {
                 write!(f, "MemoryRead({range:X?})")
             }
+            StyxHook::MemoryReadVirtual(range, _hook) => {
+                write!(f, "MemoryReadVirtual({range:X?})")
+            }
             StyxHook::MemoryWrite(range, _hook) => {
                 write!(f, "MemoryWrite({range:X?})")
+            }
+            StyxHook::MemoryWriteVirtual(range, _hook) => {
+                write!(f, "MemoryWriteVirtual({range:X?})")
             }
             StyxHook::Interrupt(_hook) => {
                 write!(f, "Interrupt")
@@ -297,7 +331,7 @@ impl Debug for StyxHook {
 }
 
 impl StyxHook {
-    /// Construct a code hook. Whenever the program counter has a value
+    /// Construct a code hook. Whenever the program counter's physical address translation is
     /// inside the passed `range`, the callback will be executed.
     ///
     /// This callback is executed before the instruction caught has been
@@ -321,9 +355,33 @@ impl StyxHook {
         Self::Code(range, Box::new(hook))
     }
 
-    /// Construct a memory read hook.
+    /// Construct a code hook. Whenever the program counter has a value
+    /// inside the passed `range`, the callback will be executed.
     ///
-    /// The callback will be invoked every time the guest performs a memory read in the `range`. The
+    /// This callback is executed before the instruction caught has been
+    /// executed by the guest.
+    ///
+    /// ```
+    /// use styx_processor::hooks::{CoreHandle, StyxHook};
+    /// use styx_errors::UnknownError;
+    ///
+    /// fn my_code_hook(mut proc: CoreHandle) -> Result<(), UnknownError> {
+    ///     // do hook things
+    ///     let pc = proc.pc()?;
+    ///     println!("pc: 0x{pc:X}");
+    ///     Ok(())
+    /// }
+    ///
+    /// let code_hook = StyxHook::code(0x1000..0x2000, my_code_hook);
+    /// ```
+    pub fn virt_code(range: impl Into<AddressRange>, hook: impl CodeHook + 'static) -> Self {
+        let range = range.into();
+        Self::CodeVirtual(range, Box::new(hook))
+    }
+
+    /// Construct a memory read hook on a **physical address range**.
+    ///
+    /// The callback will be invoked every time the guest performs a memory read in the physical address `range`. The
     /// hook has the opportunity to modify the read data by modifying the mutable slice `data`
     /// passed to the hook.
     ///
@@ -363,10 +421,53 @@ impl StyxHook {
         Self::MemoryRead(range, Box::new(hook))
     }
 
-    /// Construct a memory write hook. The callback will be invoked every time the guest performs a
-    /// memory write in the `range`.
+    /// Construct a memory read hook on a **virtual address range**.
     ///
-    /// This callback is executed before the data written by the guest has been
+    /// The callback will be invoked every time the guest performs a memory read in the virtual address `range`. The
+    /// hook has the opportunity to modify the read data by modifying the mutable slice `data`
+    /// passed to the hook.
+    ///
+    /// This callback is executed after the target issues the read but before the data is
+    /// transferred anywhere, giving the hook the ability to modify the data after the target
+    /// requests it and before the target receives it. Simply modify the bytes in the mutable slice
+    /// passed in the callback.
+    ///
+    /// The `data` slice will be in target endianness and will be the size of the memory operation.
+    /// The `size` will be the size of the memory operation done by the processor and match the size
+    /// of the `data` slice.
+    ///
+    /// Changes to these valid bytes of the `data` slice will be reflected in the memory read
+    /// operation (i.e. to a register) as well as applied to memory.
+    ///
+    /// ```
+    /// use styx_processor::hooks::{CoreHandle, StyxHook};
+    /// use styx_errors::UnknownError;
+    ///
+    /// fn my_memory_read_hook(mut proc: CoreHandle, address: u64, size: u32, data: &mut [u8]) -> Result<(), UnknownError> {
+    ///     // do hook things
+    ///     let pc = proc.pc()?;
+    ///     println!("pc: 0x{pc:X}");
+    ///
+    ///     // modify memory being read
+    ///     data[0] = 0xDE;
+    ///     Ok(())
+    /// }
+    ///
+    /// let memory_read_hook = StyxHook::memory_read_virt(0x1000..0x2000, my_memory_read_hook);
+    /// ```
+    pub fn memory_read_virt(
+        range: impl Into<AddressRange>,
+        hook: impl MemoryReadHook + 'static,
+    ) -> Self {
+        let range = range.into();
+        Self::MemoryRead(range, Box::new(hook))
+    }
+
+    /// Construct a memory write hook **physical address range**.
+    ///
+    /// The callback will be invoked every time the guest performs a
+    /// memory write in the physical address `range`. This callback is
+    /// executed before the data written by the guest has been
     /// committed to memory.
     ///
     /// <div class="warning">
@@ -398,6 +499,48 @@ impl StyxHook {
     /// let memory_write_hook = StyxHook::memory_write(0x1000..0x2000, my_memory_write_hook);
     /// ```
     pub fn memory_write(
+        range: impl Into<AddressRange>,
+        hook: impl MemoryWriteHook + 'static,
+    ) -> Self {
+        let range = range.into();
+        Self::MemoryWrite(range, Box::new(hook))
+    }
+
+    /// Construct a memory write hook on a **virtual address range**.
+    ///
+    /// The callback will be invoked every time the guest performs a
+    /// memory write in the virtual address `range`. This callback is executed before
+    /// the data written by the guest has been committed to memory.
+    ///
+    /// <div class="warning">
+    /// Data written to the address that triggered the callback will
+    /// not persist after the callback. A workaround is to add a read callback
+    /// on the same address and modify the read value from the target address there.
+    /// </div>
+    ///
+    /// The `data` slice will be in target endianness and will be the size of the memory operation.
+    /// The `size` will be the size of the memory operation done by the processor and match the size
+    /// of the `data` slice.
+    ///
+    ///  ```
+    /// use styx_processor::hooks::{CoreHandle, StyxHook};
+    /// use styx_errors::UnknownError;
+    ///
+    /// fn my_memory_write_hook(
+    ///     mut proc: CoreHandle,
+    ///     address: u64,
+    ///     size: u32,
+    ///     data: &[u8],
+    /// ) -> Result<(), UnknownError> {
+    ///     // do hook things
+    ///     let pc = proc.pc()?;
+    ///     println!("pc: 0x{pc:X}");
+    ///     Ok(())
+    /// }
+    ///
+    /// let memory_write_hook = StyxHook::memory_write_virt(0x1000..0x2000, my_memory_write_hook);
+    /// ```
+    pub fn memory_write_virt(
         range: impl Into<AddressRange>,
         hook: impl MemoryWriteHook + 'static,
     ) -> Self {

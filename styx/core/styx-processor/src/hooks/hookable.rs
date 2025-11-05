@@ -103,6 +103,18 @@ pub trait Hookable {
         self.add_hook(StyxHook::Code((start..=end).into(), hook))
     }
 
+    /// Add a code hook between addresses `start` and `end` inclusive.
+    ///
+    /// See [StyxHook::code()] for information on code hooks.
+    fn virt_code_hook(
+        &mut self,
+        start: u64,
+        end: u64,
+        hook: Box<dyn CodeHook + 'static>,
+    ) -> Result<HookToken, AddHookError> {
+        self.add_hook(StyxHook::CodeVirtual((start..=end).into(), hook))
+    }
+
     /// Add a memory protection fault hook between addresses `start` and `end` inclusive.
     ///
     /// See [StyxHook::protection_fault()] for information on memory protection fault hooks.
@@ -127,7 +139,7 @@ pub trait Hookable {
         self.add_hook(StyxHook::UnmappedFault((start..=end).into(), hook))
     }
 
-    /// Add a memory read hook between addresses `start` and `end` inclusive.
+    /// Add a memory read hook between physical addresses `start` and `end` inclusive.
     ///
     /// See [StyxHook::memory_read()] for information on memory read hooks.
     fn mem_read_hook(
@@ -137,6 +149,18 @@ pub trait Hookable {
         hook: Box<dyn MemoryReadHook + 'static>,
     ) -> Result<HookToken, AddHookError> {
         self.add_hook(StyxHook::MemoryRead((start..=end).into(), hook))
+    }
+
+    /// Add a memory read hook between virtual addresses `start` and `end` inclusive.
+    ///
+    /// See [StyxHook::memory_read()] for information on memory read hooks.
+    fn mem_read_virtual_hook(
+        &mut self,
+        start: u64,
+        end: u64,
+        hook: Box<dyn MemoryReadHook + 'static>,
+    ) -> Result<HookToken, AddHookError> {
+        self.add_hook(StyxHook::MemoryReadVirtual((start..=end).into(), hook))
     }
 
     /// Add a memory read hook with data between addresses `start` and `end` inclusive.
@@ -162,7 +186,7 @@ pub trait Hookable {
         ))
     }
 
-    /// Add a memory write hook with data between addresses `start` and `end` inclusive.
+    /// Add a memory write hook with data between physical addresses `start` and `end` inclusive.
     ///
     /// See [StyxHook::memory_write()] for information on memory write hooks.
     fn mem_write_hook(
@@ -172,6 +196,18 @@ pub trait Hookable {
         hook: Box<dyn MemoryWriteHook + 'static>,
     ) -> Result<HookToken, AddHookError> {
         self.add_hook(StyxHook::MemoryWrite((start..=end).into(), hook))
+    }
+
+    /// Add a memory write hook with data between virtual addresses `start` and `end` inclusive.
+    ///
+    /// See [StyxHook::memory_write()] for information on memory write hooks.
+    fn mem_write_virtual_hook(
+        &mut self,
+        start: u64,
+        end: u64,
+        hook: Box<dyn MemoryWriteHook + 'static>,
+    ) -> Result<HookToken, AddHookError> {
+        self.add_hook(StyxHook::MemoryWriteVirtual((start..=end).into(), hook))
     }
 
     /// Add a memory write hook with data between addresses `start` and `end` inclusive.
