@@ -72,7 +72,7 @@ pub fn pre_execute_hooks<T: CpuBackend + HasHookManager>(
 ) -> Result<(), UnknownError> {
     let physical_pc = mmu.translate_va(pc, MemoryOperation::Read, MemoryType::Code, cpu);
     if let Ok(physical_pc) = physical_pc {
-        HookManager::trigger_code_hook(cpu, mmu, ev, physical_pc)?;
+        HookManager::trigger_code_hook(cpu, mmu, ev, pc, physical_pc)?;
     } // no code hook if translate errors, we will catch then on instruction fetch
     Ok(())
 }

@@ -59,8 +59,11 @@ pub struct HookManager {
 
     // All hook containers
     code_hooks: OptionalHookBucket<AddrHookBucket<Box<dyn CodeHook>>>,
+    code_virtual_hooks: OptionalHookBucket<AddrHookBucket<Box<dyn CodeHook>>>,
     memory_read_hooks: OptionalHookBucket<AddrHookBucket<Box<dyn MemoryReadHook>>>,
+    memory_read_virtual_hooks: OptionalHookBucket<AddrHookBucket<Box<dyn MemoryReadHook>>>,
     memory_write_hooks: OptionalHookBucket<AddrHookBucket<Box<dyn MemoryWriteHook>>>,
+    memory_write_virtual_hooks: OptionalHookBucket<AddrHookBucket<Box<dyn MemoryWriteHook>>>,
     interrupt_hooks: OptionalHookBucket<HookBucket<Box<dyn InterruptHook>>>,
     block_hooks: OptionalHookBucket<HookBucket<Box<dyn BlockHook>>>,
     invalid_instruction_hooks: OptionalHookBucket<HookBucket<Box<dyn InvalidInstructionHook>>>,
@@ -156,13 +159,28 @@ impl HookManager {
             StyxHook::Code(range, hook) => {
                 self.code_hooks.available()?.add_hook(token, range, hook);
             }
+            StyxHook::CodeVirtual(range, hook) => {
+                self.code_virtual_hooks
+                    .available()?
+                    .add_hook(token, range, hook);
+            }
             StyxHook::MemoryRead(range, hook) => {
                 self.memory_read_hooks
                     .available()?
                     .add_hook(token, range, hook);
             }
+            StyxHook::MemoryReadVirtual(range, hook) => {
+                self.memory_read_virtual_hooks
+                    .available()?
+                    .add_hook(token, range, hook);
+            }
             StyxHook::MemoryWrite(range, hook) => {
                 self.memory_write_hooks
+                    .available()?
+                    .add_hook(token, range, hook);
+            }
+            StyxHook::MemoryWriteVirtual(range, hook) => {
+                self.memory_write_virtual_hooks
                     .available()?
                     .add_hook(token, range, hook);
             }
@@ -222,12 +240,27 @@ impl HookManager {
             .ok()
             .and_then(|a| a.delete_hook(token)))
             .or(self
+                .code_virtual_hooks
+                .available()
+                .ok()
+                .and_then(|a| a.delete_hook(token)))
+            .or(self
                 .memory_read_hooks
                 .available()
                 .ok()
                 .and_then(|a| a.delete_hook(token)))
             .or(self
+                .memory_read_virtual_hooks
+                .available()
+                .ok()
+                .and_then(|a| a.delete_hook(token)))
+            .or(self
                 .memory_write_hooks
+                .available()
+                .ok()
+                .and_then(|a| a.delete_hook(token)))
+            .or(self
+                .memory_write_virtual_hooks
                 .available()
                 .ok()
                 .and_then(|a| a.delete_hook(token)))
@@ -273,13 +306,18 @@ impl HookManager {
         cpu: &mut T,
         mmu: &mut Mmu,
         ev: &mut EventController,
-        addr: u64,
+        virtual_addr: u64,
+        physical_addr: u64,
     ) -> Result<(), UnknownError> {
-        let mut hook_bucket = cpu.hook_manager().code_hooks.take()?;
+        let mut physical_hooks = cpu.hook_manager().code_hooks.take()?;
+        let mut virtual_hooks = cpu.hook_manager().code_virtual_hooks.take()?;
 
-        trace!("Triggering code hook on 0x{addr:X}.");
+        trace!("Triggering code hook on virtual 0x{virtual_addr:X} (0x{physical_addr}).");
         let mut errors = ErrorBuffer::new();
-        for hook in hook_bucket.activate(addr) {
+        for hook in physical_hooks
+            .activate(physical_addr)
+            .chain(virtual_hooks.activate(virtual_addr))
+        {
             let core_handler = CoreHandle::new(cpu, mmu, ev);
             let hook_callback_res = hook.callback.call(core_handler);
             if let Err(err) = hook_callback_res {
@@ -288,7 +326,10 @@ impl HookManager {
         }
 
         // replace hook bucket structure
-        cpu.hook_manager().code_hooks.put_back(hook_bucket);
+        cpu.hook_manager().code_hooks.put_back(physical_hooks);
+        cpu.hook_manager()
+            .code_virtual_hooks
+            .put_back(virtual_hooks);
 
         errors
             .result()
@@ -299,25 +340,41 @@ impl HookManager {
         cpu: &mut T,
         mmu: &mut Mmu,
         ev: &mut EventController,
-        addr: u64,
+        paddr: u64,
+        vaddr: u64,
         size: u32,
         data: &mut [u8],
     ) -> Result<(), UnknownError> {
-        let mut hook_bucket = cpu.hook_manager().memory_read_hooks.take()?;
+        let mut physical_hooks = cpu.hook_manager().memory_read_hooks.take()?;
+        let mut virtual_hooks = cpu.hook_manager().memory_read_virtual_hooks.take()?;
 
-        trace!("Triggering memory read hooks on 0x{addr:X}.");
+        trace!("Triggering memory read hooks on 0x{paddr:X}.");
         let mut errors = ErrorBuffer::new();
-        for hook in hook_bucket.activate(addr) {
+        for hook in physical_hooks.activate(paddr) {
             trace!("exec token {:?}.", hook.token);
             let core_handler = CoreHandle::new(cpu, mmu, ev);
-            let hook_callback_res = hook.callback.call(core_handler, addr, size, data);
+            let hook_callback_res = hook.callback.call(core_handler, paddr, size, data);
+            if let Err(err) = hook_callback_res {
+                errors.push(err);
+            }
+        }
+
+        for hook in virtual_hooks.activate(vaddr) {
+            trace!("exec token {:?}.", hook.token);
+            let core_handler = CoreHandle::new(cpu, mmu, ev);
+            let hook_callback_res = hook.callback.call(core_handler, vaddr, size, data);
             if let Err(err) = hook_callback_res {
                 errors.push(err);
             }
         }
 
         // replace hook bucket structure
-        cpu.hook_manager().memory_read_hooks.put_back(hook_bucket);
+        cpu.hook_manager()
+            .memory_read_hooks
+            .put_back(physical_hooks);
+        cpu.hook_manager()
+            .memory_read_virtual_hooks
+            .put_back(virtual_hooks);
 
         errors
             .result()
@@ -328,25 +385,42 @@ impl HookManager {
         cpu: &mut T,
         mmu: &mut Mmu,
         ev: &mut EventController,
-        addr: u64,
+        physical_addr: u64,
+        virtual_addr: u64,
         size: u32,
         data: &[u8],
     ) -> Result<(), UnknownError> {
-        let mut hook_bucket = cpu.hook_manager().memory_write_hooks.take()?;
+        let mut physical_hooks = cpu.hook_manager().memory_write_hooks.take()?;
+        let mut virtual_hooks = cpu.hook_manager().memory_write_virtual_hooks.take()?;
 
-        trace!("Triggering memory write hooks on 0x{addr:X}.");
+        trace!(
+            "Triggering memory write hooks on paddr=0x{physical_addr:X} vaddr=0x{virtual_addr:X}."
+        );
         let mut errors = ErrorBuffer::new();
-        for hook in hook_bucket.activate(addr) {
+        for hook in physical_hooks.activate(physical_addr) {
             trace!("exec token {:?}.", hook.token);
             let core_handler = CoreHandle::new(cpu, mmu, ev);
-            let hook_callback_res = hook.callback.call(core_handler, addr, size, data);
+            let hook_callback_res = hook.callback.call(core_handler, physical_addr, size, data);
             if let Err(err) = hook_callback_res {
                 errors.push(err);
             }
         }
 
+        for hook in virtual_hooks.activate(virtual_addr) {
+            trace!("exec token {:?}.", hook.token);
+            let core_handler = CoreHandle::new(cpu, mmu, ev);
+            let hook_callback_res = hook.callback.call(core_handler, virtual_addr, size, data);
+            if let Err(err) = hook_callback_res {
+                errors.push(err);
+            }
+        }
         // replace hook bucket structure
-        cpu.hook_manager().memory_write_hooks.put_back(hook_bucket);
+        cpu.hook_manager()
+            .memory_write_hooks
+            .put_back(physical_hooks);
+        cpu.hook_manager()
+            .memory_write_virtual_hooks
+            .put_back(virtual_hooks);
 
         errors
             .result()
@@ -702,13 +776,25 @@ mod tests {
         let mut core = ProcessorCore::dummy();
 
         // outside of range, shouldn't trigger yet
-        HookManager::trigger_code_hook(&mut cpu, &mut core.mmu, &mut core.event_controller, 0x100)
-            .unwrap();
+        HookManager::trigger_code_hook(
+            &mut cpu,
+            &mut core.mmu,
+            &mut core.event_controller,
+            0x100,
+            0x100,
+        )
+        .unwrap();
         assert!(!is_triggered.load(Ordering::SeqCst));
 
         // inside of range, triggered
-        HookManager::trigger_code_hook(&mut cpu, &mut core.mmu, &mut core.event_controller, 0x1050)
-            .unwrap();
+        HookManager::trigger_code_hook(
+            &mut cpu,
+            &mut core.mmu,
+            &mut core.event_controller,
+            0x1050,
+            0x1050,
+        )
+        .unwrap();
         assert!(is_triggered.load(Ordering::SeqCst));
     }
 }

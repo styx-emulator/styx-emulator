@@ -371,6 +371,7 @@ impl SpaceManager {
                 mmu,
                 ev,
                 physical_address,
+                virtual_address,
                 varnode.size,
                 &mut data,
             )
@@ -410,21 +411,18 @@ impl SpaceManager {
             .endian;
 
         let data_bytes = data.to_bytes(endian);
-        let virtual_address = varnode.offset;
-        let physical_address = mmu.translate_va(
-            virtual_address,
-            MemoryOperation::Write,
-            MemoryType::Data,
-            cpu,
-        );
+        let vaddr = varnode.offset;
+        let physical_address =
+            mmu.translate_va(vaddr, MemoryOperation::Write, MemoryType::Data, cpu);
 
-        if let Ok(physical_address) = physical_address {
+        if let Ok(paddr) = physical_address {
             // write_data as bytes for the hook
             HookManager::trigger_memory_write_hook(
                 cpu,
                 mmu,
                 ev,
-                physical_address,
+                paddr,
+                vaddr,
                 varnode.size,
                 &data_bytes,
             )

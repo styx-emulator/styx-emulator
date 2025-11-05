@@ -294,7 +294,7 @@ impl BackendHelper<u64, Pcode> for PcodeBackend {
     ) -> Result<(), UnknownError> {
         // Trigger code hooks for this address
         // This is done before pcode generation allowing for the
-        // current instruction to be modified in memory, not sure if this is correct behavior.
+        // current instruction to be modified in memory.
         let mut pc_manager = self.pc_manager.take().unwrap();
         pc_manager.pre_code_hook(self);
         self.pc_manager = Some(pc_manager);
