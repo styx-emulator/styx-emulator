@@ -92,8 +92,9 @@ pub fn code_hook_proxy(
     log::trace!("code hook proxy at 0x{address:X}");
 
     hook_proxy(hook, |proc, hook| {
-        let StyxHook::Code(range, hook) = hook else {
-            panic!("Invalid hook type called on code_hook_proxy, got: {hook:?}")
+        let (range, hook) = match hook {
+            StyxHook::Code(range, hook) | StyxHook::CodeVirtual(range, hook) => (range, hook),
+            _ => panic!("Invalid hook type called on code_hook_proxy, got: {hook:?}"),
         };
 
         // check that the code hook is valid
@@ -117,8 +118,11 @@ pub fn mem_write_proxy(
     log::trace!("memory write hook proxy at 0x{address:X}");
 
     hook_proxy(hook, |proc, hook| {
-        let StyxHook::MemoryWrite(range, hook) = hook else {
-            panic!("Invalid hook type called on mem_write_hook_proxy, got: {hook:?}")
+        let (range, hook) = match hook {
+            StyxHook::MemoryWrite(range, hook) | StyxHook::MemoryWriteVirtual(range, hook) => {
+                (range, hook)
+            }
+            _ => panic!("Invalid hook type called on mem_write_hook_proxy, got: {hook:?}"),
         };
 
         debug_assert!(mem_type == unicorn_const::MemType::WRITE);
@@ -155,8 +159,11 @@ pub fn mem_read_proxy(
     log::trace!("memory write hook proxy at 0x{address:X}");
 
     hook_proxy(hook, |proc, hook| {
-        let StyxHook::MemoryRead(range, hook) = hook else {
-            panic!("Invalid hook type called on mem_read_proxy, got: {hook:?}")
+        let (range, hook) = match hook {
+            StyxHook::MemoryRead(range, hook) | StyxHook::MemoryReadVirtual(range, hook) => {
+                (range, hook)
+            }
+            _ => panic!("Invalid hook type called on mem_read_hook_proxy, got: {hook:?}"),
         };
 
         debug_assert!(mem_type == unicorn_const::MemType::READ);

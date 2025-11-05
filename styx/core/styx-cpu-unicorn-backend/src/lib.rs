@@ -176,7 +176,8 @@ fn styx_hook_to_unicorn(styx_hook: &StyxHook) -> Option<((u64, u64), HookType, *
     }
 
     match styx_hook {
-        StyxHook::Code(range, _) => {
+        StyxHook::Code(range, _) | StyxHook::CodeVirtual(range, _) => {
+            // Unicorn has a paddr == vaddr behavior so Code and CodeVirtual hooks apply
             Some((range_convert(range), HookType::CODE, code_hook_proxy as _))
         }
         // Block needs start/end to be 1/0
@@ -191,12 +192,14 @@ fn styx_hook_to_unicorn(styx_hook: &StyxHook) -> Option<((u64, u64), HookType, *
             HookType::MEM_UNMAPPED,
             unmapped_fault_hook_proxy as _,
         )),
-        StyxHook::MemoryRead(range, _) => Some((
+        StyxHook::MemoryRead(range, _) | StyxHook::MemoryReadVirtual(range, _) => Some((
+            // Unicorn has a paddr == vaddr behavior so MemoryRead and MemoryReadVirtual hooks apply
             range_convert(range),
             HookType::MEM_READ,
             mem_read_proxy as _,
         )),
-        StyxHook::MemoryWrite(range, _) => Some((
+        StyxHook::MemoryWrite(range, _) | StyxHook::MemoryWriteVirtual(range, _) => Some((
+            // Unicorn has a paddr == vaddr behavior so MemoryWrite and MemoryWriteVirtual hooks apply
             range_convert(range),
             HookType::MEM_WRITE,
             mem_write_proxy as _,
@@ -264,10 +267,13 @@ impl Hookable for UnicornBackend {
     fn add_hook(&mut self, hook: StyxHook) -> Result<HookToken, AddHookError> {
         match &hook {
             StyxHook::Code(_, _)
+            | StyxHook::CodeVirtual(_, _)
             | StyxHook::ProtectionFault(_, _)
             | StyxHook::UnmappedFault(_, _)
             | StyxHook::MemoryRead(_, _)
+            | StyxHook::MemoryReadVirtual(_, _)
             | StyxHook::MemoryWrite(_, _)
+            | StyxHook::MemoryWriteVirtual(_, _)
             | StyxHook::Interrupt(_)
             | StyxHook::InvalidInstruction(_)
             | StyxHook::Block(_) => add_unicorn_hook(
