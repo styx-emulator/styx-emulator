@@ -113,3 +113,6 @@ store-failure-output = true
 [profile.default-miri]
 # Miri tests take up a lot of memory, so only run 1 test at a time by default.
 test-threads = 8
+
+[profile.quiet]
+failure-output = "never"

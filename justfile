@@ -51,10 +51,10 @@ nogpl-check:
     ./util/etc/gpl/nogpl-check
 
 full-cargo-test: cargo-test cargo-doc-test cargo-test-bindings
-cargo-test: cargo-test-deps
+cargo-test *ARGS: cargo-test-deps
     #!/usr/bin/env -S bash -e
     IGNORE_CRATES=`a=({{ DB_CONTAINER_CRATES }} {{ MACRO_CRATES }}); echo "${a[@]/#/--exclude }"`
-    cargo nextest run --workspace --lib --bins --tests $IGNORE_CRATES # no benches
+    cargo nextest run --workspace --lib --bins --tests $IGNORE_CRATES {{ARGS}} # no benches
 
 cargo-test-bindings:
     #!/usr/bin/env -S bash -e
