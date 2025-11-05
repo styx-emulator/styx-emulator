@@ -3,14 +3,15 @@
 use styx_core::arch::arm::ArmVariants;
 use styx_core::cpu::arch::arm::gdb_targets::Armv7emDescription;
 use styx_core::loader::RawLoader;
-use styx_core::prelude::*;
 use styx_core::processor::ProcessorBuilder;
+use styx_core::{prelude::*, util};
 use styx_integration_tests::gdb_core_test_suite;
 use styx_kinetis21_processor::Kinetis21Builder;
 
 const BLINK_FLASH_PATH: &str = "arm/kinetis_21/bin/led_output/led_output_debug.bin";
 
 fn kinetis_21_gdb_blink_flash() -> ProcessorBuilder<'static> {
+    util::logging::init_logging();
     ProcessorBuilder::default()
         .with_backend(Backend::Unicorn)
         .with_target_program(resolve_test_bin(BLINK_FLASH_PATH))
