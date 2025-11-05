@@ -702,7 +702,11 @@ where
     ) -> TargetResult<usize, Self> {
         let addr: u64 = num_traits::ToPrimitive::to_u64(&start_addr).unwrap();
 
-        match self.proc.mmu.read_data(addr, data) {
+        match self
+            .proc
+            .mmu
+            .virt_read_data(addr, data, self.proc.cpu.as_mut())
+        {
             Err(e) => {
                 debug!("GdbExecutor::read_addrs(addr: `0x{:x}`): {}", addr, e);
                 Err(gdbstub::target::TargetError::NonFatal)
@@ -720,7 +724,11 @@ where
     ) -> TargetResult<(), Self> {
         let addr: u64 = num_traits::ToPrimitive::to_u64(&start_addr).unwrap();
 
-        match self.proc.mmu.write_data(addr, data) {
+        match self
+            .proc
+            .mmu
+            .virt_write_data(addr, data, self.proc.cpu.as_mut())
+        {
             Err(e) => {
                 debug!("GdbExecutor::write_addrs(addr: `0x{:x}`): {}", addr, e);
                 Err(gdbstub::target::TargetError::NonFatal)
@@ -1021,14 +1029,17 @@ where
         let bp_state = self.breakpoint_state.clone();
         match self
             .target_cpu()
-            .code_hook(addr, addr, Box::new(GdbBreakpointHook(bp_state)))
+            .virt_code_hook(addr, addr, Box::new(GdbBreakpointHook(bp_state)))
         {
             Ok(hook_token) => {
                 self.breakpoint_state.add_breakpoint(hook_token, addr);
                 Ok(true)
             }
-            Err(_) => {
-                warn!("Failed to add breakpoint at `{:#x}`", addr);
+            Err(err) => {
+                warn!(
+                    "Failed to add breakpoint at `{:#x}` because of {err:?}",
+                    addr
+                );
                 Ok(false)
             }
         }
@@ -1104,7 +1115,7 @@ where
                 // make sure we're not already tracking the watchpoint
                 if !self.mem_hook_cache.tracked(addr) {
                     let mem_cache = self.mem_hook_cache.clone();
-                    return match self.target_cpu().mem_write_hook(
+                    return match self.target_cpu().mem_write_virtual_hook(
                         addr,
                         addr,
                         Box::new(MemWrittenHook(mem_cache)),
