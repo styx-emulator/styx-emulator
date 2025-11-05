@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
 /// Given a series of inputs, generate a test suite to exercise gdb plugin functionality for a
-/// provided styx processor
+/// provided styx processor.
 ///
 /// As input this macro requires (in order)
 /// - a `&'static str` name of the `pc` register according to gdb
@@ -16,10 +16,12 @@
 /// Requirements:
 ///
 /// - Test file must be loaded at 0x0 so that the read_memory check succeeds
+///   - i.e. the first 0x100 bytes of the test_bin must be the 0x100 bytes at `0x0`
 /// - Pc must be set by loader, the input "entry address" here will not set pc, it's simply a value
 ///   to check the instantiated pc
 /// - the watchpoint must be far enough away from entry to allow harness/client to connect before
 ///   hitting
+/// - All addresses given are interpreted in the virtual address space
 ///
 #[macro_export]
 macro_rules! gdb_core_test_suite {
@@ -180,13 +182,12 @@ macro_rules! gdb_core_test_suite {
             #[cfg_attr(miri, ignore)]
             #[cfg_attr(asan, ignore)]
             fn test_gdb_code_hook() {
-                let builder = $gdb_test_processor().add_hook(::styx_core::hooks::StyxHook::code(
-                    BP_ONE,
-                    |mut cpu: CoreHandle| {
+                let builder = $gdb_test_processor().add_hook(
+                    ::styx_core::hooks::StyxHook::virt_code(BP_ONE, |mut cpu: CoreHandle| {
                         cpu.stop();
                         Ok(())
-                    },
-                ));
+                    }),
+                );
                 let harness =
                     ::styx_integration_tests::gdb_harness::GdbHarness::from_processor_builder::<
                         GdbTestTargetDescriptionType,
