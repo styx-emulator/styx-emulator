@@ -74,7 +74,7 @@ impl From<LoadMemoryPermissions> for MemoryPermissions {
 /// to a single memory region with the specified permissions.
 #[derive(Deserialize, PartialEq, Debug, Clone)]
 pub struct LoadFileRaw {
-    /// Base address for the mapped memory region.
+    /// Base physical address for the mapped memory region.
     pub base: u64,
     /// Path to the raw file to be loaded.
     pub file: String,
@@ -87,7 +87,7 @@ pub struct LoadFileRaw {
 /// is created with the specified permissions.
 #[derive(Deserialize, PartialEq, Debug, Clone)]
 pub struct LoadMemoryRegion {
-    /// Base address for the mapped memory region.
+    /// Base physical address for the mapped memory region.
     pub base: u64,
     /// Size of the requested region.
     pub size: u64,
