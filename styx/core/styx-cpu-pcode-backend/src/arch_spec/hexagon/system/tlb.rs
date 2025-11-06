@@ -108,7 +108,7 @@ impl<T: CpuBackend> CallOtherCallback<T> for TlbRead {
                     .with_context(|| "couldn't convert index to u64")? as usize,
                 FLAGS_NONE,
             )
-            .with_context(|| "couldn't read from tlb")?;
+            .with_context(|| format!("couldn't read from tlb {:x?}", cpu.pc()))?;
 
         // write the entry to the vn
         cpu.write(output_vn, pte.into())

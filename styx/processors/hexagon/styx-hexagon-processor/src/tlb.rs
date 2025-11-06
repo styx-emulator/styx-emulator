@@ -329,7 +329,7 @@ impl TlbImpl for HexagonTlb {
     fn tlb_read(&self, idx: usize, flags: u32) -> Result<u64, TlbTranslateError> {
         if idx >= MAX_TLB_ENTRIES {
             Err(TlbTranslateError::Other(UnknownError::msg(format!(
-                "specified tlb entry at {idx} doesn't exist, cannot read"
+                "specified tlb entry at index {idx} doesn't exist, cannot read"
             ))))
         } else {
             Ok(self.entries[idx].raw_value())
@@ -382,10 +382,11 @@ impl TlbImpl for HexagonTlb {
         );
 
         // match on VPN and ASID
-        for ent in self.entries.iter() {
+        for (i, ent) in self.entries.iter().enumerate() {
+            trace!("probe_field vpn {:x} entry vpn {:x}", probe_field.vpn(), ent.vpn());
             if ent.asid() == probe_field.asid() && ent.vpn() == probe_field.vpn() {
                 trace!("tlb search got entry {:x?}", ent);
-                return Some(ent.raw_value());
+                return Some(i as u64);
             }
         }
 

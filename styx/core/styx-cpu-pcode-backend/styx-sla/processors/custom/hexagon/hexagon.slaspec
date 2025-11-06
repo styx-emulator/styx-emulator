@@ -79122,7 +79122,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
 :SA1_cmpeqi SA1_cmpeqi_Rs16 SA1_cmpeqi_u2 is phase = 1 & subinsn = 1 & a8 = 1 & a9 = 0 & a10 = 0 & a11 = 1 & a12 = 1 & SA1_cmpeqi_Rs16 & SA1_cmpeqi_u2 {
   local tmp0:1;
   tmp0 = SA1_cmpeqi_Rs16 == SA1_cmpeqi_u2;
-  D_P0 = tmp0;
+  D_P0 = (tmp0 << 7) s>> 7;
 }
 
 :SL1_loadri_io SL1_loadri_io_Rd16 SL1_loadri_io_Rs16 SL1_loadri_io_u4_2 is phase = 1 & subinsn = 2 & a12 = 0 & SL1_loadri_io_Rd16 & SL1_loadri_io_Rs16 & SL1_loadri_io_u4_2 {
