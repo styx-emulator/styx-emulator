@@ -229,8 +229,7 @@ fn test_four(r0: u32, r1: u32, r2: u32, r3: u32, r4: u32, r5: u32, r6: u32, r7: 
             .to_string()],
             verify_fn: Box::new(|regs: FourInsnTestCaseRegValues| {
                 if regs.r0 > regs.r1 && regs.r2 > regs.r3 && regs.r4 > regs.r5 && regs.r6 > regs.r7 {
-                    // NOTE: this should actually be 0xff
-                    assert_eq!(regs.p1, 1)
+                    assert_eq!(regs.p1, 255)
                 } else {
                     assert_eq!(regs.p1, 0);
                 }
@@ -277,14 +276,13 @@ fn test_four(r0: u32, r1: u32, r2: u32, r3: u32, r4: u32, r5: u32, r6: u32, r7: 
             ],
             verify_fn: Box::new(|regs: FourInsnTestCaseRegValues| {
                 if regs.r0 > regs.r1 && regs.r2 > regs.r3 && regs.r6 > regs.r7 {
-                    // NOTE: this should actually be 0xff
-                    assert_eq!(regs.p1, 1);
+                    assert_eq!(regs.p1, 255);
                 } else {
                     assert_eq!(regs.p1, 0);
                 }
 
                 if regs.r4 > regs.r5 {
-                    assert_eq!(regs.p2, 1);
+                    assert_eq!(regs.p2, 255);
                 } else {
                     assert_eq!(regs.p2, 0);
                 }
@@ -323,20 +321,19 @@ fn test_four(r0: u32, r1: u32, r2: u32, r3: u32, r4: u32, r5: u32, r6: u32, r7: 
             ],
             verify_fn: Box::new(|regs: FourInsnTestCaseRegValues| {
                 if regs.r2 > regs.r3 && regs.r6 > regs.r7 {
-                    // NOTE: this should actually be 0xff
-                    assert_eq!(regs.p1, 1);
+                    assert_eq!(regs.p1, 255);
                 } else {
                     assert_eq!(regs.p1, 0);
                 }
 
                 if regs.r4 > regs.r5 {
-                    assert_eq!(regs.p2, 1);
+                    assert_eq!(regs.p2, 255);
                 } else {
                     assert_eq!(regs.p2, 0);
                 }
 
                 if regs.r0 > regs.r1 {
-                    assert_eq!(regs.p3, 1);
+                    assert_eq!(regs.p3, 255);
                 } else {
                     assert_eq!(regs.p3, 0);
                 }
@@ -384,14 +381,13 @@ fn test_four(r0: u32, r1: u32, r2: u32, r3: u32, r4: u32, r5: u32, r6: u32, r7: 
             ],
             verify_fn: Box::new(|regs: FourInsnTestCaseRegValues| {
                 if regs.r2 > regs.r3 && regs.r6 > regs.r7 {
-                    // NOTE: this should actually be 0xff
-                    assert_eq!(regs.p1, 1);
+                    assert_eq!(regs.p1, 255);
                 } else {
                     assert_eq!(regs.p1, 0);
                 }
 
                 if regs.r0 > regs.r1 && regs.r4 > regs.r5 {
-                    assert_eq!(regs.p2, 1);
+                    assert_eq!(regs.p2, 255);
                 } else {
                     assert_eq!(regs.p2, 0);
                 }

@@ -21728,7 +21728,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   EA = S2_storew_locked_Rs32;
   local tmp0:4;
   tmp0 = memw_locked(EA, S2_storew_locked_Rt32);
-  S2_storew_locked_Pd4 = tmp0:1;
+  S2_storew_locked_Pd4 = (tmp0:1 << 7) s>> 7;
 }
 
 :L4_loadd_locked L4_loadd_locked_Rdd32 L4_loadd_locked_Rs32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b5 = 0 & b6 = 0 & b12 = 1 & b13 = 0 & b21 = 0 & b22 = 0 & b23 = 0 & b24 = 0 & b25 = 1 & b26 = 0 & b27 = 0 & b28 = 1 & b29 = 0 & b30 = 0 & b31 = 1 & L4_loadd_locked_Rdd32 & L4_loadd_locked_Rs32 {
@@ -21748,7 +21748,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   EA = S4_stored_locked_Rs32;
   local tmp0:4;
   tmp0 = memd_locked(EA, S4_stored_locked_Rtt32);
-  S4_stored_locked_Pd4 = tmp0:1;
+  S4_stored_locked_Pd4 = (tmp0:1 << 7) s>> 7;
 }
 
 :L4_loadrub_rr L4_loadrub_rr_Rd32 L4_loadrub_rr_Rs32 L4_loadrub_rr_Rt32 L4_loadrub_rr_u2 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b21 = 1 & b22 = 0 & b23 = 0 & b24 = 0 & b25 = 1 & b26 = 0 & b27 = 1 & b28 = 1 & b29 = 1 & b30 = 0 & b31 = 0 & L4_loadrub_rr_Rd32 & L4_loadrub_rr_Rs32 & L4_loadrub_rr_Rt32 & L4_loadrub_rr_u2 {
@@ -28328,13 +28328,13 @@ gp: reloc is epsilon [ reloc = 0; ] {
 :C2_cmpeq C2_cmpeq_Pd4 C2_cmpeq_Rs32 C2_cmpeq_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b2 = 0 & b3 = 0 & b4 = 0 & b21 = 0 & b22 = 0 & b24 = 0 & b25 = 1 & b26 = 0 & b27 = 0 & b28 = 1 & b29 = 1 & b30 = 1 & b31 = 1 & C2_cmpeq_Pd4 & C2_cmpeq_Rs32 & C2_cmpeq_Rt32 {
   local tmp0:1;
   tmp0 = C2_cmpeq_Rs32 == C2_cmpeq_Rt32;
-  C2_cmpeq_Pd4 = tmp0;
+  C2_cmpeq_Pd4 = (tmp0 << 7) s>> 7;
 }
 
 :C2_cmpgt C2_cmpgt_Pd4 C2_cmpgt_Rs32 C2_cmpgt_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b2 = 0 & b3 = 0 & b4 = 0 & b21 = 0 & b22 = 1 & b24 = 0 & b25 = 1 & b26 = 0 & b27 = 0 & b28 = 1 & b29 = 1 & b30 = 1 & b31 = 1 & C2_cmpgt_Pd4 & C2_cmpgt_Rs32 & C2_cmpgt_Rt32 {
   local tmp0:1;
   tmp0 = C2_cmpgt_Rs32 s> C2_cmpgt_Rt32;
-  C2_cmpgt_Pd4 = tmp0;
+  C2_cmpgt_Pd4 = (tmp0 << 7) s>> 7;
 }
 
 :C2_cmpgtu C2_cmpgtu_Pd4 C2_cmpgtu_Rs32 C2_cmpgtu_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b2 = 0 & b3 = 0 & b4 = 0 & b21 = 1 & b22 = 1 & b24 = 0 & b25 = 1 & b26 = 0 & b27 = 0 & b28 = 1 & b29 = 1 & b30 = 1 & b31 = 1 & C2_cmpgtu_Pd4 & C2_cmpgtu_Rs32 & C2_cmpgtu_Rt32 {
@@ -28344,19 +28344,19 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp1 = C2_cmpgtu_Rt32;
   local tmp2:1;
   tmp2 = tmp0 > tmp1;
-  C2_cmpgtu_Pd4 = tmp2;
+  C2_cmpgtu_Pd4 = (tmp2 << 7) s>> 7;
 }
 
 :C2_cmpeqp C2_cmpeqp_Pd4 C2_cmpeqp_Rss32 C2_cmpeqp_Rtt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b5 = 0 & b6 = 0 & b7 = 0 & b21 = 0 & b22 = 0 & b23 = 1 & b24 = 0 & b25 = 1 & b26 = 0 & b27 = 0 & b28 = 1 & b29 = 0 & b30 = 1 & b31 = 1 & C2_cmpeqp_Pd4 & C2_cmpeqp_Rss32 & C2_cmpeqp_Rtt32 {
   local tmp0:1;
   tmp0 = C2_cmpeqp_Rss32 == C2_cmpeqp_Rtt32;
-  C2_cmpeqp_Pd4 = tmp0;
+  C2_cmpeqp_Pd4 = (tmp0 << 7) s>> 7;
 }
 
 :C2_cmpgtp C2_cmpgtp_Pd4 C2_cmpgtp_Rss32 C2_cmpgtp_Rtt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b5 = 0 & b6 = 1 & b7 = 0 & b21 = 0 & b22 = 0 & b23 = 1 & b24 = 0 & b25 = 1 & b26 = 0 & b27 = 0 & b28 = 1 & b29 = 0 & b30 = 1 & b31 = 1 & C2_cmpgtp_Pd4 & C2_cmpgtp_Rss32 & C2_cmpgtp_Rtt32 {
   local tmp0:1;
   tmp0 = C2_cmpgtp_Rss32 s> C2_cmpgtp_Rtt32;
-  C2_cmpgtp_Pd4 = tmp0;
+  C2_cmpgtp_Pd4 = (tmp0 << 7) s>> 7;
 }
 
 :C2_cmpgtup C2_cmpgtup_Pd4 C2_cmpgtup_Rss32 C2_cmpgtup_Rtt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b5 = 0 & b6 = 0 & b7 = 1 & b21 = 0 & b22 = 0 & b23 = 1 & b24 = 0 & b25 = 1 & b26 = 0 & b27 = 0 & b28 = 1 & b29 = 0 & b30 = 1 & b31 = 1 & C2_cmpgtup_Pd4 & C2_cmpgtup_Rss32 & C2_cmpgtup_Rtt32 {
@@ -28366,7 +28366,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp1 = C2_cmpgtup_Rtt32;
   local tmp2:1;
   tmp2 = tmp0 > tmp1;
-  C2_cmpgtup_Pd4 = tmp2;
+  C2_cmpgtup_Pd4 = (tmp2 << 7) s>> 7;
 }
 
 :A4_rcmpeqi A4_rcmpeqi_Rd32 A4_rcmpeqi_Rs32 A4_rcmpeqi_s8 is phase = 1 & Parse != 0b00 & subinsn = 0 & b13 = 1 & b21 = 0 & b22 = 1 & b24 = 1 & b25 = 1 & b26 = 0 & b27 = 0 & b28 = 1 & b29 = 1 & b30 = 1 & b31 = 0 & A4_rcmpeqi_Rd32 & A4_rcmpeqi_Rs32 & A4_rcmpeqi_s8 {
@@ -28398,7 +28398,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp0 = C2_bitsset_Rs32 & C2_bitsset_Rt32;
   local tmp1:1;
   tmp1 = tmp0 == C2_bitsset_Rt32;
-  C2_bitsset_Pd4 = tmp1;
+  C2_bitsset_Pd4 = (tmp1 << 7) s>> 7;
 }
 
 :C2_bitsclr C2_bitsclr_Pd4 C2_bitsclr_Rs32 C2_bitsclr_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b21 = 0 & b22 = 0 & b23 = 1 & b24 = 1 & b25 = 1 & b26 = 1 & b27 = 0 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & C2_bitsclr_Pd4 & C2_bitsclr_Rs32 & C2_bitsclr_Rt32 {
@@ -28408,7 +28408,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp1 = 0;
   local tmp2:1;
   tmp2 = tmp0 == tmp1;
-  C2_bitsclr_Pd4 = tmp2;
+  C2_bitsclr_Pd4 = (tmp2 << 7) s>> 7;
 }
 
 :C4_nbitsset C4_nbitsset_Pd4 C4_nbitsset_Rs32 C4_nbitsset_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b21 = 1 & b22 = 1 & b23 = 0 & b24 = 1 & b25 = 1 & b26 = 1 & b27 = 0 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & C4_nbitsset_Pd4 & C4_nbitsset_Rs32 & C4_nbitsset_Rt32 {
@@ -28416,7 +28416,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp0 = C4_nbitsset_Rs32 & C4_nbitsset_Rt32;
   local tmp1:1;
   tmp1 = tmp0 != C4_nbitsset_Rt32;
-  C4_nbitsset_Pd4 = tmp1;
+  C4_nbitsset_Pd4 = (tmp1 << 7) s>> 7;
 }
 
 :C4_nbitsclr C4_nbitsclr_Pd4 C4_nbitsclr_Rs32 C4_nbitsclr_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b21 = 1 & b22 = 0 & b23 = 1 & b24 = 1 & b25 = 1 & b26 = 1 & b27 = 0 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & C4_nbitsclr_Pd4 & C4_nbitsclr_Rs32 & C4_nbitsclr_Rt32 {
@@ -28426,19 +28426,19 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp1 = 0;
   local tmp2:1;
   tmp2 = tmp0 != tmp1;
-  C4_nbitsclr_Pd4 = tmp2;
+  C4_nbitsclr_Pd4 = (tmp2 << 7) s>> 7;
 }
 
 :C2_cmpeqi C2_cmpeqi_Pd4 C2_cmpeqi_Rs32 C2_cmpeqi_s10 is phase = 1 & Parse != 0b00 & subinsn = 0 & b2 = 0 & b3 = 0 & b4 = 0 & b22 = 0 & b23 = 0 & b24 = 1 & b25 = 0 & b26 = 1 & b27 = 0 & b28 = 1 & b29 = 1 & b30 = 1 & b31 = 0 & C2_cmpeqi_Pd4 & C2_cmpeqi_Rs32 & C2_cmpeqi_s10 {
   local tmp0:1;
   tmp0 = C2_cmpeqi_Rs32 == C2_cmpeqi_s10;
-  C2_cmpeqi_Pd4 = tmp0;
+  C2_cmpeqi_Pd4 = (tmp0 << 7) s>> 7;
 }
 
 :C2_cmpgti C2_cmpgti_Pd4 C2_cmpgti_Rs32 C2_cmpgti_s10 is phase = 1 & Parse != 0b00 & subinsn = 0 & b2 = 0 & b3 = 0 & b4 = 0 & b22 = 1 & b23 = 0 & b24 = 1 & b25 = 0 & b26 = 1 & b27 = 0 & b28 = 1 & b29 = 1 & b30 = 1 & b31 = 0 & C2_cmpgti_Pd4 & C2_cmpgti_Rs32 & C2_cmpgti_s10 {
   local tmp0:1;
   tmp0 = C2_cmpgti_Rs32 s> C2_cmpgti_s10;
-  C2_cmpgti_Pd4 = tmp0;
+  C2_cmpgti_Pd4 = (tmp0 << 7) s>> 7;
 }
 
 :C2_cmpgtui C2_cmpgtui_Pd4 C2_cmpgtui_Rs32 C2_cmpgtui_u9 is phase = 1 & Parse != 0b00 & subinsn = 0 & b2 = 0 & b3 = 0 & b4 = 0 & b21 = 0 & b22 = 0 & b23 = 1 & b24 = 1 & b25 = 0 & b26 = 1 & b27 = 0 & b28 = 1 & b29 = 1 & b30 = 1 & b31 = 0 & C2_cmpgtui_Pd4 & C2_cmpgtui_Rs32 & C2_cmpgtui_u9 {
@@ -28448,7 +28448,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp1 = C2_cmpgtui_u9;
   local tmp2:1;
   tmp2 = tmp0 > tmp1;
-  C2_cmpgtui_Pd4 = tmp2;
+  C2_cmpgtui_Pd4 = (tmp2 << 7) s>> 7;
 }
 
 :C2_bitsclri C2_bitsclri_Pd4 C2_bitsclri_Rs32 C2_bitsclri_u6 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b21 = 0 & b22 = 0 & b23 = 1 & b24 = 1 & b25 = 0 & b26 = 1 & b27 = 0 & b28 = 0 & b29 = 0 & b30 = 0 & b31 = 1 & C2_bitsclri_Pd4 & C2_bitsclri_Rs32 & C2_bitsclri_u6 {
@@ -28458,7 +28458,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp1 = 0;
   local tmp2:1;
   tmp2 = tmp0 == tmp1;
-  C2_bitsclri_Pd4 = tmp2;
+  C2_bitsclri_Pd4 = (tmp2 << 7) s>> 7;
 }
 
 :C4_nbitsclri C4_nbitsclri_Pd4 C4_nbitsclri_Rs32 C4_nbitsclri_u6 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b21 = 1 & b22 = 0 & b23 = 1 & b24 = 1 & b25 = 0 & b26 = 1 & b27 = 0 & b28 = 0 & b29 = 0 & b30 = 0 & b31 = 1 & C4_nbitsclri_Pd4 & C4_nbitsclri_Rs32 & C4_nbitsclri_u6 {
@@ -28468,19 +28468,19 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp1 = 0;
   local tmp2:1;
   tmp2 = tmp0 != tmp1;
-  C4_nbitsclri_Pd4 = tmp2;
+  C4_nbitsclri_Pd4 = (tmp2 << 7) s>> 7;
 }
 
 :C4_cmpneqi C4_cmpneqi_Pd4 C4_cmpneqi_Rs32 C4_cmpneqi_s10 is phase = 1 & Parse != 0b00 & subinsn = 0 & b2 = 0 & b3 = 0 & b4 = 1 & b22 = 0 & b23 = 0 & b24 = 1 & b25 = 0 & b26 = 1 & b27 = 0 & b28 = 1 & b29 = 1 & b30 = 1 & b31 = 0 & C4_cmpneqi_Pd4 & C4_cmpneqi_Rs32 & C4_cmpneqi_s10 {
   local tmp0:1;
   tmp0 = C4_cmpneqi_Rs32 != C4_cmpneqi_s10;
-  C4_cmpneqi_Pd4 = tmp0;
+  C4_cmpneqi_Pd4 = (tmp0 << 7) s>> 7;
 }
 
 :C4_cmpltei C4_cmpltei_Pd4 C4_cmpltei_Rs32 C4_cmpltei_s10 is phase = 1 & Parse != 0b00 & subinsn = 0 & b2 = 0 & b3 = 0 & b4 = 1 & b22 = 1 & b23 = 0 & b24 = 1 & b25 = 0 & b26 = 1 & b27 = 0 & b28 = 1 & b29 = 1 & b30 = 1 & b31 = 0 & C4_cmpltei_Pd4 & C4_cmpltei_Rs32 & C4_cmpltei_s10 {
   local tmp0:1;
   tmp0 = C4_cmpltei_Rs32 s<= C4_cmpltei_s10;
-  C4_cmpltei_Pd4 = tmp0;
+  C4_cmpltei_Pd4 = (tmp0 << 7) s>> 7;
 }
 
 :C4_cmplteui C4_cmplteui_Pd4 C4_cmplteui_Rs32 C4_cmplteui_u9 is phase = 1 & Parse != 0b00 & subinsn = 0 & b2 = 0 & b3 = 0 & b4 = 1 & b21 = 0 & b22 = 0 & b23 = 1 & b24 = 1 & b25 = 0 & b26 = 1 & b27 = 0 & b28 = 1 & b29 = 1 & b30 = 1 & b31 = 0 & C4_cmplteui_Pd4 & C4_cmplteui_Rs32 & C4_cmplteui_u9 {
@@ -28490,19 +28490,19 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp1 = C4_cmplteui_u9;
   local tmp2:1;
   tmp2 = tmp0 <= tmp1;
-  C4_cmplteui_Pd4 = tmp2;
+  C4_cmplteui_Pd4 = (tmp2 << 7) s>> 7;
 }
 
 :C4_cmpneq C4_cmpneq_Pd4 C4_cmpneq_Rs32 C4_cmpneq_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b2 = 0 & b3 = 0 & b4 = 1 & b21 = 0 & b22 = 0 & b24 = 0 & b25 = 1 & b26 = 0 & b27 = 0 & b28 = 1 & b29 = 1 & b30 = 1 & b31 = 1 & C4_cmpneq_Pd4 & C4_cmpneq_Rs32 & C4_cmpneq_Rt32 {
   local tmp0:1;
   tmp0 = C4_cmpneq_Rs32 != C4_cmpneq_Rt32;
-  C4_cmpneq_Pd4 = tmp0;
+  C4_cmpneq_Pd4 = (tmp0 << 7) s>> 7;
 }
 
 :C4_cmplte C4_cmplte_Pd4 C4_cmplte_Rs32 C4_cmplte_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b2 = 0 & b3 = 0 & b4 = 1 & b21 = 0 & b22 = 1 & b24 = 0 & b25 = 1 & b26 = 0 & b27 = 0 & b28 = 1 & b29 = 1 & b30 = 1 & b31 = 1 & C4_cmplte_Pd4 & C4_cmplte_Rs32 & C4_cmplte_Rt32 {
   local tmp0:1;
   tmp0 = C4_cmplte_Rs32 s<= C4_cmplte_Rt32;
-  C4_cmplte_Pd4 = tmp0;
+  C4_cmplte_Pd4 = (tmp0 << 7) s>> 7;
 }
 
 :C4_cmplteu C4_cmplteu_Pd4 C4_cmplteu_Rs32 C4_cmplteu_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b2 = 0 & b3 = 0 & b4 = 1 & b21 = 1 & b22 = 1 & b24 = 0 & b25 = 1 & b26 = 0 & b27 = 0 & b28 = 1 & b29 = 1 & b30 = 1 & b31 = 1 & C4_cmplteu_Pd4 & C4_cmplteu_Rs32 & C4_cmplteu_Rt32 {
@@ -28512,7 +28512,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp1 = C4_cmplteu_Rt32;
   local tmp2:1;
   tmp2 = tmp0 <= tmp1;
-  C4_cmplteu_Pd4 = tmp2;
+  C4_cmplteu_Pd4 = (tmp2 << 7) s>> 7;
 }
 
 :C2_and C2_and_Pd4 C2_and_Pt4 C2_and_Ps4 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b13 = 0 & b20 = 0 & b21 = 0 & b22 = 0 & b23 = 0 & b24 = 1 & b25 = 1 & b26 = 0 & b27 = 1 & b28 = 0 & b29 = 1 & b30 = 1 & b31 = 0 & C2_and_Pd4 & C2_and_Pt4 & C2_and_Ps4 {
@@ -32277,7 +32277,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp7 = tmp13:1;
   local tmp14:1;
   tmp14 = tmp0 == tmp7;
-  A4_cmpbeq_Pd4 = tmp14;
+  A4_cmpbeq_Pd4 = (tmp14 << 7) s>> 7;
 }
 
 :A4_cmpbeqi A4_cmpbeqi_Pd4 A4_cmpbeqi_Rs32 A4_cmpbeqi_u8 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b3 = 0 & b4 = 0 & b21 = 0 & b22 = 0 & b24 = 1 & b25 = 0 & b26 = 1 & b27 = 1 & b28 = 1 & b29 = 0 & b30 = 1 & b31 = 1 & A4_cmpbeqi_Pd4 & A4_cmpbeqi_Rs32 & A4_cmpbeqi_u8 {
@@ -32299,7 +32299,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp7 = sext(tmp0);
   local tmp8:1;
   tmp8 = tmp7 == A4_cmpbeqi_u8;
-  A4_cmpbeqi_Pd4 = tmp8;
+  A4_cmpbeqi_Pd4 = (tmp8 << 7) s>> 7;
 }
 
 :A4_cmpbgtu A4_cmpbgtu_Pd4 A4_cmpbgtu_Rs32 A4_cmpbgtu_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b5 = 1 & b6 = 1 & b7 = 1 & b21 = 0 & b22 = 1 & b23 = 1 & b24 = 1 & b25 = 1 & b26 = 1 & b27 = 0 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & A4_cmpbgtu_Pd4 & A4_cmpbgtu_Rs32 & A4_cmpbgtu_Rt32 {
@@ -32333,7 +32333,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp7 = tmp13:1;
   local tmp14:1;
   tmp14 = tmp0 > tmp7;
-  A4_cmpbgtu_Pd4 = tmp14;
+  A4_cmpbgtu_Pd4 = (tmp14 << 7) s>> 7;
 }
 
 :A4_cmpbgtui A4_cmpbgtui_Pd4 A4_cmpbgtui_Rs32 A4_cmpbgtui_u7 is phase = 1 & Parse != 0b00 & subinsn = 0 & b3 = 0 & b4 = 0 & b12 = 0 & b21 = 0 & b22 = 1 & b24 = 1 & b25 = 0 & b26 = 1 & b27 = 1 & b28 = 1 & b29 = 0 & b30 = 1 & b31 = 1 & A4_cmpbgtui_Pd4 & A4_cmpbgtui_Rs32 & A4_cmpbgtui_u7 {
@@ -32357,7 +32357,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp8 = sext(tmp0);
   local tmp9:1;
   tmp9 = tmp8 > tmp7;
-  A4_cmpbgtui_Pd4 = tmp9;
+  A4_cmpbgtui_Pd4 = (tmp9 << 7) s>> 7;
 }
 
 :A4_cmpbgt A4_cmpbgt_Pd4 A4_cmpbgt_Rs32 A4_cmpbgt_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b5 = 0 & b6 = 1 & b7 = 0 & b21 = 0 & b22 = 1 & b23 = 1 & b24 = 1 & b25 = 1 & b26 = 1 & b27 = 0 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & A4_cmpbgt_Pd4 & A4_cmpbgt_Rs32 & A4_cmpbgt_Rt32 {
@@ -32391,7 +32391,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp7 = tmp13:1;
   local tmp14:1;
   tmp14 = tmp0 s> tmp7;
-  A4_cmpbgt_Pd4 = tmp14;
+  A4_cmpbgt_Pd4 = (tmp14 << 7) s>> 7;
 }
 
 :A4_cmpbgti A4_cmpbgti_Pd4 A4_cmpbgti_Rs32 A4_cmpbgti_s8 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b3 = 0 & b4 = 0 & b21 = 1 & b22 = 0 & b24 = 1 & b25 = 0 & b26 = 1 & b27 = 1 & b28 = 1 & b29 = 0 & b30 = 1 & b31 = 1 & A4_cmpbgti_Pd4 & A4_cmpbgti_Rs32 & A4_cmpbgti_s8 {
@@ -32413,7 +32413,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp7 = zext(tmp0);
   local tmp8:1;
   tmp8 = tmp7 s> A4_cmpbgti_s8;
-  A4_cmpbgti_Pd4 = tmp8;
+  A4_cmpbgti_Pd4 = (tmp8 << 7) s>> 7;
 }
 
 :A2_vcmpheq A2_vcmpheq_Pd4 A2_vcmpheq_Rss32 A2_vcmpheq_Rtt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b5 = 1 & b6 = 1 & b7 = 0 & b13 = 0 & b23 = 0 & b24 = 0 & b25 = 1 & b26 = 0 & b27 = 0 & b28 = 1 & b29 = 0 & b30 = 1 & b31 = 1 & A2_vcmpheq_Pd4 & A2_vcmpheq_Rss32 & A2_vcmpheq_Rtt32 {
@@ -35687,7 +35687,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp7 = tmp13:2;
   local tmp14:1;
   tmp14 = tmp0 == tmp7;
-  A4_cmpheq_Pd4 = tmp14;
+  A4_cmpheq_Pd4 = (tmp14 << 7) s>> 7;
 }
 
 :A4_cmphgt A4_cmphgt_Pd4 A4_cmphgt_Rs32 A4_cmphgt_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b5 = 0 & b6 = 0 & b7 = 1 & b21 = 0 & b22 = 1 & b23 = 1 & b24 = 1 & b25 = 1 & b26 = 1 & b27 = 0 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & A4_cmphgt_Pd4 & A4_cmphgt_Rs32 & A4_cmphgt_Rt32 {
@@ -35721,7 +35721,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp7 = tmp13:2;
   local tmp14:1;
   tmp14 = tmp0 s> tmp7;
-  A4_cmphgt_Pd4 = tmp14;
+  A4_cmphgt_Pd4 = (tmp14 << 7) s>> 7;
 }
 
 :A4_cmphgtu A4_cmphgtu_Pd4 A4_cmphgtu_Rs32 A4_cmphgtu_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b5 = 1 & b6 = 0 & b7 = 1 & b21 = 0 & b22 = 1 & b23 = 1 & b24 = 1 & b25 = 1 & b26 = 1 & b27 = 0 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & A4_cmphgtu_Pd4 & A4_cmphgtu_Rs32 & A4_cmphgtu_Rt32 {
@@ -35755,7 +35755,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp7 = tmp13:2;
   local tmp14:1;
   tmp14 = tmp0 > tmp7;
-  A4_cmphgtu_Pd4 = tmp14;
+  A4_cmphgtu_Pd4 = (tmp14 << 7) s>> 7;
 }
 
 :A4_cmpheqi A4_cmpheqi_Pd4 A4_cmpheqi_Rs32 A4_cmpheqi_s8 is phase = 1 & Parse != 0b00 & subinsn = 0 & b3 = 1 & b4 = 0 & b21 = 0 & b22 = 0 & b24 = 1 & b25 = 0 & b26 = 1 & b27 = 1 & b28 = 1 & b29 = 0 & b30 = 1 & b31 = 1 & A4_cmpheqi_Pd4 & A4_cmpheqi_Rs32 & A4_cmpheqi_s8 {
@@ -35777,7 +35777,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp7 = zext(tmp0);
   local tmp8:1;
   tmp8 = tmp7 == A4_cmpheqi_s8;
-  A4_cmpheqi_Pd4 = tmp8;
+  A4_cmpheqi_Pd4 = (tmp8 << 7) s>> 7;
 }
 
 :A4_cmphgti A4_cmphgti_Pd4 A4_cmphgti_Rs32 A4_cmphgti_s8 is phase = 1 & Parse != 0b00 & subinsn = 0 & b3 = 1 & b4 = 0 & b21 = 1 & b22 = 0 & b24 = 1 & b25 = 0 & b26 = 1 & b27 = 1 & b28 = 1 & b29 = 0 & b30 = 1 & b31 = 1 & A4_cmphgti_Pd4 & A4_cmphgti_Rs32 & A4_cmphgti_s8 {
@@ -35799,7 +35799,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp7 = zext(tmp0);
   local tmp8:1;
   tmp8 = tmp7 s> A4_cmphgti_s8;
-  A4_cmphgti_Pd4 = tmp8;
+  A4_cmphgti_Pd4 = (tmp8 << 7) s>> 7;
 }
 
 :A4_cmphgtui A4_cmphgtui_Pd4 A4_cmphgtui_Rs32 A4_cmphgtui_u7 is phase = 1 & Parse != 0b00 & subinsn = 0 & b3 = 1 & b4 = 0 & b12 = 0 & b21 = 0 & b22 = 1 & b24 = 1 & b25 = 0 & b26 = 1 & b27 = 1 & b28 = 1 & b29 = 0 & b30 = 1 & b31 = 1 & A4_cmphgtui_Pd4 & A4_cmphgtui_Rs32 & A4_cmphgtui_u7 {
@@ -35823,7 +35823,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp8 = sext(tmp0);
   local tmp9:1;
   tmp9 = tmp8 > tmp7;
-  A4_cmphgtui_Pd4 = tmp9;
+  A4_cmphgtui_Pd4 = (tmp9 << 7) s>> 7;
 }
 
 :A2_vcmpweq A2_vcmpweq_Pd4 A2_vcmpweq_Rss32 A2_vcmpweq_Rtt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b5 = 0 & b6 = 0 & b7 = 0 & b13 = 0 & b23 = 0 & b24 = 0 & b25 = 1 & b26 = 0 & b27 = 0 & b28 = 1 & b29 = 0 & b30 = 1 & b31 = 1 & A2_vcmpweq_Pd4 & A2_vcmpweq_Rss32 & A2_vcmpweq_Rtt32 {
@@ -38577,7 +38577,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp32 = tmp31 < tmp22;
   local tmp33:1;
   tmp33 = tmp20 && tmp32;
-  A4_boundscheck_hi_Pd4 = tmp33;
+  A4_boundscheck_hi_Pd4 = (tmp33 << 7) s>> 7;
 }
 
 :A4_boundscheck_lo A4_boundscheck_lo_Pd4 A4_boundscheck_lo_Rss32 A4_boundscheck_lo_Rtt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b5 = 0 & b6 = 0 & b7 = 1 & b13 = 1 & b23 = 0 & b24 = 0 & b25 = 1 & b26 = 0 & b27 = 0 & b28 = 1 & b29 = 0 & b30 = 1 & b31 = 1 & A4_boundscheck_lo_Pd4 & A4_boundscheck_lo_Rss32 & A4_boundscheck_lo_Rtt32 {
@@ -38651,13 +38651,13 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp32 = tmp31 < tmp22;
   local tmp33:1;
   tmp33 = tmp20 && tmp32;
-  A4_boundscheck_lo_Pd4 = tmp33;
+  A4_boundscheck_lo_Pd4 = (tmp33 << 7) s>> 7;
 }
 
 :A4_tlbmatch A4_tlbmatch_Pd4 A4_tlbmatch_Rss32 A4_tlbmatch_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b5 = 1 & b6 = 1 & b7 = 0 & b13 = 1 & b23 = 0 & b24 = 0 & b25 = 1 & b26 = 0 & b27 = 0 & b28 = 1 & b29 = 0 & b30 = 1 & b31 = 1 & A4_tlbmatch_Pd4 & A4_tlbmatch_Rss32 & A4_tlbmatch_Rt32 {
   local tmp0:4;
   tmp0 = tlbmatch(A4_tlbmatch_Rss32, A4_tlbmatch_Rt32);
-  A4_tlbmatch_Pd4 = tmp0:1;
+  A4_tlbmatch_Pd4 = (tmp0:1 << 7) s>> 7;
 }
 
 :C2_tfrpr C2_tfrpr_Rd32 C2_tfrpr_Ps4 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b22 = 1 & b24 = 1 & b25 = 0 & b26 = 0 & b27 = 1 & b28 = 0 & b29 = 0 & b30 = 0 & b31 = 1 & C2_tfrpr_Rd32 & C2_tfrpr_Ps4 {
@@ -38693,13 +38693,13 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp6:4;
   tmp6 = tmp4 & tmp5;
   tmp0 = tmp6:1;
-  C2_tfrrp_Pd4 = tmp0;
+  C2_tfrrp_Pd4 = (tmp0 << 7) s>> 7;
 }
 
 :C4_fastcorner9 C4_fastcorner9_Pd4 C4_fastcorner9_Ps4 C4_fastcorner9_Pt4 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b4 = 1 & b7 = 1 & b13 = 1 & b20 = 0 & b21 = 0 & b22 = 0 & b23 = 0 & b24 = 1 & b25 = 1 & b26 = 0 & b27 = 1 & b28 = 0 & b29 = 1 & b30 = 1 & b31 = 0 & C4_fastcorner9_Pd4 & C4_fastcorner9_Ps4 & C4_fastcorner9_Pt4 {
   local tmp0:4;
   tmp0 = fastcorner9(C4_fastcorner9_Ps4, C4_fastcorner9_Pt4);
-  C4_fastcorner9_Pd4 = tmp0:1;
+  C4_fastcorner9_Pd4 = (tmp0:1 << 7) s>> 7;
 }
 
 :C4_fastcorner9_not C4_fastcorner9_not_Pd4 C4_fastcorner9_not_Ps4 C4_fastcorner9_not_Pt4 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b4 = 1 & b7 = 1 & b13 = 1 & b20 = 1 & b21 = 0 & b22 = 0 & b23 = 0 & b24 = 1 & b25 = 1 & b26 = 0 & b27 = 1 & b28 = 0 & b29 = 1 & b30 = 1 & b31 = 0 & C4_fastcorner9_not_Pd4 & C4_fastcorner9_not_Ps4 & C4_fastcorner9_not_Pt4 {
@@ -38709,7 +38709,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp1 = tmp0:1;
   local tmp2:1;
   tmp2 = ! tmp1;
-  C4_fastcorner9_not_Pd4 = tmp2;
+  C4_fastcorner9_not_Pd4 = (tmp2 << 7) s>> 7;
 }
 
 :M2_mpy_acc_hh_s0 M2_mpy_acc_hh_s0_Rx32 M2_mpy_acc_hh_s0_Rx32d M2_mpy_acc_hh_s0_Rs32 M2_mpy_acc_hh_s0_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b5 = 1 & b6 = 1 & b7 = 0 & b21 = 0 & b22 = 0 & b23 = 0 & b24 = 0 & b25 = 1 & b26 = 1 & b27 = 1 & b28 = 0 & b29 = 1 & b30 = 1 & b31 = 1 & M2_mpy_acc_hh_s0_Rx32 & M2_mpy_acc_hh_s0_Rx32d & M2_mpy_acc_hh_s0_Rs32 & M2_mpy_acc_hh_s0_Rt32 unimpl
@@ -68690,7 +68690,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp3 = 0;
   local tmp4:1;
   tmp4 = tmp2 != tmp3;
-  S2_tstbit_i_Pd4 = tmp4;
+  S2_tstbit_i_Pd4 = (tmp4 << 7) s>> 7;
 }
 
 :S4_ntstbit_i S4_ntstbit_i_Pd4 S4_ntstbit_i_Rs32 S4_ntstbit_i_u5 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b13 = 0 & b21 = 1 & b22 = 0 & b23 = 0 & b24 = 1 & b25 = 0 & b26 = 1 & b27 = 0 & b28 = 0 & b29 = 0 & b30 = 0 & b31 = 1 & S4_ntstbit_i_Pd4 & S4_ntstbit_i_Rs32 & S4_ntstbit_i_u5 {
@@ -68704,7 +68704,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp3 = 0;
   local tmp4:1;
   tmp4 = tmp2 == tmp3;
-  S4_ntstbit_i_Pd4 = tmp4;
+  S4_ntstbit_i_Pd4 = (tmp4 << 7) s>> 7;
 }
 
 :S2_setbit_i S2_setbit_i_Rd32 S2_setbit_i_Rs32 S2_setbit_i_u5 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b5 = 0 & b6 = 0 & b7 = 0 & b13 = 0 & b21 = 0 & b22 = 1 & b23 = 1 & b24 = 0 & b25 = 0 & b26 = 1 & b27 = 1 & b28 = 0 & b29 = 0 & b30 = 0 & b31 = 1 & S2_setbit_i_Rd32 & S2_setbit_i_Rs32 & S2_setbit_i_u5 {
@@ -68897,7 +68897,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp74 = zext(tmp73);
   local tmp75:1;
   tmp75 = tmp49 != tmp74;
-  S2_tstbit_r_Pd4 = tmp75;
+  S2_tstbit_r_Pd4 = (tmp75 << 7) s>> 7;
 }
 
 :S4_ntstbit_r S4_ntstbit_r_Pd4 S4_ntstbit_r_Rs32 S4_ntstbit_r_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b21 = 1 & b22 = 0 & b23 = 0 & b24 = 1 & b25 = 1 & b26 = 1 & b27 = 0 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & S4_ntstbit_r_Pd4 & S4_ntstbit_r_Rs32 & S4_ntstbit_r_Rt32 {
@@ -69058,7 +69058,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp74 = zext(tmp73);
   local tmp75:1;
   tmp75 = tmp49 == tmp74;
-  S4_ntstbit_r_Pd4 = tmp75;
+  S4_ntstbit_r_Pd4 = (tmp75 << 7) s>> 7;
 }
 
 :S2_setbit_r S2_setbit_r_Rd32 S2_setbit_r_Rs32 S2_setbit_r_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b6 = 0 & b7 = 0 & b22 = 0 & b23 = 1 & b24 = 0 & b25 = 1 & b26 = 1 & b27 = 0 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & S2_setbit_r_Rd32 & S2_setbit_r_Rs32 & S2_setbit_r_Rt32 {
@@ -78852,7 +78852,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
 :Y5_l2locka Y5_l2locka_Pd4 Y5_l2locka_Rs32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b13 = 1 & b21 = 1 & b22 = 1 & b23 = 1 & b24 = 0 & b25 = 0 & b26 = 0 & b27 = 0 & b28 = 0 & b29 = 1 & b30 = 0 & b31 = 1 & Y5_l2locka_Pd4 & Y5_l2locka_Rs32 {
   local tmp0:4;
   tmp0 = l2locka(Y5_l2locka_Rs32);
-  Y5_l2locka_Pd4 = tmp0:1;
+  Y5_l2locka_Pd4 = (tmp0:1 << 7) s>> 7;
 }
 
 :Y5_l2unlocka Y5_l2unlocka_Rs32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b21 = 1 & b22 = 1 & b23 = 0 & b24 = 0 & b25 = 1 & b26 = 1 & b27 = 0 & b28 = 0 & b29 = 1 & b30 = 0 & b31 = 1 & Y5_l2unlocka_Rs32 {
