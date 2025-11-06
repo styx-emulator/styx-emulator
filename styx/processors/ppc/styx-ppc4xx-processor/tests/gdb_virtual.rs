@@ -96,9 +96,8 @@ fn virtual_gdb_tests_builder() -> ProcessorBuilder<'static> {
         .with_input_bytes(loader_yaml.as_bytes().to_owned().into())
 }
 
-// - Bytes must be loaded at 0x0 (maybe it should read at pc)
-// - Pc must be set by loader, the input here will not set pc, it's simply a value to check
-// - watchpoint must be far enough away from entry to allow harness/client to connect before hitting (not 100% sure on the reason)
+// see documentation of the test suite for all requirements of
+// test enviornment (there are many :D)
 gdb_core_test_suite!(
     "pc",
     FREERTOS_PATH,

@@ -15,13 +15,13 @@
 ///
 /// Requirements:
 ///
-/// - Test file must be loaded at 0x0 so that the read_memory check succeeds
+/// - Test file must be loaded at 0x0 so that the read_memory check succeeds.
 ///   - i.e. the first 0x100 bytes of the test_bin must be the 0x100 bytes at `0x0`
 /// - Pc must be set by loader, the input "entry address" here will not set pc, it's simply a value
-///   to check the instantiated pc
-/// - the watchpoint must be far enough away from entry to allow harness/client to connect before
-///   hitting
-/// - All addresses given are interpreted in the virtual address space
+///   to check the instantiated pc.
+/// - The watchpoint must be far enough away from entry to allow harness/client to connect before
+///   hitting. This is needed because of a race condition in lockbox/gdb-client.
+/// - All addresses given are interpreted in the virtual address space>
 ///
 #[macro_export]
 macro_rules! gdb_core_test_suite {
