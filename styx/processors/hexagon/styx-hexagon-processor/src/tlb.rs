@@ -123,7 +123,8 @@ impl TlbImpl for HexagonTlb {
             let offset = virt_addr & 0xffff;
 
             for ent in &self.entries {
-                if !ent.v() || ent.asid() != ssr.asid() {
+                if !ent.v() || (ent.asid() != ssr.asid() && !ent.g()) {
+                    trace!("skipping {ent:x?}");
                     continue;
                 }
 
@@ -156,7 +157,7 @@ impl TlbImpl for HexagonTlb {
 
                 let ent_vpn = u64::from(ent.vpn()) << PAGE_SIZE_BITS;
 
-                trace!("ent vpn {ent_vpn:x} real vpn {va_vpn:x} va_offset {va_offset:x}",);
+                info!("ent vpn {ent_vpn:x} real vpn {va_vpn:x} va_offset {va_offset:x}",);
                 if va_vpn == ent_vpn {
                     let ppd_mask = u64::from(ent.ppd() >> 1)
                         .overflowing_shl(PAGE_SIZE_BITS as u32)
@@ -221,7 +222,7 @@ impl TlbImpl for HexagonTlb {
     fn tlb_search(&self, flags: u32) -> Option<u64> {
         let probe_field = TLBProbeField::new_with_raw_value(flags);
 
-        trace!(
+        info!(
             "tlb search with asid {:x} vpn {:x}",
             probe_field.asid(),
             probe_field.vpn()
