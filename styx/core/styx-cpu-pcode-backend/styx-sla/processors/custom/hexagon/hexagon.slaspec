@@ -67332,7 +67332,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp22:8;
   tmp22 = tmp20 << tmp21;
   local tmp23:8;
-  tmp23 = zext(S2_insert_Rx32);
+  tmp23 = zext(S2_insert_Rx32d);
   local tmp24:8;
   tmp24 = tmp23 | tmp22;
   S2_insert_Rx32d = tmp24:4;
@@ -78560,7 +78560,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
 }
 
 :Y2_tlbr Y2_tlbr_Rdd32 Y2_tlbr_Rs32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b21 = 0 & b22 = 1 & b23 = 0 & b24 = 0 & b25 = 0 & b26 = 1 & b27 = 1 & b28 = 0 & b29 = 1 & b30 = 1 & b31 = 0 & Y2_tlbr_Rdd32 & Y2_tlbr_Rs32 {
-  local tmp0:4;
+  local tmp0:8;
   tmp0 = tlbr(Y2_tlbr_Rs32);
   Y2_tlbr_Rdd32 = zext(tmp0);
 }
