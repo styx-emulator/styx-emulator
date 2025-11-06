@@ -193,7 +193,13 @@ impl TlbImpl for HexagonTlb {
     }
 
     fn tlb_read(&self, idx: usize, flags: u32) -> Result<u64, TlbTranslateError> {
-        todo!()
+        if idx >= MAX_TLB_ENTRIES {
+            Err(TlbTranslateError::Other(UnknownError::msg(format!(
+                "specified tlb entry at index {idx} doesn't exist, cannot read"
+            ))))
+        } else {
+            Ok(self.entries[idx].raw_value())
+        }
     }
 
     /// This is only used for ASID in our implementation
@@ -202,6 +208,34 @@ impl TlbImpl for HexagonTlb {
     }
 
     fn invalidate(&mut self, idx: usize) -> Result<(), UnknownError> {
-        todo!()
+        if idx >= MAX_TLB_ENTRIES {
+            Err(UnknownError::msg(format!(
+                "specified tlb entry at index {idx} doesn't exist, cannot invalidate"
+            )))
+        } else {
+            self.entries[idx].set_v(false);
+            Ok(())
+        }
+    }
+
+    fn tlb_search(&self, flags: u32) -> Option<u64> {
+        let probe_field = TLBProbeField::new_with_raw_value(flags);
+
+        trace!(
+            "tlb search with asid {:x} vpn {:x}",
+            probe_field.asid(),
+            probe_field.vpn()
+        );
+
+        // match on VPN and ASID
+        for (i, ent) in self.entries.iter().enumerate() {
+            trace!("probe_field vpn {:x} entry vpn {:x}", probe_field.vpn(), ent.vpn());
+            if ent.asid() == probe_field.asid() && ent.vpn() == probe_field.vpn() {
+                trace!("tlb search got entry {:x?}", ent);
+                return Some(i as u64);
+            }
+        }
+
+        return None;
     }
 }
