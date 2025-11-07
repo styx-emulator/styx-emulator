@@ -4,9 +4,9 @@ use strum_macros::Display;
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
-    /// Generate a template file for a new ADR
+    /// Generate a new templated ADR
     Adr {
-        /// Name for the new ADR template
+        /// Title for the new ADR, a slug will be generated from this title
         #[arg(long)]
         name: String,
     },
