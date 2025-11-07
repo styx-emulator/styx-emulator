@@ -228,13 +228,13 @@ impl<T: CpuBackend> CallOtherCallback<T> for RteHandler {
 impl<T: CpuBackend> CallOtherCallback<T> for InterruptGenericStub {
     fn handle(
         &mut self,
-        _backend: &mut dyn CallOtherCpu<T>,
+        backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         _inputs: &[VarnodeData],
         _output: Option<&VarnodeData>,
     ) -> Result<PCodeStateChange, CallOtherHandleError> {
-        unimplemented!("interrupt related stub called for {}", self.from);
+        unimplemented!("interrupt related stub called for {} pc {:x?}", self.from, backend.pc());
     }
 }
 

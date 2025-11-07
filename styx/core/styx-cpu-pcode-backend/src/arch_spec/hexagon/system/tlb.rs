@@ -189,6 +189,21 @@ impl<T: CpuBackend> CallOtherCallback<T> for TlbProbe {
     }
 }
 
+#[derive(Debug)]
+pub struct TlbLockUnlock {}
+impl<T: CpuBackend> CallOtherCallback<T> for TlbLockUnlock {
+    fn handle(
+        &mut self,
+        _cpu: &mut dyn CallOtherCpu<T>,
+        _mmu: &mut Mmu,
+        _ev: &mut EventController,
+        _inputs: &[VarnodeData],
+        _output: Option<&VarnodeData>,
+    ) -> Result<PCodeStateChange, CallOtherHandleError> {
+        Ok(PCodeStateChange::Fallthrough)
+    }
+}
+
 pub fn add_tlb_callothers<S: SlaUserOps<UserOps: FromStr>>(
     spec: &mut ArchSpecBuilder<S, HexagonPcodeBackend>,
 ) {
@@ -224,13 +239,13 @@ pub fn add_tlb_callothers<S: SlaUserOps<UserOps: FromStr>>(
         .unwrap();
 
     spec.call_other_manager
-        .add_handler_other_sla(HexagonUserOps::Tlblock, TlbGenericStub { from: "tlblock" })
+        .add_handler_other_sla(HexagonUserOps::Tlblock, TlbLockUnlock {} )
         .unwrap();
 
     spec.call_other_manager
         .add_handler_other_sla(
             HexagonUserOps::Tlbunlock,
-            TlbGenericStub { from: "tlbunlock" },
+            TlbLockUnlock {}
         )
         .unwrap();
 }
