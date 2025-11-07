@@ -32,7 +32,7 @@ A good example would look like eg.
 
    1-use-of-rfcs-and-adrs.rst
 
-**TODO**: make an ``xtask`` to automate this
+You can use `cargo xtask adr --name "Title of My New ADR"` to generate a new ADR in `docs/source/adrs/`.
 
 Record Format
 ^^^^^^^^^^^^^
