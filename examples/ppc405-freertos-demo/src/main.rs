@@ -261,6 +261,9 @@ fn main() {
     info!("built processor");
 
     let mut tests = Tests::default();
+    // These addresses are the instructions where the firmware checks the
+    // success condition of the test. They are firmware specific so a firmware rebuild
+    // may need these to change.
     tests
         .add(Test::new_hook("Math", 0xfff0260c, &processor))
         .add(Test::new_hook("Coms (UART)", 0xfff02624, &processor))
@@ -465,6 +468,8 @@ impl ProcStatus {
     }
 
     fn get_task(core: &SyncProcessor) -> Option<Task> {
+        // Address of currently executing task in FreeRTOS. May need to change
+        // if firmware is rebuilt.
         let new_handle = core.data().read(0xfff1212cu64).be().u32().unwrap();
 
         Task::from_addr(core, new_handle as u64)
@@ -480,6 +485,9 @@ impl Widget for &ProcStatus {
             .border_set(border::THICK);
 
         let pc = self.proc.pc().unwrap();
+        // Global memory address of tick counter in FreeRTOS. May need to change
+        // if firmware is rebuilt. The tick is used to determine when to switch
+        // tasks and is displayed in the TUI.
         let current_tick = self.proc.data().read(0xfff12138u64).be().u32().unwrap();
         let next_task_unblock_time = self.proc.data().read(0xfff12154u64).be().u32().unwrap();
 
@@ -574,6 +582,8 @@ impl UartStatus {
         let bytes_rx: Arc<Mutex<Vec<u8>>> = Default::default();
         {
             let bytes_rx = bytes_rx.clone();
+            // Memory address of instruction that receives uart. This may need
+            // to change if firmware is rebuilt.
             proc.add_hook(StyxHook::code(0xfff0302c, move |mut proc: CoreHandle| {
                 let r4 = proc.cpu.read_reg(Ppc32Register::R4);
                 let r4 = proc.mmu.data().read(r4).u8().unwrap();
