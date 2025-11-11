@@ -250,6 +250,40 @@ impl<T: CpuBackend> CallOtherCallback<T> for RteHandler {
     }
 }
 
+/// Return from exception - 11.9.2
+#[derive(Debug)]
+pub struct NmiHandler;
+impl<T: CpuBackend> CallOtherCallback<T> for NmiHandler {
+    /// Implement RTE (return from exception)
+    fn handle(
+        &mut self,
+        backend: &mut dyn CallOtherCpu<T>,
+        _mmu: &mut Mmu,
+        _ev: &mut EventController,
+        inputs: &[VarnodeData],
+        _output: Option<&VarnodeData>,
+    ) -> Result<PCodeStateChange, CallOtherHandleError> {
+        let rs = &inputs[0];
+        let rs_val = backend
+            .read(rs)
+            .with_context(|| "couldn't read Rs for nmi")?
+            .to_u64()
+            .with_context(|| "couldn't turn Rs to u32 for nmi")?;
+
+        // WARN NOTE TODO
+        // we only have one thread, so this suffices.
+        if rs_val & 1 == 0 {
+            trace!("nmi({:x}) called", rs_val);
+            Ok(PCodeStateChange::Fallthrough)
+        } else {
+            unimplemented!("nmi({:x}) called", rs_val);
+            Ok(PCodeStateChange::DelayedInterrupt(
+                InterruptType::Imprecise as i32,
+            ))
+        }
+    }
+}
+
 impl<T: CpuBackend> CallOtherCallback<T> for InterruptGenericStub {
     fn handle(
         &mut self,
@@ -259,7 +293,11 @@ impl<T: CpuBackend> CallOtherCallback<T> for InterruptGenericStub {
         _inputs: &[VarnodeData],
         _output: Option<&VarnodeData>,
     ) -> Result<PCodeStateChange, CallOtherHandleError> {
-        unimplemented!("interrupt related stub called for {} pc {:x?}", self.from, backend.pc());
+        unimplemented!(
+            "interrupt related stub called for {} pc {:x?}",
+            self.from,
+            backend.pc()
+        );
     }
 }
 

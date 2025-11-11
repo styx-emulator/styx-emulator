@@ -22,8 +22,6 @@ use crate::{
     HexagonPcodeBackend, PCodeStateChange,
 };
 
-use super::regs::Syscfg;
-
 /// Handle the isync instruction, see 11.9.3 "Instruction synchronization."
 ///
 /// This will be called after the SYSCFG register is set, so we can update
@@ -65,9 +63,23 @@ impl<T: CpuBackend> CallOtherCallback<T> for MemHandler {
         assert_eq!(output.size, 4);
 
         // 11.9.2 "load from physical address"
+        // Physical addresses in Hexagon are 36 bits,
+        // and chunks of these bits are passed in with two registers,
+        // so we have to read these registers, mask them, and string these.
+        //
+        // Specifically, Rt's lower 25 bits should be bits 10 to 35 in the
+        // memory address, and Rs's lower 11 bits should be bits 0 to 10
+        // in the memory address. The below mask and shift reflects this.
+        //
+        // It doesn't seem to be worth using a bitfield for this because
+        // the "rest" of each of these registers aren't used for anything
+        // else during this instruction.
         let input = (rs & 0x7ff) | (rt << 11);
 
-        info!("memw_phys reading from {input:x}, rs {rs:x} rt {rt:x}");
+        info!(
+            "memw_phys reading from {input:x}, rs {rs:x} rt {rt:x} at pc {:x?}",
+            cpu.pc()
+        );
 
         let output_data = mmu
             .read_u32_le_phys_data(input)
