@@ -7,6 +7,19 @@ of rapid emulator development for debugging target systems. The Styx Emulator
 is primarily a Rust library with bindings in multiple languages and
 extensions for multiple tools.
 
+Contributions of code, issues, documentation, and showcases are always welcome. Look for issues [tagged with trivial](https://github.com/styx-emulator/styx-emulator/issues?q=is%3Aissue%20state%3Aopen%20label%3AD-Trivial) or submit an issue for how you would like to use Styx.
+
+Do you use Styx to emulate an analyze a hard to reach target? Submit a [Pull Request](https://github.com/styx-emulator/styx-emulator/pulls) of part of or all of your Styx changes! PRs are encouraged for changes like but not limited to the following:
+
+- ISA additions or changes
+- New plugins
+- Additional peripherals
+- CPU Backend improvements
+- Example code for running a new processor
+- And so much more!
+
+Thank you for giving back to the open source ecosystem.
+
 Styx is under active development and does not currently follow Semantic Versioning. Beware of breaking changes!
 
 ## Project Links
