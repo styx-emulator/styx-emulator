@@ -45896,7 +45896,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp52:8;
   tmp52 = ~ tmp51;
   local tmp53:8;
-  tmp53 = A2_vraddub_acc_Rxx32 & tmp52;
+  tmp53 = A2_vraddub_acc_Rxx32d & tmp52;
   local tmp54:8;
   local tmp55:4;
   local tmp56:4;
@@ -45908,7 +45908,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp59:8;
   tmp59 = zext(tmp58);
   local tmp60:8;
-  tmp60 = A2_vraddub_acc_Rxx32 s>> tmp59;
+  tmp60 = A2_vraddub_acc_Rxx32d s>> tmp59;
   local tmp61:8;
   tmp61 = 4294967295;
   local tmp62:8;
@@ -45989,7 +45989,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp98:8;
   tmp98 = ~ tmp97;
   local tmp99:8;
-  tmp99 = A2_vraddub_acc_Rxx32 & tmp98;
+  tmp99 = A2_vraddub_acc_Rxx32d & tmp98;
   local tmp100:8;
   local tmp101:4;
   local tmp102:4;
@@ -46001,7 +46001,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp105:8;
   tmp105 = zext(tmp104);
   local tmp106:8;
-  tmp106 = A2_vraddub_acc_Rxx32 s>> tmp105;
+  tmp106 = A2_vraddub_acc_Rxx32d s>> tmp105;
   local tmp107:8;
   tmp107 = 4294967295;
   local tmp108:8;
@@ -46082,7 +46082,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp144:8;
   tmp144 = ~ tmp143;
   local tmp145:8;
-  tmp145 = A2_vraddub_acc_Rxx32 & tmp144;
+  tmp145 = A2_vraddub_acc_Rxx32d & tmp144;
   local tmp146:8;
   local tmp147:4;
   local tmp148:4;
@@ -46094,7 +46094,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp151:8;
   tmp151 = zext(tmp150);
   local tmp152:8;
-  tmp152 = A2_vraddub_acc_Rxx32 s>> tmp151;
+  tmp152 = A2_vraddub_acc_Rxx32d s>> tmp151;
   local tmp153:8;
   tmp153 = 4294967295;
   local tmp154:8;
@@ -46175,7 +46175,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp190:8;
   tmp190 = ~ tmp189;
   local tmp191:8;
-  tmp191 = A2_vraddub_acc_Rxx32 & tmp190;
+  tmp191 = A2_vraddub_acc_Rxx32d & tmp190;
   local tmp192:8;
   local tmp193:4;
   local tmp194:4;
@@ -46187,7 +46187,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp197:8;
   tmp197 = zext(tmp196);
   local tmp198:8;
-  tmp198 = A2_vraddub_acc_Rxx32 s>> tmp197;
+  tmp198 = A2_vraddub_acc_Rxx32d s>> tmp197;
   local tmp199:8;
   tmp199 = 4294967295;
   local tmp200:8;
@@ -46268,7 +46268,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp236:8;
   tmp236 = ~ tmp235;
   local tmp237:8;
-  tmp237 = A2_vraddub_acc_Rxx32 & tmp236;
+  tmp237 = A2_vraddub_acc_Rxx32d & tmp236;
   local tmp238:8;
   local tmp239:4;
   local tmp240:4;
@@ -46280,7 +46280,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp243:8;
   tmp243 = zext(tmp242);
   local tmp244:8;
-  tmp244 = A2_vraddub_acc_Rxx32 s>> tmp243;
+  tmp244 = A2_vraddub_acc_Rxx32d s>> tmp243;
   local tmp245:8;
   tmp245 = 4294967295;
   local tmp246:8;
@@ -46361,7 +46361,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp282:8;
   tmp282 = ~ tmp281;
   local tmp283:8;
-  tmp283 = A2_vraddub_acc_Rxx32 & tmp282;
+  tmp283 = A2_vraddub_acc_Rxx32d & tmp282;
   local tmp284:8;
   local tmp285:4;
   local tmp286:4;
@@ -46373,7 +46373,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp289:8;
   tmp289 = zext(tmp288);
   local tmp290:8;
-  tmp290 = A2_vraddub_acc_Rxx32 s>> tmp289;
+  tmp290 = A2_vraddub_acc_Rxx32d s>> tmp289;
   local tmp291:8;
   tmp291 = 4294967295;
   local tmp292:8;
@@ -46454,7 +46454,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp328:8;
   tmp328 = ~ tmp327;
   local tmp329:8;
-  tmp329 = A2_vraddub_acc_Rxx32 & tmp328;
+  tmp329 = A2_vraddub_acc_Rxx32d & tmp328;
   local tmp330:8;
   local tmp331:4;
   local tmp332:4;
@@ -46466,7 +46466,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp335:8;
   tmp335 = zext(tmp334);
   local tmp336:8;
-  tmp336 = A2_vraddub_acc_Rxx32 s>> tmp335;
+  tmp336 = A2_vraddub_acc_Rxx32d s>> tmp335;
   local tmp337:8;
   tmp337 = 4294967295;
   local tmp338:8;
@@ -52722,7 +52722,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp144:8;
   tmp144 = ~ tmp143;
   local tmp145:8;
-  tmp145 = A4_vrminh_Rxx32 & tmp144;
+  tmp145 = A4_vrminh_Rxx32d & tmp144;
   local tmp146:8;
   tmp146 = 4294967295;
   local tmp147:8;
@@ -53062,7 +53062,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp144:8;
   tmp144 = ~ tmp143;
   local tmp145:8;
-  tmp145 = A4_vrmaxh_Rxx32 & tmp144;
+  tmp145 = A4_vrmaxh_Rxx32d & tmp144;
   local tmp146:8;
   tmp146 = 4294967295;
   local tmp147:8;
@@ -53402,7 +53402,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp144:8;
   tmp144 = ~ tmp143;
   local tmp145:8;
-  tmp145 = A4_vrminuh_Rxx32 & tmp144;
+  tmp145 = A4_vrminuh_Rxx32d & tmp144;
   local tmp146:8;
   tmp146 = 4294967295;
   local tmp147:8;
@@ -53742,7 +53742,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp144:8;
   tmp144 = ~ tmp143;
   local tmp145:8;
-  tmp145 = A4_vrmaxuh_Rxx32 & tmp144;
+  tmp145 = A4_vrmaxuh_Rxx32d & tmp144;
   local tmp146:8;
   tmp146 = 4294967295;
   local tmp147:8;
@@ -53964,7 +53964,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp90:8;
   tmp90 = ~ tmp89;
   local tmp91:8;
-  tmp91 = A4_vrminw_Rxx32 & tmp90;
+  tmp91 = A4_vrminw_Rxx32d & tmp90;
   local tmp92:8;
   tmp92 = 4294967295;
   local tmp93:8;
@@ -54186,7 +54186,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp90:8;
   tmp90 = ~ tmp89;
   local tmp91:8;
-  tmp91 = A4_vrmaxw_Rxx32 & tmp90;
+  tmp91 = A4_vrmaxw_Rxx32d & tmp90;
   local tmp92:8;
   tmp92 = 4294967295;
   local tmp93:8;
@@ -54408,7 +54408,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp90:8;
   tmp90 = ~ tmp89;
   local tmp91:8;
-  tmp91 = A4_vrminuw_Rxx32 & tmp90;
+  tmp91 = A4_vrminuw_Rxx32d & tmp90;
   local tmp92:8;
   tmp92 = 4294967295;
   local tmp93:8;
@@ -54630,7 +54630,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp90:8;
   tmp90 = ~ tmp89;
   local tmp91:8;
-  tmp91 = A4_vrmaxuw_Rxx32 & tmp90;
+  tmp91 = A4_vrmaxuw_Rxx32d & tmp90;
   local tmp92:8;
   tmp92 = 4294967295;
   local tmp93:8;
@@ -67647,7 +67647,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp20:8;
   tmp20 = tmp18 << tmp19;
   local tmp21:8;
-  tmp21 = S2_insertp_Rxx32 | tmp20;
+  tmp21 = S2_insertp_Rxx32d | tmp20;
   S2_insertp_Rxx32d = tmp21;
 }
 
@@ -67875,7 +67875,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp60:8;
   tmp60 = ~ tmp59;
   local tmp61:8;
-  tmp61 = zext(S2_insert_rp_Rx32);
+  tmp61 = zext(S2_insert_rp_Rx32d);
   local tmp62:8;
   tmp62 = tmp61 & tmp60;
   S2_insert_rp_Rx32d = tmp62:4;
@@ -67888,7 +67888,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp66:8;
   tmp66 = tmp64 << tmp65;
   local tmp67:8;
-  tmp67 = zext(S2_insert_rp_Rx32);
+  tmp67 = zext(S2_insert_rp_Rx32d);
   local tmp68:8;
   tmp68 = tmp67 | tmp66;
   S2_insert_rp_Rx32d = tmp68:4;
@@ -68355,7 +68355,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp60:8;
   tmp60 = ~ tmp59;
   local tmp61:8;
-  tmp61 = S2_insertp_rp_Rxx32 & tmp60;
+  tmp61 = S2_insertp_rp_Rxx32d & tmp60;
   S2_insertp_rp_Rxx32d = tmp61;
   local tmp62:8;
   tmp62 = S2_insertp_rp_Rss32 & mask;
@@ -68364,7 +68364,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp64:8;
   tmp64 = tmp62 << tmp63;
   local tmp65:8;
-  tmp65 = S2_insertp_rp_Rxx32 | tmp64;
+  tmp65 = S2_insertp_rp_Rxx32d | tmp64;
   S2_insertp_rp_Rxx32d = tmp65;
 <done_57>
 }

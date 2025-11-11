@@ -20,10 +20,15 @@ use crate::{
     GDBOptions, StepIRQs,
 };
 use gdbstub::{
+    arch::lldb::Register,
     common::Signal,
     target::{
         self,
-        ext::breakpoints::{HwWatchpointOps, SwBreakpointOps, WatchKind},
+        ext::{
+            base::single_register_access::SingleRegisterAccess,
+            breakpoints::{HwWatchpointOps, SwBreakpointOps, WatchKind},
+            lldb_register_info_override::LldbRegisterInfoOverride,
+        },
         TargetError, TargetResult,
     },
 };
@@ -519,8 +524,7 @@ where
         &mut self,
     ) -> Option<target::ext::lldb_register_info_override::LldbRegisterInfoOverrideOps<'_, Self>>
     {
-        // Not implemented
-        None
+        Some(self)
     }
 
     /// Not implemented
@@ -1056,6 +1060,41 @@ impl MemoryWriteHook for MemWrittenHook {
         let access = Access::from_target_write(address, size, data);
         self.0.add(address, access.val);
         Ok(())
+    }
+}
+
+impl<GdbArchImpl> LldbRegisterInfoOverride for TargetImpl<'_, GdbArchImpl>
+where
+    GdbArchImpl: gdbstub::arch::Arch,
+    GdbArchImpl::Registers: styx_core::cpu::arch::GdbRegistersHelper,
+    GdbArchImpl::RegId: super::GdbArchIdSupportTrait,
+{
+    fn lldb_register_info<'a>(
+        &mut self,
+        reg_id: usize,
+        reg_info: target::ext::lldb_register_info_override::Callback<'a>,
+    ) -> Result<target::ext::lldb_register_info_override::CallbackToken<'a>, Self::Error> {
+        let reg_bank = self.target_cpu().architecture().registers();
+        let regs = reg_bank.registers();
+        if let Some(reg) = regs.get(reg_id) {
+            Ok(reg_info.write(Register {
+                name: reg.name(),
+                alt_name: None,
+                bitsize: reg.bit_size().get(),
+                offset: reg.byte_size().get() * reg_id,
+                encoding: gdbstub::arch::lldb::Encoding::Uint,
+                format: gdbstub::arch::lldb::Format::Hex,
+                set: "either HVX or regular",
+                gcc: None,
+                // we have this but idk
+                dwarf: None,
+                generic: None,
+                container_regs: None,
+                invalidate_regs: None,
+            }))
+        } else {
+            Ok(reg_info.done())
+        }
     }
 }
 
