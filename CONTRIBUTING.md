@@ -2,8 +2,7 @@
 
 Thanks for your interest in `styx`!
 
-If you're ever unsure or get stuck trying to make something work feel free to
-post a question to the repo's github `discussions`.
+If you're ever unsure or get stuck trying to make something work feel free to post a question in the [Community Discord](https://discord.gg/styx-emulator).
 
 ## Issues, Bug Reports, and Features
 
