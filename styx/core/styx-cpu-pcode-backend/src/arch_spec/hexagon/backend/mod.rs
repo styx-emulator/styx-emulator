@@ -947,10 +947,6 @@ impl HexagonPcodeBackend {
             // 10.10 for some details.
             let is_immext = {
                 match decode_state {
-                    // Constant extenders can be anywhere in a packet (except the end).
-                    // The other states (eg. packet started first duplex) should not
-                    // be classified here since a duplex packet could be "misclassified"
-                    // as a constant extender if it were here.
                     PktState::PktStarted(insn_data) | PktState::InsidePacket(insn_data) => {
                         insn_data[0].nonduplex_iclass() == Iclass::Immext
                     }
