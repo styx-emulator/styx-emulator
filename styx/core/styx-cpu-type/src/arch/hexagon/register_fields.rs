@@ -69,6 +69,7 @@ impl Ssr {
 pub struct Syscfg {
     #[bit(0, rw)]
     mmuen: bool,
+    // icen and dcen are l1 caches
     #[bit(1, rw)]
     icen: bool,
     #[bit(2, rw)]
@@ -97,6 +98,8 @@ pub struct Syscfg {
     prio: bool,
     #[bit(15, rw)]
     dmt: bool,
+    // crt0_standalone.S: this is equivalent to the size of the l2 cache?
+    // can be at most 5?
     #[bits(16..=18, rw)]
     l2cfg: u3,
     #[bit(19, rw)]

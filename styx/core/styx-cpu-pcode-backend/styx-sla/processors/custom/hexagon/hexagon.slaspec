@@ -79150,7 +79150,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   EA = tmp0;
   local tmp1:2;
   tmp1 = *:2 EA;
-  SL2_loadrh_io_Rd16 = zext(tmp1);
+  SL2_loadrh_io_Rd16 = sext(tmp1);
 }
 
 :SL2_loadruh_io SL2_loadruh_io_Rd16 SL2_loadruh_io_Rs16 SL2_loadruh_io_u3_1 is phase = 1 & subinsn = 3 & a11 = 1 & a12 = 0 & SL2_loadruh_io_Rd16 & SL2_loadruh_io_Rs16 & SL2_loadruh_io_u3_1 {
@@ -79163,14 +79163,13 @@ gp: reloc is epsilon [ reloc = 0; ] {
   SL2_loadruh_io_Rd16 = zext(tmp1);
 }
 
-:SL2_loadrb_io SL2_loadrb_io_Rd16 SL2_loadrb_io_Rs16 SL2_loadrb_io_u3_0 is phase = 1 & subinsn = 3 & a11 = 0 & a12 = 1 & SL2_loadrb_io_Rd16 & SL2_loadrb_io_Rs16 & SL2_loadrb_io_u3_0 {
-  local EA:4;
+:SL2_loadrb_io SL2_loadrb_io_Rd16 SL2_loadrb_io_Rs16 SL2_loadrb_io_u3_0 is phase = 1 & subinsn = 3 & a11 = 0 & a12 = 1 & SL2_loadrb_io_Rd16 & SL2_loadrb_io_Rs16 & SL2_loadrb_io_u3_0 {local EA:4;
   local tmp0:4;
   tmp0 = SL2_loadrb_io_Rs16 + SL2_loadrb_io_u3_0;
   EA = tmp0;
   local tmp1:1;
   tmp1 = *:1 EA;
-  SL2_loadrb_io_Rd16 = zext(tmp1);
+  SL2_loadrb_io_Rd16 = sext(tmp1);
 }
 
 :SL2_loadri_sp SL2_loadri_sp_Rd16 SL2_loadri_sp_u5_2 is phase = 1 & subinsn = 3 & a9 = 0 & a10 = 1 & a11 = 1 & a12 = 1 & SL2_loadri_sp_Rd16 & SL2_loadri_sp_u5_2 {

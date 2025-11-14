@@ -725,7 +725,7 @@ impl HexagonPcodeBackend {
         if let Some((k, _)) = self.cache.first_key_value() {
             // The page boundary has changed
             if k & !0xfff != initial_pc & !0xfff {
-                info!(
+                trace!(
                     "invalidating pcode cache, cache at page {k:x} and pc at page {initial_pc:x}"
                 );
                 self.cache.clear()
@@ -908,9 +908,12 @@ impl HexagonPcodeBackend {
             if !is_immext {
                 dotnew_total_insns += 1;
                 dotnew_regs_written.push(first_general_reg);
+
+                // A packet with 5 operations (eg. op1, nop, immext, duplex1, duplex2) will skip the
+                // last instruction with the empty duplex pcode operations added here.
+                full_pcodes.push(pcodes);
             }
 
-            full_pcodes.push(pcodes);
             // End common postfetch
 
             let mut execution_helper = self.execution_helper.take().unwrap();
