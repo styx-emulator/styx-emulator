@@ -2,7 +2,7 @@
 //! These aren't system instructions, but I guess they can be accelerated by farming them out to Rust.
 //! And I guess analysis doesn't matter as much for this?
 use derive_more::FromStr;
-use log::{debug, info};
+use log::{debug, trace};
 use styx_errors::anyhow::Context;
 use styx_pcode::{pcode::VarnodeData, sla::SlaUserOps};
 use styx_pcode_translator::sla::HexagonUserOps;
@@ -68,10 +68,10 @@ impl<T: CpuBackend> CallOtherCallback<T> for BrevHandler {
             .with_context(|| "couldn't convert Rs(s) to u64")?;
 
         let rs_rev = if rs_val.size() == 8 {
-            info!("brev {:64b} {:64b}", rs_64, rs_64.reverse_bits());
+            trace!("brev {:64b} {:64b}", rs_64, rs_64.reverse_bits());
             SizedValue::from_u64(rs_64.reverse_bits(), 8)
         } else if rs_val.size() == 4 {
-            info!(
+            trace!(
                 "brev {:032b} {:032b}",
                 rs_64 as u32,
                 (rs_64 as u32).reverse_bits()

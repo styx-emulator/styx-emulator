@@ -809,7 +809,7 @@ impl HexagonPcodeBackend {
         if let Some((k, _)) = self.cache.first_key_value() {
             // The page boundary has changed
             if k & !0xfff != initial_pc & !0xfff {
-                info!(
+                trace!(
                     "invalidating pcode cache, cache at page {k:x} and pc at page {initial_pc:x}"
                 );
                 self.cache.clear()
