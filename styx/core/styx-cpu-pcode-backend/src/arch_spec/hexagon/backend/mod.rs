@@ -853,15 +853,14 @@ impl HexagonPcodeBackend {
             // 10.10 for some details.
             let is_immext = {
                 match decode_state {
-                    PktState::PktStarted(insn_data)
-                    | PktState::InsidePacket(insn_data)
-                    | PktState::PktStartedFirstDuplex(insn_data) => {
+                    PktState::PktStarted(insn_data) | PktState::InsidePacket(insn_data) => {
                         insn_data[0].nonduplex_iclass() == Iclass::Immext
                     }
                     // The end packets don't matter because a constant extender
                     // always comes before an instruction, so a constant extender can't
                     // end a packet. See section 10.9.
                     PktState::PktStandalone(_)
+                    | PktState::PktStartedFirstDuplex(_)
                     | PktState::FirstDuplex(_)
                     | PktState::PktEnded(_) => false,
                 }
@@ -906,6 +905,7 @@ impl HexagonPcodeBackend {
             //
             // See section 10.10.
             if !is_immext {
+                trace!("the current instruction is an immediate extension, so we aren't adding it to the list of pcodes to execute");
                 dotnew_total_insns += 1;
                 dotnew_regs_written.push(first_general_reg);
 

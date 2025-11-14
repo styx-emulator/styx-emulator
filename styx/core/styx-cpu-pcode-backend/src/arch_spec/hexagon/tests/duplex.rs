@@ -46,3 +46,30 @@ fn test_duplex_instructions() {
     assert_eq!(r5, 0xcafeb0ba);
     assert_eq!(end_isa_pc - initial_isa_pc, 4);
 }
+
+#[test]
+fn test_two_loads() {
+    const R5START: u32 = 0x10000;
+    const R0START: u32 = 0x20000;
+    const VAL: u32 = 0x11987309;
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(
+        r#"
+       0:	54 00 02 00	00020054 { 	r2 = memw(r0+#0x0); 	r4 = memw(r5+#0x0) }
+"#,
+    );
+
+    cpu.write_register(HexagonRegister::R0, R0START).unwrap();
+    cpu.write_register(HexagonRegister::R5, R5START).unwrap();
+
+    mmu.write_u32_le_phys_data(R0START as u64, VAL).unwrap();
+    mmu.write_u32_le_phys_data(R5START as u64, VAL).unwrap();
+
+    let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
+
+    let r2 = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
+    let r4 = cpu.read_register::<u32>(HexagonRegister::R4).unwrap();
+
+    assert_eq!(r2, VAL);
+    assert_eq!(r4, VAL);
+}
