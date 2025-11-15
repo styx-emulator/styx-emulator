@@ -1,5 +1,24 @@
 # Styx Emulator
 
+<!--toc:start-->
+- [Styx Emulator](#styx-emulator)
+  - [Project Links](#project-links)
+    - [Official](#official)
+    - [Unofficial](#unofficial)
+  - [Why Use Styx?](#why-use-styx)
+  - [Repository Information](#repository-information)
+  - [Development Roadmap](#development-roadmap)
+  - [Development Environment](#development-environment)
+    - [devcontainer](#devcontainer)
+    - [guix](#guix)
+    - [Docker container based](#docker-container-based)
+    - [Host / Native development](#host-native-development)
+      - [For Tests + Local CI](#for-tests-local-ci)
+    - [Project Setup](#project-setup)
+  - [Documentation](#documentation)
+  - [Disclaimer](#disclaimer)
+<!--toc:end-->
+
 [![License](https://img.shields.io/github/license/styx-emulator/styx-emulator.svg)](https://github.com/styx-emulator/styx-emulator/blob/main/LICENSE)
 
 The Styx Emulator is a composable emulation framework with the primary goal
@@ -66,7 +85,7 @@ Whether you're working on embedded systems, DSPs, or just need a lightweight emu
 
 ## Repository Information
 
-- [**Contributing**](./CONTRIBUTING.md): advice about contributing and creating build environments, see
+- [**Contributing**](./CONTRIBUTING.md): advice about contributing and creating build environments
 - [**Layout**](./LAYOUT.md): navigating the codebase
 - [**Conventions**](./CONVENTIONS.md): repository conventions
 - [**Documentation**](#documentation): how to locally build documentation
@@ -81,6 +100,13 @@ When talking about "the Styx Emulator", we're generally talking about
 the `styx-emulator` library, which contains all the in-tree processors, peripherals,
 devices, machines, and cpu's etc. When discussing extensions, we usually
 refer to them by name.
+
+## Development Roadmap
+
+Checkout out the [Styx Roadmap](https://github.com/orgs/styx-emulator/projects/7) to stay informed of where Styx is
+heading next. The open tasks indicate where the Styx team is currently focused - but that doesn't mean all contributions
+need to fit into those buckets! We welcome all offers of assistance, whether that's raising your hand to pick up an issue,
+providing your two cents in an issue's comments, or submitting a [rfc](https://github.com/styx-emulator/rfcs) for a feature we haven't thought of yet!
 
 ## Development Environment
 
