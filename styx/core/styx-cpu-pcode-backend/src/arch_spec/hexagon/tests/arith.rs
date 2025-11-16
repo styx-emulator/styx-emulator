@@ -51,3 +51,20 @@ pub fn test_abs_range() {
         cpu.set_pc(0x1000).unwrap();
     }
 }
+
+#[test]
+pub fn testbit_reg() {
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(
+        r#"
+       0:	00 c0 02 c7	c702c000 { 	p0 = tstbit(r2,r0) }
+"#,
+    );
+
+    cpu.write_register(HexagonRegister::R2, 65536u32).unwrap();
+    cpu.write_register(HexagonRegister::R0, 16u32).unwrap();
+    let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
+
+    let p0 = cpu.read_register::<u8>(HexagonRegister::P0).unwrap() as i32;
+    assert_eq!(p0, 0xff);
+}

@@ -68810,13 +68810,13 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp0:8;
   local tmp1:4;
   tmp1 = S2_tstbit_r_Rs32;
-  tmp0 = sext(tmp1);
+  tmp0 = zext(tmp1);
   local tmp2:4;
   tmp2 = 1;
   local tmp3:4;
   tmp3 = 7;
   local tmp4:4;
-  tmp4 = tmp2 << tmp3;
+  tmp4 = tmp2 << tmp3; 
   local tmp5:4;
   tmp5 = 1;
   local tmp6:4;
@@ -68865,7 +68865,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp28:4;
   tmp28 = 1;
   tmp27 = tmp28;
-  tmp26 = sext(tmp27);
+  tmp26 = zext(tmp27);
   local tmp29:4;
   tmp29 = 1;
   local tmp30:4;
@@ -68963,7 +68963,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp74:8;
   tmp74 = zext(tmp73);
   local tmp75:1;
-  tmp75 = tmp49 != tmp74;
+  tmp75 = tmp49 == tmp74;
   S2_tstbit_r_Pd4 = (tmp75 << 7) s>> 7;
 }
 
