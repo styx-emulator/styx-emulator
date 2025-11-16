@@ -68,3 +68,55 @@ pub fn testbit_reg() {
     let p0 = cpu.read_register::<u8>(HexagonRegister::P0).unwrap() as i32;
     assert_eq!(p0, 0xff);
 }
+
+#[test]
+pub fn testbit_reg_f() {
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(
+        r#"
+       0:	00 c0 02 c7	c702c000 { 	p0 = tstbit(r2,r0) }
+"#,
+    );
+
+    cpu.write_register(HexagonRegister::R2, 0b1_1111_1111_1100_1111u32)
+        .unwrap();
+    cpu.write_register(HexagonRegister::R0, 5u32).unwrap();
+    let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
+
+    let p0 = cpu.read_register::<u8>(HexagonRegister::P0).unwrap();
+    assert_eq!(p0, 0x00);
+}
+
+#[test]
+pub fn testbit_reg_oob() {
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(
+        r#"
+       0:	00 c0 02 c7	c702c000 { 	p0 = tstbit(r2,r0) }
+"#,
+    );
+
+    cpu.write_register(HexagonRegister::R2, 0u32).unwrap();
+    cpu.write_register(HexagonRegister::R0, 0x80du32).unwrap();
+    let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
+
+    let p0 = cpu.read_register::<u8>(HexagonRegister::P0).unwrap();
+    assert_eq!(p0, 0x00);
+}
+
+#[test]
+pub fn setbit_reg() {
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(
+        r#"
+        0:	02 c0 82 c6	c682c002 { 	r2 = setbit(r2,r0) }
+"#,
+    );
+
+    cpu.write_register(HexagonRegister::R2, 65536u32).unwrap();
+    cpu.write_register(HexagonRegister::R0, 17u32).unwrap();
+    let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
+
+    let r2 = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
+    assert_eq!(r2, 65536 | (1 << 17));
+}
