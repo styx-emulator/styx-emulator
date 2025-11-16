@@ -122,7 +122,7 @@ pub fn parse_dotnew(insn: GeneralHexagonInstruction) -> Option<u32> {
         // 0b0011
         Iclass::IclassLoadStore => {
             let reserved_field = IclassLoadStoreInstruction::new_with_raw_value(insn.reserved());
-            trace!("dotnew: iclass load store, reserved field is {reserved_field:x?} iclass subtype is {:x}", reserved_field.iclass_subtype().unwrap().raw_value());
+            trace!("dotnew: iclass load store, reserved field is {reserved_field:x?} iclass subtype is {:x} and operation {:x}", reserved_field.iclass_subtype_1().unwrap().raw_value(), reserved_field.iclass_subtype_1().unwrap().raw_value());
 
             match reserved_field.iclass_subtype_1() {
                 Ok(IclassLoadStoreType::DotnewOrHalfwordConditionalStore) => {
