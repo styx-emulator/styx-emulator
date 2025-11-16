@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use log::trace;
+use log::{info, trace};
 use styx_cpu_type::arch::hexagon::HexagonRegister;
 use styx_errors::anyhow::Context;
 use styx_pcode::pcode::{Opcode, Pcode, SpaceName, VarnodeData};
 use styx_pcode_translator::ContextOption;
-use styx_processor::{cpu::CpuBackendExt, memory::Mmu};
+use styx_processor::{
+    cpu::{CpuBackend, CpuBackendExt},
+    memory::Mmu,
+};
 
 use super::{
     decode_info::{DuplexInsClass, PktLoopParseBits},
@@ -92,7 +95,7 @@ impl DefaultHexagonExecutionHelper {
         match dotnew::parse_dotnew(insn_data) {
             Some(referenced_dotnew_pkt) => {
                 trace!(
-                    "dotnew: this is a dotnew packet, finding register at {dotnew_instructions} - {referenced_dotnew_pkt} within {dotnew_regs_written:?}"
+                    "dotnew: this is a dotnew packet, finding register at {dotnew_instructions} - {referenced_dotnew_pkt} within {dotnew_regs_written:?}",
                 );
                 let location = dotnew_instructions - referenced_dotnew_pkt;
                 if let OutputRegisterType::General(register_num) =

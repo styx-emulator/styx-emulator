@@ -1012,3 +1012,32 @@ fn test_all_dotnew_class() {
         }
     }
 }
+
+#[test]
+fn test_dotnew_misidentify_load_halfword() {
+    const R1START: u32 = 0x20000;
+
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(
+        r#"
+       0:	04 43 02 f3	f3024304 { 	r4 = add(r2,r3)
+       4:	08 40 20 5c	5c204008   	if (!p0) jump:nt 0x10
+       8:	1f e0 a1 38	38a1e01f   	if (!p0) memh(r1+#0x0) = #-0x1 }
+       c:	00 c0 00 7f	7f00c000 { 	nop }
+      10:	00 c0 00 7f	7f00c000 { 	nop }
+"#,
+    );
+
+    cpu.write_register(HexagonRegister::R1, R1START).unwrap();
+    cpu.write_register(HexagonRegister::R2, 78u32).unwrap();
+    cpu.write_register(HexagonRegister::R3, 91u32).unwrap();
+    cpu.write_register(HexagonRegister::P0, 0u8).unwrap();
+
+    let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
+
+    let pc = cpu.read_register::<u32>(HexagonRegister::Pc).unwrap();
+    let memval = mmu.read_u32_le_phys_code(R1START as u64).unwrap() as i32;
+
+    assert_eq!(pc, 0x10);
+    assert_eq!(memval, -1);
+}
