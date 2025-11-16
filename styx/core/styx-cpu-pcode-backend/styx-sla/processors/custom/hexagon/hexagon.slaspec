@@ -63256,13 +63256,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp18 = 0;
   local tmp19:1;
   tmp19 = shamt s> tmp18;
-  local tmp20:4;
-  tmp20 = zext(tmp19);
-  local tmp21:4;
-  tmp21 = S2_asl_r_r_nac_Rx32 - tmp20;
-  local tmp22:1;
-  tmp22 = tmp21:1;
-  if (tmp22) goto <t_branch_24>;
+  if (tmp19) goto <t_branch_24>;
   goto <f_branch_24>;
 <t_branch_24>
   local tmp24:8;
@@ -63284,10 +63278,10 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp31:8;
   tmp31 = zext(shamt);
   local tmp32:8;
-  tmp32 = tmp29 s>> tmp31;
+  tmp32 = tmp29 >> tmp31;
   tmp28 = tmp32;
 <done_24>
-  S2_asl_r_r_nac_Rx32d = tmp28:4;
+  S2_asl_r_r_nac_Rx32d = S2_asl_r_r_nac_Rx32 - tmp28:4;
 }
 
 :S2_lsr_r_r_nac S2_lsr_r_r_nac_Rx32 S2_lsr_r_r_nac_Rx32d S2_lsr_r_r_nac_Rs32 S2_lsr_r_r_nac_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b6 = 1 & b7 = 0 & b22 = 0 & b23 = 1 & b24 = 0 & b25 = 0 & b26 = 1 & b27 = 1 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & S2_lsr_r_r_nac_Rx32 & S2_lsr_r_r_nac_Rx32d & S2_lsr_r_r_nac_Rs32 & S2_lsr_r_r_nac_Rt32 {

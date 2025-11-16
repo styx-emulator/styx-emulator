@@ -105,18 +105,20 @@ pub fn testbit_reg_oob() {
 }
 
 #[test]
-pub fn setbit_reg() {
+pub fn asl_sub() {
     let (mut cpu, mut mmu, mut ev) = setup_objdump(
         r#"
-        0:	02 c0 82 c6	c682c002 { 	r2 = setbit(r2,r0) }
+0:	80 c1 82 cc	cc82c180 { 	r0 -= asl(r2,r1) }
 "#,
     );
 
-    cpu.write_register(HexagonRegister::R2, 65536u32).unwrap();
-    cpu.write_register(HexagonRegister::R0, 17u32).unwrap();
+    cpu.write_register(HexagonRegister::R1, 1u32).unwrap();
+    cpu.write_register(HexagonRegister::R2, 4u32).unwrap();
+    cpu.write_register(HexagonRegister::R0, 10u32).unwrap();
+
     let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
     assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
-    let r2 = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
-    assert_eq!(r2, 65536 | (1 << 17));
+    let r0 = cpu.read_register::<u32>(HexagonRegister::R0).unwrap();
+    assert_eq!(r0, 2u32);
 }
