@@ -384,10 +384,25 @@ impl TlbImpl for HexagonTlb {
 
         // match on VPN and ASID
         for (i, ent) in self.entries.iter().enumerate() {
-            trace!("probe_field vpn {:x} entry vpn {:x}", probe_field.vpn(), ent.vpn());
-            if ent.asid() == probe_field.asid() && ent.vpn() == probe_field.vpn() {
-                trace!("tlb search got entry {:x?}", ent);
-                return Some(i as u64);
+            trace!(
+                "probe_field vpn {:x} entry vpn {:x}",
+                probe_field.vpn(),
+                ent.vpn()
+            );
+            if ent.asid() == probe_field.asid() && ent.v() {
+                let ent_vpn_shifted = ent.vpn().as_u64() << PAGE_SIZE_BITS;
+                let probe_field_vpn_shifted = probe_field.vpn().as_u64() << PAGE_SIZE_BITS;
+
+                let page_type = Self::get_entry_page_type(ent);
+                let page_mask = PAGE_MASK[page_type];
+
+                let probe_field_vpn_page_masked = probe_field_vpn_shifted & !page_mask;
+                trace!("probe_field_vpn_page_masked {probe_field_vpn_page_masked:x} ent_vpn_shfited {ent_vpn_shifted:x}");
+
+                if probe_field_vpn_page_masked == ent_vpn_shifted {
+                    trace!("tlb search got entry {:x?}", ent);
+                    return Some(i as u64);
+                }
             }
         }
 

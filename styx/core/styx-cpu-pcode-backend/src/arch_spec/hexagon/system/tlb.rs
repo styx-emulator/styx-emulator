@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use arbitrary_int::*;
 use derive_more::FromStr;
-use log::{debug, trace, warn};
+use log::{debug, info, trace, warn};
 use styx_errors::anyhow::Context;
 use styx_pcode::{pcode::VarnodeData, sla::SlaUserOps};
 use styx_pcode_translator::sla::HexagonUserOps;
@@ -171,7 +171,7 @@ impl<T: CpuBackend> CallOtherCallback<T> for TlbProbe {
                 .to_u64()
                 .with_context(|| "couldn't convert asid vn to u64")? as u32;
 
-        trace!("hexagon tlb probe {}", tlb_probe_field);
+        info!("hexagon tlb probe {}", tlb_probe_field);
 
         // we must pass in the bits as unshifted
         let stored_ent = match mmu.tlb.tlb_search(tlb_probe_field) {
@@ -239,13 +239,10 @@ pub fn add_tlb_callothers<S: SlaUserOps<UserOps: FromStr>>(
         .unwrap();
 
     spec.call_other_manager
-        .add_handler_other_sla(HexagonUserOps::Tlblock, TlbLockUnlock {} )
+        .add_handler_other_sla(HexagonUserOps::Tlblock, TlbLockUnlock {})
         .unwrap();
 
     spec.call_other_manager
-        .add_handler_other_sla(
-            HexagonUserOps::Tlbunlock,
-            TlbLockUnlock {}
-        )
+        .add_handler_other_sla(HexagonUserOps::Tlbunlock, TlbLockUnlock {})
         .unwrap();
 }
