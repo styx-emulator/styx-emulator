@@ -11846,13 +11846,13 @@ S4_storeirifnew_io_S6: reloc is immext = 0xffffffff & S4_storeirifnew_io_S6_0 & 
 
 S4_storeirb_io_u6_0: reloc is S4_storeirb_io_u6_0_0 [ reloc = S4_storeirb_io_u6_0_0 << 0; ] { export *[const]:4 reloc; }
 
-S4_storeirb_io_S8: reloc is                       S4_storeirb_io_S8_0 & S4_storeirb_io_S8_1 [ reloc = ((((S4_storeirb_io_S8_0 << 0) + (S4_storeirb_io_S8_1 << 7)) & 0b111111) | immext); ] { export *[const]:4 reloc; }
-S4_storeirb_io_S8: reloc is immext = 0xffffffff & S4_storeirb_io_S8_0 & S4_storeirb_io_S8_1 [ reloc = (S4_storeirb_io_S8_0 << 0) + (S4_storeirb_io_S8_1 << 7); ] { export *[const]:4 reloc; }
+S4_storeirb_io_S8: reloc is                       S4_storeirb_io_S8_0 & S4_storeirb_io_S8_1 [ reloc = ((((S4_storeirb_io_S8_0 << 0) + (S4_storeirb_io_S8_1 << 7)) & 0b111111) | immext); ] { export *[const]:1 reloc; }
+S4_storeirb_io_S8: reloc is immext = 0xffffffff & S4_storeirb_io_S8_0 & S4_storeirb_io_S8_1 [ reloc = (S4_storeirb_io_S8_0 << 0) + (S4_storeirb_io_S8_1 << 7); ] { export *[const]:1 reloc; }
 
 S4_storeirh_io_u6_1: reloc is S4_storeirh_io_u6_1_0 [ reloc = (S4_storeirh_io_u6_1_0 << 0) << 1; ] { export *[const]:4 reloc; }
 
-S4_storeirh_io_S8: reloc is                       S4_storeirh_io_S8_0 & S4_storeirh_io_S8_1 [ reloc = ((((S4_storeirh_io_S8_0 << 0) + (S4_storeirh_io_S8_1 << 7)) & 0b111111) | immext); ] { export *[const]:4 reloc; }
-S4_storeirh_io_S8: reloc is immext = 0xffffffff & S4_storeirh_io_S8_0 & S4_storeirh_io_S8_1 [ reloc = (S4_storeirh_io_S8_0 << 0) + (S4_storeirh_io_S8_1 << 7); ] { export *[const]:4 reloc; }
+S4_storeirh_io_S8: reloc is                       S4_storeirh_io_S8_0 & S4_storeirh_io_S8_1 [ reloc = ((((S4_storeirh_io_S8_0 << 0) + (S4_storeirh_io_S8_1 << 7)) & 0b111111) | immext); ] { export *[const]:2 reloc; }
+S4_storeirh_io_S8: reloc is immext = 0xffffffff & S4_storeirh_io_S8_0 & S4_storeirh_io_S8_1 [ reloc = (S4_storeirh_io_S8_0 << 0) + (S4_storeirh_io_S8_1 << 7); ] { export *[const]:2 reloc; }
 
 S4_storeiri_io_u6_2: reloc is S4_storeiri_io_u6_2_0 [ reloc = (S4_storeiri_io_u6_2_0 << 0) << 2; ] { export *[const]:4 reloc; }
 
