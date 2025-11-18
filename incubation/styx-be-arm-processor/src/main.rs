@@ -143,6 +143,8 @@ mod test_machine {
             let instruction_count = result.stat_count.into();
             debug!("INS Set: {:?}", code);
             proc.core.mmu.write_code(0x1000, &code).unwrap();
+            let read_data = proc.core.mmu.code().read(0x1000).vec(code.len()).unwrap();
+            assert_eq!(read_data, code);
             // we write to the program counter in ARM mode - our skeleton does do THUMB but we aren't doing that
             proc.core
                 .cpu
@@ -182,6 +184,7 @@ mod test_machine {
     // Loads data at address in R3 to R1
     #[test]
     fn test_memory_read() {
+        styx_core::util::logging::init_logging();
         // grab data at R3's address & put in R1
         let instr = "ldr r1, [r3]".to_owned();
         let mut machine = TestMachine::new_machine(instr);
@@ -238,7 +241,7 @@ mod test_machine {
         trace!("Register 1: {:x}", value);
 
         // final check that we got our value back
-        assert_eq!(value, 3724541952);
+        assert_eq!(value, 0xde000000);
     }
 
     // This adds 1+1:

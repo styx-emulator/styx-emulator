@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use super::{
     helpers::{Readable, Writable},
-    memory_region::{MemoryRegion, MemoryRegionView},
-    physical::{MemoryBackend, PhysicalMemoryVariant},
+    memory_region::{HasRegions, MemoryRegion},
+    physical::{MemoryBackend, PhysicalMemoryVariant, Space},
     tlb::DummyTlb,
-    AddRegionError, MemoryOperation, MemoryOperationError, MemoryPermissions, TlbImpl,
-    TlbTranslateError,
+    AddRegionError, MemoryArchitecture, MemoryOperation, MemoryOperationError, MemoryPermissions,
+    TlbImpl, TlbTranslateError,
 };
 use crate::{
     cpu::CpuBackend,
     event_controller::ExceptionNumber,
-    memory::{physical::address_space::MemoryImpl, tlb::TlbProcessor, TlbTranslateResult},
+    memory::{tlb::TlbProcessor, TlbTranslateResult},
 };
+use itertools::Itertools;
+use std::fmt::Debug;
 use std::ops::Range;
 use styx_errors::UnknownError;
 use thiserror::Error;
@@ -48,11 +50,9 @@ pub enum MemoryType {
 /// [`DummyTlb`].
 ///
 /// For a processor ready default use [`Mmu::default_region_store()`].
-///
-/// Access physical memory using [`Mmu::memory()`].
 pub struct Mmu {
-    pub tlb: Box<dyn TlbImpl>,
-    pub memory: MemoryBackend,
+    pub(crate) tlb: Box<dyn TlbImpl>,
+    pub(crate) memory: MemoryBackend,
 }
 
 impl Default for Mmu {
@@ -96,21 +96,15 @@ impl Mmu {
         }
     }
 
-    /// Returns a mutable reference to the physical memory backend.  Useful
-    /// if you want to read/write memory without involving the Tlb.
-    pub fn memory(&mut self) -> &mut MemoryBackend {
-        &mut self.memory
-    }
-
     /// Returns the range made up of the min and max addresses supported
     /// by the physical memory backend.
-    pub fn valid_memory_range(&self) -> Range<u64> {
-        self.memory.min_address(None)..self.memory.max_address(None)
+    pub fn valid_memory_range(&self) -> MemoryArchitecture<Range<u64>> {
+        self.memory
+            .min_address()
+            .with(self.memory.max_address(), |a, b| a..b)
     }
 
     /// Create a new memory region on the backend.
-    ///
-    /// Notes: Not all backends support adding regions.
     pub fn memory_map(
         &mut self,
         base: u64,
@@ -121,27 +115,26 @@ impl Mmu {
     }
 
     /// Adds a pre-populated MemoryRegion to emulator memory map.
-    pub fn add_memory_region(&mut self, region: MemoryRegion) -> Result<(), AddRegionError> {
-        self.memory.add_region(region)
-    }
-
-    /// Returns an iterator over the regions contained in the underlying physical memory backend.
     ///
-    /// Notes: The return type is an `Option` because iterating over memory regions is not always
-    /// a definable operation.
-    pub fn regions(&mut self) -> Option<impl Iterator<Item = MemoryRegionView>> {
-        let rtn: Option<Box<dyn Iterator<Item = MemoryRegionView>>> = match self.memory() {
-            MemoryBackend::HarvardFlatMemory(_) => None,
-            MemoryBackend::FlatMemory(flat_memory) => Some(Box::new(
-                [flat_memory].into_iter().map(MemoryRegionView::from),
-            )),
-            MemoryBackend::RegionStore(region_store) => Some(Box::new(
-                region_store.regions.iter_mut().map(MemoryRegionView::from),
-            )),
-        };
-        rtn
+    /// Adds to both code and data space if Harvard architecture.
+    pub fn add_memory_region(&mut self, region: MemoryRegion) -> Result<(), AddRegionError> {
+        self.add_memory_region_space(region, None)
     }
 
+    /// Add a pre-populaed region to memory.
+    ///
+    /// The `space` can be specified as `Some(Space)` so add to that space if Harvard type
+    /// or just add the region if VonNeuman. `None` will add the region to both [`Space::Code`]
+    /// [`Space::Data`] if Hardvard.
+    pub fn add_memory_region_space(
+        &mut self,
+        region: MemoryRegion,
+        space: Option<Space>,
+    ) -> Result<(), AddRegionError> {
+        self.memory.add_region(region, space)
+    }
+
+    /// Translates a virtual address to a physical address.
     pub fn translate_va(
         &mut self,
         virtual_addr: u64,
@@ -157,30 +150,22 @@ impl Mmu {
     // PHYSICAL METHODS
 
     /// Write an array of bytes to data memory, the address will be interpreted as a physical address.
-    pub fn write_data(&mut self, phys_addr: u64, bytes: &[u8]) -> Result<(), MemoryOperationError> {
+    pub fn write_data(&self, phys_addr: u64, bytes: &[u8]) -> Result<(), MemoryOperationError> {
         self.memory.write_data(phys_addr, bytes)
     }
 
     /// Read an array of bytes from data memory, the address will be interpreted as a physical address.
-    pub fn read_data(
-        &mut self,
-        phys_addr: u64,
-        bytes: &mut [u8],
-    ) -> Result<(), MemoryOperationError> {
+    pub fn read_data(&self, phys_addr: u64, bytes: &mut [u8]) -> Result<(), MemoryOperationError> {
         self.memory.read_data(phys_addr, bytes)
     }
 
     /// Write an array of bytes to code memory, the address will be interpreted as a physical address.
-    pub fn write_code(&mut self, phys_addr: u64, bytes: &[u8]) -> Result<(), MemoryOperationError> {
+    pub fn write_code(&self, phys_addr: u64, bytes: &[u8]) -> Result<(), MemoryOperationError> {
         self.memory.write_code(phys_addr, bytes)
     }
 
     /// Read an array of bytes from code memory, the address will be interpreted as a physical address.
-    pub fn read_code(
-        &mut self,
-        phys_addr: u64,
-        bytes: &mut [u8],
-    ) -> Result<(), MemoryOperationError> {
+    pub fn read_code(&self, phys_addr: u64, bytes: &mut [u8]) -> Result<(), MemoryOperationError> {
         self.memory.read_code(phys_addr, bytes)
     }
 
@@ -235,7 +220,7 @@ impl Mmu {
 
     /// Write to data without checking permissions
     pub fn sudo_write_data(
-        &mut self,
+        &self,
         phys_addr: u64,
         bytes: &[u8],
     ) -> Result<(), MemoryOperationError> {
@@ -244,7 +229,7 @@ impl Mmu {
 
     /// Read from data without checking permissions
     pub fn sudo_read_data(
-        &mut self,
+        &self,
         phys_addr: u64,
         bytes: &mut [u8],
     ) -> Result<(), MemoryOperationError> {
@@ -253,7 +238,7 @@ impl Mmu {
 
     /// Write to code without checking permissions
     pub fn sudo_write_code(
-        &mut self,
+        &self,
         phys_addr: u64,
         bytes: &[u8],
     ) -> Result<(), MemoryOperationError> {
@@ -262,7 +247,7 @@ impl Mmu {
 
     /// Read from code without checking permissions
     pub fn sudo_read_code(
-        &mut self,
+        &self,
         phys_addr: u64,
         bytes: &mut [u8],
     ) -> Result<(), MemoryOperationError> {
@@ -289,7 +274,7 @@ impl Mmu {
     /// // same thing but with a concrete type, if you prefer
     /// mmu.data().write(0x1000).le().u32(0x1337)?;
     ///
-    /// // read back the 32 bit value, ensuring same endianess
+    /// // read back the 32 bit value, ensuring same endianness
     /// let value = mmu.data().read(0x1000).le().u32()?;
     /// // again, inferred type api available
     /// let value_2: u32 = mmu.data().read(0x1000).le().value()?;
@@ -327,7 +312,7 @@ impl Mmu {
     /// // same thing but with a concrete type, if you prefer
     /// mmu.code().write(0x1000).le().u32(0x1337)?;
     ///
-    /// // read back the 32 bit value, ensuring same endianess
+    /// // read back the 32 bit value, ensuring same endianness
     /// let value = mmu.code().read(0x1000).le().u32()?;
     /// // again, inferred type api available
     /// let value_2: u32 = mmu.code().read(0x1000).le().value()?;
@@ -364,7 +349,7 @@ impl Mmu {
     /// // same thing but with a concrete type, if you prefer
     /// mmu.virt_code(&mut cpu).write(0x1000).le().u32(0x1337)?;
     ///
-    /// // read back the 32 bit value, ensuring same endianess
+    /// // read back the 32 bit value, ensuring same endianness
     /// let value = mmu.virt_code(&mut cpu).read(0x1000).le().u32()?;
     /// // again, inferred type api available
     /// let value_2: u32 = mmu.virt_code(&mut cpu).read(0x1000).le().value()?;
@@ -401,7 +386,7 @@ impl Mmu {
     /// // same thing but with a concrete type, if you prefer
     /// mmu.virt_data(&mut cpu).write(0x1000).le().u32(0x1337)?;
     ///
-    /// // read back the 32 bit value, ensuring same endianess
+    /// // read back the 32 bit value, ensuring same endianness
     /// let value = mmu.virt_data(&mut cpu).read(0x1000).le().u32()?;
     /// // again, inferred type api available
     /// let value_2: u32 = mmu.virt_data(&mut cpu).read(0x1000).le().value()?;
@@ -439,7 +424,7 @@ impl Mmu {
     /// // same thing but with a concrete type, if you prefer
     /// mmu.sudo_data().write(0x1000).le().u32(0x1337)?;
     ///
-    /// // read back the 32 bit value, ensuring same endianess
+    /// // read back the 32 bit value, ensuring same endianness
     /// let value = mmu.sudo_data().read(0x1000).le().u32()?;
     /// // again, inferred type api available
     /// let value_2: u32 = mmu.sudo_data().read(0x1000).le().value()?;
@@ -477,7 +462,7 @@ impl Mmu {
     /// // same thing but with a concrete type, if you prefer
     /// mmu.sudo_code().write(0x1000).le().u32(0x1337)?;
     ///
-    /// // read back the 32 bit value, ensuring same endianess
+    /// // read back the 32 bit value, ensuring same endianness
     /// let value = mmu.sudo_code().read(0x1000).le().u32()?;
     /// // again, inferred type api available
     /// let value_2: u32 = mmu.sudo_code().read(0x1000).le().value()?;
@@ -659,6 +644,21 @@ impl Writable for SudoCodeMemoryOp<'_> {
             .memory
             .unchecked_write_code(phys_addr, bytes)
             .map_err(Into::into) // map phys memory error to mmu memory error
+    }
+}
+
+impl HasRegions for Mmu {
+    fn regions(&self) -> impl Iterator<Item = &MemoryRegion> {
+        // collect to vec so that the iters are the same type
+        match &self.memory {
+            MemoryBackend::Harvard { code, data } => code
+                .regions
+                .iter()
+                .chain(data.regions.iter())
+                .collect_vec()
+                .into_iter(),
+            MemoryBackend::VonNeumann { memory } => memory.regions.iter().collect_vec().into_iter(),
+        }
     }
 }
 

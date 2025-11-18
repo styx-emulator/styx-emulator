@@ -174,7 +174,7 @@ impl Peripheral for SystemInterfaceUnit {
         // Registers the hook that will hook *every* instruction and handle the
         // stores to mtspr since those are hidden / abstracted away from us in
         // the backend
-        let valid_mem = proc.core.mmu.valid_memory_range();
+        let valid_mem = proc.core.mmu.valid_memory_range().data();
         proc.core
             .cpu
             .code_hook(valid_mem.start, valid_mem.end, Box::new(mtspr_proxy))?;

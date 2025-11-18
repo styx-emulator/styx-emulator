@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
-use std::{collections::BTreeMap, ffi::c_void, marker::PhantomPinned, mem::size_of, pin::Pin};
+use std::{
+    collections::BTreeMap, ffi::c_void, marker::PhantomPinned, mem::size_of, num::NonZeroUsize,
+    pin::Pin,
+};
 
 use arbitrary_int::{u20, u40, u80};
 use beau_collector::BeauCollector;
@@ -8,9 +11,9 @@ use derivative::Derivative;
 use hooks::{StyxHookDescriptor, StyxHookMap};
 use log::{debug, trace, warn};
 use ref_cast::RefCast;
-use tap::Pipe;
+use tap::{Pipe, TryConv};
 
-use unicorn_engine::{ffi, unicorn_const, HookType, MemRegion, Unicorn};
+use unicorn_engine::{ffi, unicorn_const, HookType, MemRegion, Permission, Unicorn};
 
 use styx_cpu_type::{
     arch::{
@@ -29,7 +32,7 @@ use styx_processor::{
     cpu::{CpuBackend, ExecutionReport, ReadRegisterError, WriteRegisterError},
     event_controller::EventController,
     hooks::{AddHookError, AddressRange, DeleteHookError, HookToken, Hookable, StyxHook},
-    memory::{memory_region::MemoryRegion, MemoryPermissions, MemoryRegionSize, Mmu},
+    memory::{memory_region::MemoryRegion, HasRegions, MemoryPermissions, MemoryRegionSize, Mmu},
 };
 use styx_sync::cell::UnsafeCell;
 use styx_util::unsafe_lib::{any_as_u8_slice, any_as_u8_slice_mut};
@@ -99,7 +102,7 @@ pub struct UnicornBackend {
     /// cleared after handling.
     stop_request: bool,
     endian: ArchEndian,
-    unicorn_regions: Vec<(u64, u64, u32)>,
+    unicorn_regions: Vec<UnicornMemoryRegion>,
 
     /// Aggregate errors from hooks in current execution cycle.
     hook_errors: Vec<UnknownError>,
@@ -682,20 +685,12 @@ impl UnicornBackend {
 
     /// Returns true if the mmu regions match the [Self::unicorn_regions].
     fn check_synced(&self, mmu: &mut Mmu) -> Result<bool, UnknownError> {
-        let uc_regions = self.unicorn_regions.iter().cloned();
+        let uc_regions = &self.unicorn_regions;
 
-        let mmu_regions = mmu
-            .regions()
-            .ok_or(anyhow!("unicorn backend requires region physical memory"))?;
-        let mmu_regions = mmu_regions.into_iter().map(|r| {
-            (
-                r.base(),
-                r.size(),
-                styx_to_unicorn_permissions(&r.perms).bits(),
-            )
-        });
+        let mmu_regions = mmu.regions();
+        let mmu_regions = get_unicorn_regions(mmu_regions)?;
 
-        Ok(uc_regions.eq(mmu_regions))
+        Ok(uc_regions.eq(&mmu_regions))
     }
 
     /// Removes all unicorn regions and overwrites them with the current mmu regions.
@@ -705,10 +700,9 @@ impl UnicornBackend {
         let uc_regions = self
             .inner()
             .mem_regions()
-            .pipe(UcErr::from_unicorn_result)?;
-        let mmu_regions = mmu
-            .regions()
-            .ok_or(anyhow!("unicorn backend requires region physical memory"))?;
+            .pipe(UcErr::from_unicorn_result)
+            .context("could not iterate regions")?;
+        let mmu_regions = mmu.regions();
 
         for uc_region in uc_regions {
             let address = uc_region.begin;
@@ -719,13 +713,12 @@ impl UnicornBackend {
                 .pipe(UcErr::from_unicorn_result)
                 .with_context(|| "failed to unmap")?;
         }
-        for region in mmu_regions {
-            // check region.base + region.size to be page aligned
-            region
-                .expect_aligned(0x1000)
-                .with_context(|| "unicorn memory regions must be 4k aligned ")?;
-
-            let perms = styx_to_unicorn_permissions(&region.perms);
+        let unicorn_regions = get_unicorn_regions(mmu_regions)?;
+        for region in unicorn_regions.iter() {
+            // the function to convert to unicorn regions
+            // already:
+            // - checked region.base + region.size to be page aligned
+            // - size is not 0
 
             // # Safety
             // Until a better method is found, we're making sure
@@ -733,27 +726,21 @@ impl UnicornBackend {
             // We're also keeping the [`MemoryRegion`] around so we
             // know it's not dead until we get dropped.
             unsafe {
-                let (data, size) = (region.data.as_mut_ptr(), region.size());
-
-                // if we call unicorn to add a region with size 0, it will error
-                if size > 0 {
-                    // cast to the void pointer required by unicorn, note
-                    // that we're just unwrapping, at some point we're going
-                    // to need to actually handle the unicorn errors.
-                    self.inner()
-                        .mem_map_ptr(
-                            region.base(),
-                            size as usize,
-                            perms,
-                            data as *mut std::ffi::c_void,
-                        )
-                        .pipe(UcErr::from_unicorn_result)?;
-                }
+                // cast to the void pointer required by unicorn, note
+                // that we're just unwrapping, at some point we're going
+                // to need to actually handle the unicorn errors.
+                self.inner()
+                    .mem_map_ptr(
+                        region.base,
+                        region.size.get(),
+                        region.permissions,
+                        region.data as *mut std::ffi::c_void,
+                    )
+                    .pipe(UcErr::from_unicorn_result)?;
             }
 
-            trace!("region: {:?}", region.size());
-            self.unicorn_regions
-                .push((region.base(), region.size(), perms.bits()));
+            trace!("Adding region: {region:?}");
+            self.unicorn_regions.push(*region);
         }
         trace!("syncing regions done");
         Ok(())
@@ -866,6 +853,71 @@ impl UnicornBackend {
     }
 }
 
+unsafe impl Send for UnicornMemoryRegion {}
+
+/// Represents the needed bits for a [`MemoryRegion`] in the Unicorn Backend.
+///
+/// Creation should be done through the [`TryFrom`] implementation to as to
+/// uphold the requirements.
+///
+/// The size must not be zero.
+#[derive(Debug, Clone, Copy)]
+struct UnicornMemoryRegion {
+    base: u64,
+    size: NonZeroUsize,
+    data: *const u8,
+    permissions: Permission,
+}
+
+impl PartialEq for UnicornMemoryRegion {
+    fn eq(&self, other: &Self) -> bool {
+        self.base == other.base
+            && self.size == other.size
+            && self.data == other.data
+            && self.permissions.bits() == other.permissions.bits()
+    }
+}
+
+enum TryIntoUnicornError {
+    EmptyRegion,
+    UnalignedRegion,
+}
+
+impl TryFrom<&MemoryRegion> for UnicornMemoryRegion {
+    type Error = TryIntoUnicornError;
+
+    fn try_from(region: &MemoryRegion) -> Result<Self, Self::Error> {
+        region
+            .expect_aligned(0x1000)
+            .map_err(|_| TryIntoUnicornError::UnalignedRegion)?;
+        let permissions = styx_to_unicorn_permissions(&region.perms());
+
+        let (data, size) = region
+            .as_raw_parts()
+            .ok_or(TryIntoUnicornError::EmptyRegion)?;
+
+        Ok(UnicornMemoryRegion {
+            base: region.base(),
+            size,
+            data,
+            permissions,
+        })
+    }
+}
+
+/// Transforms a list of [`MemoryRegion`]s to Unicorn Regions,
+/// discarding zero-sized regions and erroring if any are not 4k aligned.
+fn get_unicorn_regions<'a>(
+    regions: impl Iterator<Item = &'a MemoryRegion>,
+) -> Result<Vec<UnicornMemoryRegion>, UnknownError> {
+    let regions_flat = regions.flat_map(|region| match region.try_conv::<UnicornMemoryRegion>() {
+        Ok(region) => Some(Ok(region)),
+        Err(TryIntoUnicornError::EmptyRegion) => None,
+        Err(TryIntoUnicornError::UnalignedRegion) => Some(Err(anyhow!("region is not 4k aligned"))),
+    });
+    regions_flat.collect()
+}
+
 #[cfg(test)]
 mod tests {
     use keystone_engine::Keystone;
@@ -945,10 +997,13 @@ mod tests {
             assert_eq!(exit_reason, TargetExitReason::InstructionCountComplete);
         }
 
-        fn run_and_assert_exit_reason(&mut self, reason: TargetExitReason) {
+        fn run_and_assert_exit_reason(&mut self, expected_reason: TargetExitReason) {
             let exit_reason = self.run_no_assert();
 
-            assert_eq!(exit_reason, reason);
+            assert_eq!(
+                exit_reason, expected_reason,
+                "expected {expected_reason}, found {exit_reason}"
+            );
         }
     }
 
@@ -1821,34 +1876,26 @@ mod tests {
             .value(0xDEADFACEu32)
             .unwrap();
 
-        // Get the region that corresponds to the memory we are accessing.
-        let region = machine
-            .mmu
-            .regions()
-            .unwrap()
-            .find(|r| r.contains_region((0x4000, 0x1000)))
-            .unwrap();
-
         // Verify that the value we read directly from the region matches what we wrote through the
         // backend.
-        let region_read_val = region.read(TEST_ADDR).le().u32().unwrap();
+        let region_read_val = machine.mmu.data().read(TEST_ADDR).le().u32().unwrap();
         assert_eq!(region_read_val, 0xDEADFACE);
 
         machine.run();
 
-        let mut region = machine
-            .mmu
-            .regions()
-            .unwrap()
-            .find(|r| r.contains_region((0x4000, 0x1000)))
-            .unwrap();
         // Verify that the value we read directly from the region matches the changes made by the
         // emulated instruction.
-        let region_read_val = region.read(TEST_ADDR).le().u32().unwrap();
+        let region_read_val = machine.mmu.data().read(TEST_ADDR).le().u32().unwrap();
         assert_eq!(region_read_val, 0xCAFEBABE);
 
         // Write data directly to the region and verify that the backend read reflects this change.
-        region.write(TEST_ADDR).le().value(0x00FACADEu32).unwrap();
+        machine
+            .mmu
+            .data()
+            .write(TEST_ADDR)
+            .le()
+            .value(0x00FACADEu32)
+            .unwrap();
 
         let unicorn_read_val = u32::from_le_bytes(
             machine

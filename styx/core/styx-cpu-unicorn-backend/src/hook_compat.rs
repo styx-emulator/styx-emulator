@@ -20,7 +20,7 @@ use styx_processor::{
     hooks::{CoreHandle, MemFaultData, Resolution, StyxHook},
     memory::{
         helpers::{ReadExt, WriteExt},
-        MemoryRegionSize, Mmu,
+        HasRegions, MemoryRegionSize, Mmu,
     },
 };
 use unicorn_engine::unicorn_const;
@@ -342,9 +342,8 @@ pub fn protection_fault_hook_proxy(
                 let perms = proc
                     .mmu
                     .regions()
-                    .expect("mmu for unicorn engine MUST have regions")
                     .find(|region| region.contains_region((address, size as u64)))
-                    .map(|r| r.perms)
+                    .map(|r| r.perms())
                     .expect("unicorn protection fault in nonexistent region?");
 
                 hook.call(proc, address, size as u32, perms, fault_data)

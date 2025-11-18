@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! Stub emulation for the STM32F405 processor
 #![allow(non_upper_case_globals)]
-use anyhow::Context;
 use styx_core::core::builder::BuildProcessorImplArgs;
 use styx_core::cpu::PcodeBackend;
+use styx_core::memory::HasRegions;
 use styx_core::prelude::*;
 use styx_core::{
     core::builder::ProcessorImpl,
@@ -49,7 +49,7 @@ const ADDRESS_MAP: [RegionInfo; 13] = [
     // Flash memory
     ("FLASH",           0x0800_0000,	1*MiB,               RWX, None, None),
 
-    // 64 KiB auxillary SRAM memory
+    // 64 KiB auxiliary SRAM memory
     ("SRAM3",	        0x1000_0000,	64*KiB,              RWX, None, None),
 
     // System memory (note: this lumps in some reserved memory and Option bytes)
@@ -58,7 +58,7 @@ const ADDRESS_MAP: [RegionInfo; 13] = [
     // 112 KiB main SRAM
     ("SRAM1",	        0x2000_0000,	112*KiB,             RWX, None, None),
 
-    // 16 KiB auxillary SRAM memory
+    // 16 KiB auxiliary SRAM memory
     ("SRAM2",	        0x2001_C000,	16*KiB,              RWX, None, None),
 
     // Peripherals take up the next 512 MiB (note: to better fit page size
@@ -214,12 +214,20 @@ pub struct MissingProgramStartRegion;
 fn populate_default_registers(cpu: &mut dyn CpuBackend, mmu: &mut Mmu) -> Result<(), UnknownError> {
     // find the regions available that starts at address 0 or address 0x0800_0000
     // (either of the flash or the flash alias region)
-    for region in mmu.regions().context("must have region mmu")? {
+    for region in mmu.regions() {
         if region.base() == 0x0 || region.base() == 0x0800_0000 {
             // found a base region, read the first 8 bytes to get the register
             // values to use
-            let sp = u32::from_le_bytes(region.data[0..4].try_into().unwrap());
-            let pc = u32::from_le_bytes(region.data[4..8].try_into().unwrap());
+            let sp = u32::from_le_bytes(
+                region.data().read(0).vec(4).unwrap()[0..4]
+                    .try_into()
+                    .unwrap(),
+            );
+            let pc = u32::from_le_bytes(
+                region.data().read(4).vec(4).unwrap()[4..8]
+                    .try_into()
+                    .unwrap(),
+            );
 
             log::debug!(
                 "populating default registers from 0x{:X}: sp=0x{sp:X}, pc=0x{pc:X}",

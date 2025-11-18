@@ -2,19 +2,21 @@
 use std::cmp::{max, min};
 
 use crate::memory::{
-    memory_region::MemoryRegion, AddRegionError, MemoryOperationError, UnmappedMemoryError,
+    memory_region::MemoryRegion, AddRegionError, MemoryOperationError, MemoryPermissions,
+    UnmappedMemoryError,
 };
-
-use super::{FromYaml, MemoryImpl};
 
 mod region_walker;
 
 use log::{debug, trace};
 use region_walker::{
-    MemoryReadRegionWalker, MemoryWriteRegionWalker, RegionWalker, SearchState,
-    UncheckedMemoryReadRegionWalker, UncheckedMemoryWriteRegionWalker,
+    AtomicMemoryReadRegionWalker, AtomicMemoryWriteRegionWalker, MemoryReadRegionWalker,
+    MemoryWriteRegionWalker, RegionWalker, SearchState, UncheckedMemoryReadRegionWalker,
+    UncheckedMemoryWriteRegionWalker,
 };
 use styx_errors::UnknownError;
+
+use super::physical::AtomicMemoryOperationError;
 
 /// A region based memory implementation, memory is represented by zero or more
 /// unique, non-overlapping memory regions.
@@ -38,30 +40,19 @@ impl Default for RegionStore {
     }
 }
 
-impl FromYaml for RegionStore {
-    fn from_config(
-        config: Vec<crate::memory::physical::MemoryRegionDescriptor>,
-    ) -> Result<Self, crate::memory::FromConfigError>
-    where
-        Self: Sized,
-    {
-        let mut mem = RegionStore::default();
-
-        for region in config {
-            mem.add_region(MemoryRegion::new(
-                region.base,
-                region.size,
-                region.perms.into(),
-            )?)?;
-        }
-
-        Ok(mem)
-    }
-}
-
 impl RegionStore {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn flat() -> Self {
+        let mut me = Self::new();
+        // 1 over `u32::MAX` to make 4k aligned for out beloved unicorn
+        me.add_region(
+            MemoryRegion::new(0x0, u32::MAX as u64 + 1, MemoryPermissions::all()).unwrap(),
+        )
+        .unwrap();
+        me
     }
 
     fn check_overlap(&self, base: u64, size: u64) -> bool {
@@ -87,7 +78,7 @@ impl RegionStore {
     /// This function handles the traversing of internal memory regions. If an errors occurs when
     /// reading from a region, the function will return early. Because of this the read may
     /// partially complete before erroring. This could be changed in the future.
-    fn read_memory(&self, base: u64, data: &mut [u8]) -> Result<(), MemoryOperationError> {
+    pub fn read_memory(&self, base: u64, data: &mut [u8]) -> Result<(), MemoryOperationError> {
         let size = data.len() as u64;
         if size != 0 {
             let mut walker = MemoryReadRegionWalker::new(data);
@@ -102,11 +93,50 @@ impl RegionStore {
     /// This function handles the traversing of internal memory regions. If an errors occurs when
     /// writing to a region, the function will return early. Because of this the write may partially
     /// complete before erroring. This could be changed in the future.
-    fn write_memory(&self, base: u64, data: &[u8]) -> Result<(), MemoryOperationError> {
+    pub fn write_memory(&self, base: u64, data: &[u8]) -> Result<(), MemoryOperationError> {
         let size = data.len() as u64;
 
         if size != 0 {
             let mut walker = MemoryWriteRegionWalker::new(data);
+            self.walk_regions(&mut walker, base, size)?;
+        } // do nothing if there is no data to write
+
+        Ok(())
+    }
+
+    /// Reads a contiguous array of bytes to the buffer `data`.
+    ///
+    /// This function handles the traversing of internal memory regions. If an errors occurs when
+    /// reading from a region, the function will return early. Because of this the read may
+    /// partially complete before erroring. This could be changed in the future.
+    pub fn read_memory_atomic(
+        &self,
+        base: u64,
+        data: &mut [u8],
+    ) -> Result<(), AtomicMemoryOperationError> {
+        let size = data.len() as u64;
+        if size != 0 {
+            let mut walker = AtomicMemoryReadRegionWalker::new(data);
+            self.walk_regions(&mut walker, base, size)?;
+        } // do nothing if there is no data to write
+
+        Ok(())
+    }
+
+    /// Writes a contiguous array of bytes to memory.
+    ///
+    /// This function handles the traversing of internal memory regions. If an errors occurs when
+    /// writing to a region, the function will return early. Because of this the write may partially
+    /// complete before erroring. This could be changed in the future.
+    pub fn write_memory_atomic(
+        &self,
+        base: u64,
+        data: &[u8],
+    ) -> Result<(), AtomicMemoryOperationError> {
+        let size = data.len() as u64;
+
+        if size != 0 {
+            let mut walker = AtomicMemoryWriteRegionWalker::new(data);
             self.walk_regions(&mut walker, base, size)?;
         } // do nothing if there is no data to write
 
@@ -118,7 +148,11 @@ impl RegionStore {
     /// This function handles the traversing of internal memory regions. If an errors occurs when
     /// reading from a region, the function will return early. Because of this the read may
     /// partially complete before erroring. This could be changed in the future.
-    fn sudo_read_memory(&self, base: u64, data: &mut [u8]) -> Result<(), MemoryOperationError> {
+    pub(in crate::memory) fn sudo_read_memory(
+        &self,
+        base: u64,
+        data: &mut [u8],
+    ) -> Result<(), MemoryOperationError> {
         let size = data.len() as u64;
         if size != 0 {
             let mut walker = UncheckedMemoryReadRegionWalker::new(data);
@@ -133,7 +167,11 @@ impl RegionStore {
     /// This function handles the traversing of internal memory regions. If an errors occurs when
     /// writing to a region, the function will return early. Because of this the write may partially
     /// complete before erroring. This could be changed in the future.
-    fn sudo_write_memory(&self, base: u64, data: &[u8]) -> Result<(), MemoryOperationError> {
+    pub(in crate::memory) fn sudo_write_memory(
+        &self,
+        base: u64,
+        data: &[u8],
+    ) -> Result<(), MemoryOperationError> {
         let size = data.len() as u64;
 
         if size != 0 {
@@ -151,12 +189,12 @@ impl RegionStore {
     /// the bank's regions starting from `base` and continuing until `base + size`. If the range
     /// spans multiple [MemoryRegion]s then the `walker` will be called with a `region`, `start`,
     /// and `size`.
-    fn walk_regions<RW: RegionWalker>(
+    fn walk_regions<RW: RegionWalker<Error: From<MemoryOperationError>>>(
         &self,
         walker: &mut RW,
         base: u64,
         size: u64,
-    ) -> Result<(), MemoryOperationError> {
+    ) -> Result<(), RW::Error> {
         // make sure the range is eligible in the first place
         let in_min = base;
         // inclusive
@@ -168,14 +206,18 @@ impl RegionStore {
         );
         if in_min < self.min_address || in_min > self.max_address {
             trace!("operation in_min < self.min_address || in_min > self.max_address");
-            return Err(MemoryOperationError::UnmappedMemory(
-                UnmappedMemoryError::UnmappedStart(base),
-            ));
+            return Err(
+                MemoryOperationError::UnmappedMemory(UnmappedMemoryError::UnmappedStart(base))
+                    .into(),
+            );
         } else if in_max > self.max_address {
             trace!("operation in_max > self.max_address");
-            return Err(MemoryOperationError::UnmappedMemory(
-                UnmappedMemoryError::GoesUnmapped(1 + self.max_address - base),
-            ));
+            return Err(
+                MemoryOperationError::UnmappedMemory(UnmappedMemoryError::GoesUnmapped(
+                    1 + self.max_address - base,
+                ))
+                .into(),
+            );
         }
 
         // if a range is not enclosed within a single region, we
@@ -237,7 +279,8 @@ impl RegionStore {
                     if prev_address + 1 != region_min {
                         return Err(MemoryOperationError::UnmappedMemory(
                             UnmappedMemoryError::GoesUnmapped(1 + prev_address - base),
-                        ));
+                        )
+                        .into());
                     } // can now assume these regions are fully contiguous
 
                     // if `in_max` is in this region then we're done
@@ -267,18 +310,25 @@ impl RegionStore {
             // base of operation was not found
             SearchState::Start => Err(MemoryOperationError::UnmappedMemory(
                 UnmappedMemoryError::UnmappedStart(in_min),
-            )),
+            )
+            .into()),
             // base of operation was found but whole range is not mapped.
             // BaseFound variant contains the last address that was found valid
             SearchState::BaseFound(last_address) => Err(MemoryOperationError::UnmappedMemory(
                 UnmappedMemoryError::GoesUnmapped(1 + last_address - in_min),
-            )),
+            )
+            .into()),
             SearchState::Done => Ok(()),
         }
     }
+
+    pub(crate) fn empty() -> RegionStore {
+        Self::new()
+    }
 }
 
-impl MemoryImpl for RegionStore {
+impl RegionStore {
+    #[allow(unused)]
     fn context_save(&mut self) -> Result<(), UnknownError> {
         for region in self.regions.iter_mut() {
             // safety: unsafe because we are ignoring memory permissions
@@ -287,6 +337,7 @@ impl MemoryImpl for RegionStore {
         Ok(())
     }
 
+    #[allow(unused)]
     fn context_restore(&mut self) -> Result<(), UnknownError> {
         for region in self.regions.iter_mut() {
             // safety: unsafe because we are ignoring memory permissions
@@ -295,15 +346,15 @@ impl MemoryImpl for RegionStore {
         Ok(())
     }
 
-    fn min_address(&self, _space: Option<crate::memory::physical::Space>) -> u64 {
+    pub fn min_address(&self) -> u64 {
         self.min_address
     }
 
-    fn max_address(&self, _space: Option<crate::memory::physical::Space>) -> u64 {
+    pub fn max_address(&self) -> u64 {
         self.max_address
     }
 
-    fn add_region(&mut self, region: MemoryRegion) -> Result<(), AddRegionError> {
+    pub fn add_region(&mut self, region: MemoryRegion) -> Result<(), AddRegionError> {
         debug!(
             "adding region with base: 0x{:X} size: 0x{:X}",
             region.base(),
@@ -331,70 +382,6 @@ impl MemoryImpl for RegionStore {
         }
 
         Ok(())
-    }
-
-    fn read_code(
-        &self,
-        addr: u64,
-        bytes: &mut [u8],
-    ) -> Result<(), crate::memory::MemoryOperationError> {
-        self.read_memory(addr, bytes)
-    }
-
-    fn read_data(
-        &self,
-        addr: u64,
-        bytes: &mut [u8],
-    ) -> Result<(), crate::memory::MemoryOperationError> {
-        self.read_memory(addr, bytes)
-    }
-
-    fn write_code(
-        &mut self,
-        addr: u64,
-        bytes: &[u8],
-    ) -> Result<(), crate::memory::MemoryOperationError> {
-        self.write_memory(addr, bytes)
-    }
-
-    fn write_data(
-        &mut self,
-        addr: u64,
-        bytes: &[u8],
-    ) -> Result<(), crate::memory::MemoryOperationError> {
-        self.write_memory(addr, bytes)
-    }
-
-    fn unchecked_read_code(
-        &self,
-        addr: u64,
-        bytes: &mut [u8],
-    ) -> Result<(), crate::memory::MemoryOperationError> {
-        self.sudo_read_memory(addr, bytes)
-    }
-
-    fn unchecked_read_data(
-        &self,
-        addr: u64,
-        bytes: &mut [u8],
-    ) -> Result<(), crate::memory::MemoryOperationError> {
-        self.sudo_read_memory(addr, bytes)
-    }
-
-    fn unchecked_write_code(
-        &mut self,
-        addr: u64,
-        bytes: &[u8],
-    ) -> Result<(), crate::memory::MemoryOperationError> {
-        self.sudo_write_memory(addr, bytes)
-    }
-
-    fn unchecked_write_data(
-        &mut self,
-        addr: u64,
-        bytes: &[u8],
-    ) -> Result<(), crate::memory::MemoryOperationError> {
-        self.sudo_write_memory(addr, bytes)
     }
 }
 

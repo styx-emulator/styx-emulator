@@ -163,7 +163,7 @@ impl SPIDevice for AT25HP512 {
             DeviceState::Read => {
                 let ap =
                     ((self.address_pointer_msb as usize) << 8) | self.address_pointer_lsb as usize;
-                let d = self.memory.read(ap).u8().unwrap();
+                let d = self.memory.data().read(ap).u8().unwrap();
 
                 let (new_lsb, overflow) = self.address_pointer_lsb.overflowing_add(1);
                 if overflow {
@@ -217,7 +217,7 @@ impl AT25HP512 {
                     && !self.status.write_prot.is_protected(address as u16)
                 {
                     trace!("<EEPROM> writing 0x{data:X} to 0x{address:X}");
-                    self.memory.write(address).be().value(data).unwrap();
+                    self.memory.data().write(address).be().value(data).unwrap();
                 }
                 self.address_pointer_lsb = self.address_pointer_lsb.overflowing_add(1).0;
             }

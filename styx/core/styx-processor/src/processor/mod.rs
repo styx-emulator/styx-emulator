@@ -26,7 +26,6 @@ use crate::{
     core::{ProcMeta, ProcessorCore},
     executor::{ExecutionConstraint, Executor},
     hooks::{AddHookError, DeleteHookError, HookToken, Hookable, StyxHook},
-    memory::physical::address_space::MemoryImpl,
     plugins::{collection::PluginsContainer, Plugin},
     runtime::ProcessorRuntime,
 };

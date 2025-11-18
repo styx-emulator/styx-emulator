@@ -7,14 +7,21 @@
 use bitflags::bitflags;
 use derive_more::Display;
 
+mod atomic_word;
 pub mod helpers;
+mod mem_arch;
 pub mod memory_region;
 mod mmu;
 mod mmu_sized_rw;
 pub mod physical;
+mod region;
 mod tlb;
 
-pub use memory_region::{MemoryRegionData, MemoryRegionSize};
+pub use mem_arch::MemoryArchitecture;
+pub use memory_region::{
+    HasRegions, MemoryRegionFormat, MemoryRegionPerms, MemoryRegionRawData, MemoryRegionSize,
+    MemoryRegionsWithFormat,
+};
 pub use mmu::{
     CodeMemoryOp, DataMemoryOp, MemoryType, Mmu, MmuOpError, SudoCodeMemoryOp, SudoDataMemoryOp,
 };

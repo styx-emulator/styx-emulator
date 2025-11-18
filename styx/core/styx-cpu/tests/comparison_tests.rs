@@ -1219,7 +1219,10 @@ impl MachineState {
 
         let mut memory: HashMap<u64, u8> = Default::default();
         let mut buf = [0u8];
-        for address in valid_memory {
+        for address in valid_memory
+            .von_neuman()
+            .expect("only works with von neuman arches")
+        {
             if backend.mmu.read_data(address, &mut buf).is_ok() && buf[0] != 0 {
                 memory.insert(address, buf[0]);
             };

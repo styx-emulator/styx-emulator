@@ -42,7 +42,12 @@ impl ProcessorProcess {
         trace_path: &str,
         target: &styx_core::grpc::args::Target,
     ) -> Result<Self, StyxMachineError> {
-        let memr = processor.core.mmu.valid_memory_range();
+        let memr = processor
+            .core
+            .mmu
+            .valid_memory_range()
+            .von_neuman()
+            .expect("this only works with von_neuman arches");
         let mem_low = memr.start;
         let mem_high = memr.end;
         let arch = processor.core.architecture();

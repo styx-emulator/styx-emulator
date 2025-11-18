@@ -4,7 +4,6 @@ use styx_errors::UnknownError;
 
 use super::{MemoryOperation, MemoryType, Mmu, TlbProcessor};
 use crate::cpu::CpuBackend;
-use crate::memory::physical::address_space::MemoryImpl;
 
 /// For some input type `T`, this macro generates functions for reading and
 /// writing memory as type `T`.

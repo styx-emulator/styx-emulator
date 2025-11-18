@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! Stub Emulation for STM32F107
 
-use anyhow::Context;
 use derivative::Derivative;
 use styx_core::{
     core::builder::{BuildProcessorImplArgs, ProcessorImpl},
@@ -9,6 +8,7 @@ use styx_core::{
         arch::arm::{ArmRegister, ArmVariants},
         PcodeBackend,
     },
+    memory::HasRegions,
     prelude::*,
 };
 use styx_nvic::Nvic;
@@ -190,12 +190,13 @@ pub struct MissingProgramStartRegion;
 fn populate_default_registers(cpu: &mut dyn CpuBackend, mmu: &mut Mmu) -> Result<(), UnknownError> {
     // find the regions available that starts at address 0 or address 0x0800_0000
     // (either of the flash or the flash alias region)
-    for region in mmu.regions().context("must have region mmu")? {
+
+    for region in mmu.regions() {
         if region.base() == 0x0 || region.base() == 0x0800_0000 {
             // found a base region, read the first 8 bytes to get the register
             // values to use
-            let sp = u32::from_le_bytes(region.data[0..4].try_into().unwrap());
-            let pc = u32::from_le_bytes(region.data[4..8].try_into().unwrap());
+            let sp = u32::from_le_bytes(region.data().read(0).vec(4)?.try_into().unwrap());
+            let pc = u32::from_le_bytes(region.data().read(4).vec(4)?.try_into().unwrap());
 
             log::debug!(
                 "populating default registers from 0x{:X}: sp=0x{sp:X}, pc=0x{pc:X}",

@@ -65,7 +65,7 @@ fn test_spi_combined() -> Result<(), UnknownError> {
 
     // check if address 0x100 of the eeprom has a nonzero value
     // i.e. did the processor write to it
-    let data = eeprom_ref.memory.read(0x100).be().u16()?;
+    let data = eeprom_ref.memory.data().read(0x100).be().u16()?;
     assert!(data > 0);
 
     // check that the eeprom internal address was not left at zero
