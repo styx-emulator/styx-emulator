@@ -4,7 +4,7 @@ use bitbybit::bitfield;
 use std::collections::BTreeMap;
 use styx_core::{
     arch::hexagon::{register_fields::Ssr, HexagonRegister},
-    cpu::CpuBackendExt,
+    cpu::{CpuBackendExt, HexagonInterruptType},
     errors::UnknownError,
     memory::{
         MemoryOperation, MemoryType, TlbImpl, TlbProcessor, TlbTranslateError, TlbTranslateResult,
@@ -302,8 +302,22 @@ impl TlbImpl for HexagonTlb {
                 "couldn't translate {virt_addr:x} at pc {:x?}",
                 processor.cpu.pc()
             );
-            //
-            Err(TlbTranslateError::Other(UnknownError::msg("tlb failed")))
+
+            if matches!(memory_type, MemoryType::Code)
+                && matches!(access_type, MemoryOperation::Read)
+            {
+                Err(TlbTranslateError::Exception(
+                    HexagonInterruptType::TlbMissX as i32,
+                ))
+            } else if matches!(memory_type, MemoryType::Data) {
+                Err(TlbTranslateError::Exception(
+                    HexagonInterruptType::TlbMissRw as i32,
+                ))
+            } else {
+                Err(TlbTranslateError::Other(UnknownError::msg(
+                    "couldn't translate tlb and not a page fault",
+                )))
+            }
         }
     }
 

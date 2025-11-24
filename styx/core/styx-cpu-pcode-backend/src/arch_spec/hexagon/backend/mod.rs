@@ -323,12 +323,17 @@ impl BackendHelper<HexagonExecuteSingleInfo, Vec<Pcode>> for HexagonPcodeBackend
                 Ok(HexagonSingleInstructionAction::DelayedInterrupt(irqn)) => {
                     delayed_irqn = Some(irqn);
                 }
-                // Rerunning a single instruction is tenuous, as packets are supposed to be
-                // atomic. The rerun condition occurs when there's an exception in an instruction.
-                // Re-running the entire packet while in the middle of the packet would require a rollback,
-                // however.
+                // In the case of a rerun, there was an exception. The exception will have the correct address
+                // (the start of this packet) to return to, so we need to bail out of this function successfully.
+                //
+                // WARN NOTE ERROR: there is an issue here, where instructions here may have an issue
+                // { a; b } where if b faults, then a will get re-run. If the values/memory used in a changes,
+                // then a gets re-run with a different result. Not clear what the correct action is here.
                 Ok(HexagonSingleInstructionAction::Rerun) => {
-                    continue;
+                    return Ok(Ok(HexagonExecuteSingleInfo {
+                        _total_instrs_within_packet_executed: total_instrs_executed,
+                        ordering: fetch_decode_info.ordering,
+                    }))
                 }
 
                 // Setting it only once when it's none allows for the first branch to be taken,

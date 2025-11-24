@@ -27,7 +27,7 @@ pub struct InterruptGenericStub {
 
 /// Look at https://github.com/quic/qemu/blob/hex-next/target/hexagon/cpu_bits.h
 #[repr(i32)]
-pub enum InterruptType {
+pub enum HexagonInterruptType {
     None = -1,
     Reset = 0,
     Imprecise = 1,
@@ -100,7 +100,7 @@ impl<T: CpuBackend> CallOtherCallback<T> for Trap0Handler {
         );
 
         Ok(PCodeStateChange::DelayedInterrupt(
-            InterruptType::Trap0 as i32,
+            HexagonInterruptType::Trap0 as i32,
         ))
     }
 }
@@ -253,7 +253,7 @@ impl<T: CpuBackend> CallOtherCallback<T> for NmiHandler {
         } else {
             unimplemented!("nmi({:x}) called", rs_val);
             Ok(PCodeStateChange::DelayedInterrupt(
-                InterruptType::Imprecise as i32,
+                HexagonInterruptType::Imprecise as i32,
             ))
         }
     }

@@ -16,7 +16,7 @@ use styx_core::{
         builder::{BuildProcessorImplArgs, ProcessorImpl},
         ProcessorBundle,
     },
-    cpu::{ArchEndian, CpuBackendExt, HexagonPcodeBackend},
+    cpu::{ArchEndian, CpuBackendExt, HexagonInterruptType, HexagonPcodeBackend},
     errors::{anyhow, UnknownError},
     hooks::{CoreHandle, Hookable, Resolution, StyxHook},
 };
@@ -54,6 +54,8 @@ impl ProcessorImpl for HexagonBuilder {
 
         // WARN: this should always be triggered at the end of a packet, after the pc has
         // been incremented, so the Elr should be set to the pc
+        //
+        // This should only be done if the interrupt number is 0?
         let interrupt_handler = |handle: CoreHandle, interrupt_number: i32| {
             // get cause, if the cause is 0 then we need to do the angel stuff
             let ssr = Ssr::new_with_raw_value(
@@ -63,7 +65,9 @@ impl ProcessorImpl for HexagonBuilder {
                     .with_context(|| "couldn't read ssr in interrupt")?,
             );
 
-            if ssr.cause() == 0 {
+            info!("interrupt number is {}", interrupt_number);
+
+            if ssr.cause() == 0 && interrupt_number == HexagonInterruptType::Trap0 as i32 {
                 let swi_no = handle
                     .cpu
                     .read_register::<u32>(HexagonRegister::R0)

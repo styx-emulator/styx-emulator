@@ -20,8 +20,8 @@ use self::{
     pcode_gen::GhidraPcodeGenerator,
     register_manager::RegisterManager,
 };
-pub use arch_spec::HexagonPcodeBackend;
 use arch_spec::{build_arch_spec, ArchPcManager, GeneratorHelp, GeneratorHelper, PcManager};
+pub use arch_spec::{HexagonInterruptType, HexagonPcodeBackend};
 use call_other::CallOtherManager;
 use derivative::Derivative;
 use log::trace;

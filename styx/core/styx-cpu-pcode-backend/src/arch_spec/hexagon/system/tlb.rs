@@ -1,3 +1,5 @@
+use std::cmp::min;
+
 // SPDX-License-Identifier: BSD-2-Clause
 use arbitrary_int::*;
 use derive_more::FromStr;
@@ -5,7 +7,11 @@ use log::{debug, info, trace, warn};
 use styx_errors::anyhow::Context;
 use styx_pcode::{pcode::VarnodeData, sla::SlaUserOps};
 use styx_pcode_translator::sla::HexagonUserOps;
-use styx_processor::{cpu::CpuBackend, event_controller::EventController, memory::Mmu};
+use styx_processor::{
+    cpu::{CpuBackend, CpuBackendExt},
+    event_controller::EventController,
+    memory::Mmu,
+};
 
 use crate::{
     arch_spec::{ArchSpecBuilder, HexagonPcodeBackend},
@@ -204,6 +210,54 @@ impl<T: CpuBackend> CallOtherCallback<T> for TlbLockUnlock {
     }
 }
 
+#[derive(Debug)]
+pub struct TlbMatch {}
+impl<T: CpuBackend> CallOtherCallback<T> for TlbMatch {
+    fn handle(
+        &mut self,
+        cpu: &mut dyn CallOtherCpu<T>,
+        _mmu: &mut Mmu,
+        _ev: &mut EventController,
+        inputs: &[VarnodeData],
+        output: Option<&VarnodeData>,
+    ) -> Result<PCodeStateChange, CallOtherHandleError> {
+        // cpu
+
+        let rss = cpu
+            .read(&inputs[0])
+            .with_context(|| "couldn't read Rss")?
+            .to_u64()
+            .with_context(|| "couldn't turn Rss to u64")?;
+
+        // Fine to keep as u64 since we mask with a u64 later.
+        let rt = cpu.read(&inputs[1]).with_context(|| "couldn't read Rt")?;
+        assert_eq!(rt.size(), 4);
+        let rt = rt.to_u64().with_context(|| "couldn't turn Rt to u64")?;
+
+        let output_unwrap = output.with_context(|| "no output for tlbmatch")?;
+
+        let tlblo = rss & 0xffffffff;
+        let tlbhi = (rss >> 32) & 0xffffffff;
+
+        let size = min(6, (!(tlblo.reverse_bits())).leading_ones());
+        let mask = 0x07ffffff & (0xffffffff << (2 * size));
+
+        // The top bit is set (valid bit??)
+        let tlbhi_topbit = ((tlbhi >> 31) & 1) == 1;
+
+        let pd: u32 = if tlbhi_topbit && ((tlbhi & mask) == (rt & mask)) {
+            0xff
+        } else {
+            0x0
+        };
+
+        cpu.write(&output_unwrap, pd.into())
+            .with_context(|| "failed to set Pd register for tlbmatch")?;
+
+        Ok(PCodeStateChange::Fallthrough)
+    }
+}
+
 pub fn add_tlb_callothers<S: SlaUserOps<UserOps: FromStr>>(
     spec: &mut ArchSpecBuilder<S, HexagonPcodeBackend>,
 ) {
@@ -212,10 +266,7 @@ pub fn add_tlb_callothers<S: SlaUserOps<UserOps: FromStr>>(
         .unwrap();
 
     spec.call_other_manager
-        .add_handler_other_sla(
-            HexagonUserOps::Tlbmatch,
-            TlbGenericStub { from: "tlbmatch" },
-        )
+        .add_handler_other_sla(HexagonUserOps::Tlbmatch, TlbMatch {})
         .unwrap();
 
     spec.call_other_manager
