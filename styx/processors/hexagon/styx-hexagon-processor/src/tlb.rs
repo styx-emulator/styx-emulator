@@ -4,7 +4,7 @@ use bitbybit::bitfield;
 use std::collections::BTreeMap;
 use styx_core::{
     arch::hexagon::{register_fields::Ssr, HexagonRegister},
-    cpu::{CpuBackendExt, HexagonInterruptType},
+    cpu::{CpuBackendExt, HexagonInterruptCause, HexagonInterruptType},
     errors::UnknownError,
     memory::{
         MemoryOperation, MemoryType, TlbImpl, TlbProcessor, TlbTranslateError, TlbTranslateResult,
@@ -14,6 +14,8 @@ use styx_core::{
         Context,
     },
 };
+
+use crate::exception::{ssr_set_cause, update_badva};
 
 // See https://github.com/quic/qemu/blob/hex-next/target/hexagon/cpu.h.
 const MAX_TLB_ENTRIES: usize = 1024;
@@ -303,13 +305,29 @@ impl TlbImpl for HexagonTlb {
                 processor.cpu.pc()
             );
 
-            if matches!(memory_type, MemoryType::Code)
+            let err = if matches!(memory_type, MemoryType::Code)
                 && matches!(access_type, MemoryOperation::Read)
             {
+                update_badva(processor, virt_addr)?;
+
+                if (virt_addr as u64 & page_number_mask) == 0 {
+                    ssr_set_cause(processor, HexagonInterruptCause::TlbmissxCauseNextpage)?;
+                } else if access_type == MemoryOperation::Write {
+                    ssr_set_cause(processor, HexagonInterruptCause::TlbmissxCauseNormal)?;
+                }
+
                 Err(TlbTranslateError::Exception(
                     HexagonInterruptType::TlbMissX as i32,
                 ))
             } else if matches!(memory_type, MemoryType::Data) {
+                update_badva(processor, virt_addr)?;
+
+                if access_type == MemoryOperation::Read {
+                    ssr_set_cause(processor, HexagonInterruptCause::TlbmissrwCauseRead)?;
+                } else if access_type == MemoryOperation::Write {
+                    ssr_set_cause(processor, HexagonInterruptCause::TlbmissrwCauseWrite)?;
+                }
+
                 Err(TlbTranslateError::Exception(
                     HexagonInterruptType::TlbMissRw as i32,
                 ))
@@ -317,7 +335,9 @@ impl TlbImpl for HexagonTlb {
                 Err(TlbTranslateError::Other(UnknownError::msg(
                     "couldn't translate tlb and not a page fault",
                 )))
-            }
+            };
+
+            err
         }
     }
 
@@ -387,35 +407,68 @@ impl TlbImpl for HexagonTlb {
         }
     }
 
-    fn tlb_search(&self, flags: u32) -> Option<u64> {
-        let probe_field = TLBProbeField::new_with_raw_value(flags);
+    fn tlb_search(&self, input: u64, flags: u32) -> Option<u64> {
+        // Match based on TLBProbeField
+        if flags == 0 {
+            let probe_field = TLBProbeField::new_with_raw_value(input as u32);
 
-        trace!(
-            "tlb search with asid {:x} vpn {:x}",
-            probe_field.asid(),
-            probe_field.vpn()
-        );
-
-        // match on VPN and ASID
-        for (i, ent) in self.entries.iter().enumerate() {
             trace!(
-                "probe_field vpn {:x} entry vpn {:x}",
-                probe_field.vpn(),
-                ent.vpn()
+                "tlb search with asid {:x} vpn {:x}",
+                probe_field.asid(),
+                probe_field.vpn()
             );
-            if ent.asid() == probe_field.asid() && ent.v() {
-                let ent_vpn_shifted = ent.vpn().as_u64() << PAGE_SIZE_BITS;
-                let probe_field_vpn_shifted = probe_field.vpn().as_u64() << PAGE_SIZE_BITS;
 
-                let page_type = Self::get_entry_page_type(ent);
+            // match on VPN and ASID
+            for (i, ent) in self.entries.iter().enumerate() {
+                trace!(
+                    "probe_field vpn {:x} entry vpn {:x}",
+                    probe_field.vpn(),
+                    ent.vpn()
+                );
+                if ent.asid() == probe_field.asid() && ent.v() {
+                    let ent_vpn_shifted = ent.vpn().as_u64() << PAGE_SIZE_BITS;
+                    let probe_field_vpn_shifted = probe_field.vpn().as_u64() << PAGE_SIZE_BITS;
+
+                    let page_type = Self::get_entry_page_type(ent);
+                    let page_mask = PAGE_MASK[page_type];
+
+                    let probe_field_vpn_page_masked = probe_field_vpn_shifted & !page_mask;
+                    trace!("probe_field_vpn_page_masked {probe_field_vpn_page_masked:x} ent_vpn_shfited {ent_vpn_shifted:x}");
+
+                    if probe_field_vpn_page_masked == ent_vpn_shifted {
+                        trace!("tlb search got entry {:x?}", ent);
+                        return Some(i as u64);
+                    }
+                }
+            }
+        } else if flags == 1 {
+            // TLB match, input is a TLB entry
+            let input_entry = Pte::new_with_raw_value(input);
+            let valid = input_entry.v();
+            if !valid {
+                return None;
+            }
+
+            for (i, entry) in self.entries.iter().enumerate() {
+                if !entry.v() {
+                    continue;
+                }
+
+                let page_type = Self::get_entry_page_type(entry);
                 let page_mask = PAGE_MASK[page_type];
 
-                let probe_field_vpn_page_masked = probe_field_vpn_shifted & !page_mask;
-                trace!("probe_field_vpn_page_masked {probe_field_vpn_page_masked:x} ent_vpn_shfited {ent_vpn_shifted:x}");
+                let input_va = (u64::from(input_entry.vpn()) << PAGE_SIZE_BITS) & !page_mask;
+                let va = (u64::from(entry.vpn()) << PAGE_SIZE_BITS) & !page_mask;
 
-                if probe_field_vpn_page_masked == ent_vpn_shifted {
-                    trace!("tlb search got entry {:x?}", ent);
-                    return Some(i as u64);
+                let sz = 1 << Self::get_entry_page_num_bits(entry);
+                let input_sz = 1 << Self::get_entry_page_num_bits(&input_entry);
+
+                if (input_va < va && va < (input_va + input_sz))
+                    || (va < input_va && input_va < (va + sz))
+                {
+                    if input_entry.asid() == entry.asid() {
+                        return Some(i as u64);
+                    }
                 }
             }
         }

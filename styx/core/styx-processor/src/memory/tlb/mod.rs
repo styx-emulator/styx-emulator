@@ -102,7 +102,7 @@ pub trait TlbImpl: Send {
     /// it exists.
     ///
     /// This isn't need for anything other than Hexagon, so we return None and stub this out by default.
-    fn tlb_search(&self, _flags: u32) -> Option<u64> {
+    fn tlb_search(&self, _input: u64, _flags: u32) -> Option<u64> {
         None
     }
 }

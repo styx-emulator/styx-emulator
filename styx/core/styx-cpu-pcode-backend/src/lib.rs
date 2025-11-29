@@ -21,7 +21,7 @@ use self::{
     register_manager::RegisterManager,
 };
 use arch_spec::{build_arch_spec, ArchPcManager, GeneratorHelp, GeneratorHelper, PcManager};
-pub use arch_spec::{HexagonInterruptType, HexagonPcodeBackend};
+pub use arch_spec::{HexagonInterruptCause, HexagonInterruptType, HexagonPcodeBackend};
 use call_other::CallOtherManager;
 use derivative::Derivative;
 use log::trace;

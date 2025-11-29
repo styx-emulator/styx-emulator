@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
 use anyhow::anyhow;
+pub use decode_attribs::BitPattern;
+use decode_info::SlotInfo;
 pub use decode_info::{GeneralHexagonInstruction, Iclass};
 use execution_helper::DefaultHexagonExecutionHelper;
 use log::{info, trace};
@@ -10,7 +12,7 @@ use std::collections::BTreeMap;
 use styx_cpu_type::{
     arch::{
         backends::{ArchRegister, ArchVariant, BasicArchRegister},
-        hexagon::HexagonRegister,
+        hexagon::{register_fields::Ssr, HexagonRegister},
         ArchitectureDef, RegisterValue,
     },
     Arch, ArchEndian, TargetExitReason,
@@ -23,14 +25,13 @@ use styx_errors::{
 use styx_pcode::pcode::{Opcode, Pcode, SpaceName, VarnodeData};
 use styx_pcode_translator::ContextOption;
 use styx_processor::{
-    cpu::{CpuBackend, ExecutionReport, ReadRegisterError, WriteRegisterError},
+    cpu::{CpuBackend, CpuBackendExt, ExecutionReport, ReadRegisterError, WriteRegisterError},
     event_controller::EventController,
     hooks::{AddHookError, DeleteHookError, HookToken, Hookable, StyxHook},
     memory::Mmu,
 };
 use thiserror::Error;
 
-use crate::execute_pcode;
 use crate::{
     arch_spec::hexagon::pkt_semantics::DEST_REG_OFFSET,
     backend_helper::BackendHelper,
@@ -52,9 +53,11 @@ use crate::{
     register_manager::{HasRegisterManager, RegisterCallbackCpu},
     GhidraPcodeGenerator, HasConfig, RegisterManager, MAX_PACKET_SIZE,
 };
+use crate::{execute_pcode, HexagonInterruptType};
 use crate::{PCodeStateChange, DEFAULT_REG_ALLOCATION};
 use derive_more::Debug;
 
+mod decode_attribs;
 mod decode_info;
 mod execution_helper;
 mod saved_context_opts;
@@ -319,6 +322,7 @@ impl BackendHelper<HexagonExecuteSingleInfo, Vec<Pcode>> for HexagonPcodeBackend
                 ev,
                 &mut execution_regs_written,
                 fetch_decode_info.total_bytes_consumed,
+                Some(i),
             )? {
                 Ok(HexagonSingleInstructionAction::DelayedInterrupt(irqn)) => {
                     delayed_irqn = Some(irqn);
@@ -359,6 +363,7 @@ impl BackendHelper<HexagonExecuteSingleInfo, Vec<Pcode>> for HexagonPcodeBackend
             ev,
             &mut execution_regs_written,
             fetch_decode_info.total_bytes_consumed,
+            None,
         )? {
             // Only handle if there was actually an IRQ request
             Ok(HexagonSingleInstructionAction::DelayedInterrupt(irqn)) => {
@@ -616,6 +621,7 @@ impl HexagonPcodeBackend {
         ev: &mut EventController,
         execution_regs_written: &mut SmallVec<[VarnodeData; DEFAULT_REG_ALLOCATION]>,
         _bytes_consumed: u64,
+        order: Option<usize>,
     ) -> Result<Result<HexagonSingleInstructionAction, TargetExitReason>, UnknownError> {
         // execute
         let mut i = 0;
@@ -667,6 +673,57 @@ impl HexagonPcodeBackend {
                     // Don't increment PC, jump to next instruction
                 }
                 PCodeStateChange::Exception(irqn) => {
+                    // hexagon specific things
+
+                    let pc = self.pc().with_context(|| "couldn't get pc")?;
+                    let instr = mmu
+                        .read_u32_le_virt_code(pc, self)
+                        .with_context(|| "couldn't read instr")?;
+
+                    let slot_info = decode_attribs::loadstore_slot(instr)
+                        .expect("couldn't get load/store slot info");
+                    info!("slot info is {:?}", slot_info);
+
+                    let slot = if order == Some(3) && matches!(slot_info, SlotInfo::Slots01) {
+                        // i is the last slot
+                        0
+                    } else if order == Some(0) && matches!(slot_info, SlotInfo::Slots01) {
+                        // i is the second-to-last slot
+                        0
+                    } else if matches!(slot_info, SlotInfo::Slots0) {
+                        0
+                    } else if matches!(slot_info, SlotInfo::Slots1) {
+                        1
+                    } else {
+                        unreachable!()
+                    };
+
+                    let badva = self
+                        .read_register::<u32>(HexagonRegister::BadVa)
+                        .with_context(|| "couldn't read badva in exception")?;
+                    let mut ssr = Ssr::new_with_raw_value(
+                        self.read_register::<u32>(HexagonRegister::Ssr)
+                            .with_context(|| "couldn't read ssr in exception")?,
+                    );
+                    info!("slot is {slot}");
+
+                    if irqn == HexagonInterruptType::TlbMissX as i32 || slot == 0 {
+                        self.write_register(HexagonRegister::BadVa0, badva)?;
+                        self.write_register(HexagonRegister::BadVa1, 0xbadabadau32)?;
+
+                        ssr.set_v0(true);
+                        ssr.set_v1(false);
+                        ssr.set_bvs(false);
+                    } else if slot == 1 {
+                        self.write_register(HexagonRegister::BadVa1, badva)?;
+                        self.write_register(HexagonRegister::BadVa0, 0xbadabadau32)?;
+
+                        ssr.set_v0(false);
+                        ssr.set_v1(true);
+                        ssr.set_bvs(true);
+                    }
+                    self.write_register(HexagonRegister::Ssr, ssr.raw_value())?;
+
                     // exception occurred
                     // we should interrupt hook and rerun instruction
                     HookManager::trigger_interrupt_hook(self, mmu, ev, irqn)?;

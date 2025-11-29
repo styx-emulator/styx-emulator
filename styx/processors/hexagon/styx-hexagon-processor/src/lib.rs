@@ -23,6 +23,7 @@ use styx_core::{
 use tlb::HexagonTlb;
 
 mod event_controller;
+mod exception;
 mod tlb;
 
 #[derive(serde::Deserialize)]

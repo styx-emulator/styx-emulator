@@ -180,7 +180,7 @@ impl<T: CpuBackend> CallOtherCallback<T> for TlbProbe {
         info!("hexagon tlb probe {}", tlb_probe_field);
 
         // we must pass in the bits as unshifted
-        let stored_ent = match mmu.tlb.tlb_search(tlb_probe_field) {
+        let stored_ent = match mmu.tlb.tlb_search(tlb_probe_field as u64, 0) {
             // Store this
             Some(ent) => ent,
             None => 0x8000_0000,
@@ -258,6 +258,45 @@ impl<T: CpuBackend> CallOtherCallback<T> for TlbMatch {
     }
 }
 
+#[derive(Debug)]
+pub struct Ctlbw {}
+impl<T: CpuBackend> CallOtherCallback<T> for Ctlbw {
+    fn handle(
+        &mut self,
+        cpu: &mut dyn CallOtherCpu<T>,
+        mmu: &mut Mmu,
+        _ev: &mut EventController,
+        inputs: &[VarnodeData],
+        output: Option<&VarnodeData>,
+    ) -> Result<PCodeStateChange, CallOtherHandleError> {
+        let rss = cpu
+            .read(&inputs[0])
+            .with_context(|| "couldn't read rss varnode")?
+            .to_u64()
+            .with_context(|| "couldn't turn rss to u64")?;
+        let rt = cpu
+            .read(&inputs[1])
+            .with_context(|| "couldn't read rss varnode")?
+            .to_u64()
+            .with_context(|| "couldn't turn rss to u64")? as u32;
+        let rd = output.with_context(|| "couldn't unwrap Rd output for ctlbw")?;
+
+        let rd_val = if let Some(idx) = mmu.tlb.tlb_search(rss, 1) {
+            idx as u32
+        } else {
+            mmu.tlb
+                .tlb_write(rt as usize, rss, 0)
+                .with_context(|| "couldn't write to tlb")?;
+            0x8000_0000
+        } as u32;
+
+        cpu.write(&rd, rd_val.into())
+            .with_context(|| "couldn't write Rd for ctlbw")?;
+
+        Ok(PCodeStateChange::Fallthrough)
+    }
+}
+
 pub fn add_tlb_callothers<S: SlaUserOps<UserOps: FromStr>>(
     spec: &mut ArchSpecBuilder<S, HexagonPcodeBackend>,
 ) {
@@ -270,7 +309,7 @@ pub fn add_tlb_callothers<S: SlaUserOps<UserOps: FromStr>>(
         .unwrap();
 
     spec.call_other_manager
-        .add_handler_other_sla(HexagonUserOps::Ctlbw, TlbGenericStub { from: "ctlbw" })
+        .add_handler_other_sla(HexagonUserOps::Ctlbw, Ctlbw {})
         .unwrap();
 
     spec.call_other_manager
