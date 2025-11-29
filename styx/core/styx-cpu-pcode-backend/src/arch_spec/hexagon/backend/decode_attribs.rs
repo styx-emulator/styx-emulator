@@ -10,7 +10,6 @@
 // ld 01
 // st 01
 
-use log::{info, trace};
 use smallvec::{smallvec, SmallVec};
 use styx_sync::lazy_static;
 
@@ -3879,7 +3878,6 @@ lazy_static! {
     ];
 }
 
-#[derive(Debug)]
 pub struct BitPattern {
     pattern: &'static str,
     pub mask: u32,
@@ -3917,7 +3915,6 @@ impl BitPattern {
     }
 }
 
-#[derive(Debug)]
 pub struct HexagonInstr {
     opcode: &'static str,
     pub attrs: SmallVec<[HexagonInsnAttributes; 10]>,
@@ -3925,7 +3922,6 @@ pub struct HexagonInstr {
 }
 
 #[repr(u16)]
-#[derive(Debug)]
 pub enum HexagonInsnAttributes {
     AaDummy = 1,
     Fakeinsn = 2,
@@ -4310,28 +4306,20 @@ pub fn loadstore_slot(instr_bits: u32) -> Option<SlotInfo> {
     // This should never be called for a duplex
     let instr_parsed = GeneralHexagonInstruction::new_with_raw_value(instr_bits);
     // We only care about loads and stores here.
-    //
-    // There are loads and stores in duplexes, and they may page fault.
-    // However, we know these loads/stores must either be in
-    // slot 0 or 1.
-    trace!("loadstore_slot: instr_bits is {instr_bits:x}");
-    if matches!(instr_parsed.parse(), PktLoopParseBits::Duplex) {
-        return Some(SlotInfo::Slots01);
-    }
-    if !matches!(
-        instr_parsed.nonduplex_iclass(),
-        Iclass::IclassLoadStore
-            | Iclass::IclassConditionalGPLoadStore
-            | Iclass::IclassStore
-            | Iclass::IclassLoad
-    ) {
-        trace!("loadstore slot is not a load/store instruction");
+    if matches!(instr_parsed.parse(), PktLoopParseBits::Duplex)
+        || !matches!(
+            instr_parsed.nonduplex_iclass(),
+            Iclass::IclassLoadStore
+                | Iclass::IclassConditionalGPLoadStore
+                | Iclass::IclassStore
+                | Iclass::IclassLoad
+        )
+    {
         return None;
     }
 
     for ins in INSTRS.iter() {
         if ins.pattern.is_match(instr_bits) {
-            trace!("the ins {ins:?} is a match");
             for attr in &ins.attrs {
                 match attr {
                     HexagonInsnAttributes::RestrictSlot0Only

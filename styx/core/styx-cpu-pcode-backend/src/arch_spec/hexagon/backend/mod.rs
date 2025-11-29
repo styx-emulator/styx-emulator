@@ -2,6 +2,7 @@
 
 use anyhow::anyhow;
 pub use decode_attribs::BitPattern;
+use decode_info::SlotInfo;
 pub use decode_info::{GeneralHexagonInstruction, Iclass};
 use decode_info::{PktLoopParseBits, SlotInfo};
 use execution_helper::DefaultHexagonExecutionHelper;
@@ -344,7 +345,8 @@ impl BackendHelper<HexagonExecuteSingleInfo, Vec<Pcode>> for HexagonPcodeBackend
                 mmu,
                 ev,
                 &mut execution_regs_written,
-                fetch_decode_data.total_bytes_consumed,
+                fetch_decode_info.total_bytes_consumed,
+                Some(i),
             )? {
                 Ok(HexagonSingleInstructionAction::DelayedInterrupt(irqn)) => {
                     delayed_irqn = Some(irqn);
@@ -391,7 +393,8 @@ impl BackendHelper<HexagonExecuteSingleInfo, Vec<Pcode>> for HexagonPcodeBackend
             mmu,
             ev,
             &mut execution_regs_written,
-            fetch_decode_data.total_bytes_consumed,
+            fetch_decode_info.total_bytes_consumed,
+            None,
         )? {
             // Only handle if there was actually an IRQ request
             Ok(HexagonSingleInstructionAction::DelayedInterrupt(irqn)) => {
@@ -653,9 +656,6 @@ impl HexagonPcodeBackend {
         execution_regs_written: &mut SmallVec<[VarnodeData; DEFAULT_REG_ALLOCATION]>,
         _bytes_consumed: u64,
         order: Option<usize>,
-        // Used for handling page faulting
-        load_store_slot_info: &SmallVec<[Option<usize>; 4]>,
-        duplex_start: u32,
     ) -> Result<Result<HexagonSingleInstructionAction, TargetExitReason>, UnknownError> {
         // execute
         let mut i = 0;
@@ -707,10 +707,30 @@ impl HexagonPcodeBackend {
                     // Don't increment PC, jump to next instruction
                 }
                 PCodeStateChange::Exception(irqn) => {
-                    info!("load_store_slot_info is {load_store_slot_info:?} order is {order:?}");
-                    let slot = load_store_slot_info[order.expect("could not get load/store order")]
-                        .expect("load/store instruction does not have a slot!");
-                    error!("exception: slot is {slot}");
+                    // hexagon specific things
+
+                    let pc = self.pc().with_context(|| "couldn't get pc")?;
+                    let instr = mmu
+                        .read_u32_le_virt_code(pc, self)
+                        .with_context(|| "couldn't read instr")?;
+
+                    let slot_info = decode_attribs::loadstore_slot(instr)
+                        .expect("couldn't get load/store slot info");
+                    info!("slot info is {:?}", slot_info);
+
+                    let slot = if order == Some(3) && matches!(slot_info, SlotInfo::Slots01) {
+                        // i is the last slot
+                        0
+                    } else if order == Some(0) && matches!(slot_info, SlotInfo::Slots01) {
+                        // i is the second-to-last slot
+                        0
+                    } else if matches!(slot_info, SlotInfo::Slots0) {
+                        0
+                    } else if matches!(slot_info, SlotInfo::Slots1) {
+                        1
+                    } else {
+                        unreachable!()
+                    };
 
                     let badva = self
                         .read_register::<u32>(HexagonRegister::BadVa)
@@ -719,16 +739,9 @@ impl HexagonPcodeBackend {
                         self.read_register::<u32>(HexagonRegister::Ssr)
                             .with_context(|| "couldn't read ssr in exception")?,
                     );
-                    info!("slot is {slot}, badva is {badva:x}");
+                    info!("slot is {slot}");
 
                     if irqn == HexagonInterruptType::TlbMissX as i32 || slot == 0 {
-                        info!(
-                            "writing slot0 badva0/badva1, badva0 offset is {:x?}",
-                            self.pcode_generator
-                                .get_register(&HexagonRegister::BadVa0.into())
-                                .unwrap()
-                                .offset
-                        );
                         self.write_register(HexagonRegister::BadVa0, badva)?;
                         self.write_register(HexagonRegister::BadVa1, 0xbadabadau32)?;
 
@@ -736,7 +749,6 @@ impl HexagonPcodeBackend {
                         ssr.set_v1(false);
                         ssr.set_bvs(false);
                     } else if slot == 1 {
-                        info!("writing slot1 badva0/badva1");
                         self.write_register(HexagonRegister::BadVa1, badva)?;
                         self.write_register(HexagonRegister::BadVa0, 0xbadabadau32)?;
 

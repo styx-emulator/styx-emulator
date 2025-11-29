@@ -187,7 +187,7 @@ impl<T: CpuBackend> CallOtherCallback<T> for TlbProbe {
         trace!("hexagon tlb probe {}", tlb_probe_field);
 
         // we must pass in the bits as unshifted
-        let stored_ent = match mmu.tlb.tlb_search(tlb_probe_field) {
+        let stored_ent = match mmu.tlb.tlb_search(tlb_probe_field as u64, 0) {
             // Store this
             Some(ent) => ent,
             None => 0x8000_0000,
@@ -213,6 +213,93 @@ impl<T: CpuBackend> CallOtherCallback<T> for TlbLockUnlock {
         _inputs: &[VarnodeData],
         _output: Option<&VarnodeData>,
     ) -> Result<PCodeStateChange, CallOtherHandleError> {
+        Ok(PCodeStateChange::Fallthrough)
+    }
+}
+
+#[derive(Debug)]
+pub struct TlbMatch {}
+impl<T: CpuBackend> CallOtherCallback<T> for TlbMatch {
+    fn handle(
+        &mut self,
+        cpu: &mut dyn CallOtherCpu<T>,
+        _mmu: &mut Mmu,
+        _ev: &mut EventController,
+        inputs: &[VarnodeData],
+        output: Option<&VarnodeData>,
+    ) -> Result<PCodeStateChange, CallOtherHandleError> {
+        // cpu
+
+        let rss = cpu
+            .read(&inputs[0])
+            .with_context(|| "couldn't read Rss")?
+            .to_u64()
+            .with_context(|| "couldn't turn Rss to u64")?;
+
+        // Fine to keep as u64 since we mask with a u64 later.
+        let rt = cpu.read(&inputs[1]).with_context(|| "couldn't read Rt")?;
+        assert_eq!(rt.size(), 4);
+        let rt = rt.to_u64().with_context(|| "couldn't turn Rt to u64")?;
+
+        let output_unwrap = output.with_context(|| "no output for tlbmatch")?;
+
+        let tlblo = rss & 0xffffffff;
+        let tlbhi = (rss >> 32) & 0xffffffff;
+
+        let size = min(6, (!(tlblo.reverse_bits())).leading_ones());
+        let mask = 0x07ffffff & (0xffffffff << (2 * size));
+
+        // The top bit is set (valid bit??)
+        let tlbhi_topbit = ((tlbhi >> 31) & 1) == 1;
+
+        let pd: u32 = if tlbhi_topbit && ((tlbhi & mask) == (rt & mask)) {
+            0xff
+        } else {
+            0x0
+        };
+
+        cpu.write(&output_unwrap, pd.into())
+            .with_context(|| "failed to set Pd register for tlbmatch")?;
+
+        Ok(PCodeStateChange::Fallthrough)
+    }
+}
+
+#[derive(Debug)]
+pub struct Ctlbw {}
+impl<T: CpuBackend> CallOtherCallback<T> for Ctlbw {
+    fn handle(
+        &mut self,
+        cpu: &mut dyn CallOtherCpu<T>,
+        mmu: &mut Mmu,
+        _ev: &mut EventController,
+        inputs: &[VarnodeData],
+        output: Option<&VarnodeData>,
+    ) -> Result<PCodeStateChange, CallOtherHandleError> {
+        let rss = cpu
+            .read(&inputs[0])
+            .with_context(|| "couldn't read rss varnode")?
+            .to_u64()
+            .with_context(|| "couldn't turn rss to u64")?;
+        let rt = cpu
+            .read(&inputs[1])
+            .with_context(|| "couldn't read rss varnode")?
+            .to_u64()
+            .with_context(|| "couldn't turn rss to u64")? as u32;
+        let rd = output.with_context(|| "couldn't unwrap Rd output for ctlbw")?;
+
+        let rd_val = if let Some(idx) = mmu.tlb.tlb_search(rss, 1) {
+            idx as u32
+        } else {
+            mmu.tlb
+                .tlb_write(rt as usize, rss, 0)
+                .with_context(|| "couldn't write to tlb")?;
+            0x8000_0000
+        } as u32;
+
+        cpu.write(&rd, rd_val.into())
+            .with_context(|| "couldn't write Rd for ctlbw")?;
+
         Ok(PCodeStateChange::Fallthrough)
     }
 }
