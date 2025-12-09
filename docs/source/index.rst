@@ -75,7 +75,6 @@ Documentation Contents
    user/unified_configuration
    user/unicorn_replacement
    user/styx_trace
-   user/using_a_processor
    user/adding_a_processor
    user/custom_components
    user/using_multiple_processors
