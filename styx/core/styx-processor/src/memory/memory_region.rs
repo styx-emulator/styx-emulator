@@ -12,12 +12,13 @@ use styx_errors::UnknownError;
 use styx_sync::sync::Arc;
 
 use getset::CopyGetters;
+use tap::Conv;
 use thiserror::Error;
 use zstd::{decode_all, encode_all};
 
 use super::atomic_word::AtomicWord;
-use super::physical::AtomicMemoryOperationError;
-use super::UnmappedMemoryError;
+use super::physical::{AtomicMemoryOperationError, CompareExchangeError};
+use super::{CompareExchangeResult, UnmappedMemoryError};
 
 #[derive(Debug, Error)]
 #[error("region not 0x{expected_alignment:X} aligned (base: 0x{base:X}, size: 0x{size:X})")]
@@ -604,6 +605,59 @@ impl MemoryRegion {
                 max_size: AtomicWord::WORD_SIZE_BYTES,
             }),
         }
+    }
+
+    /// Perform a Compare Exchange operation on `address`, writing `new` if the current value of those bytes is `new`.
+    pub fn compare_exchange(
+        &self,
+        address: u64,
+        current: &[u8],
+        new: &[u8],
+    ) -> Result<CompareExchangeResult, CompareExchangeError> {
+        if current.len() != new.len() {
+            return Err(CompareExchangeError::MismatchedSizes(
+                current.len(),
+                new.len(),
+            ));
+        }
+        let op_size = current.len();
+        self.address_range_valid(address, op_size as u64, MemoryOperation::Read)
+            .map_err(|e| e.conv::<AtomicMemoryOperationError>())?;
+
+        // the start index into our underlying Vec<u8>
+        let byte_idx: usize = (address - self.base) as usize;
+
+        let word_idx;
+        let inside_word_idx;
+        match align_access::<{ AtomicWord::WORD_SIZE_BYTES }>(byte_idx, current) {
+            // ONLY left or ONLY right
+            // this fits in an word so we are good
+            (_, [], []) | ([], [], _) => {
+                word_idx = byte_idx / AtomicWord::WORD_SIZE_BYTES;
+                // this will be 0 for !right.is_empty()
+                inside_word_idx = byte_idx % AtomicWord::WORD_SIZE_BYTES;
+            }
+            // ONLY middle and ONLY one item
+            // this will fit in an word and is word aligned
+            ([], [_], []) => {
+                word_idx = byte_idx / AtomicWord::WORD_SIZE_BYTES;
+                inside_word_idx = 0;
+            }
+            // any more WILL NOT fit in an word
+            _ => {
+                return Err(AtomicMemoryOperationError::TooLarge {
+                    address,
+                    bytes: current.len(),
+                    max_size: AtomicWord::WORD_SIZE_BYTES,
+                }
+                .into())
+            }
+        }
+
+        // we've checked size and alginement of our compare and swap, this should never Err
+        Ok(self.data.0[word_idx]
+            .compare_exchange(inside_word_idx, current, new)
+            .expect("bug in memory region compare and swap"))
     }
 
     /// # Safety

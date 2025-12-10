@@ -16,7 +16,10 @@ use region_walker::{
 };
 use styx_errors::UnknownError;
 
-use super::physical::AtomicMemoryOperationError;
+use super::{
+    physical::AtomicMemoryOperationError, CompareExchangeError, CompareExchangeResult,
+    MemoryRegionSize,
+};
 
 /// A region based memory implementation, memory is represented by zero or more
 /// unique, non-overlapping memory regions.
@@ -54,7 +57,6 @@ impl RegionStore {
         .unwrap();
         me
     }
-
     fn check_overlap(&self, base: u64, size: u64) -> bool {
         // ignore anything that would overflow
         if base.checked_add(size).is_none() {
@@ -141,6 +143,27 @@ impl RegionStore {
         } // do nothing if there is no data to write
 
         Ok(())
+    }
+
+    /// Compare exchange operation on a segment in memory.
+    ///
+    /// The `current` and `new` slices must be the same size and be
+    /// < 8 bytes, otherwise this will return `Err()`.
+    pub fn compare_exchange(
+        &self,
+        address: u64,
+        current: &[u8],
+        new: &[u8],
+    ) -> Result<CompareExchangeResult, CompareExchangeError> {
+        let Some(region) = self.regions.iter().find(|r| r.contains(address)) else {
+            return Err(CompareExchangeError::Atomic(
+                AtomicMemoryOperationError::NonAtomic(MemoryOperationError::UnmappedMemory(
+                    UnmappedMemoryError::UnmappedStart(address),
+                )),
+            ));
+        };
+
+        region.compare_exchange(address, current, new)
     }
 
     /// Reads a contiguous array of bytes to the buffer `data`, without checking permissions.

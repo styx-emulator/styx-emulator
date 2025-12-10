@@ -67,7 +67,7 @@ impl<'a> TargetProgramSource<'a> {
 /// // process is owned and must be mutable.
 /// let proc: Processor = ProcessorBuilder::default()
 ///     .with_executor(DefaultExecutor)
-///     .with_backend(Backend::Unicorn)
+///     .with_backend(Backend::Pcode)
 ///     .with_builder(DummyProcessorBuilder)
 ///     .build().unwrap();
 ///

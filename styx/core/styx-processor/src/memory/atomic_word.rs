@@ -49,6 +49,21 @@ pub(in crate::memory) struct AlignmentError {
     size: usize,
 }
 
+#[derive(Error, Debug)]
+#[error("Size of old and new slices must be the same in compare exchange (current: {current_size} vs new: {new_size})")]
+pub struct CompareExchangeSizeMismatch {
+    current_size: usize,
+    new_size: usize,
+}
+
+#[derive(Error, Debug)]
+pub(in crate::memory) enum CompareExchangeError {
+    #[error(transparent)]
+    Alignment(#[from] AlignmentError),
+    #[error(transparent)]
+    SizeMismatch(#[from] CompareExchangeSizeMismatch),
+}
+
 impl AtomicWord {
     pub(in crate::memory) const WORD_SIZE_BYTES: usize = std::mem::size_of::<Self>();
 
@@ -132,15 +147,64 @@ impl AtomicWord {
     }
 
     /// Updates the value in the word if `current` is the current bytes in the word, akin to [`AtomicU64::compare_exchange()`].
-    #[allow(unused)]
-    pub(in crate::memory) fn compare_and_swap(
+    ///
+    /// This is *technically* a **weak** compare and swap operation.
+    /// To approximate `< WORD_SIZE` operations, we first load the
+    /// current value of the word, then modify the operations bytes (starting at `idx`).
+    /// Then we use the native [`AtomicU64::compare_exchange()`] to do the final compare and swap.
+    /// If a writer changes the values in the word that are not a part of the operation (i.e. not in `word[idx..idx+current.len()]`),
+    /// then the operation will fail, despite the bytes checked by `current` being the same.
+    ///
+    /// In reality, this window is very small, and the compare and swap operation will not spuriously succeed.
+    ///
+    /// Sequence of operations:
+    ///
+    /// ```ignore
+    /// 1. loaded = Load word
+    /// 2. current_u64 = (loaded & mask) | current <-- A write here could cause a fail even though the value at idx == current
+    /// 3. new_u64 = (loaded & mask) | new <-- Same thing here
+    /// 4. word.compare_exchange(current_u64, new_u64)
+    /// ```
+    pub(in crate::memory) fn compare_exchange(
         &self,
         idx: usize,
         current: &[u8],
         new: &[u8],
-    ) -> Result<CompareAndSwapResult, AlignmentError> {
-        // This will use AtomicU64 compare and swap with read_from_word and write_to_word
-        todo!()
+    ) -> Result<CompareExchangeResult, CompareExchangeError> {
+        Self::check(idx, current.len())?;
+        Self::check(idx, new.len())?;
+        if current.len() != new.len() {
+            return Err(CompareExchangeSizeMismatch {
+                current_size: current.len(),
+                new_size: new.len(),
+            }
+            .into());
+        }
+        // now we know idx and current/new are appropriately sized
+        let op_size = current.len();
+
+        // To do this operation will will load the value from self,
+        // mask and apply the bytes from `current`, then compare_exchange.
+
+        let load_value = self.0.load(Ordering::Relaxed).to_ne_bytes();
+        let mut current_load_value = load_value;
+        current_load_value[idx..idx + op_size].copy_from_slice(current);
+        let current_value = NonAtomicWord::from_ne_bytes(current_load_value);
+        let mut new_load_value = load_value;
+        new_load_value[idx..idx + op_size].copy_from_slice(new);
+        let new_value = NonAtomicWord::from_ne_bytes(new_load_value);
+
+        let result = self.0.compare_exchange(
+            current_value,
+            new_value,
+            Ordering::Relaxed,
+            Ordering::Relaxed,
+        );
+
+        match result {
+            Ok(_) => Ok(CompareExchangeResult::Success),
+            Err(_) => Ok(CompareExchangeResult::Failure),
+        }
     }
 
     /// Convert to in-memory representation.
@@ -156,13 +220,18 @@ impl AtomicWord {
     }
 }
 
-pub enum CompareAndSwapResult {
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum CompareExchangeResult {
     /// The swap succeeded.
-    #[allow(unused)]
     Success,
     /// The swap was not performed.
-    #[allow(unused)]
     Failure,
+}
+
+impl CompareExchangeResult {
+    pub fn success(self) -> bool {
+        CompareExchangeResult::Success == self
+    }
 }
 
 /// Copy a idx and size from an Atomic.
@@ -308,6 +377,52 @@ mod tests {
 
         for i in 0..user_bytes.len() {
             assert_eq!(raw_bytes[idx + i], user_bytes[i])
+        }
+    }
+
+    /// Tests compare and swap
+    ///
+    /// - First arg: idx and bytes of initial value of word.
+    ///   This is also the "old"/current value in compare and swap operation
+    /// - Second arg: Optional idx and bytes of write, before compare and swap
+    /// - Third arg: bytes of new value to write if compare and swap operation succeeds.
+    ///   same idx as first arg, must be same size as first arg
+    // No writes between Load and Compare and swap, should always succeed
+    #[test_case((0, &[0x12, 0x34]), None,  &[0x13, 0x37], CompareExchangeResult::Success)]
+    #[test_case((4, &[0x12, 0x34]), None, &[0x13, 0x37], CompareExchangeResult::Success)]
+    #[test_case((0, &[0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0]), None, &[0x13, 0x37, 0xDE, 0xAD, 0xBE, 0xEF, 0xBA, 0xBE], CompareExchangeResult::Success)]
+    #[test_case((6, &[0x12, 0x34]), None, &[0x13, 0x37], CompareExchangeResult::Success)]
+    #[test_case((4, &[0x12, 0x34, 0x56, 0x78]), None, &[0x13, 0x37, 0x13, 0x37], CompareExchangeResult::Success)]
+    // Overwrite, now the compare and swap fails
+    #[test_case((4, &[0x12, 0x34]), Some((4, &[0x99, 0x99])), &[0x13, 0x37], CompareExchangeResult::Failure)]
+    #[test_case((4, &[0x12, 0x34]), Some((2, &[0x99, 0x99, 0x99])), &[0x13, 0x37], CompareExchangeResult::Failure)]
+    #[test_case((4, &[0x12, 0x34]), Some((4, &[0x12, 0x34])), &[0x13, 0x37], CompareExchangeResult::Success)]
+    // The operations do not overlap
+    #[test_case((4, &[0x12, 0x34]), Some((0, &[0x99, 0x99])), &[0x13, 0x37], CompareExchangeResult::Success)]
+    // The operations do not overlap
+    #[test_case((2, &[0x12, 0x34]), Some((0, &[0x99, 0x99])), &[0x13, 0x37], CompareExchangeResult::Success)]
+    fn test_compare_exchange(
+        old_bytes: (usize, &[u8]),
+        write_bytes: Option<(usize, &[u8])>,
+        final_write: &[u8],
+        expected: CompareExchangeResult,
+    ) {
+        let word = AtomicWord::default();
+        word.write(old_bytes.0, old_bytes.1).unwrap();
+
+        if let Some((idx, bytes)) = write_bytes {
+            word.write(idx, bytes).unwrap();
+        }
+
+        let result = word
+            .compare_exchange(old_bytes.0, old_bytes.1, final_write)
+            .unwrap();
+
+        assert_eq!(result, expected);
+        if result.success() {
+            let mut buffer = vec![0u8; final_write.len()];
+            word.read(old_bytes.0, &mut buffer).unwrap();
+            assert_eq!(&buffer, final_write)
         }
     }
 }

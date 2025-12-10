@@ -5,7 +5,7 @@ use styx_errors::anyhow::anyhow;
 use thiserror::Error;
 
 use super::{
-    atomic_word::CompareAndSwapResult, region::RegionStore, MemoryArchitecture, MemoryPermissions,
+    atomic_word::CompareExchangeResult, region::RegionStore, MemoryArchitecture, MemoryPermissions,
 };
 use crate::memory::memory_region::MemoryRegion;
 
@@ -38,6 +38,14 @@ pub enum AtomicMemoryOperationError {
     NotSupported,
     #[error("Atomic memory access failed due to non-atomic reason")]
     NonAtomic(#[from] MemoryOperationError),
+}
+
+#[derive(Error, Debug)]
+pub enum CompareExchangeError {
+    #[error(transparent)]
+    Atomic(#[from] AtomicMemoryOperationError),
+    #[error("mismatched sizes")]
+    MismatchedSizes(usize, usize),
 }
 
 #[derive(Error, Debug)]
@@ -318,26 +326,31 @@ impl MemoryBackend {
 
     // at minimum we need compare and swap on an arbitrary 8 byte.
 
-    /// Performs an atomic arbitrary memory operations.
-    pub fn compare_and_swap_code(
+    /// Compare exchange operation on a segment in code memory.
+    ///
+    /// The `current` and `new` slices must be the same size and be
+    /// < 8 bytes, otherwise this will return `Err()`.
+    pub fn compare_exchange_code(
         &self,
-        _addr: u64,
-        _current: &[u8],
-        _new: &[u8],
-    ) -> Result<CompareAndSwapResult, AtomicMemoryOperationError> {
-        todo!()
+        address: u64,
+        current: &[u8],
+        new: &[u8],
+    ) -> Result<CompareExchangeResult, CompareExchangeError> {
+        self.code_storage().compare_exchange(address, current, new)
     }
 
-    pub fn compare_and_swap_data(
+    /// Compare exchange operation on a segment in data memory.
+    ///
+    /// The `current` and `new` slices must be the same size and be
+    /// < 8 bytes, otherwise this will return `Err()`.
+    pub fn compare_exchange_data(
         &self,
-        _addr: u64,
-        _current: &[u8],
-        _new: &[u8],
-    ) -> Result<CompareAndSwapResult, AtomicMemoryOperationError> {
-        todo!()
+        address: u64,
+        current: &[u8],
+        new: &[u8],
+    ) -> Result<CompareExchangeResult, CompareExchangeError> {
+        self.data_storage().compare_exchange(address, current, new)
     }
-
-    // possible here atomic_add, atomic_inc, etc
 
     /// Reads a contiguous array of code bytes to the buffer `data` starting from `addr`.
     ///

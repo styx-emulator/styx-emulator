@@ -4,8 +4,8 @@ use super::{
     memory_region::{HasRegions, MemoryRegion},
     physical::{MemoryBackend, PhysicalMemoryVariant, Space},
     tlb::DummyTlb,
-    AddRegionError, MemoryArchitecture, MemoryOperation, MemoryOperationError, MemoryPermissions,
-    TlbImpl, TlbTranslateError,
+    AddRegionError, CompareExchangeError, CompareExchangeResult, MemoryArchitecture,
+    MemoryOperation, MemoryOperationError, MemoryPermissions, TlbImpl, TlbTranslateError,
 };
 use crate::{
     cpu::CpuBackend,
@@ -252,6 +252,28 @@ impl Mmu {
         bytes: &mut [u8],
     ) -> Result<(), MemoryOperationError> {
         self.memory.unchecked_read_code(phys_addr, bytes)
+    }
+
+    // ATOMIC
+
+    pub fn compare_exchange_code(
+        &self,
+        physical_address: u64,
+        old: &[u8],
+        new: &[u8],
+    ) -> Result<CompareExchangeResult, CompareExchangeError> {
+        self.memory
+            .compare_exchange_code(physical_address, old, new)
+    }
+
+    pub fn compare_exchange_data(
+        &self,
+        physical_address: u64,
+        old: &[u8],
+        new: &[u8],
+    ) -> Result<CompareExchangeResult, CompareExchangeError> {
+        self.memory
+            .compare_exchange_data(physical_address, old, new)
     }
 
     /// Access data memory using the [memory helper api](crate::memory::helpers).
@@ -681,6 +703,33 @@ mod tests {
         mmu.write_u32_be_phys_data(0x100, 0xdeadbeef).unwrap();
         let data = mmu.data().read(0x100).be().u32().unwrap();
         assert_eq!(data, 0xdeadbeef)
+    }
+
+    /// Simple test of compare exchange in the unmodified and modified case with size=2.
+    #[test]
+    fn test_compare_exchange() {
+        let mut mmu = Mmu::default();
+
+        mmu.write_data(0x1100, &[0x12, 0x34]).unwrap();
+        let result = mmu
+            .compare_exchange_data(0x1100, &[0x99, 0x99], &[0x13, 0x37])
+            .unwrap();
+        assert!(!result.success());
+        // data didn't change because compare exchange failed
+        assert_eq!(
+            mmu.data().read(0x1100).vec(2).unwrap().as_slice(),
+            &[0x12, 0x34]
+        );
+
+        let result = mmu
+            .compare_exchange_data(0x1100, &[0x12, 0x34], &[0x13, 0x37])
+            .unwrap();
+        assert!(result.success());
+        // compare and swap changed data
+        assert_eq!(
+            mmu.data().read(0x1100).vec(2).unwrap().as_slice(),
+            &[0x13, 0x37]
+        );
     }
 
     // todo add tests for virtual addressing once we make a TLB
