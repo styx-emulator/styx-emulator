@@ -1,5 +1,5 @@
 [package]
-name = "kinetis-interrupt-analysis"
+name = "kinetis21-interrupt-angr"
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
