@@ -20,7 +20,7 @@ members = [
   "./examples/using-a-processor",
   "./examples/using-processor-hooks",
   "./examples/external-backend",
-  "./incubation/trace-tools",
+  "./incubation/styx-trace-tools",
   "./incubation/styx-cow",
   "./incubation/styx-macros-args",
   "./incubation/styx-be-arm-processor",

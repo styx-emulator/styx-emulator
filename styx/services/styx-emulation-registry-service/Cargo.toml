@@ -21,7 +21,7 @@ path = "src/emuregsvc-svc-main.rs"
 styx-core = { workspace = true }
 styx-macros-args = { path = "../../../incubation/styx-macros-args" }
 emulation-service = { path = "../styx-emulation-service" }
-styx-trace-tools = { path = "../../../incubation/trace-tools" }
+styx-trace-tools = { path = "../../../incubation/styx-trace-tools" }
 tracing = { workspace = true }
 tonic = { workspace = true }
 tokio = { workspace = true, features = ["fs", "process", "mio"] }

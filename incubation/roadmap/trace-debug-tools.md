@@ -1,7 +1,7 @@
 # Styx Execution Trace Tools Roadmap
 
 Summary, for roadmap context. *(details at
-[`trace-tools/README.md`](../../../incubation/trace-tools/README.md))*
+[`styx-trace-tools/README.md`](../../incubation/styx-trace-tools/README.md))*
 
 - ptrace: cli for running emulations and trace analysis
 - webapp: typescript/Angular web application that uses service `TraceAppSessionService`

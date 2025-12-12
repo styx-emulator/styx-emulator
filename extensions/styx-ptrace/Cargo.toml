@@ -16,7 +16,7 @@ path = "src/ptrace-main.rs"
 emulation-service = { path = "../../styx/services/styx-emulation-service" }
 styx-emulator = { workspace = true }
 
-styx-trace-tools = { path = "../../incubation/trace-tools" }
+styx-trace-tools = { path = "../../incubation/styx-trace-tools" }
 traceapp-service = { path = "../../styx/services/styx-traceapp-service" }
 typhunix-server-bin = { path = "../typhunix/rust/typhunix-server" }
 
