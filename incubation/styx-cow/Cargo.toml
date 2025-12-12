@@ -19,3 +19,9 @@ styx-workspace-hack = { version = "0.1", path = "../../styx/workspace-hack" }
 [[bench]]
 name = "benchmark"
 harness = false
+
+[[bin]]
+# use a different name here to avoid duplicate name
+# see https://github.com/rust-lang/cargo/issues/6313
+name = "styx-cow-bin"
+path = "src/main.rs"
