@@ -6,8 +6,6 @@ rustflags = [
   "--cfg",
   "tokio_unstable", # we always build with tokio_unstable so tracing plugins can be used w/o pain
 ]
-# keep flags the same, avoid rebuilds
-rustdocflags = ["--cfg", "tokio_unstable"]
 
 [alias]
 xtask = "run --package xtask --"
