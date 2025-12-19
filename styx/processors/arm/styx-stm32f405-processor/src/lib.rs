@@ -3,7 +3,7 @@
 #![allow(non_upper_case_globals)]
 use styx_core::core::builder::BuildProcessorImplArgs;
 use styx_core::cpu::PcodeBackend;
-use styx_core::memory::HasRegions;
+use styx_core::memory::{DummyTlb, HasRegions};
 use styx_core::prelude::*;
 use styx_core::{
     core::builder::ProcessorImpl,
@@ -118,13 +118,14 @@ impl ProcessorImpl for Stm32f405Builder {
             _ => return Err(BackendNotSupported(args.backend).into()),
         };
 
-        let mut mmu = Mmu::default_region_store();
+        let mut memory = MemoryBackend::new_region_store();
+        let tlb = DummyTlb::new();
         // nvic event controller
         let event_controller = Box::new(Nvic::default());
         let mut loader_hints = LoaderHints::new();
         loader_hints.insert("arch".to_string().into_boxed_str(), Box::new(Arch::Arm));
 
-        setup_address_space(&mut mmu)?;
+        setup_address_space(&mut memory)?;
         set_hooks(cpu.as_mut())?;
 
         // setup the peripherals
@@ -134,7 +135,8 @@ impl ProcessorImpl for Stm32f405Builder {
 
         Ok(ProcessorBundle {
             cpu,
-            mmu,
+            tlb,
+            memory,
             event_controller,
             peripherals,
             loader_hints,
@@ -244,9 +246,9 @@ fn populate_default_registers(cpu: &mut dyn CpuBackend, mmu: &mut Mmu) -> Result
     Err(MissingProgramStartRegion.into())
 }
 
-fn setup_address_space(mmu: &mut Mmu) -> Result<(), UnknownError> {
+fn setup_address_space(mmu: &mut MemoryBackend) -> Result<(), UnknownError> {
     macro_rules! debug_region {
-        ($name: expr_2021, $base: expr_2021, $size: expr_2021, $init: expr_2021, $alias_base: expr_2021, $perms: expr_2021) => {
+        ($name: expr, $base: expr, $size: expr, $init: expr, $alias_base: expr, $perms: expr) => {
             let __alias = match $alias_base {
                 Some(b) => format!("A({:#010x})", b),
                 None => String::from("-"),

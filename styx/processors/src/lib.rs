@@ -8,7 +8,7 @@ use styx_core::{
     },
     cpu::{Arch, ArchEndian, PcodeBackend},
     loader::LoaderHints,
-    memory::Mmu,
+    memory::{DummyTlb, PhysicalMemoryVariant},
     prelude::*,
 };
 use styx_event_controllers::DummyEventController;
@@ -94,9 +94,13 @@ impl ProcessorImpl for RawProcessor {
         let mut hints = LoaderHints::new();
         hints.insert("arch".to_string().into_boxed_str(), Box::new(self.arch));
 
+        let memory = MemoryBackend::new(PhysicalMemoryVariant::FlatMemory);
+        let tlb = DummyTlb::new();
+
         Ok(ProcessorBundle {
             cpu,
-            mmu: Mmu::default(),
+            memory,
+            tlb,
             event_controller: Box::new(DummyEventController::default()),
             peripherals: vec![],
             loader_hints: hints,

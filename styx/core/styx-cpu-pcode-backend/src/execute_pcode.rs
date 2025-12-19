@@ -1052,10 +1052,7 @@ mod tests {
     };
     use styx_cpu_type::arch::arm::ArmVariants;
     use styx_pcode::pcode::{Opcode, Pcode, SpaceName, VarnodeData};
-    use styx_processor::{
-        event_controller::{DummyEventController, EventController},
-        memory::Mmu,
-    };
+    use styx_processor::event_controller::{DummyEventController, EventController};
 
     use super::*;
 

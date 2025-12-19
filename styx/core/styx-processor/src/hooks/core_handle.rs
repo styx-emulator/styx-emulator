@@ -90,6 +90,7 @@ impl<'a> CoreHandle<'a> {
             pub fn code(&mut self) -> crate::memory::CodeMemoryOp;
             /// See [`Mmu::data()`]
             pub fn data(&mut self) -> crate::memory::DataMemoryOp;
+            /// See [`Mmu::sudo_code()`]
             pub fn sudo_code(&mut self) -> crate::memory::SudoCodeMemoryOp;
             /// See [`Mmu::sudo_data()`]
             pub fn sudo_data(&mut self) -> crate::memory::SudoDataMemoryOp;

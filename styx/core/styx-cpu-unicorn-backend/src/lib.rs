@@ -662,7 +662,7 @@ impl UnicornBackend {
         let self_ptr = self as *mut _;
         self.core_ptr.set(CorePointers {
             unicorn_backend: self_ptr,
-            mmu: mmu as *mut _,
+            mmu: mmu as *mut Mmu,
             event_controller: ev as *mut _,
             _pin: PhantomPinned,
         });
@@ -920,6 +920,8 @@ fn get_unicorn_regions<'a>(
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use keystone_engine::Keystone;
     use styx_cpu_type::arch::arm::{ArmRegister, ArmVariants};
     use styx_processor::{
@@ -927,7 +929,7 @@ mod tests {
         hooks::{CoreHandle, MemFaultData, Resolution},
         memory::{
             helpers::{ReadExt, WriteExt},
-            MemoryPermissions,
+            DummyTlb, MemoryBackend, MemoryPermissions,
         },
     };
 
@@ -941,21 +943,43 @@ mod tests {
         instruction_count: u32,
     }
 
-    impl TestMachine {
-        fn with_bytes(code: &[u8], num_instr: u32) -> Self {
+    #[derive(Default, Clone, Debug)]
+    struct TestMachineBuilder {
+        code: Vec<u8>,
+        num_instr: u32,
+        regions: Vec<MemoryRegion>,
+    }
+
+    impl TestMachineBuilder {
+        fn with_region(mut self, region: MemoryRegion) -> Self {
+            self.regions.push(region);
+            self
+        }
+        fn build(self) -> TestMachine {
             let mut backend = UnicornBackend::new_engine(
                 Arch::Arm,
                 ArmVariants::ArmCortexM4,
                 ArchEndian::LittleEndian,
             );
-            let mut mmu = Mmu::default_region_store();
+            let mut memory = MemoryBackend::new(
+                styx_processor::memory::physical::PhysicalMemoryVariant::RegionStore,
+            );
+            let tlb = Box::new(DummyTlb);
             let ev = EventController::default();
 
-            mmu.memory_map(0x4000, 0x1000, MemoryPermissions::all())
+            memory
+                .memory_map(0x4000, 0x1000, MemoryPermissions::all())
                 .unwrap();
+            for region in self.regions {
+                memory.add_memory_region(region).unwrap();
+            }
+            let mut mmu = Mmu {
+                tlb,
+                memory: Arc::new(memory),
+            };
 
             // Write generated instructions to memory
-            mmu.code().write(0x4000).bytes(code).unwrap();
+            mmu.code().write(0x4000).bytes(&self.code).unwrap();
             // Start thumb execution at our instructions
             backend.write_register(ArmRegister::Pc, 0x4001u32).unwrap();
 
@@ -968,7 +992,14 @@ mod tests {
                 proc: backend,
                 mmu,
                 ev,
-                instruction_count: num_instr,
+                instruction_count: self.num_instr,
+            }
+        }
+        fn with_bytes(code: &[u8], num_instr: u32) -> Self {
+            Self {
+                code: code.to_vec(),
+                num_instr,
+                ..Default::default()
             }
         }
         fn with_code(instr: &str) -> Self {
@@ -984,11 +1015,18 @@ mod tests {
 
             Self::with_bytes(&code, instruction_count)
         }
+    }
+
+    impl TestMachine {
         fn run_no_assert(&mut self) -> TargetExitReason {
             self.proc
                 .execute(&mut self.mmu, &mut self.ev, self.instruction_count.into())
                 .unwrap()
                 .exit_reason
+        }
+        fn run_n(&mut self, num_instructions: u64) -> Result<ExecutionReport, UnknownError> {
+            self.proc
+                .execute(&mut self.mmu, &mut self.ev, num_instructions)
         }
 
         fn run(&mut self) {
@@ -1011,13 +1049,10 @@ mod tests {
     #[cfg_attr(miri, ignore)]
     #[cfg_attr(asan, ignore)]
     fn test_save_restore_registers() {
-        let mut machine = TestMachine::with_code("movs r2, #10;movs r2, #20;");
+        let mut machine = TestMachineBuilder::with_code("movs r2, #10;movs r2, #20;").build();
 
         // execute first instruction, check if r2=10, save state
-        machine
-            .proc
-            .execute(&mut machine.mmu, &mut machine.ev, 1)
-            .unwrap();
+        machine.run_n(1).unwrap();
         assert_eq!(
             machine.proc.read_register::<u32>(ArmRegister::R2).unwrap(),
             10
@@ -1025,10 +1060,7 @@ mod tests {
         machine.proc.context_save().unwrap();
 
         // execute next instruction, check if r2=20
-        machine
-            .proc
-            .execute(&mut machine.mmu, &mut machine.ev, 1)
-            .unwrap();
+        machine.run_n(1).unwrap();
         assert_eq!(
             machine.proc.read_register::<u32>(ArmRegister::R2).unwrap(),
             20
@@ -1047,7 +1079,8 @@ mod tests {
     #[cfg_attr(asan, ignore)]
     fn test_hook_error() {
         // Tests when a hook returns an error. The backend should propagate it up.
-        let mut machine = TestMachine::with_code("movw r1, #0x400b;mov r8, r8;mov r8,r8;bx r1");
+        let mut machine =
+            TestMachineBuilder::with_code("movw r1, #0x400b;mov r8, r8;mov r8,r8;bx r1").build();
 
         let cb = |proc: CoreHandle, addr: u64, size: u32| {
             println!("hit bb: 0x{addr:x} of size: {size}");
@@ -1062,7 +1095,7 @@ mod tests {
             .add_hook(StyxHook::Block(Box::new(cb)))
             .unwrap();
 
-        let res = machine.proc.execute(&mut machine.mmu, &mut machine.ev, 100);
+        let res = machine.run_n(100);
 
         assert!(res.is_err(), "{res:?} not an error!");
         assert_eq!(
@@ -1076,11 +1109,12 @@ mod tests {
     #[cfg_attr(asan, ignore)]
     fn test_address_zero_error() {
         // Tests that unicorn backend returns an error at address 0
-        let mut machine = TestMachine::with_code("movw r1, #0x400b;mov r8, r8;mov r8,r8;bx r1");
+        let mut machine =
+            TestMachineBuilder::with_code("movw r1, #0x400b;mov r8, r8;mov r8,r8;bx r1").build();
 
         // set pc to 0
         machine.proc.set_pc(0).unwrap();
-        let res = machine.proc.execute(&mut machine.mmu, &mut machine.ev, 100);
+        let res = machine.run_n(100);
 
         assert!(res.is_err(), "{res:?} not an error!");
         assert_eq!(
@@ -1096,7 +1130,8 @@ mod tests {
         // Tests that the invalid instruction hook gets executed when valid code gets
         // overwritten with intentionally bad data. This test clobbers the end of this
         // while true insn data to provide invalid opcodes starting @ 0x4004
-        let mut machine = TestMachine::with_code("movw r1, #0x400b;mov r8, r8;mov r8,r8;bx r1");
+        let mut machine =
+            TestMachineBuilder::with_code("movw r1, #0x400b;mov r8, r8;mov r8,r8;bx r1").build();
 
         // write invalid data to 0x4004 (after 2 insns in)
         machine
@@ -1140,7 +1175,8 @@ mod tests {
     fn test_bb_hooks() {
         // tests that the basic block hook event will fire when this while true
         // loop is translated then executed
-        let mut machine = TestMachine::with_code("movw r1, #0x400b;mov r8, r8;mov r8,r8;bx r1");
+        let mut machine =
+            TestMachineBuilder::with_code("movw r1, #0x400b;mov r8, r8;mov r8,r8;bx r1").build();
 
         let cb = |proc: CoreHandle, addr: u64, size: u32| {
             println!("hit bb: 0x{addr:x} of size: {size}");
@@ -1168,7 +1204,7 @@ mod tests {
     #[cfg_attr(asan, ignore)]
     fn test_unmapped_read_hooks() {
         // tests that the hook gets called when we read from an unmapped address
-        let mut machine = TestMachine::with_code("movw r1, #0x9999;ldr r4, [r1];");
+        let mut machine = TestMachineBuilder::with_code("movw r1, #0x9999;ldr r4, [r1];").build();
 
         let cb = |proc: CoreHandle, addr: u64, size: u32, fault_data: MemFaultData| {
             println!("unmapped fault: 0x{addr:x} of size: {size}, type: {fault_data:?}");
@@ -1217,7 +1253,7 @@ mod tests {
     #[cfg_attr(asan, ignore)]
     fn test_unmapped_write_hooks() {
         // tests that the hook gets called when we write to an unmapped address
-        let mut machine = TestMachine::with_code("movw r1, #0x9999;str r4, [r1];");
+        let mut machine = TestMachineBuilder::with_code("movw r1, #0x9999;str r4, [r1];").build();
 
         let cb = |proc: CoreHandle, addr: u64, size: u32, fault_data: MemFaultData| {
             println!("unmapped fault: 0x{addr:x} of size: {size}, type: {fault_data:?}");
@@ -1266,13 +1302,10 @@ mod tests {
     #[cfg_attr(asan, ignore)]
     fn test_protection_read_hooks() {
         // tests that the hook gets called when we read from a WO address
-        let mut machine = TestMachine::with_code("movw r1, #0x9999;ldr r4, [r1];");
-
-        // map in 0x9999 as write only
-        machine
-            .mmu
-            .add_memory_region(MemoryRegion::new(0x9000, 0x1000, MemoryPermissions::WRITE).unwrap())
-            .unwrap();
+        let mut machine = TestMachineBuilder::with_code("movw r1, #0x9999;ldr r4, [r1];")
+            // map in 0x9999 as write only
+            .with_region(MemoryRegion::new(0x9000, 0x1000, MemoryPermissions::WRITE).unwrap())
+            .build();
 
         let cb = |proc: CoreHandle,
                   addr: u64,
@@ -1327,13 +1360,10 @@ mod tests {
     #[cfg_attr(asan, ignore)]
     fn test_protection_write_hooks() {
         // tests that the hook gets called when we write to a RO address
-        let mut machine = TestMachine::with_code("movw r1, #0x9999;str r4, [r1];");
-
-        // map in 0x9999 as read only
-        machine
-            .mmu
-            .add_memory_region(MemoryRegion::new(0x9000, 0x1000, MemoryPermissions::READ).unwrap())
-            .unwrap();
+        let mut machine = TestMachineBuilder::with_code("movw r1, #0x9999;str r4, [r1];")
+            // map in 0x9999 as read only
+            .with_region(MemoryRegion::new(0x9000, 0x1000, MemoryPermissions::READ).unwrap())
+            .build();
 
         let cb = |proc: CoreHandle,
                   addr: u64,
@@ -1402,14 +1432,10 @@ mod tests {
             0x00, 0xdf, // svc 0
         ];
 
-        let mut machine = TestMachine::with_bytes(&code, 6);
-
-        // map a region with known data, and the messed up address
-
-        machine
-            .mmu
-            .memory_map(0x2000, 0x1000, MemoryPermissions::all())
-            .unwrap();
+        let mut machine = TestMachineBuilder::with_bytes(&code, 6)
+            // map a region with known data, and the messed up address
+            .with_region(MemoryRegion::new(0x2000, 0x1000, MemoryPermissions::all()).unwrap())
+            .build();
 
         let code_cb = |proc: CoreHandle| {
             println!("code hook @0x{:x}", proc.cpu.pc().unwrap());
@@ -1472,7 +1498,7 @@ mod tests {
         // tests that software raised interrupt executes an interrupt hook to
         // be called, in this case svc0 for arm32le
         let code: [u8; 2] = [0x00, 0xdf];
-        let mut machine = TestMachine::with_bytes(&code, 1);
+        let mut machine = TestMachineBuilder::with_bytes(&code, 1).build();
 
         let cb = |proc: CoreHandle, intno: i32| {
             println!("caught interrupt: {intno}");
@@ -1498,7 +1524,7 @@ mod tests {
     fn test_generic_add_hook() {
         let code: [u8; 4] = [0xa0, 0xf1, 0x17, 0x00]; // sub r0, #23 in LE
 
-        let mut machine = TestMachine::with_bytes(&code, 1);
+        let mut machine = TestMachineBuilder::with_bytes(&code, 1).build();
 
         let cb = |proc: CoreHandle| {
             proc.cpu.set_pc(0x4500).unwrap();
@@ -1528,7 +1554,7 @@ mod tests {
     fn test_delete_hook() {
         // tests that we can delete a hook before actually executing
         // any code
-        let mut machine = TestMachine::with_bytes(&[], 0);
+        let mut machine = TestMachineBuilder::with_bytes(&[], 0).build();
 
         let handle = machine
             .proc
@@ -1546,7 +1572,7 @@ mod tests {
         // adds a hook, checks to make sure it gets called
         // then deletes the hook and makes sure it doesn't get called
         let code: [u8; 2] = [0xfe, 0xe7]; // b #0
-        let mut machine = TestMachine::with_bytes(&code, 1);
+        let mut machine = TestMachineBuilder::with_bytes(&code, 1).build();
 
         let cb = |proc: CoreHandle| {
             proc.cpu.stop();
@@ -1555,20 +1581,12 @@ mod tests {
 
         let handle = machine.proc.add_hook(StyxHook::code(.., cb)).unwrap();
 
-        let exit_reason = machine
-            .proc
-            .execute(&mut machine.mmu, &mut machine.ev, 0)
-            .unwrap()
-            .exit_reason;
+        let exit_reason = machine.run_n(0).unwrap().exit_reason;
         assert_eq!(exit_reason, TargetExitReason::HostStopRequest);
 
         machine.proc.delete_hook(handle).unwrap();
 
-        let exit_reason = machine
-            .proc
-            .execute(&mut machine.mmu, &mut machine.ev, 10)
-            .unwrap()
-            .exit_reason;
+        let exit_reason = machine.run_n(10).unwrap().exit_reason;
         assert_eq!(exit_reason, TargetExitReason::InstructionCountComplete);
     }
 
@@ -1579,7 +1597,7 @@ mod tests {
         // infinite loop code to test timeout exit
         let code: [u8; 2] = [0xfe, 0xe7]; // b #0
 
-        let mut machine = TestMachine::with_bytes(&code, 1);
+        let mut machine = TestMachineBuilder::with_bytes(&code, 1).build();
 
         machine.run_and_assert_exit_reason(TargetExitReason::InstructionCountComplete);
     }
@@ -1656,7 +1674,7 @@ mod tests {
     fn test_unicorn_map_memory() {
         let code: [u8; 4] = [0xa0, 0xf1, 0x17, 0x00]; // sub r0, #23 in LE
 
-        let mut machine = TestMachine::with_bytes(&code, 1);
+        let mut machine = TestMachineBuilder::with_bytes(&code, 1).build();
 
         // make sure can read the data
         let out_buf = machine.mmu.code().read(0x4000).vec(4).unwrap();
@@ -1679,15 +1697,10 @@ mod tests {
     fn test_unicorn_run_add_hook() {
         let code: [u8; 4] = [0xa0, 0xf1, 0x17, 0x00]; // sub r0, #23 in LE
 
-        let mut machine = TestMachine::with_bytes(&code, 1);
-
-        // map a region with known data, and the messed up address
-        machine
-            .mmu
-            .add_memory_region(
-                MemoryRegion::new(0x99990000, 0x1000, MemoryPermissions::all()).unwrap(),
-            )
-            .unwrap();
+        let mut machine = TestMachineBuilder::with_bytes(&code, 1)
+            // map a region with known data, and the messed up address
+            .with_region(MemoryRegion::new(0x99990000, 0x1000, MemoryPermissions::all()).unwrap())
+            .build();
 
         // set hook to trigger
         let token = machine
@@ -1710,7 +1723,7 @@ mod tests {
     fn test_unicorn_run_trace() {
         let code: [u8; 4] = [0xa0, 0xf1, 0x17, 0x00]; // sub r0, #23 in LE
 
-        let mut machine = TestMachine::with_bytes(&code, 1);
+        let mut machine = TestMachineBuilder::with_bytes(&code, 1).build();
 
         // run, set r0 to 123, should get #23 subtracted from it
         machine
@@ -1771,7 +1784,7 @@ mod tests {
     fn test_code_hook_execution_order() {
         styx_util::logging::init_logging();
         // Ensures that code hooks are triggered BEFORE instruction is executed
-        let mut machine = TestMachine::with_code("mov r1, r0");
+        let mut machine = TestMachineBuilder::with_code("mov r1, r0").build();
 
         machine
             .proc
@@ -1810,7 +1823,7 @@ mod tests {
     fn test_write_memory_hook_execution_order() {
         // Ensures that memory write hooks are triggered BEFORE memory is written
         // Also ensures memory write parameters are correct
-        let mut machine = TestMachine::with_code("str r0, [r1]");
+        let mut machine = TestMachineBuilder::with_code("str r0, [r1]").build();
 
         machine
             .proc
@@ -1857,7 +1870,7 @@ mod tests {
     fn test_out_of_band_mem_access() {
         // Ensures that memory write hooks are triggered BEFORE memory is written
         // Also ensures memory write parameters are correct
-        let mut machine = TestMachine::with_code("str r0, [r1]");
+        let mut machine = TestMachineBuilder::with_code("str r0, [r1]").build();
         const TEST_ADDR: u64 = 0x4040;
 
         machine
@@ -1915,7 +1928,7 @@ mod tests {
     fn test_read_memory_hook_execution_order() {
         // Ensures that memory read hooks are triggered BEFORE read instruction executes
         // Also ensures memory read callback parameters are correct
-        let mut machine = TestMachine::with_code("ldr r0, [r1]");
+        let mut machine = TestMachineBuilder::with_code("ldr r0, [r1]").build();
 
         machine
             .proc
@@ -1960,7 +1973,7 @@ mod tests {
     #[cfg_attr(asan, ignore)]
     fn test_read_memory_hook_modify() {
         // Ensures that memory read hooks can modify their read data
-        let mut machine = TestMachine::with_code("ldr r0, [r1]");
+        let mut machine = TestMachineBuilder::with_code("ldr r0, [r1]").build();
 
         machine
             .proc

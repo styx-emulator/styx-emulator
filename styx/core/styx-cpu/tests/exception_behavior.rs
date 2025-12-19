@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
 #![cfg(feature = "unicorn-backend")]
 
-use std::sync::atomic::{AtomicU32, Ordering};
-
 use styx_cpu::{
     arch::arm::{ArmRegister, ArmVariants},
     Arch, ArchEndian, Backend, BackendNotSupported, PcodeBackend, TargetExitReason, UnicornBackend,
@@ -14,8 +12,10 @@ use styx_processor::{
         ExceptionBehavior, ProcessorBundle,
     },
     cpu::{CpuBackend, CpuBackendExt},
-    hooks::{CoreHandle, MemFaultData, Resolution, StyxHook},
-    memory::{helpers::WriteExt, memory_region::MemoryRegion, MemoryPermissions, Mmu},
+    hooks::{CoreHandle, MemFaultData, StyxHook},
+    memory::{
+        helpers::WriteExt, memory_region::MemoryRegion, DummyTlb, MemoryBackend, MemoryPermissions,
+    },
     processor::{Processor, ProcessorBuilder},
 };
 
@@ -39,12 +39,14 @@ impl ProcessorImpl for CustomBuilder {
             )),
             _ => return Err(BackendNotSupported(args.backend).into()),
         };
-        let mut mmu = Mmu::default_region_store();
-        mmu.add_memory_region(MemoryRegion::new(0, 0x1000, MemoryPermissions::all())?)?;
+        let mut memory = MemoryBackend::new_region_store();
+        let tlb = DummyTlb::new();
+        memory.add_memory_region(MemoryRegion::new(0, 0x1000, MemoryPermissions::all())?)?;
 
         Ok(ProcessorBundle {
             cpu,
-            mmu,
+            memory,
+            tlb,
             ..Default::default()
         })
     }
@@ -68,39 +70,43 @@ fn construct_cpu(
     Ok(proc)
 }
 
-#[test_case(Backend::Pcode)]
-#[test_case(Backend::Unicorn)]
-fn test_target_handle_unmapped(backend: Backend) -> Result<(), UnknownError> {
-    // ARM thumb:
-    // ldr r0, [r0, #0]
-    let program_bytes = [0x00, 0x68];
-    let mut proc = construct_cpu(backend, ExceptionBehavior::TargetHandle, &program_bytes)?;
-    proc.core.cpu.write_register(ArmRegister::R0, 0x1000u32)?;
+// INFO:
+// The new Mmu for multi-processor configurations removed the ability to map memory
+// during emulation. Until that feature is readded, these tests are worthless.
 
-    let count: &'static AtomicU32 = Box::leak(Box::new(AtomicU32::new(0)));
-    proc.core.cpu.add_hook(StyxHook::unmapped_fault(
-        0x1000..=0x2000,
-        |core: CoreHandle, _, _, _: MemFaultData| {
-            core.mmu.add_memory_region(MemoryRegion::new(
-                0x1000,
-                0x1000,
-                MemoryPermissions::all(),
-            )?)?;
-            count.fetch_add(1, Ordering::SeqCst);
-            Ok(Resolution::Fixed)
-        },
-    ))?;
+// #[test_case(Backend::Pcode)]
+// #[test_case(Backend::Unicorn)]
+// fn test_target_handle_unmapped(backend: Backend) -> Result<(), UnknownError> {
+//     // ARM thumb:
+//     // ldr r0, [r0, #0]
+//     let program_bytes = [0x00, 0x68];
+//     let mut proc = construct_cpu(backend, ExceptionBehavior::TargetHandle, &program_bytes)?;
+//     proc.core.cpu.write_register(ArmRegister::R0, 0x1000u32)?;
 
-    let exit_res = proc.run(1)?.exit_reason;
-    assert!(
-        matches!(exit_res, TargetExitReason::InstructionCountComplete),
-        "ope, actually reason was {exit_res}"
-    );
+//     let count: &'static AtomicU32 = Box::leak(Box::new(AtomicU32::new(0)));
+//     proc.core.cpu.add_hook(StyxHook::unmapped_fault(
+//         0x1000..=0x2000,
+//         |core: CoreHandle, _, _, _: MemFaultData| {
+//             core.mmu.add_memory_region(MemoryRegion::new(
+//                 0x1000,
+//                 0x1000,
+//                 MemoryPermissions::all(),
+//             )?)?;
+//             count.fetch_add(1, Ordering::SeqCst);
+//             Ok(Resolution::Fixed)
+//         },
+//     ))?;
 
-    assert_eq!(count.load(Ordering::SeqCst), 1);
+//     let exit_res = proc.run(1)?.exit_reason;
+//     assert!(
+//         matches!(exit_res, TargetExitReason::InstructionCountComplete),
+//         "ope, actually reason was {exit_res}"
+//     );
 
-    Ok(())
-}
+//     assert_eq!(count.load(Ordering::SeqCst), 1);
+
+//     Ok(())
+// }
 
 #[test_case(Backend::Pcode)]
 #[test_case(Backend::Unicorn)]

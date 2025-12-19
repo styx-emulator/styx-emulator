@@ -666,6 +666,7 @@ mod tests {
         cpu.set_pc(init_pc).unwrap();
 
         let mut mmu = Mmu::default();
+
         let mut ev = EventController::default();
         mmu.code().write(init_pc).bytes(&code).unwrap();
 
@@ -829,7 +830,8 @@ mod arm_tests {
         hooks::{CoreHandle, Hookable, MemFaultData, Resolution, StyxHook},
         memory::{
             helpers::{ReadExt, WriteExt},
-            MemoryPermissions, Mmu,
+            memory_region::MemoryRegion,
+            DummyTlb, MemoryBackend, MemoryPermissions, Mmu,
         },
     };
     use styx_sync::sync::{Arc, Mutex};
@@ -838,43 +840,71 @@ mod arm_tests {
 
     /// Test fixture that uses ArmCortexA7 executor to test parts of the runtime
     struct TestMachine {
-        proc: PcodeBackend,
-        mmu: Mmu,
-        ev: EventController,
+        pub proc: PcodeBackend,
+        pub mmu: Mmu,
+        pub ev: EventController,
         instruction_count: u32,
     }
 
-    impl TestMachine {
-        pub const fn start_address() -> u64 {
-            0x1000
+    #[derive(Default, Clone, Debug)]
+    struct TestMachineBuilder {
+        code: Vec<u8>,
+        num_instr: u32,
+        regions: Vec<MemoryRegion>,
+    }
+
+    impl TestMachineBuilder {
+        fn with_region(mut self, region: MemoryRegion) -> Self {
+            self.regions.push(region);
+            self
         }
-        fn with_bytes(code: &[u8], instruction_count: u32) -> Self {
+        fn build(self) -> TestMachine {
             let mut backend = PcodeBackend::new_engine(
                 Arch::Arm,
                 ArmVariants::ArmCortexM4,
                 ArchEndian::LittleEndian,
             );
-            let mut mmu = Mmu::default_region_store();
+            let mut memory = MemoryBackend::new(
+                styx_processor::memory::physical::PhysicalMemoryVariant::RegionStore,
+            );
+            let tlb = Box::new(DummyTlb);
             let ev = EventController::default();
-            mmu.memory_map(Self::start_address(), 0x1000, MemoryPermissions::all())
+
+            memory
+                .memory_map(
+                    TestMachine::start_address(),
+                    0x1000,
+                    MemoryPermissions::all(),
+                )
                 .unwrap();
 
+            for region in self.regions {
+                memory.add_memory_region(region).unwrap();
+            }
+
+            let mut mmu = Mmu {
+                tlb,
+                memory: Arc::new(memory),
+            };
             // Write generated instructions to memory
-            mmu.code().write(Self::start_address()).bytes(code).unwrap();
+            mmu.code()
+                .write(TestMachine::start_address())
+                .bytes(&self.code)
+                .unwrap();
             // Start execution at our instructions
             backend
-                .write_register(ArmRegister::Pc, Self::start_address() as u32)
+                .write_register(ArmRegister::Pc, TestMachine::start_address() as u32)
                 .unwrap();
 
             // get pc
             assert_eq!(
-                Self::start_address(),
+                TestMachine::start_address(),
                 backend.pc().unwrap(),
                 "pc is not correct"
             );
             let pc_val = backend.read_register::<u32>(ArmRegister::Pc).unwrap();
             assert_eq!(
-                Self::start_address(),
+                TestMachine::start_address(),
                 pc_val as u64,
                 "did not read pc correctly"
             );
@@ -883,23 +913,35 @@ mod arm_tests {
                 proc: backend,
                 mmu,
                 ev,
-                instruction_count,
+                instruction_count: self.num_instr,
+            }
+        }
+        fn with_bytes(code: &[u8], num_instr: u32) -> Self {
+            Self {
+                code: code.to_vec(),
+                num_instr,
+                ..Default::default()
             }
         }
         fn with_code(instr: &str) -> Self {
             // Assemble instructions
+            // Processor default to thumb so we use that
             let ks = Keystone::new(keystone_engine::Arch::ARM, keystone_engine::Mode::THUMB)
                 .expect("Could not initialize Keystone engine");
             let asm = ks
-                .asm(instr.to_owned(), Self::start_address())
+                .asm(instr.to_owned(), 0x4000)
                 .expect("Could not assemble");
             let code = asm.bytes;
-            println!("generated code {code:X?}");
             let instruction_count = asm.stat_count;
 
             Self::with_bytes(&code, instruction_count)
         }
+    }
 
+    impl TestMachine {
+        pub const fn start_address() -> u64 {
+            0x1000
+        }
         fn run(&mut self) {
             let exit_reason = self
                 .proc
@@ -932,7 +974,7 @@ mod arm_tests {
     #[test]
     fn test_simple() {
         styx_util::logging::init_logging();
-        let mut machine = TestMachine::with_code("mov r0, #0xDE");
+        let mut machine = TestMachineBuilder::with_code("mov r0, #0xDE").build();
 
         let r0 = machine.proc.read_register::<u32>(ArmRegister::R0).unwrap();
         assert_eq!(r0, 0x00);
@@ -949,7 +991,7 @@ mod arm_tests {
     #[cfg_attr(miri, ignore)]
     #[test]
     fn test_arm_pc() {
-        let mut machine = TestMachine::with_code("movs r0, pc");
+        let mut machine = TestMachineBuilder::with_code("movs r0, pc").build();
         assert_eq!(machine.instruction_count, 1);
         machine.run();
         let r0 = machine.proc.read_register::<u32>(ArmRegister::R0).unwrap() as u64;
@@ -959,15 +1001,12 @@ mod arm_tests {
     #[cfg_attr(miri, ignore)]
     #[test]
     fn test_load() {
-        let mut machine = TestMachine::with_code("movs r0, #0x00; ldr r1, [r0]");
+        let mut machine = TestMachineBuilder::with_code("movs r0, #0x00; ldr r1, [r0]")
+            .with_region(MemoryRegion::new(0, 0x10, MemoryPermissions::RW).unwrap())
+            .build();
         assert_eq!(machine.instruction_count, 2);
 
-        machine
-            .mmu
-            .memory_map(0, 0x10, MemoryPermissions::READ)
-            .unwrap();
-
-        machine.mmu.sudo_data().write(0).le().u32(0x1337).unwrap();
+        machine.mmu.data().write(0).le().u32(0x1337).unwrap();
         machine.run();
         let r1 = machine.proc.read_register::<u32>(ArmRegister::R1).unwrap();
         assert_eq!(r1, 0x00001337);
@@ -977,13 +1016,10 @@ mod arm_tests {
     #[test]
     fn test_memory_read_hook() {
         styx_util::logging::init_logging();
-        let mut machine = TestMachine::with_code("movs r0, #0x00; ldr r1, [r0]");
+        let mut machine = TestMachineBuilder::with_code("movs r0, #0x00; ldr r1, [r0]")
+            .with_region(MemoryRegion::new(0, 0x10, MemoryPermissions::RW).unwrap())
+            .build();
         assert_eq!(machine.instruction_count, 2);
-
-        machine
-            .mmu
-            .memory_map(0, 0x10, MemoryPermissions::RW)
-            .unwrap();
 
         machine
             .proc
@@ -1004,12 +1040,11 @@ mod arm_tests {
     #[cfg_attr(miri, ignore)]
     #[test]
     fn test_memory_write_hook() {
-        let mut machine = TestMachine::with_code("movs r1, #0xDE; movs r0, #0x00; str r1, [r0]");
+        let mut machine =
+            TestMachineBuilder::with_code("movs r1, #0xDE; movs r0, #0x00; str r1, [r0]")
+                .with_region(MemoryRegion::new(0, 0x10, MemoryPermissions::WRITE).unwrap())
+                .build();
         assert_eq!(machine.instruction_count, 3);
-        machine
-            .mmu
-            .memory_map(0, 0x10, MemoryPermissions::WRITE)
-            .unwrap();
 
         let triggered = Arc::new(Mutex::new(false));
         {
@@ -1033,7 +1068,7 @@ mod arm_tests {
     #[cfg_attr(miri, ignore)]
     #[test]
     fn test_pcode_stack_pointers_todo() {
-        let mut machine = TestMachine::with_bytes(
+        let mut machine = TestMachineBuilder::with_bytes(
             &[
                 0xde, 0x22, // movs r2, 0xde
                 0x82, 0xF3, 0x08, 0x88, // msr msp, r2
@@ -1041,7 +1076,8 @@ mod arm_tests {
                 0x80, 0xf3, 0x09, 0x88, // msr psp, r0
             ],
             4, // 4 instructions
-        );
+        )
+        .build();
 
         machine.run();
         assert_eq!(
@@ -1059,7 +1095,7 @@ mod arm_tests {
     #[cfg_attr(miri, ignore)]
     #[test]
     fn test_loop_conditional_branch() {
-        let mut machine = TestMachine::with_code(
+        let mut machine = TestMachineBuilder::with_code(
             "
                 ADDS R2, #1
             loop:
@@ -1068,7 +1104,8 @@ mod arm_tests {
                 MOV R7, #1
                 MOV R0, #0
                 SWI 0",
-        );
+        )
+        .build();
 
         machine
             .proc
@@ -1094,7 +1131,8 @@ mod arm_tests {
     #[cfg_attr(miri, ignore)]
     #[test]
     fn test_stop() {
-        let mut machine = TestMachine::with_code("mov r0, #0xff; mov r0, #0xff; mov r0, #0xff");
+        let mut machine =
+            TestMachineBuilder::with_code("mov r0, #0xff; mov r0, #0xff; mov r0, #0xff").build();
         machine
             .proc
             .code_hook(
@@ -1125,19 +1163,13 @@ mod arm_tests {
     #[cfg_attr(miri, ignore)]
     #[test]
     fn test_branch() {
-        let mut mmu = Mmu::default();
+        let mut mmu = Mmu::default_flat();
         let mut ev = EventController::default();
         let mut backend = PcodeBackend::new_engine(
             Arch::Arm,
             ArmVariants::ArmCortexA7,
             ArchEndian::LittleEndian,
         );
-
-        // let region = MemoryRegion::new(0x0000, 0x100, MemoryPermissions::all()).unwrap();
-        // backend.add_memory_region(region).unwrap();
-
-        // let region = MemoryRegion::new(0x1000, 0x100, MemoryPermissions::all()).unwrap();
-        // backend.add_memory_region(region).unwrap();
 
         // Assemble instructions
         let ks = Keystone::new(keystone_engine::Arch::ARM, keystone_engine::Mode::ARM)
@@ -1156,19 +1188,13 @@ mod arm_tests {
     #[cfg_attr(miri, ignore)]
     #[test]
     fn test_cbranch() {
-        let mut mmu = Mmu::default();
+        let mut mmu = Mmu::default_flat();
         let mut ev = EventController::default();
         let mut backend = PcodeBackend::new_engine(
             Arch::Arm,
             ArmVariants::ArmCortexA7,
             ArchEndian::LittleEndian,
         );
-
-        // let region = MemoryRegion::new(0x0000, 0x100, MemoryPermissions::all()).unwrap();
-        // backend.add_memory_region(region).unwrap();
-
-        // let region = MemoryRegion::new(0x1000, 0x100, MemoryPermissions::all()).unwrap();
-        // backend.add_memory_region(region).unwrap();
 
         // Assemble instructions
         let ks = Keystone::new(keystone_engine::Arch::ARM, keystone_engine::Mode::ARM)
@@ -1186,19 +1212,14 @@ mod arm_tests {
     #[cfg_attr(miri, ignore)]
     #[test]
     fn test_ind_branch() {
-        let mut mmu = Mmu::default();
+        let mut mmu = Mmu::default_flat();
+
         let mut ev = EventController::default();
         let mut backend = PcodeBackend::new_engine(
             Arch::Arm,
             ArmVariants::ArmCortexA7,
             ArchEndian::LittleEndian,
         );
-
-        // let region = MemoryRegion::new(0x0000, 0x100, MemoryPermissions::all()).unwrap();
-        // backend.add_memory_region(region).unwrap();
-
-        // let region = MemoryRegion::new(0x1000, 0x100, MemoryPermissions::all()).unwrap();
-        // backend.add_memory_region(region).unwrap();
 
         // Assemble instructions
         let ks = Keystone::new(keystone_engine::Arch::ARM, keystone_engine::Mode::ARM)
@@ -1214,19 +1235,13 @@ mod arm_tests {
     #[cfg_attr(miri, ignore)]
     #[test]
     fn test_store() {
-        let mut mmu = Mmu::default();
+        let mut mmu = Mmu::default_flat();
         let mut ev = EventController::default();
         let mut backend = PcodeBackend::new_engine(
             Arch::Arm,
             ArmVariants::ArmCortexM4,
             ArchEndian::LittleEndian,
         );
-
-        // let region = MemoryRegion::new(0x0000, 0x100, MemoryPermissions::all()).unwrap();
-        // backend.add_memory_region(region).unwrap();
-
-        // let region = MemoryRegion::new(0x1000, 0x100, MemoryPermissions::all()).unwrap();
-        // backend.add_memory_region(region).unwrap();
 
         // Assemble instructions
         let ks = Keystone::new(keystone_engine::Arch::ARM, keystone_engine::Mode::THUMB)
@@ -1246,13 +1261,10 @@ mod arm_tests {
     #[cfg_attr(miri, ignore)]
     fn test_pcode_protection_read_hooks() {
         // tests that the hook gets called when we read from a WO address
-        let mut machine = TestMachine::with_code("movw r1, #0x9999; ldr r4, [r1];");
-
-        // map in 0x9999 as write only
-        machine
-            .mmu
-            .memory_map(0x9000, 0x1000, MemoryPermissions::WRITE)
-            .unwrap();
+        let mut machine = TestMachineBuilder::with_code("movw r1, #0x9999; ldr r4, [r1];")
+            // map in 0x9999 as write only
+            .with_region(MemoryRegion::new(0x9000, 0x1000, MemoryPermissions::WRITE).unwrap())
+            .build();
 
         let cb = |proc: CoreHandle,
                   addr: u64,
@@ -1311,13 +1323,10 @@ mod arm_tests {
     #[cfg_attr(miri, ignore)]
     fn test_pcode_protection_write_hooks() {
         // tests that the hook gets called when we write to a RO address
-        let mut machine = TestMachine::with_code("movw r1, #0x9999;str r4, [r1];");
-
-        // map in 0x9999 as read only
-        machine
-            .mmu
-            .memory_map(0x9000, 0x1000, MemoryPermissions::READ)
-            .unwrap();
+        let mut machine = TestMachineBuilder::with_code("movw r1, #0x9999;str r4, [r1];")
+            // map in 0x9999 as read only
+            .with_region(MemoryRegion::new(0x9000, 0x1000, MemoryPermissions::READ).unwrap())
+            .build();
 
         let cb = |proc: CoreHandle,
                   addr: u64,

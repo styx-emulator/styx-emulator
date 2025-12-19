@@ -104,7 +104,7 @@ mod tests {
     /// simple read from mmuspace
     #[test]
     fn test_simple() {
-        let mut mmu = Mmu::default();
+        let mut mmu = Mmu::default_flat();
         let mut cpu = DummyBackend;
 
         let mmu_store = MmuSpace::new(get_info(ArchEndian::LittleEndian));
@@ -118,7 +118,7 @@ mod tests {
     /// simple read from mmuspace but big endian
     #[test]
     fn test_big_endian() {
-        let mut mmu = Mmu::default();
+        let mut mmu = Mmu::default_flat();
         let mut cpu = DummyBackend;
 
         let mmu_store = MmuSpace::new(get_info(ArchEndian::BigEndian));

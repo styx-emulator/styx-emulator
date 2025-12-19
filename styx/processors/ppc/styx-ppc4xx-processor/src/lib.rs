@@ -19,7 +19,6 @@ use styx_core::cpu::arch::ppc32::Ppc32Register;
 use styx_core::cpu::arch::ppc32::Ppc32Variants;
 use styx_core::cpu::BackendNotSupported;
 use styx_core::cpu::PcodeBackend;
-use styx_core::memory::physical::PhysicalMemoryVariant;
 use styx_core::prelude::*;
 use styx_peripherals::uart::{UartController, UartInterface};
 use timers::Timers;
@@ -70,8 +69,9 @@ impl ProcessorImpl for PowerPC405Builder {
         };
 
         let tlb = Box::new(tlb::Ppc405Tlb::new());
-        let mut mmu = Mmu::new(tlb, PhysicalMemoryVariant::RegionStore, cpu.as_mut())?;
-        mmu.memory_map(0, 2u64.pow(32), MemoryPermissions::all())?;
+        let mut memory = MemoryBackend::new_region_store();
+
+        memory.memory_map(0, 2u64.pow(32), MemoryPermissions::all())?;
 
         self.initial_registers(cpu.as_mut())?;
         let cec = Box::new(CoreEventController::new(cpu.as_mut(), args.runtime.clone()));
@@ -88,7 +88,8 @@ impl ProcessorImpl for PowerPC405Builder {
         hints.insert("arch".to_string().into_boxed_str(), Box::new(Arch::Ppc32));
         Ok(ProcessorBundle {
             cpu,
-            mmu,
+            tlb,
+            memory,
             event_controller: cec,
             peripherals,
             loader_hints: hints,

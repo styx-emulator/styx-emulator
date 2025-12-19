@@ -213,7 +213,7 @@ impl GicRegisters {
 // | Reset                         | 0x0000 | First instruction executed after reset.       |
 // | Undefined Instruction (Undef) | 0x0004 | Signals usage of an illegal instructions.     |
 // | Supervisor Call (SVC)         | 0x0008 | Issued by software using SVC instruction.     |
-// | Prefetch Abort (PAbt)         | 0x000C | Signals a memory abort on istruction fetch.   |
+// | Prefetch Abort (PAbt)         | 0x000C | Signals a memory abort on instruction fetch.   |
 // | Data Abort (DAbt)             | 0x0010 | Signals a memory abort on data read or write. |
 // | Hyp Trap                      | 0x0014 | Hypervisor instruction trap                   |
 // | IRQ interrupt                 | 0x0018 | Interrupt Request                             |
@@ -255,10 +255,10 @@ enum EventType {
 }
 
 /// This is the data container used by the [`GicIsrRecovery`] and holds the register state +
-/// interrupt number as well as holds the routines to perform the automatic stack maintinence.
+/// interrupt number as well as holds the routines to perform the automatic stack maintenance.
 /// According to the reference, `pc` and `cpsr` are saved by the processor, but we also save `lr`
 /// since we use it to intercept returns from ISRs.
-/// TODO: move the maintinence routines into [`GicIsrRecovery`]
+/// TODO: move the maintenance routines into [`GicIsrRecovery`]
 #[derive(Debug)]
 struct IsrContext {
     lr: u32,
@@ -452,7 +452,11 @@ impl EventControllerImpl for Gic {
         None
     }
 
-    fn init(&mut self, _cpu: &mut dyn CpuBackend, _mmu: &mut Mmu) -> Result<(), UnknownError> {
+    fn init(
+        &mut self,
+        _cpu: &mut dyn CpuBackend,
+        _mmu: &mut MemoryBackend,
+    ) -> Result<(), UnknownError> {
         Ok(())
     }
 }

@@ -275,10 +275,15 @@ impl<T: CpuBackend> Loader for MmuLoader<T> {
 }
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use styx_cpu_type::{arch::ppc32::Ppc32Variants, Arch};
     use styx_processor::{
         event_controller::DummyEventController,
-        memory::{memory_region::MemoryRegion, MemoryPermissions},
+        memory::{
+            memory_region::MemoryRegion, physical::PhysicalMemoryVariant, MemoryBackend,
+            MemoryPermissions,
+        },
     };
 
     use crate::PcodeBackend;
@@ -291,12 +296,17 @@ mod tests {
         let mut cpu =
             PcodeBackend::new_engine(Arch::Ppc32, Ppc32Variants::Ppc405, ArchEndian::BigEndian);
         let mut evt = EventController::new(Box::new(DummyEventController::default()));
-        let mut mmu = Mmu::default_region_store();
-        mmu.add_memory_region(
-            MemoryRegion::new_with_data(0, 100, MemoryPermissions::all(), (0..100).collect())
-                .unwrap(),
-        )
-        .unwrap();
+        let mut memory = MemoryBackend::new(PhysicalMemoryVariant::RegionStore);
+        memory
+            .add_memory_region(
+                MemoryRegion::new_with_data(0, 100, MemoryPermissions::all(), (0..100).collect())
+                    .unwrap(),
+            )
+            .unwrap();
+        let mut mmu = Mmu {
+            memory: Arc::new(memory),
+            ..Default::default()
+        };
 
         let mut loader = MmuLoader::new();
 
@@ -317,16 +327,24 @@ mod tests {
         let mut cpu =
             PcodeBackend::new_engine(Arch::Ppc32, Ppc32Variants::Ppc405, ArchEndian::BigEndian);
         let mut evt = EventController::new(Box::new(DummyEventController::default()));
-        let mut mmu = Mmu::default_region_store();
-        mmu.add_memory_region(
-            MemoryRegion::new_with_data(0, 8, MemoryPermissions::all(), (0..8).collect()).unwrap(),
-        )
-        .unwrap();
-        mmu.add_memory_region(
-            MemoryRegion::new_with_data(8, 8, MemoryPermissions::all(), (0..8).collect()).unwrap(),
-        )
-        .unwrap();
+        let mut memory = MemoryBackend::new(PhysicalMemoryVariant::RegionStore);
+        memory
+            .add_memory_region(
+                MemoryRegion::new_with_data(0, 8, MemoryPermissions::all(), (0..8).collect())
+                    .unwrap(),
+            )
+            .unwrap();
+        memory
+            .add_memory_region(
+                MemoryRegion::new_with_data(8, 8, MemoryPermissions::all(), (0..8).collect())
+                    .unwrap(),
+            )
+            .unwrap();
 
+        let mut mmu = Mmu {
+            memory: Arc::new(memory),
+            ..Default::default()
+        };
         let mut loader = MmuLoader::new();
 
         let mut err = None;
@@ -350,14 +368,20 @@ mod tests {
         let mut cpu =
             PcodeBackend::new_engine(Arch::Ppc32, Ppc32Variants::Ppc405, ArchEndian::BigEndian);
         let mut evt = EventController::new(Box::new(DummyEventController::default()));
-        let mut mmu = Mmu::default_region_store();
-        mmu.add_memory_region(
-            MemoryRegion::new_with_data(0, 8, MemoryPermissions::all(), (0..8).collect()).unwrap(),
-        )
-        .unwrap();
+        let mut memory = MemoryBackend::new(PhysicalMemoryVariant::RegionStore);
+        memory
+            .add_memory_region(
+                MemoryRegion::new_with_data(0, 8, MemoryPermissions::all(), (0..8).collect())
+                    .unwrap(),
+            )
+            .unwrap();
 
         let mut loader = MmuLoader::new();
 
+        let mut mmu = Mmu {
+            memory: Arc::new(memory),
+            ..Default::default()
+        };
         let mut err = None;
         let data = MmuLoaderDependencies::new(&mut cpu, &mut mmu, &mut evt, &mut err);
 
@@ -383,13 +407,20 @@ mod tests {
         let mut cpu =
             PcodeBackend::new_engine(Arch::Ppc32, Ppc32Variants::Ppc405, ArchEndian::BigEndian);
         let mut evt = EventController::new(Box::new(DummyEventController::default()));
-        let mut mmu = Mmu::default_region_store();
-        mmu.add_memory_region(
-            MemoryRegion::new_with_data(0, 8, MemoryPermissions::all(), (0..8).collect()).unwrap(),
-        )
-        .unwrap();
+        let mut memory = MemoryBackend::new(PhysicalMemoryVariant::RegionStore);
+        memory
+            .add_memory_region(
+                MemoryRegion::new_with_data(0, 8, MemoryPermissions::all(), (0..8).collect())
+                    .unwrap(),
+            )
+            .unwrap();
 
         let mut loader = MmuLoader::new();
+
+        let mut mmu = Mmu {
+            memory: Arc::new(memory),
+            ..Default::default()
+        };
 
         let mut err = None;
         let data = MmuLoaderDependencies::new(&mut cpu, &mut mmu, &mut evt, &mut err);

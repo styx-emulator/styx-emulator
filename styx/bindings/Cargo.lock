@@ -4884,7 +4884,6 @@ dependencies = [
  "styx-cpu-type",
  "styx-cpu-unicorn-backend",
  "styx-errors",
- "styx-memory",
  "styx-sync",
  "styx-workspace-hack",
 ]
