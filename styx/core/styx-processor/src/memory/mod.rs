@@ -5,6 +5,17 @@
 //! behaviors using the [`TlbImpl`] however it also supports no-translation behavior with the
 //! [`DummyTlb`].
 //!
+//! ## Memory Structures
+//! `Mmu` is the per-core/per-vCPU Memory Management Unit.
+//! It is transient in that no-one owns a CPU.
+//! This is because we want to provide exclusive access to main memory when
+//! emulation is paused.
+//!
+//! The `Mmu` holds an exclusive reference to a `Tlb`
+//! and a shared reference to the `ProcessorMemory`.
+//!
+//! `ProcessorMemory` is owned by the `Processor` and shared to others.
+//!
 //! ## Atomic Operations
 //! In Styx we must faithfully emulate target atomic operations.
 //! While there are many atomic operations that may be implemented by ISAs, we can emulate all of them
@@ -175,17 +186,19 @@ pub use atomic_word::CompareExchangeResult;
 pub use llsc::{StoreConditionalError, StoreConditionalResult};
 pub use mem_arch::MemoryArchitecture;
 pub use memory_region::{
-    HasRegions, MemoryRegionFormat, MemoryRegionPerms, MemoryRegionRawData, MemoryRegionSize,
-    MemoryRegionsWithFormat,
+    HasRegions, MemoryRegion, MemoryRegionFormat, MemoryRegionPerms, MemoryRegionRawData,
+    MemoryRegionSize, MemoryRegionsWithFormat,
 };
 pub use mmu::{
     CodeMemoryOp, DataMemoryOp, MemoryType, Mmu, MmuOpError, SudoCodeMemoryOp, SudoDataMemoryOp,
 };
 pub use physical::{
     AddRegionError, AtomicMemoryOperationError, CompareExchangeError, FromConfigError,
-    MemoryOperationError, UnmappedMemoryError,
+    MemoryBackend, MemoryOperationError, PhysicalMemoryVariant, UnmappedMemoryError,
 };
-pub use tlb::{DummyTlb, FnTlb, TlbImpl, TlbProcessor, TlbTranslateError, TlbTranslateResult};
+pub use tlb::{
+    DummyTlb, FnTlb, TlbImpl, TlbProcessor, TlbTranslateError, TlbTranslateResult,
+};
 
 /// Enum that is used to be explicit in error handling
 /// of current memory operations
