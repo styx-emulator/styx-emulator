@@ -17,12 +17,11 @@ use styx_errors::UnknownError;
 use crate::{
     cpu::{CpuBackend, DummyBackend, ExecutionReport, ReadRegisterError, WriteRegisterError},
     event_controller::{ActivateIRQnError, DummyEventController, EventController, ExceptionNumber},
-    hooks::CoreHandle,
-    memory::{DummyTlb, MemoryOperationError, Mmu},
+    memory::{MemoryOperationError, Mmu},
 };
 
 pub mod builder;
-pub use builder::ProcessorBundle;
+pub use builder::{ProcessorBundle, ProcessorImpl};
 
 mod exceptions;
 pub use exceptions::*;
@@ -81,17 +80,8 @@ impl ProcessorCore {
     pub fn dummy() -> Self {
         Self {
             cpu: Box::new(DummyBackend),
-            mmu: Mmu::from_impl(Box::new(DummyTlb)),
+            mmu: Mmu::default(),
             event_controller: EventController::new(Box::new(DummyEventController::default())),
-        }
-    }
-
-    /// Repackage the [`ProcessorCore`] as a [`CoreHandle`] struct for use within hooks.
-    pub fn core_handle(&mut self) -> CoreHandle {
-        CoreHandle {
-            cpu: self.cpu.as_mut(),
-            mmu: &mut self.mmu,
-            event_controller: &mut self.event_controller,
         }
     }
 }

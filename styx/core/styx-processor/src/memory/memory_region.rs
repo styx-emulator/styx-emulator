@@ -3,13 +3,13 @@ use std::alloc::{alloc_zeroed, Layout};
 use std::fmt::Debug;
 use std::num::NonZeroUsize;
 use std::ops::Range;
+use std::sync::Arc;
 
 use crate::memory::{AddRegionError, MemoryOperation, MemoryOperationError, MemoryPermissions};
 
 use itertools::Itertools;
 use styx_errors::anyhow::{anyhow, Context};
 use styx_errors::UnknownError;
-use styx_sync::sync::Arc;
 
 use getset::CopyGetters;
 use tap::Conv;
@@ -173,6 +173,7 @@ impl<'a> crate::memory::helpers::Writable for RegionDataHelper<'a> {
     }
 }
 
+#[derive(Clone)]
 #[repr(transparent)]
 pub(in crate::memory) struct RegionData(pub(in crate::memory) Vec<AtomicWord>);
 
@@ -236,7 +237,10 @@ impl RegionData {
 ///
 /// Comparison's between [`MemoryRegion`]'s do not compare data,
 /// only the addresses and sizes. When comparing regions it is
-/// assumed that the regions do *NOT** overlap
+/// assumed that the regions do *NOT** overlap.
+///
+/// [`MemoryRegion`] cloned with `.clone()` will copy the underlying data.
+/// Use [`MemoryRegion::new_alias()`] to create a new region with aliased data.
 ///
 /// ## No Permissions Optimization
 /// If the memory region is created with no permissions (`perms.is_empty() == true`), the data store
@@ -260,7 +264,7 @@ impl RegionData {
 /// [memory model for atomic accesses]: https://doc.rust-lang.org/std/sync/atomic/#memory-model-for-atomic-accesses
 ///
 #[repr(C)]
-#[derive(CopyGetters, Clone)]
+#[derive(CopyGetters)]
 pub struct MemoryRegion {
     /// Base address of the region.
     #[getset(get_copy = "pub")]
@@ -288,6 +292,20 @@ impl std::fmt::Display for MemoryRegion {
             "MemoryRegion{{base: {:#x}, size: {:#x}, perms: {}}}",
             self.base, self.size, self.perms,
         )
+    }
+}
+
+impl Clone for MemoryRegion {
+    fn clone(&self) -> Self {
+        Self {
+            base: self.base,
+            size: self.size,
+            perms: self.perms,
+            data: Arc::new((*self.data.as_ref()).clone()), // avoid creating an alias
+            effective_size: self.effective_size,
+            aliased: false,
+            saved_context: self.saved_context.clone(),
+        }
     }
 }
 
@@ -838,7 +856,7 @@ fn align_access_mut<const ALIGN: usize>(
     (left, middle, right)
 }
 
-impl Debug for &MemoryRegion {
+impl Debug for MemoryRegion {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,

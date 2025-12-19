@@ -2,10 +2,9 @@
 use super::{
     helpers::{Readable, Writable},
     memory_region::{HasRegions, MemoryRegion},
-    physical::{MemoryBackend, PhysicalMemoryVariant, Space},
-    tlb::DummyTlb,
-    AddRegionError, CompareExchangeError, CompareExchangeResult, MemoryArchitecture,
-    MemoryOperation, MemoryOperationError, MemoryPermissions, TlbImpl, TlbTranslateError,
+    physical::{MemoryBackend, PhysicalMemoryVariant},
+    CompareExchangeError, CompareExchangeResult, DummyTlb, MemoryArchitecture, MemoryOperation,
+    MemoryOperationError, TlbImpl, TlbTranslateError,
 };
 use crate::{
     cpu::CpuBackend,
@@ -13,9 +12,8 @@ use crate::{
     memory::{tlb::TlbProcessor, TlbTranslateResult},
 };
 use itertools::Itertools;
-use std::fmt::Debug;
-use std::ops::Range;
-use styx_errors::UnknownError;
+use std::{fmt::Debug, ops::Range, sync::Arc};
+use styx_errors::{anyhow::anyhow, UnknownError};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -43,95 +41,110 @@ pub enum MemoryType {
     Code,
 }
 
-/// The MMU owns the processor specific TLB implementation and the physical memory backend. It is
-/// the single point where all memory transactions flow through.
+/// Per-cpu MMU allows access to virtual and physical memory.
+///
+/// The MMU has two components: the processor specific TLB implementation and
+/// a reference to the physical memory backend.
+/// It is the single point where all memory transactions should flow through.
+/// The Mmu has full mutable access to the [`TlbImpl`] but an **immutable** reference
+/// to the [`MemoryBackend`].
+/// [`MemoryBackend`] has interior mutability and allows for synchronous mutation
+/// of memory with other vCPUs.
+///
+/// Currently, [`MemoryRegion`]s require `&mut MemoryBackend` and so can only be configured
+/// at `Mmu` construction time and cannot be modified after construction.
+///
+/// In the future it may be possible to add regions at emulation time via an Append Only Vec.
 ///
 /// Default implementation for testing purposes uses [`PhysicalMemoryVariant::FlatMemory`] and
-/// [`DummyTlb`].
+/// [`DummyTlb`]. For a test ready default use [`Mmu::default_flat()`].
 ///
-/// For a processor ready default use [`Mmu::default_region_store()`].
+/// The recommended way of construction in a [`crate::core::ProcessorImpl`]
+/// is to create separate [`MemoryBackend`] and [`DummyTlb`]
+/// and then pass them to the [`crate::core::ProcessorBundle`].
+///
+/// In tests, [`Mmu::default_flat()`] or [`Mmu::with_regions()`] should suffice.
 pub struct Mmu {
-    pub(crate) tlb: Box<dyn TlbImpl>,
-    pub(crate) memory: MemoryBackend,
+    /// [`TlbImpl`] instance for this cpu.
+    pub tlb: Box<dyn TlbImpl>,
+    /// Shared physical memory backend.
+    ///
+    /// At the moment this is `pub` and so technically users are free to clone.
+    /// If we ever want to collect all the `Arc<MemoryBackend>` from each CPU
+    /// to get a `&mut MemoryBackend` then we will have to provide helper methods to access this.
+    pub memory: Arc<MemoryBackend>,
 }
 
 impl Default for Mmu {
     fn default() -> Self {
-        // OKAY to subvert ::new() because DummyTlb has noop init.
-        Mmu {
-            tlb: Box::new(DummyTlb),
-            memory: MemoryBackend::new(PhysicalMemoryVariant::FlatMemory),
+        Self::default_flat()
+    }
+}
+
+// Constructors
+impl Mmu {
+    /// Construct a Mmu with a set of regions and default TLB.
+    ///
+    /// This is useful for testing or processor that do not have a custom TLB.
+    pub fn with_regions(regions: impl IntoIterator<Item = MemoryRegion>) -> Self {
+        Self::with_regions_tlb(regions, DummyTlb::new())
+    }
+
+    /// Construct a Mmu with a set of regions and custom TLB.
+    ///
+    /// [`DummyTlb`] is the default TLB and an Mmu can be created with
+    /// regions and the [`DummyTlb`] using [`Mmu::with_regions()`]. Otherwise,
+    /// use this method to attach a custom, processor specific [`TlbImpl`]
+    /// implementation.
+    pub fn with_regions_tlb(
+        regions: impl IntoIterator<Item = MemoryRegion>,
+        tlb: Box<dyn TlbImpl>,
+    ) -> Self {
+        let mut memory = MemoryBackend::new(PhysicalMemoryVariant::RegionStore);
+        for region in regions.into_iter() {
+            memory.add_memory_region(region).unwrap();
+        }
+
+        Self {
+            tlb,
+            memory: Arc::new(memory),
+        }
+    }
+
+    /// Create a new Mmu with dummy tlb and flat memory.
+    ///
+    /// This is good for testing or proof of concept processors.
+    /// This is not recommended for production processors since there are no memory regions
+    /// with a flat memory structure.
+    ///
+    /// ## Why Use Memory Regions
+    /// Memory regions are necessary for processors because they define the available
+    /// memory on the processor explicitly.
+    /// Having out of bounds or restricted permission memory regions could fail on common errors
+    /// like null pointer dereference, code execution in
+    /// uninitialized memory (if impossible on target processor).
+    ///
+    /// With memory regions, an invalid read/write/execute faults the processor and stops
+    /// execution allowing the user to debug the issue.
+    /// With no regions, the processor will continue executing as if nothing happened,
+    /// most likely causing issues down the road and masking the root cause.
+    /// Uninitialized null bytes may act like a sled, hiding that invalid address
+    /// that was jumped to.
+    pub fn default_flat() -> Self {
+        Self {
+            tlb: DummyTlb::new(),
+            memory: Arc::new(MemoryBackend::new(PhysicalMemoryVariant::FlatMemory)),
         }
     }
 }
 
 impl Mmu {
-    /// Takes uninitialized tlb and creates mmu and inits `tlb`.
-    pub fn new(
-        mut tlb: Box<dyn TlbImpl>,
-        memory: PhysicalMemoryVariant,
-        cpu: &mut dyn CpuBackend,
-    ) -> Result<Self, UnknownError> {
-        tlb.init(cpu)?;
-        Ok(Self {
-            tlb,
-            memory: MemoryBackend::new(memory),
-        })
-    }
-
-    /// Constructs the [`Mmu`] with the default physical memory backend.
-    pub fn from_impl(tlb: Box<dyn TlbImpl>) -> Self {
-        Self {
-            tlb,
-            memory: MemoryBackend::default(),
-        }
-    }
-
-    /// Constructs the [`Mmu`] with a [`DummyTlb`] and a [`PhysicalMemoryVariant::RegionStore`].
-    pub fn default_region_store() -> Self {
-        // OKAY to subvert ::new() because DummyTlb has noop init.
-        Mmu {
-            tlb: Box::new(DummyTlb),
-            memory: MemoryBackend::new(PhysicalMemoryVariant::RegionStore),
-        }
-    }
-
     /// Returns the range made up of the min and max addresses supported
     /// by the physical memory backend.
     pub fn valid_memory_range(&self) -> MemoryArchitecture<Range<u64>> {
         self.memory
             .min_address()
             .with(self.memory.max_address(), |a, b| a..b)
-    }
-
-    /// Create a new memory region on the backend.
-    pub fn memory_map(
-        &mut self,
-        base: u64,
-        size: u64,
-        perms: MemoryPermissions,
-    ) -> Result<(), AddRegionError> {
-        self.add_memory_region(MemoryRegion::new(base, size, perms)?)
-    }
-
-    /// Adds a pre-populated MemoryRegion to emulator memory map.
-    ///
-    /// Adds to both code and data space if Harvard architecture.
-    pub fn add_memory_region(&mut self, region: MemoryRegion) -> Result<(), AddRegionError> {
-        self.add_memory_region_space(region, None)
-    }
-
-    /// Add a pre-populaed region to memory.
-    ///
-    /// The `space` can be specified as `Some(Space)` so add to that space if Harvard type
-    /// or just add the region if VonNeuman. `None` will add the region to both [`Space::Code`]
-    /// [`Space::Data`] if Hardvard.
-    pub fn add_memory_region_space(
-        &mut self,
-        region: MemoryRegion,
-        space: Option<Space>,
-    ) -> Result<(), AddRegionError> {
-        self.memory.add_region(region, space)
     }
 
     /// Translates a virtual address to a physical address.
@@ -142,7 +155,7 @@ impl Mmu {
         memory_type: MemoryType,
         cpu: &mut dyn CpuBackend,
     ) -> TlbTranslateResult {
-        let mut processor = TlbProcessor::new(&mut self.memory, cpu);
+        let mut processor = TlbProcessor::new(&self.memory, cpu);
         self.tlb
             .translate_va(virtual_addr, access_type, memory_type, &mut processor)
     }
@@ -503,6 +516,22 @@ impl Mmu {
     }
 }
 
+// context save/restore
+impl Mmu {
+    /// Save the [`Mmu`]'s context to be restored in the future.
+    pub fn context_save(&mut self) -> Result<(), UnknownError> {
+        Err(anyhow!(
+            "memory implementation doesn't support save/restore"
+        ))
+    }
+    /// Restore the [`Mmu`]'s context from a saved one.
+    pub fn context_restore(&mut self) -> Result<(), UnknownError> {
+        Err(anyhow!(
+            "memory implementation doesn't support save/restore"
+        ))
+    }
+}
+
 pub struct DataMemoryOp<'a>(&'a mut Mmu);
 impl Readable for DataMemoryOp<'_> {
     type Error = MmuOpError;
@@ -672,7 +701,7 @@ impl Writable for SudoCodeMemoryOp<'_> {
 impl HasRegions for Mmu {
     fn regions(&self) -> impl Iterator<Item = &MemoryRegion> {
         // collect to vec so that the iters are the same type
-        match &self.memory {
+        match &*self.memory {
             MemoryBackend::Harvard { code, data } => code
                 .regions
                 .iter()
@@ -686,8 +715,7 @@ impl HasRegions for Mmu {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::memory::helpers::*;
+    use crate::memory::{helpers::*, Mmu};
 
     #[test]
     fn test_simple() {

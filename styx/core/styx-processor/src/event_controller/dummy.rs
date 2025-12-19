@@ -2,7 +2,10 @@
 use log::debug;
 use styx_errors::UnknownError;
 
-use crate::{cpu::CpuBackend, memory::Mmu};
+use crate::{
+    cpu::CpuBackend,
+    memory::{MemoryBackend, Mmu},
+};
 
 use super::{
     ActivateIRQnError, EventControllerImpl, ExceptionNumber, InterruptExecuted, Peripherals,
@@ -51,7 +54,11 @@ impl EventControllerImpl for DummyEventController {
         None
     }
 
-    fn init(&mut self, _cpu: &mut dyn CpuBackend, _mmu: &mut Mmu) -> Result<(), UnknownError> {
+    fn init(
+        &mut self,
+        _cpu: &mut dyn CpuBackend,
+        _mmu: &mut MemoryBackend,
+    ) -> Result<(), UnknownError> {
         Ok(())
     }
 }

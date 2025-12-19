@@ -31,12 +31,12 @@ pub enum TlbTranslateError {
 ///
 /// Construct with [`Self::new()`].
 pub struct TlbProcessor<'a> {
-    pub physical_memory: &'a mut MemoryBackend,
+    pub physical_memory: &'a MemoryBackend,
     pub cpu: &'a mut dyn CpuBackend,
 }
 
 impl<'a> TlbProcessor<'a> {
-    pub fn new(physical_memory: &'a mut MemoryBackend, cpu: &'a mut dyn CpuBackend) -> Self {
+    pub fn new(physical_memory: &'a MemoryBackend, cpu: &'a mut dyn CpuBackend) -> Self {
         Self {
             physical_memory,
             cpu,

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! `ProcessorBuilder` logic and utilities
-use std::borrow::Cow;
+use std::{borrow::Cow, sync::Arc};
 
 use log::{debug, info};
 use styx_cpu_type::Backend;
@@ -20,6 +20,7 @@ use crate::{
     event_controller::EventController,
     executor::{DefaultExecutor, Executor, ExecutorImpl},
     hooks::StyxHook,
+    memory::Mmu,
     plugins::{collection::PluginsContainer, UninitPlugin},
     runtime::ProcessorRuntime,
 };
@@ -269,12 +270,17 @@ impl<'a> ProcessorBuilder<'a> {
             .with_context(|| "could not resolve the ipc port to build the processor")?;
 
         let mut cpu = bundle.cpu;
-        let mut mmu = bundle.mmu;
+        let mut memory = bundle.memory;
+        let tlb = bundle.tlb;
 
         let mut event_controller_impl = bundle.event_controller;
-        event_controller_impl.init(cpu.as_mut(), &mut mmu)?;
+        event_controller_impl.init(cpu.as_mut(), &mut memory)?;
         let event_controller = EventController::new(event_controller_impl);
 
+        let mmu = Mmu {
+            tlb,
+            memory: Arc::new(memory),
+        };
         let mut core = ProcessorCore {
             cpu,
             mmu,

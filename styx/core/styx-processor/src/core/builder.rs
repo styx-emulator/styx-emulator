@@ -8,7 +8,7 @@ use crate::{
     core::ExceptionBehavior,
     cpu::{CpuBackend, DummyBackend},
     event_controller::{DummyEventController, EventControllerImpl, Peripheral},
-    memory::Mmu,
+    memory::{physical::MemoryBackend, DummyTlb, TlbImpl},
     processor::BuildingProcessor,
 };
 
@@ -20,8 +20,10 @@ use crate::{
 pub struct ProcessorBundle {
     /// Uninitialized [CpuBackend] implementation.
     pub cpu: Box<dyn CpuBackend>,
-    /// Uninitialized [Mmu] implementation.
-    pub mmu: Mmu,
+    /// Physical memory.
+    pub memory: MemoryBackend,
+    /// Processor TLB.
+    pub tlb: Box<dyn TlbImpl>,
     /// Uninitialized [EventControllerImpl] implementation.
     pub event_controller: Box<dyn EventControllerImpl>,
     /// List of peripherals that will be added and initialized.
@@ -33,7 +35,8 @@ impl Default for ProcessorBundle {
     fn default() -> Self {
         Self {
             cpu: Box::new(DummyBackend),
-            mmu: Mmu::default(),
+            memory: MemoryBackend::default(),
+            tlb: Box::new(DummyTlb),
             event_controller: Box::new(DummyEventController::default()),
             peripherals: Default::default(),
             loader_hints: Default::default(),

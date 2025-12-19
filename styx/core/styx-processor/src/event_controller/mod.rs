@@ -19,7 +19,11 @@ use styx_errors::{
 };
 use thiserror::Error;
 
-use crate::{cpu::CpuBackend, executor::Delta, memory::Mmu};
+use crate::{
+    cpu::CpuBackend,
+    executor::Delta,
+    memory::{MemoryBackend, Mmu},
+};
 
 pub type ExceptionNumber = i32;
 
@@ -85,7 +89,11 @@ pub trait EventControllerImpl: AsAny + Send {
         mmu: &mut Mmu,
     ) -> Option<ExceptionNumber>;
 
-    fn init(&mut self, cpu: &mut dyn CpuBackend, mmu: &mut Mmu) -> Result<(), UnknownError>;
+    fn init(
+        &mut self,
+        cpu: &mut dyn CpuBackend,
+        mmu: &mut MemoryBackend,
+    ) -> Result<(), UnknownError>;
 
     fn reset(&mut self, _cpu: &mut dyn CpuBackend, _mmu: &mut Mmu) -> Result<(), UnknownError> {
         Ok(())
@@ -181,10 +189,14 @@ impl EventController {
         }
     }
 
-    pub fn reset(&mut self, cpu: &mut dyn CpuBackend, mmu: &mut Mmu) -> Result<(), UnknownError> {
-        self.inner.reset(cpu, mmu)?;
+    pub fn reset(
+        &mut self,
+        cpu: &mut dyn CpuBackend,
+        memory: &mut Mmu,
+    ) -> Result<(), UnknownError> {
+        self.inner.reset(cpu, memory)?;
         for peripheral in self.peripherals.peripherals.iter_mut() {
-            peripheral.reset(cpu, mmu)?;
+            peripheral.reset(cpu, memory)?;
         }
         Ok(())
     }
