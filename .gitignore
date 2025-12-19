@@ -75,3 +75,6 @@ compile_commands.json
 
 # faux cargo home
 .cargo-home
+
+# helix editor configuration
+.helix/
