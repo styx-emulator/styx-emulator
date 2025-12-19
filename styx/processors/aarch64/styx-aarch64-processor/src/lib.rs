@@ -8,8 +8,8 @@ use styx_core::{
     cpu::{Backend, PcodeBackend},
     event_controller::DummyEventController,
     loader::LoaderHints,
-    memory::Mmu,
-    prelude::CpuBackend,
+    memory::DummyTlb,
+    prelude::{CpuBackend, *},
 };
 
 /// A processor with no peripherals or event controller, purely instruction emulation.
@@ -36,9 +36,13 @@ impl ProcessorImpl for Aarch64Processor {
             Box::new(styx_core::cpu::Arch::Aarch64),
         );
 
+        let memory = MemoryBackend::new_flat();
+        let tlb = DummyTlb::new();
+
         Ok(ProcessorBundle {
             cpu,
-            mmu: Mmu::default(),
+            memory,
+            tlb,
             event_controller: Box::new(DummyEventController::default()),
             peripherals: vec![],
             loader_hints: hints,

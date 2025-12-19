@@ -514,7 +514,7 @@ pub fn aircr_w_hook(
 
     // setting this bit triggers a local system reset
     if val & SYSRESETREQ > 0 {
-        nvic.reset(proc.cpu, proc.mmu);
+        nvic.reset(proc.cpu, &proc.mmu.memory);
     }
 
     debug!("Priority grouping changed to: {prigroup}");

@@ -10,7 +10,6 @@ use styx_core::core::builder::BuildProcessorImplArgs;
 use styx_core::cpu::arch::ppc32::gdb_targets::Ppc4xxTargetDescription;
 use styx_core::cpu::PcodeBackend;
 use styx_core::event_controller::DummyEventController;
-use styx_core::memory::physical::PhysicalMemoryVariant;
 use styx_core::memory::{FnTlb, TlbProcessor, TlbTranslateResult};
 use styx_core::{prelude::*, util};
 
@@ -46,7 +45,7 @@ fn virtual_gdb_tests_builder() -> ProcessorBuilder<'static> {
     );
 
     let custom_builder = |args: &BuildProcessorImplArgs| {
-        let mut cpu = if let Backend::Pcode = args.backend {
+        let cpu = if let Backend::Pcode = args.backend {
             Box::new(PcodeBackend::new_engine_config(
                 Ppc32Variants::Ppc405,
                 ArchEndian::BigEndian,
@@ -71,8 +70,8 @@ fn virtual_gdb_tests_builder() -> ProcessorBuilder<'static> {
         }
 
         let tlb = Box::new(FnTlb::new(translation));
-        let mut mmu = Mmu::new(tlb, PhysicalMemoryVariant::RegionStore, cpu.as_mut())?;
-        mmu.memory_map(0, 2u64.pow(32), MemoryPermissions::all())?;
+        let mut memory = MemoryBackend::new_region_store();
+        memory.memory_map(0, 2u64.pow(32), MemoryPermissions::all())?;
 
         let cec = Box::new(DummyEventController::default());
 
@@ -82,7 +81,8 @@ fn virtual_gdb_tests_builder() -> ProcessorBuilder<'static> {
         hints.insert("arch".to_string().into_boxed_str(), Box::new(Arch::Ppc32));
         Ok(ProcessorBundle {
             cpu,
-            mmu,
+            memory,
+            tlb,
             event_controller: cec,
             peripherals,
             loader_hints: hints,

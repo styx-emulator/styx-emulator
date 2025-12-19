@@ -12,13 +12,12 @@ use styx_processor::{
 /// Execution when starting in unmapped memory should throw a descriptive error.
 #[test]
 fn test_unmapped_execution() {
-    let mut mmu = Mmu::default_region_store();
+    let mut mmu =
+        Mmu::with_regions([MemoryRegion::new(0, 0x1000, MemoryPermissions::all()).unwrap()]);
     let mut ev = EventController::default();
     let mut cpu =
         PcodeBackend::new_engine(Arch::Ppc32, Ppc32Variants::Ppc405, ArchEndian::BigEndian);
 
-    mmu.add_memory_region(MemoryRegion::new(0x0, 0x1000, MemoryPermissions::all()).unwrap())
-        .unwrap();
     // start unmapped
     cpu.set_pc(0x2000).unwrap();
 
@@ -35,14 +34,12 @@ fn test_unmapped_execution() {
 /// again.
 #[test]
 fn test_goes_unmapped_execution() {
-    let mut mmu = Mmu::default_region_store();
+    let mut mmu =
+        Mmu::with_regions([MemoryRegion::new(0, 0x1000, MemoryPermissions::all()).unwrap()]);
     let mut ev = EventController::default();
 
     let mut cpu =
         PcodeBackend::new_engine(Arch::Ppc32, Ppc32Variants::Ppc405, ArchEndian::BigEndian);
-
-    mmu.add_memory_region(MemoryRegion::new(0x0, 0x1000, MemoryPermissions::all()).unwrap())
-        .unwrap();
 
     // start mapped
     cpu.set_pc(0xFFC).unwrap();
@@ -75,16 +72,14 @@ fn test_goes_unmapped_execution() {
 /// to memory with no permissions, the execute permission is not checked.
 #[test]
 fn test_no_permission_execution() {
-    let mut mmu = Mmu::default_region_store();
+    let mut mmu = Mmu::with_regions([
+        MemoryRegion::new(0, 0x1000, MemoryPermissions::all()).unwrap(),
+        MemoryRegion::new(0x1000, 0x1000, MemoryPermissions::empty()).unwrap(),
+    ]);
     let mut ev = EventController::default();
 
     let mut cpu =
         PcodeBackend::new_engine(Arch::Ppc32, Ppc32Variants::Ppc405, ArchEndian::BigEndian);
-
-    mmu.add_memory_region(MemoryRegion::new(0x0, 0x1000, MemoryPermissions::all()).unwrap())
-        .unwrap();
-    mmu.add_memory_region(MemoryRegion::new(0x1000, 0x1000, MemoryPermissions::empty()).unwrap())
-        .unwrap();
 
     // start with no permission region
     cpu.set_pc(0x1000).unwrap();
@@ -104,16 +99,14 @@ fn test_no_permission_execution() {
 #[ignore]
 #[test]
 fn test_goes_no_permission_execution() {
-    let mut mmu = Mmu::default_region_store();
+    let mut mmu = Mmu::with_regions([
+        MemoryRegion::new(0, 0x1000, MemoryPermissions::all()).unwrap(),
+        MemoryRegion::new(0x1000, 0x1000, MemoryPermissions::empty()).unwrap(),
+    ]);
     let mut ev = EventController::default();
 
     let mut cpu =
         PcodeBackend::new_engine(Arch::Ppc32, Ppc32Variants::Ppc405, ArchEndian::BigEndian);
-
-    mmu.add_memory_region(MemoryRegion::new(0x0, 0x1000, MemoryPermissions::all()).unwrap())
-        .unwrap();
-    mmu.add_memory_region(MemoryRegion::new(0x1000, 0x1000, MemoryPermissions::empty()).unwrap())
-        .unwrap();
 
     cpu.set_pc(0xFFC).unwrap();
 

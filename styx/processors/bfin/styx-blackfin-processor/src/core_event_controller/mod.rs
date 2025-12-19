@@ -7,6 +7,7 @@ mod system_interrupts;
 use event::*;
 use exception::*;
 use styx_blackfin_sys::bf512 as sys;
+use styx_core::memory::MemoryBackend;
 use styx_core::prelude::*;
 use styx_core::{
     cpu::arch::blackfin::BlackfinRegister,
@@ -172,7 +173,11 @@ impl EventControllerImpl for CoreEventController {
         todo!()
     }
 
-    fn init(&mut self, cpu: &mut dyn CpuBackend, _mmu: &mut Mmu) -> Result<(), UnknownError> {
+    fn init(
+        &mut self,
+        cpu: &mut dyn CpuBackend,
+        _mmu: &mut MemoryBackend,
+    ) -> Result<(), UnknownError> {
         register_hooks(cpu)?;
         Ok(())
     }

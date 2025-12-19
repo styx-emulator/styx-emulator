@@ -33,7 +33,6 @@ unicorn-backend = [
 workspace = true
 
 [dependencies]
-styx-memory = { path = "../styx-memory" }
 styx-sync = { path = "../styx-sync" }
 styx-errors = { path = "../styx-errors" }
 styx-cpu-type = { path = "../styx-cpu-type" }

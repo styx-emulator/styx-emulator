@@ -196,9 +196,7 @@ pub use physical::{
     AddRegionError, AtomicMemoryOperationError, CompareExchangeError, FromConfigError,
     MemoryBackend, MemoryOperationError, PhysicalMemoryVariant, UnmappedMemoryError,
 };
-pub use tlb::{
-    DummyTlb, FnTlb, TlbImpl, TlbProcessor, TlbTranslateError, TlbTranslateResult,
-};
+pub use tlb::{DummyTlb, FnTlb, TlbImpl, TlbProcessor, TlbTranslateError, TlbTranslateResult};
 
 /// Enum that is used to be explicit in error handling
 /// of current memory operations

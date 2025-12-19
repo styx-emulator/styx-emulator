@@ -23,16 +23,14 @@ fn test_memory_read_hook_be() {
        8:	80 83 00 00 	lwz     r4,0(r3)
    ";
 
-    let mut mmu = Mmu::default_region_store();
+    // code region
+    let mut mmu =
+        Mmu::with_regions([MemoryRegion::new(0, 0x10000, MemoryPermissions::all()).unwrap()]);
     let mut ev = EventController::default();
     let mut cpu =
         PcodeBackend::new_engine(Arch::Ppc32, Ppc32Variants::Ppc405, ArchEndian::BigEndian);
 
     let code_bytes = styx_util::parse_objdump(objdump).unwrap();
-
-    // code region
-    mmu.add_memory_region(MemoryRegion::new(0, 0x10000, MemoryPermissions::all()).unwrap())
-        .unwrap();
 
     mmu.write_code(0x0, &code_bytes).unwrap();
     mmu.data().write(0x1000).be().value(0xCAFEBABEu32).unwrap();

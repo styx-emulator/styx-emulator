@@ -10,7 +10,7 @@ use styx_errors::UnknownError;
 use styx_processor::{
     cpu::CpuBackend,
     event_controller::EventController,
-    memory::{helpers::WriteExt, MemoryPermissions, Mmu},
+    memory::{helpers::WriteExt, memory_region::MemoryRegion, MemoryPermissions, Mmu},
 };
 use styx_util::logging::init_logging;
 
@@ -20,13 +20,15 @@ fn test_pc_overflow_ppc32() -> Result<(), UnknownError> {
     use styx_cpu_type::arch::ppc32::Ppc32Variants;
 
     init_logging();
-    let mut mmu = Mmu::default_region_store();
+    let mut mmu =
+        Mmu::with_regions([
+            MemoryRegion::new(u64::MAX - 0xFFF, 0x1000, MemoryPermissions::all()).unwrap(),
+        ]);
     let mut ev = EventController::default();
     let mut cpu =
         PcodeBackend::new_engine(Arch::Ppc32, Ppc32Variants::Ppc405, ArchEndian::BigEndian);
 
     cpu.set_pc(u64::MAX - 3)?;
-    mmu.memory_map(u64::MAX - 0xFFF, 0x1000, MemoryPermissions::all())?;
     mmu.code()
         .write(u64::MAX - 3)
         .bytes(&[0x60, 0x00, 0x00, 0x00])?; // powerpc code for NOP
@@ -44,7 +46,10 @@ fn test_pc_overflow_arm_tmode() -> Result<(), UnknownError> {
     use styx_cpu_type::arch::arm::ArmVariants;
 
     init_logging();
-    let mut mmu = Mmu::default_region_store();
+    let mut mmu =
+        Mmu::with_regions([
+            MemoryRegion::new(u64::MAX - 0xFFF, 0x1000, MemoryPermissions::all()).unwrap(),
+        ]);
     let mut ev = EventController::default();
     let mut cpu = PcodeBackend::new_engine(
         Arch::Arm,
@@ -53,7 +58,6 @@ fn test_pc_overflow_arm_tmode() -> Result<(), UnknownError> {
     );
 
     cpu.set_pc(u64::MAX)?;
-    mmu.memory_map(u64::MAX - 0xFFF, 0x1000, MemoryPermissions::all())?;
     mmu.code().write(u64::MAX - 1).bytes(&[0xC0, 0x46])?; // arm t-mode code for NOP
 
     let res = cpu.execute(&mut mmu, &mut ev, 1);
@@ -69,7 +73,10 @@ fn test_pc_overflow_arm_normal() -> Result<(), UnknownError> {
     use styx_cpu_type::arch::arm::ArmVariants;
 
     init_logging();
-    let mut mmu = Mmu::default_region_store();
+    let mut mmu =
+        Mmu::with_regions([
+            MemoryRegion::new(u64::MAX - 0xFFF, 0x1000, MemoryPermissions::all()).unwrap(),
+        ]);
     let mut ev = EventController::default();
     let mut cpu = PcodeBackend::new_engine(
         Arch::Arm,
@@ -78,7 +85,6 @@ fn test_pc_overflow_arm_normal() -> Result<(), UnknownError> {
     );
 
     cpu.set_pc(u64::MAX - 3)?;
-    mmu.memory_map(u64::MAX - 0xFFF, 0x1000, MemoryPermissions::all())?;
     mmu.code()
         .write(u64::MAX - 3)
         .bytes(&[0x00, 0x00, 0x00, 0x00])?; // arm code for NOP
@@ -96,7 +102,10 @@ fn test_pc_overflow_bfin() -> Result<(), UnknownError> {
     use styx_cpu_type::arch::blackfin::BlackfinVariants;
 
     init_logging();
-    let mut mmu = Mmu::default_region_store();
+    let mut mmu =
+        Mmu::with_regions([
+            MemoryRegion::new(u64::MAX - 0xFFF, 0x1000, MemoryPermissions::all()).unwrap(),
+        ]);
     let mut ev = EventController::default();
     let mut cpu = PcodeBackend::new_engine(
         Arch::Blackfin,
@@ -105,7 +114,6 @@ fn test_pc_overflow_bfin() -> Result<(), UnknownError> {
     );
 
     cpu.set_pc(u64::MAX - 1)?;
-    mmu.memory_map(u64::MAX - 0xFFF, 0x1000, MemoryPermissions::all())?;
     mmu.code().write(u64::MAX - 1).bytes(&[0x00, 0x00])?; // bfin code for NOP (at least in our sla spec)
 
     let res = cpu.execute(&mut mmu, &mut ev, 1);

@@ -16,7 +16,7 @@ use styx_core::cpu::arch::blackfin::BlackfinMetaVariants;
 use styx_core::cpu::arch::blackfin::BlackfinVariants;
 use styx_core::cpu::PcodeBackend;
 use styx_core::memory::memory_region::MemoryRegion;
-use styx_core::memory::MemoryPermissions;
+use styx_core::memory::{DummyTlb, MemoryBackend, MemoryPermissions};
 use styx_core::prelude::*;
 
 use core_event_controller::CoreEventController;
@@ -65,9 +65,10 @@ impl ProcessorImpl for BlackfinBuilder {
             return Err(anyhow!("blackfin processor only supports pcode backend"));
         };
 
-        let mut mmu = Mmu::default_region_store();
+        let mut memory = MemoryBackend::new_region_store();
+        let tlb = DummyTlb::new();
 
-        self.setup_address_space(&mut mmu)?;
+        self.setup_address_space(&mut memory)?;
 
         // initial_registers(cpu.as_mut())?;
         let cec = Box::new(CoreEventController::default());
@@ -96,7 +97,8 @@ impl ProcessorImpl for BlackfinBuilder {
 
         Ok(ProcessorBundle {
             cpu,
-            mmu,
+            tlb,
+            memory,
             event_controller: cec,
             peripherals,
             loader_hints: hints,
@@ -105,7 +107,7 @@ impl ProcessorImpl for BlackfinBuilder {
 }
 
 impl BlackfinBuilder {
-    fn setup_address_space(&self, mmu: &mut Mmu) -> Result<(), UnknownError> {
+    fn setup_address_space(&self, mmu: &mut MemoryBackend) -> Result<(), UnknownError> {
         let mut regions = Vec::new();
 
         let sdram_start = 0;

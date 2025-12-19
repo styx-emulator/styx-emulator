@@ -18,7 +18,7 @@ use styx_processor::{
         helpers::{ReadExt, WriteExt},
         memory_region::MemoryRegion,
         physical::PhysicalMemoryVariant,
-        FnTlb, MemoryOperation, MemoryPermissions, MemoryType, Mmu, TlbProcessor,
+        FnTlb, MemoryBackend, MemoryOperation, MemoryPermissions, MemoryType, Mmu, TlbProcessor,
         TlbTranslateError, TlbTranslateResult,
     },
 };
@@ -65,15 +65,16 @@ fn test_proc(
 
     let mut cpu =
         PcodeBackend::new_engine(Arch::Ppc32, Ppc32Variants::Ppc405, ArchEndian::BigEndian);
-    let physical_memory = PhysicalMemoryVariant::RegionStore;
     let tlb = FnTlb::new(translate_fn);
-    let mut mmu = Mmu::new(Box::new(tlb), physical_memory, &mut cpu)?;
+    let mut memory = MemoryBackend::new(PhysicalMemoryVariant::RegionStore);
+    memory.add_memory_region(MemoryRegion::new(0, 0x4000, MemoryPermissions::all())?)?;
+    let mmu = Mmu {
+        memory: Arc::new(memory),
+        tlb: Box::new(tlb),
+    };
     let ev = EventController::default();
 
     let code_bytes = styx_util::parse_objdump(program_objdump)?;
-
-    mmu.add_memory_region(MemoryRegion::new(0, 0x4000, MemoryPermissions::all())?)
-        .unwrap();
 
     // this is 0x0 in virtual
     mmu.write_code(0x1000, &code_bytes)?;

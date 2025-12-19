@@ -41,6 +41,8 @@ use styx_core::cpu::arch::arm::{ArmRegister, ArmVariants};
 use styx_core::cpu::PcodeBackend;
 use styx_core::errors::anyhow::anyhow;
 use styx_core::memory::memory_region::MemoryRegion;
+use styx_core::memory::physical::PhysicalMemoryVariant;
+use styx_core::memory::{DummyTlb, MemoryBackend};
 use styx_core::prelude::*;
 use styx_mk21f12_sys as mk21f12_sys;
 use styx_nvic::Nvic;
@@ -122,9 +124,10 @@ impl ProcessorImpl for Kinetis21Builder {
             _ => return Err(BackendNotSupported(args.backend).into()),
         };
 
-        let mut mmu = Mmu::default_region_store();
+        let mut memory = MemoryBackend::new(PhysicalMemoryVariant::RegionStore);
 
-        self.setup_address_space(&mut mmu)?;
+        self.setup_address_space(&mut memory)?;
+        let tlb = DummyTlb::new();
 
         // Note: BitBands is unique in that its logic is owned by the Arcs
         // contained in its callbacks. It is not owned by the EventManager
@@ -147,7 +150,8 @@ impl ProcessorImpl for Kinetis21Builder {
 
         Ok(ProcessorBundle {
             cpu,
-            mmu,
+            memory,
+            tlb,
             event_controller: Box::new(Nvic::default()),
             peripherals,
             loader_hints: hints,
@@ -182,7 +186,7 @@ impl ProcessorImpl for Kinetis21Builder {
 }
 
 impl Kinetis21Builder {
-    fn setup_address_space(&self, mmu: &mut Mmu) -> Result<(), UnknownError> {
+    fn setup_address_space(&self, mmu: &mut MemoryBackend) -> Result<(), UnknownError> {
         let mut regions = Vec::new();
 
         // Alias flash regions from

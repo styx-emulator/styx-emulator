@@ -8,6 +8,7 @@ use styx_errors::UnknownError;
 use styx_processor::cpu::{CpuBackend, ExecutionReport};
 use styx_processor::hooks::{CoreHandle, Hookable, StyxHook};
 use styx_processor::memory::helpers::WriteExt;
+use styx_processor::memory::memory_region::MemoryRegion;
 use styx_processor::memory::MemoryPermissions;
 use styx_processor::{event_controller::EventController, memory::Mmu};
 use styx_util::logging::init_logging;
@@ -28,13 +29,13 @@ fn test_basic_block_hook() -> Result<(), UnknownError> {
     14:	4b ff ff ec 	b       0 <start>
    ";
 
-    let mut mmu = Mmu::default_region_store();
+    let mut mmu =
+        Mmu::with_regions([MemoryRegion::new(0, 0x10000, MemoryPermissions::all()).unwrap()]);
     let mut ev = EventController::default();
     let mut cpu =
         PcodeBackend::new_engine(Arch::Ppc32, Ppc32Variants::Ppc405, ArchEndian::BigEndian);
 
     let code_bytes = styx_util::parse_objdump(objdump)?;
-    mmu.memory_map(0, 0x10000, MemoryPermissions::all())?;
     mmu.code().write(0).bytes(&code_bytes)?;
     cpu.set_pc(0)?;
 

@@ -65,6 +65,7 @@ use styx_core::core::builder::{BuildProcessorImplArgs, ProcessorImpl};
 use styx_core::cpu::arch::arm::{arm_coproc_registers, ArmVariants};
 use styx_core::cpu::PcodeBackend;
 use styx_core::memory::memory_region::MemoryRegion;
+use styx_core::memory::DummyTlb;
 use styx_core::prelude::*;
 use styx_gic::Gic;
 use styx_peripherals::uart::UartController;
@@ -272,9 +273,10 @@ impl ProcessorImpl for CycloneVBuilder {
             _ => return Err(BackendNotSupported(args.backend).into()),
         };
 
-        let mut mmu = Mmu::default_region_store();
+        let mut memory = MemoryBackend::new_region_store();
+        let tlb = DummyTlb::new();
 
-        self.setup_address_space(&mut mmu)?;
+        self.setup_address_space(&mut memory)?;
 
         let gic = Gic::default();
         gic.initialize(self.initial_vbar, self.initial_cbar)?;
@@ -290,7 +292,8 @@ impl ProcessorImpl for CycloneVBuilder {
 
         Ok(ProcessorBundle {
             cpu,
-            mmu,
+            tlb,
+            memory,
             event_controller: Box::new(gic),
             peripherals,
             loader_hints: hints,
@@ -299,7 +302,7 @@ impl ProcessorImpl for CycloneVBuilder {
 }
 
 impl CycloneVBuilder {
-    fn setup_address_space(&self, mmu: &mut Mmu) -> Result<(), UnknownError> {
+    fn setup_address_space(&self, mmu: &mut MemoryBackend) -> Result<(), UnknownError> {
         let mut regions = Vec::new();
 
         for rg in ADDRESS_MAP.iter() {

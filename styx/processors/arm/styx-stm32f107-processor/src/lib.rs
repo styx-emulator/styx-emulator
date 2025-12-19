@@ -8,7 +8,7 @@ use styx_core::{
         arch::arm::{ArmRegister, ArmVariants},
         PcodeBackend,
     },
-    memory::HasRegions,
+    memory::{DummyTlb, HasRegions},
     prelude::*,
 };
 use styx_nvic::Nvic;
@@ -59,13 +59,14 @@ impl ProcessorImpl for Stm32f107Builder {
             _ => return Err(BackendNotSupported(args.backend).into()),
         };
 
-        let mut mmu = Mmu::default_region_store();
+        let mut memory = MemoryBackend::new_region_store();
+        let tlb = DummyTlb::new();
         // nvic event controller
         let event_controller = Box::new(Nvic::default());
         let mut loader_hints = LoaderHints::new();
         loader_hints.insert("arch".to_string().into_boxed_str(), Box::new(Arch::Arm));
 
-        setup_address_space(&mut mmu)?;
+        setup_address_space(&mut memory)?;
         set_hooks(cpu.as_mut())?;
 
         // setup the peripherals
@@ -83,7 +84,8 @@ impl ProcessorImpl for Stm32f107Builder {
 
         Ok(ProcessorBundle {
             cpu,
-            mmu,
+            memory,
+            tlb,
             event_controller,
             peripherals,
             loader_hints,
@@ -100,7 +102,7 @@ impl ProcessorImpl for Stm32f107Builder {
 const RCC_CR_ADDR: u32 = 0x4000_0000 + 0x0002_0000 + 0x1000;
 const RCC_CFGR: u32 = RCC_CR_ADDR + 0x4;
 
-fn setup_address_space(mmu: &mut Mmu) -> Result<(), UnknownError> {
+fn setup_address_space(mmu: &mut MemoryBackend) -> Result<(), UnknownError> {
     let mut regions = Vec::new();
 
     // peripherals

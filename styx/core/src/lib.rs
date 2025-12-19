@@ -57,8 +57,8 @@ pub mod prelude {
     pub use super::loader::*;
     pub use super::macros::*;
     pub use super::memory::{
-        MemoryOperation, MemoryOperationError, MemoryPermissions, MemoryRegionSize, MemoryType,
-        Mmu, MmuOpError,
+        MemoryBackend, MemoryOperation, MemoryOperationError, MemoryPermissions, MemoryRegionSize,
+        MemoryType, Mmu, MmuOpError,
     };
     pub use super::plugins::{Plugin, UninitPlugin};
     pub use super::processor::*;
