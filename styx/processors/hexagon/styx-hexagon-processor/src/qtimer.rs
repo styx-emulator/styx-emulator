@@ -23,12 +23,14 @@ use styx_core::{
 };
 use styx_peripherals::clock::Tick;
 
-use crate::{read_cfgtable_field, SUBSYSTEM_BASE};
+use crate::read_cfgtable_field;
 use bitbybit::bitenum;
 
 const CNT_ACR_START: u16 = 0x40u16;
 const CNT_ACR_END: u16 = 0x5cu16;
 const QTIMER_OFFSET: u64 = 0x20000;
+const SUBSYSTEM_BASE: u64 = 0xfc900000;
+const QTIMER_BASE: u64 = SUBSYSTEM_BASE + QTIMER_OFFSET;
 
 #[derive(Debug)]
 #[bitenum(u16, exhaustive = false)]
@@ -56,8 +58,8 @@ pub struct QTimer {
     control_access_registers: [u32; 7],
     limit: u64,
     interrupt_level: u32,
-    qtimer_hooks: HashMap<QTimerHookName, Vec<HookToken>>,
-    qtimer_values: HashMap<QTimerHookName, u64>,
+    // qtimer_hooks: HashMap<QTimerHookName, Vec<HookToken>>,
+    // qtimer_values: HashMap<QTimerHookName, u64>,
 }
 // First it writes offset 4 sz 4 CNTSR
 // Then it writes offset 64 sz 4 CNTACR
@@ -69,13 +71,10 @@ fn qtimer_mmio_read_hook(
     data: &mut [u8],
 ) -> Result<(), UnknownError> {
     let timer_periph = proc.event_controller.peripherals.get::<QTimer>().unwrap();
-    let qtimer_base = timer_periph
-        .hook_value(QTimerHookName::QTimerBase)
-        .with_context(|| "couldn't get qtimer base")?;
 
     error!(
         "accessed offset {} size {size} access_type READ data {data:x?}",
-        address - qtimer_base
+        address - QTIMER_BASE
     );
 
     Ok(())
@@ -90,15 +89,11 @@ fn qtimer_mmio_write_hook(
     let pc = proc.cpu.pc().unwrap();
 
     let timer_periph = proc.event_controller.peripherals.get::<QTimer>().unwrap();
-    let qtimer_base = timer_periph
-        .hook_value(QTimerHookName::QTimerBase)
-        .with_context(|| "couldn't get qtimer base")?;
-
-    let offset = address - qtimer_base;
+    let offset = address - QTIMER_BASE;
     let qtimer_register = QTimerRegisters::new_with_raw_value(offset as u16);
 
     error!(
-        "accessed offset {} size {size} access_type WRITE data {data:x?} reg {:?} pc {}",
+        "accessed offset {} size {size} access_type WRITE data {data:x?} reg {:?} pc {:x}",
         offset, qtimer_register, pc
     );
 
@@ -134,7 +129,7 @@ fn qtimer_mmio_write_hook(
     Ok(())
 }
 
-fn cfg_subsys_base_hook(
+/*fn cfg_subsys_base_hook(
     hook_name: QTimerHookName,
     proc: CoreHandle,
     new_val: u64,
@@ -276,7 +271,7 @@ impl QTimer {
 
         Ok(())
     }
-}
+}*/
 
 impl Peripheral for QTimer {
     fn name(&self) -> &str {
@@ -301,12 +296,29 @@ impl Peripheral for QTimer {
         // see SIUUUUUU in powerquicky
         // just have a cfgbase handle here
         info!("We initialize the hook for cfgbase.");
-        let cfgbase = proc
+        /*let cfgbase = proc
             .core
             .cpu
             .read_register::<u32>(HexagonRegister::CfgBase)
             .with_context(|| "couldn't read cfgbase")? as u64;
-        self.update_setup_value_hooks(proc.core.cpu.as_mut(), QTimerHookName::CfgBase, cfgbase)?;
+        self.update_setup_value_hooks(proc.core.cpu.as_mut(), QTimerHookName::CfgBase, cfgbase)?;*/
+
+        proc.core
+            .cpu
+            .mem_write_hook(
+                QTIMER_BASE,
+                QTIMER_BASE + 0x1000,
+                Box::new(qtimer_mmio_write_hook),
+            )
+            .with_context(|| "couldn't add MMIO hooks for qtimer")?;
+        proc.core
+            .cpu
+            .mem_read_hook(
+                QTIMER_BASE,
+                QTIMER_BASE + 0x1000,
+                Box::new(qtimer_mmio_read_hook),
+            )
+            .with_context(|| "couldn't add MMIO hooks for qtimer")?;
 
         Ok(())
     }

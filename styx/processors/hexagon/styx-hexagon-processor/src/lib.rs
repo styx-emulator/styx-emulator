@@ -28,8 +28,6 @@ mod exception;
 mod qtimer;
 mod tlb;
 
-const SUBSYSTEM_BASE: u64 = 0x8;
-
 #[derive(serde::Deserialize)]
 pub struct HexagonBuilder {
     pub variant: HexagonVariants,
