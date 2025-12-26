@@ -2,10 +2,11 @@
 //! # Styx-Processors
 
 use event_controller::HexagonEventController;
+use qtimer::QTimer;
 use styx_core::arch::hexagon::register_fields::Ssr;
 use styx_core::arch::hexagon::HexagonRegister;
 use styx_core::cpu::arch::hexagon::HexagonVariants;
-use styx_core::cpu::{Arch, Backend};
+use styx_core::cpu::{Arch, Backend, CpuBackend, PcodeBackendConfiguration};
 use styx_core::loader::LoaderHints;
 use styx_core::memory::physical::PhysicalMemoryVariant;
 use styx_core::memory::{MemoryPermissions, Mmu};
@@ -24,7 +25,10 @@ use tlb::HexagonTlb;
 
 mod event_controller;
 mod exception;
+mod qtimer;
 mod tlb;
+
+const SUBSYSTEM_BASE: u64 = 0x8;
 
 #[derive(serde::Deserialize)]
 pub struct HexagonBuilder {
@@ -45,7 +49,11 @@ impl ProcessorImpl for HexagonBuilder {
             Box::new(HexagonPcodeBackend::new_engine_config(
                 self.variant.clone(),
                 ArchEndian::LittleEndian,
-                &args.into(),
+                &PcodeBackendConfiguration {
+                    register_read_hooks: false,
+                    register_write_hooks: true,
+                    exception: args.exception,
+                },
             ))
         } else {
             return Err(anyhow::anyhow!(
@@ -131,7 +139,7 @@ impl ProcessorImpl for HexagonBuilder {
 
         let hec = Box::new(HexagonEventController::default());
 
-        let peripherals: Vec<Box<dyn Peripheral>> = Vec::new();
+        let peripherals: Vec<Box<dyn Peripheral>> = vec![Box::new(QTimer::default())];
 
         let mut hints = LoaderHints::new();
         hints.insert("arch".to_string().into_boxed_str(), Box::new(Arch::Hexagon));
@@ -144,4 +152,47 @@ impl ProcessorImpl for HexagonBuilder {
             loader_hints: hints,
         })
     }
+}
+
+/// Hexagon's cfgbase register contains a table with various information that
+/// eventually allows us to retreive information on peripherals.
+///
+/// The way to do this is to read cfgbase (containing 20 bits of
+/// memory address information), shift it left by 5 (yielding the high 25 bits),
+/// and then add a (table) offset of (10 bits) and read that 36-bit physical address
+/// using memw_phys.
+///
+/// As a clearer example, maybe cfgbase is 0xafaf. This refers to a
+/// config table starting at address 0x0afaf0000 (36 bits).
+///
+/// To get this, we shift the 20 bits (0x0afaf << 5). Now, the memw_phys
+/// instruction reads with two parameters: memw_phys(Rs, Rt) (there is also an
+/// output register, but not relevant for us).
+///
+/// The QEMU Hexagon tests that use the config table call
+/// memw_phys where Rt register holds (0x0afaf << 5).
+///
+/// The memw_phys instruction accesses the address by using Rt's value as bits 11 to 35 (zero indexed)
+/// of the PA and bits 0 to 10 as Rs.  Therefore we have the high bits as ((0x0afaf) << 5) << 11
+/// which is just 0x0afaf << 16, or 0x0afaf0000, and the Rs value is the offset into the table.
+///
+/// Each table entry contains a similar 20-bit value corresponding to a physical address
+/// for the entry. Eg. the "subsystem base" offset will contain a 20-bit value
+/// corresponding to the base of various peripheral configuration registers.
+///
+/// This function takes an offset and uses cfgbase to find the value in the config
+/// table at that offset.
+pub fn read_cfgtable_field(
+    cpu: &mut dyn CpuBackend,
+    mmu: &mut Mmu,
+    offset: u64,
+) -> Result<u32, UnknownError> {
+    let cfgbase = cpu
+        .read_register::<u32>(HexagonRegister::CfgBase)
+        .with_context(|| "couldn't read cfgbase")? as u64;
+
+    let cfgtable_offset_addr: u64 = (cfgbase << 16) + offset;
+    Ok(mmu
+        .read_u32_le_phys_data(cfgtable_offset_addr)
+        .with_context(|| "couldn't read offset from cfg table")?)
 }
