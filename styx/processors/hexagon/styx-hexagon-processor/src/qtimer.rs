@@ -8,7 +8,7 @@
 //!
 //! Along with the "Generic Timer" documentation in the ArmV7A/ArmV7R architecture reference manual.
 
-use std::collections::HashMap;
+use std::{array, collections::HashMap};
 
 use styx_core::{
     arch::{hexagon::HexagonRegister, RegisterValue},
@@ -21,46 +21,134 @@ use styx_core::{
         ArchRegister, Context, Peripheral,
     },
 };
-use styx_peripherals::clock::Tick;
 
-use crate::read_cfgtable_field;
-use bitbybit::bitenum;
+use bitbybit::{bitenum, bitfield};
 
+/// There are 8 separate timers, each mapped to a frame
+/// aligned to 4k page size (0x1000). The 4-byte registers
+/// starting at 0x40 offset from CNTCTL up to 0x5c allow us to
+/// set various access control details for various
+/// registers in the CNTBaseN frame. There are up to 8 frames,
+/// which correspond to up to 8 actual timers.
+///
+/// See Section D5.4 of the aforementioned ARM manual.
 const CNT_ACR_START: u16 = 0x40u16;
 const CNT_ACR_END: u16 = 0x5cu16;
-const QTIMER_OFFSET: u64 = 0x20000;
-const SUBSYSTEM_BASE: u64 = 0xfc900000;
-const QTIMER_BASE: u64 = SUBSYSTEM_BASE + QTIMER_OFFSET;
 
+const SUBSYSTEM_BASE: u64 = 0xfc900000;
+
+const QTIMER_BASE: u64 = SUBSYSTEM_BASE + QTIMER_OFFSET;
+const QTIMER_OFFSET: u64 = 0x20000;
+
+const QTIMER_DEFAULT_FREQ: u32 = 19200000;
+const QDSP_CLOCK: u32 = 576000000;
+
+/// D5.7.6 ARM manual
+#[bitfield(u32, debug)]
+pub struct QTimerCNTPCTL {
+    #[bit(0, rw)]
+    enable: bool,
+    #[bit(1, rw)]
+    imask: bool,
+    #[bit(2, rw)]
+    istatus: bool,
+}
+
+/// D5.6 ARM manual
 #[derive(Debug)]
 #[bitenum(u16, exhaustive = false)]
-pub enum QTimerRegisters {
-    // Counter frequency register
+pub enum QTimerCNTCTLBaseFrame {
+    /// Counter frequency register
+    ///
+    /// According to the manual, B4.1.21 Note,
+    /// this doesn't actually set the frequency;
+    /// the frequency seems to be hardcoded.
+    /// However, this is set in order for software to
+    /// read from to understand.
     CntFrq = 0x0,
-    // Counter non-secure reigster
-    CntSr = 0x4,
-    // Counter timer ID register
-    CntTid = 0x8,
-    // Counter access control register (0 to 6), 4 bytes each.
-    // CntacrStart = 0x40,
-    // CntacrEnd = 0x5c,
+    /// Counter non-secure reigster
+    CntNsar = 0x4,
+    /// Counter timer ID register
+    CntTidr = 0x8,
+    /// Counter access control register (0 to 6), 4 bytes each.
+    /// CntacrStart = 0x40,
+    /// CntacrEnd = 0x5c,
     Version = 0xfd0,
 }
 
-#[derive(Default)]
-pub struct QTimer {
-    freq: u32,
-    secure: u32,
-    physical_counter: u64,
-    control: u32,
-    counter_control: u32,
-    control_pl0_acr: u32,
-    control_access_registers: [u32; 7],
-    limit: u64,
-    interrupt_level: u32,
-    // qtimer_hooks: HashMap<QTimerHookName, Vec<HookToken>>,
-    // qtimer_values: HashMap<QTimerHookName, u64>,
+/// D5.5 ARM manual
+/// pl1?? phys timer, see table b8-1
+#[derive(Debug)]
+#[bitenum(u16, exhaustive = false)]
+pub enum QTimerCNTBaseNFrame {
+    /// Physical count low registger
+    CntPctLo = 0x0,
+    /// Physical count hi register
+    CntPctHi = 0x4,
+    /// Physical timer compare value register
+    CntpCvalLo = 0x20,
+    CntpCvalHi = 0x24,
+    /// Physical timer value register
+    /// NOTE: "After the timer condition is met, a read of the TimerValue register indicates the time since the condition was met."
+    CntpTval = 0x28,
+    /// Physical timer control register
+    CntpCtl = 0x2c,
 }
+
+pub struct QTimer {
+    /// Frequency of the timer. At the end of 1 second, the
+    /// timer value should go up by this much (if I understand
+    /// it correctly). This is fixed by the hardware, seemingly.
+    /// See D5.2.1.
+    freq: u32,
+    /// If a bit in this is set, then the nth timer at that bit
+    /// is now accessible without secure. See D5.7.5 of the ARM manual.
+    frame_secure: u32,
+    control_access_registers: [u32; 7],
+    timer_frames: [QTimerFrame; 7],
+}
+
+/// See D5.5 table for sizes.
+#[derive(Default)]
+pub enum QTimerConditionMode {
+    TimerValue(u32),
+    CompareValue(u64),
+    #[default]
+    None,
+}
+
+/// This represents an individual timer.
+/// See section D5.4. We may control each timer
+/// with the control register, TimerValue register,
+/// or CompareValue register. See B8.1.5 for this.
+#[derive(Default)]
+pub struct QTimerFrame {
+    /// This is split into "lo" and "hi" in both the MMIO registers
+    /// and actual utimerlo/utimerhi/timerlo/timerhi registers.
+    counter: u64,
+    /// This is the condition mode. TimerValue goes down while
+    /// QTimerConditionMode waits until the timer (minus offset if that eixsts)
+    /// satisfies this value. Again see B8.1.5.
+    condition_mode: QTimerConditionMode,
+    /// Enabled or nah?
+    enabled: bool,
+    /// Event interrupt is masked?
+    imask: bool,
+    /// Was the condition for the timer (eg. from the condition mode) met?
+    istatus: bool,
+}
+
+impl Default for QTimer {
+    fn default() -> Self {
+        Self {
+            freq: QTIMER_DEFAULT_FREQ,
+            frame_secure: Default::default(),
+            control_access_registers: Default::default(),
+            timer_frames: array::from_fn(|_| QTimerFrame::default()),
+        }
+    }
+}
+
 // First it writes offset 4 sz 4 CNTSR
 // Then it writes offset 64 sz 4 CNTACR
 // Then it writes offset 0 sz 4 CNTFRQ
@@ -90,40 +178,108 @@ fn qtimer_mmio_write_hook(
 
     let timer_periph = proc.event_controller.peripherals.get::<QTimer>().unwrap();
     let offset = address - QTIMER_BASE;
-    let qtimer_register = QTimerRegisters::new_with_raw_value(offset as u16);
 
-    error!(
-        "accessed offset {} size {size} access_type WRITE data {data:x?} reg {:?} pc {:x}",
-        offset, qtimer_register, pc
-    );
+    // CNTCTLBaseFrame, which configures the BaseN actual timers and such.
+    if offset < 0x1000 {
+        let qtimer_register = QTimerCNTCTLBaseFrame::new_with_raw_value(offset as u16);
 
-    match qtimer_register {
-        Ok(QTimerRegisters::CntFrq) => {
-            timer_periph.freq = u32::from_le_bytes(
-                data.try_into()
-                    .with_context(|| "couldn't turn freq write data into u32")?,
-            )
-        }
-        Ok(QTimerRegisters::CntSr) => {
-            timer_periph.secure = u32::from_le_bytes(
-                data.try_into()
-                    .with_context(|| "couldn't turn secure write data into u32")?,
-            )
-        }
-        // One of the "Control access control registers," between 0 and 6.
-        Err(matched_off) => {
-            if matched_off >= CNT_ACR_START && matched_off <= CNT_ACR_END {
-                // Get which control access register. Each register is 4 bytes
-                // TODO enforce secure acces to this based on the secure register stuff.
-                let cntacr_num = (matched_off - CNT_ACR_START) / 4;
-                info!("writing to CNT ACR number {cntacr_num}");
-                timer_periph.control_access_registers[cntacr_num as usize] = u32::from_le_bytes(
-                    data.try_into()
-                        .with_context(|| "couldn't get control access register values as u32")?,
-                )
+        error!(
+            "accessed CNTCTL offset {} size {size} access_type WRITE data {data:x?} reg {:?} pc {:x}",
+            offset, qtimer_register, pc
+        );
+
+        let data_u32 = u32::from_le_bytes(
+            data.try_into()
+                .with_context(|| "couldn't turn data into u32")?,
+        );
+
+        match qtimer_register {
+            Ok(QTimerCNTCTLBaseFrame::CntFrq) => info!(
+                "the system set the frequency to {data_u32:x}, system frequency is {:x}",
+                timer_periph.freq
+            ),
+            Ok(QTimerCNTCTLBaseFrame::CntNsar) => timer_periph.frame_secure = data_u32,
+            // One of the "Control access control registers," between 0 and 6.
+            Err(matched_off) => {
+                if matched_off >= CNT_ACR_START && matched_off <= CNT_ACR_END {
+                    // Get which control access register. Each register is 4 bytes
+                    // TODO enforce secure acces to this based on the secure register stuff.
+                    let cntacr_num = (matched_off - CNT_ACR_START) / 4;
+                    info!("writing to CNT ACR number {cntacr_num}");
+                    timer_periph.control_access_registers[cntacr_num as usize] =
+                        u32::from_le_bytes(data.try_into().with_context(|| {
+                            "couldn't get control access register values as u32"
+                        })?)
+                }
             }
+            _ => todo!(),
         }
-        _ => todo!(),
+    }
+    // TODO: calculate which base N
+    // TODO: enforce access
+    // CNTBaseN frame. each frame is 0x1000 sized.
+    else if offset >= 0x1000 && offset < 0x9000 {
+        let offset = offset % 0x1000;
+        let base_n = (offset / 0x1000) as usize;
+        let qtimer_register = QTimerCNTBaseNFrame::new_with_raw_value(offset as u16);
+
+        let data_u32 = u32::from_le_bytes(
+            data.try_into()
+                .with_context(|| "couldn't turn data into u32")?,
+        );
+
+        error!(
+            "accessed base N offset {} size {size} access_type WRITE data {data:x?} reg {:?} pc {:x}",
+            offset, qtimer_register, pc
+        );
+
+        match qtimer_register {
+            Ok(QTimerCNTBaseNFrame::CntpTval) => {
+                // This is a timer value. This means B8.1.5 "Operation of the TimerValue views of the timers"
+                // takes effect, so the value here is decremented at the frequency given until it reaches zero,
+                // at which point an event (an interrupt) is triggered.
+                info!("the timer value (as opposed to compare value) is equal to {data_u32:x}. COUNTING DOWN.");
+
+                // Now we must start this timer with the frequency that was set.
+                timer_periph.timer_frames[base_n].condition_mode =
+                    QTimerConditionMode::TimerValue(data_u32);
+            }
+            // This is a compare value, so we basically go up until we hit this and trigger
+            // the event at that point.
+            Ok(QTimerCNTBaseNFrame::CntpCvalLo | QTimerCNTBaseNFrame::CntpCvalHi) => {
+                info!(
+                    "the compare value LO/HI (as opposed to timer value) is equal to {data_u32:x}"
+                );
+                let (new_data_shifted, new_data_replace) = match qtimer_register {
+                    Ok(QTimerCNTBaseNFrame::CntPctHi) => {
+                        let hi_data = (data_u32 as u64) << 32;
+                        (hi_data, hi_data | 0x0000ffff)
+                    }
+                    Ok(QTimerCNTBaseNFrame::CntPctLo) => {
+                        let lo_data = data_u32 as u64;
+                        (lo_data, lo_data | 0xffff0000)
+                    }
+                    _ => unreachable!(),
+                };
+                timer_periph.timer_frames[base_n].condition_mode =
+                    match timer_periph.timer_frames[base_n].condition_mode {
+                        // Just set the lower bits (or higher bits).
+                        QTimerConditionMode::CompareValue(old_value) => {
+                            QTimerConditionMode::CompareValue(old_value & new_data_replace)
+                        }
+                        _ => QTimerConditionMode::CompareValue(new_data_shifted),
+                    };
+            }
+            Ok(QTimerCNTBaseNFrame::CntpCtl) => {
+                let register_value = QTimerCNTPCTL::new_with_raw_value(data_u32);
+                info!("the control value was set to {:?}", register_value);
+
+                timer_periph.timer_frames[base_n].enabled = register_value.enable();
+                timer_periph.timer_frames[base_n].imask = register_value.imask();
+                timer_periph.timer_frames[base_n].istatus = register_value.istatus();
+            }
+            _ => todo!(),
+        }
     }
 
     Ok(())
@@ -292,8 +448,7 @@ impl Peripheral for QTimer {
         //
         // this seems excessively complicated..
         // but this is what we must do.
-        //
-        // see SIUUUUUU in powerquicky
+        // see SIU in powerquicc
         // just have a cfgbase handle here
         info!("We initialize the hook for cfgbase.");
         /*let cfgbase = proc
@@ -307,7 +462,7 @@ impl Peripheral for QTimer {
             .cpu
             .mem_write_hook(
                 QTIMER_BASE,
-                QTIMER_BASE + 0x1000,
+                QTIMER_BASE + 0x2000,
                 Box::new(qtimer_mmio_write_hook),
             )
             .with_context(|| "couldn't add MMIO hooks for qtimer")?;
@@ -315,7 +470,7 @@ impl Peripheral for QTimer {
             .cpu
             .mem_read_hook(
                 QTIMER_BASE,
-                QTIMER_BASE + 0x1000,
+                QTIMER_BASE + 0x2000,
                 Box::new(qtimer_mmio_read_hook),
             )
             .with_context(|| "couldn't add MMIO hooks for qtimer")?;
@@ -371,6 +526,11 @@ impl Peripheral for QTimer {
         _event_controller: &mut dyn styx_core::prelude::EventControllerImpl,
         _delta: &styx_core::prelude::Delta,
     ) -> Result<(), styx_core::prelude::UnknownError> {
+        for timer in self.timer_frames.iter_mut() {
+            // Only tick the enabled timers.
+            if timer.enabled {}
+        }
+
         Ok(())
     }
 }
