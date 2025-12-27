@@ -8,17 +8,14 @@
 //!
 //! Along with the "Generic Timer" documentation in the ArmV7A/ArmV7R architecture reference manual.
 
-use std::{array, collections::HashMap};
+use std::array;
 
 use styx_core::{
-    arch::{hexagon::HexagonRegister, RegisterValue},
-    cpu::{CpuBackend, CpuBackendExt},
     errors::UnknownError,
-    hooks::{CoreHandle, HookToken, StyxHook},
+    hooks::CoreHandle,
     prelude::{
-        anyhow,
-        log::{error, info, warn},
-        ArchRegister, Context, Peripheral,
+        log::{error, info, trace},
+        Context, Peripheral,
     },
 };
 
@@ -40,8 +37,10 @@ const SUBSYSTEM_BASE: u64 = 0xfc900000;
 const QTIMER_BASE: u64 = SUBSYSTEM_BASE + QTIMER_OFFSET;
 const QTIMER_OFFSET: u64 = 0x20000;
 
-const QTIMER_DEFAULT_FREQ: u32 = 19200000;
-const QDSP_CLOCK: u32 = 576000000;
+const QTIMER_FREQ: u32 = 19200000;
+const QDSP_FREQ: u32 = 729600000;
+
+const PCYCLES_PER_PACKET: u64 = 4;
 
 /// D5.7.6 ARM manual
 #[bitfield(u32, debug)]
@@ -101,6 +100,14 @@ pub struct QTimer {
     /// it correctly). This is fixed by the hardware, seemingly.
     /// See D5.2.1.
     freq: u32,
+    /// After how many pcycles should we tick the timer?
+    /// Equal to QDSP_FREQ / QTIMER_FREQ
+    pcycles_per_tick: u64,
+    /// Used to keep track of things.
+    total_pcycles: u64,
+    /// Used to keep track of pcycles until it is time to tick,
+    /// then things are cleared
+    pcycles_since_last_tick: u64,
     /// If a bit in this is set, then the nth timer at that bit
     /// is now accessible without secure. See D5.7.5 of the ARM manual.
     frame_secure: u32,
@@ -111,7 +118,7 @@ pub struct QTimer {
 /// See D5.5 table for sizes.
 #[derive(Default)]
 pub enum QTimerConditionMode {
-    TimerValue(u32),
+    TimerValue,
     CompareValue(u64),
     #[default]
     None,
@@ -121,7 +128,6 @@ pub enum QTimerConditionMode {
 /// See section D5.4. We may control each timer
 /// with the control register, TimerValue register,
 /// or CompareValue register. See B8.1.5 for this.
-#[derive(Default)]
 pub struct QTimerFrame {
     /// This is split into "lo" and "hi" in both the MMIO registers
     /// and actual utimerlo/utimerhi/timerlo/timerhi registers.
@@ -130,7 +136,13 @@ pub struct QTimerFrame {
     /// QTimerConditionMode waits until the timer (minus offset if that eixsts)
     /// satisfies this value. Again see B8.1.5.
     condition_mode: QTimerConditionMode,
-    /// Enabled or nah?
+    /// This is always being decremented, even without a condition.
+    /// It will overflow when it starts at 0. This is explicitly a u32,
+    /// D5.7.8.
+    decrement_counter: u32,
+    /// Enabled? This doesn't mean the timer doesn't stop counting down or up,
+    /// it just means that the timer won't interrupt when the condition in
+    /// condition_mode is met. (see D5.7.6)
     enabled: bool,
     /// Event interrupt is masked?
     imask: bool,
@@ -138,10 +150,33 @@ pub struct QTimerFrame {
     istatus: bool,
 }
 
+impl Default for QTimerFrame {
+    fn default() -> Self {
+        Self {
+            counter: 0,
+            decrement_counter: 0,
+            condition_mode: QTimerConditionMode::None,
+            enabled: false,
+            imask: false,
+            istatus: true,
+        }
+    }
+}
+
 impl Default for QTimer {
     fn default() -> Self {
         Self {
-            freq: QTIMER_DEFAULT_FREQ,
+            freq: QTIMER_FREQ,
+            // The DSP clock speed seemingly is equal to the number of pcycles.
+            // QEMU has 1 packet equal to 3 pcycles, but it could also be 4 pcycles.
+            // We will do 4 pcycles.
+            //
+            // Now, to find out how often to tick, we can take the DSP clock speed (
+            // ?? representing number of pcycles per second) and divide it by the
+            // timer frequency, which tells us how often to tick.
+            pcycles_per_tick: (QDSP_FREQ / QTIMER_FREQ) as u64,
+            total_pcycles: 0,
+            pcycles_since_last_tick: 0,
             frame_secure: Default::default(),
             control_access_registers: Default::default(),
             timer_frames: array::from_fn(|_| QTimerFrame::default()),
@@ -241,8 +276,8 @@ fn qtimer_mmio_write_hook(
                 info!("the timer value (as opposed to compare value) is equal to {data_u32:x}. COUNTING DOWN.");
 
                 // Now we must start this timer with the frequency that was set.
-                timer_periph.timer_frames[base_n].condition_mode =
-                    QTimerConditionMode::TimerValue(data_u32);
+                timer_periph.timer_frames[base_n].condition_mode = QTimerConditionMode::TimerValue;
+                timer_periph.timer_frames[base_n].decrement_counter = data_u32;
             }
             // This is a compare value, so we basically go up until we hit this and trigger
             // the event at that point.
@@ -284,150 +319,6 @@ fn qtimer_mmio_write_hook(
 
     Ok(())
 }
-
-/*fn cfg_subsys_base_hook(
-    hook_name: QTimerHookName,
-    proc: CoreHandle,
-    new_val: u64,
-) -> Result<(), UnknownError> {
-    info!("hook, {:?} was set, new_val {:x}", hook_name, new_val);
-    let timer_periph = proc.event_controller.peripherals.get::<QTimer>().unwrap();
-
-    match hook_name {
-        // If the subsystem base changed, the qtimer base changed.
-        QTimerHookName::SubsystemBase => {
-            let subsys_base = new_val << 16;
-            let qtimer_base = subsys_base + QTIMER_OFFSET;
-
-            timer_periph.update_setup_value_hooks(
-                proc.cpu,
-                QTimerHookName::SubsystemBase,
-                subsys_base,
-            )?;
-            timer_periph.update_setup_value_hooks(
-                proc.cpu,
-                QTimerHookName::QTimerBase,
-                qtimer_base,
-            )?;
-        }
-        // If the config base changed, then the subsystem base could have also changed.
-        QTimerHookName::CfgBase => {
-            let cfg_base = new_val << 16;
-            let subsys_base = proc
-                .mmu
-                .read_u32_le_phys_data(new_val + SUBSYSTEM_BASE)
-                .with_context(|| "couldn't read subsys base")? as u64;
-
-            timer_periph.update_setup_value_hooks(proc.cpu, QTimerHookName::CfgBase, cfg_base)?;
-            timer_periph.update_setup_value_hooks(
-                proc.cpu,
-                QTimerHookName::SubsystemBase,
-                subsys_base,
-            )?;
-        }
-        QTimerHookName::QTimerBase => unreachable!(),
-    }
-
-    Ok(())
-}
-
-#[derive(Debug, Eq, Hash, Copy, Clone, PartialEq)]
-enum QTimerHookName {
-    SubsystemBase,
-    CfgBase,
-    // This is an offset of the subsystem base.
-    QTimerBase,
-}
-
-impl QTimer {
-    fn hook_value(&self, key: QTimerHookName) -> Option<u64> {
-        self.qtimer_values.get(&key).copied()
-    }
-    fn update_setup_value_hooks(
-        &mut self,
-        cpu: &mut dyn CpuBackend,
-        key: QTimerHookName,
-        val: u64,
-    ) -> Result<(), UnknownError> {
-        self.qtimer_values.insert(key, val);
-
-        if let Some(current_hooks) = self.qtimer_hooks.get_mut(&key) {
-            // Step 1: delete le old hooks
-            while let Some(hook) = current_hooks.pop() {
-                cpu.delete_hook(hook)
-                    .with_context(|| "couldn't delete hook")?;
-            }
-        }
-        // Step 2: add our new hooks with new value
-        let value = self
-            .qtimer_values
-            .get(&key)
-            .with_context(|| "no value for key hook")?;
-        let mut tokens = match key {
-            QTimerHookName::SubsystemBase => vec![cpu
-                .mem_write_hook(
-                    *value,
-                    *value + 4,
-                    Box::new(
-                        |core: CoreHandle,
-                         _address: u64,
-                         _size: u32,
-                         value: &[u8]|
-                         -> Result<(), UnknownError> {
-                            cfg_subsys_base_hook(
-                                QTimerHookName::SubsystemBase,
-                                core,
-                                u32::from_le_bytes(value.try_into().with_context(|| {
-                                    "couldn't turn value to u32 for subsystem base"
-                                })?) as u64,
-                            )
-                        },
-                    ),
-                )
-                .with_context(|| "couldn't add subsystem base write hook")?],
-            QTimerHookName::CfgBase => {
-                info!("adding cfgbase hook");
-                vec![cpu.add_hook(StyxHook::RegisterWrite(
-                    HexagonRegister::CfgBase.into(),
-                    Box::new(
-                        |proc: CoreHandle,
-                         _register: ArchRegister,
-                         data: &RegisterValue|
-                         -> Result<(), UnknownError> {
-                            info!("had a cfg base update");
-                            if let RegisterValue::u32(val) = data {
-                                cfg_subsys_base_hook(QTimerHookName::CfgBase, proc, *val as u64)
-                            } else {
-                                Err(anyhow!(
-                                    "The Hexagon cfgbase register update was not 32 bits"
-                                ))
-                            }
-                        },
-                    ),
-                ))?]
-            }
-
-            QTimerHookName::QTimerBase => {
-                vec![
-                    // QTIMER_MEM_SIZE_BYTES is 0x1000, hence the addition
-                    cpu.mem_write_hook(*value, *value + 0x1000, Box::new(qtimer_mmio_write_hook))
-                        .with_context(|| "couldn't add MMIO hooks for qtimer")?,
-                    cpu.mem_read_hook(*value, *value + 0x1000, Box::new(qtimer_mmio_read_hook))
-                        .with_context(|| "couldn't add MMIO hooks for qtimer")?,
-                ]
-            }
-        };
-
-        match self.qtimer_hooks.get_mut(&key) {
-            Some(vector) => vector.append(&mut tokens),
-            None => {
-                self.qtimer_hooks.insert(key, tokens);
-            }
-        }
-
-        Ok(())
-    }
-}*/
 
 impl Peripheral for QTimer {
     fn name(&self) -> &str {
@@ -519,16 +410,72 @@ impl Peripheral for QTimer {
         Ok(())
     }
 
+    // WARN: The tick doesn't work when you use a debugger.
     fn tick(
         &mut self,
         _cpu: &mut dyn styx_core::prelude::CpuBackend,
         _mmu: &mut styx_core::prelude::Mmu,
         _event_controller: &mut dyn styx_core::prelude::EventControllerImpl,
-        _delta: &styx_core::prelude::Delta,
+        delta: &styx_core::prelude::Delta,
     ) -> Result<(), styx_core::prelude::UnknownError> {
-        for timer in self.timer_frames.iter_mut() {
-            // Only tick the enabled timers.
-            if timer.enabled {}
+        self.pcycles_since_last_tick += delta.count * PCYCLES_PER_PACKET;
+        self.total_pcycles += delta.count * PCYCLES_PER_PACKET;
+
+        // As an example, if we have 10 pcycles per tick, and
+        // the number of pcycles per packet is 4, then let's say that
+        // the number of packets that ran from last time to now is 2.
+        // For example, let the number of pcycles since last tick be 9.
+        //
+        // Now, we have 8 pcycles. In total we have 17 pcycles. We tick
+        // once since the number of pcycles is > 17. Then, we set
+        // the pcycles to 7 and wait till the pcycles goes up to past 10 again, then
+        // tick, then continue.
+
+        let timer_ticks = self.pcycles_since_last_tick / self.pcycles_per_tick;
+
+        trace!(
+            "TIMER tick: pcycles_since_last_tick {}, timer_ticks {}, pcycles_per_tick {}",
+            self.pcycles_since_last_tick,
+            timer_ticks,
+            self.pcycles_per_tick,
+        );
+
+        if timer_ticks > 0 {
+            for timer in self.timer_frames.iter_mut() {
+                // Tick all the timers!
+                timer.counter = timer.counter.wrapping_add(timer_ticks);
+                // The TimerValue needs to be decremented always
+                timer.decrement_counter = timer.decrement_counter.wrapping_sub(timer_ticks as u32);
+
+                // Check for conditions being met and interrupt if so.
+                let irq = match timer.condition_mode {
+                    // B8.1.5 "Operation of the TimerValue views of the timers"
+                    QTimerConditionMode::TimerValue if timer.decrement_counter as i32 <= 0 => true,
+                    // B8.1.5 "Operation of the CompareValue views of the timers"
+                    // We have not implemented an offset.
+                    QTimerConditionMode::CompareValue(value)
+                        if (timer.counter - value) as i64 >= 0 =>
+                    {
+                        true
+                    }
+                    _ => false,
+                };
+
+                // Latch interrupt or something
+                // TODO: Pending l2vic implementation?
+                if irq {
+                    todo!("Ring ring! The timer went off, but we haven't implemented that yet ):")
+                }
+
+                trace!("total ticks in counter {}", timer.counter);
+            }
+
+            // Remove these many ticks from the current pcycles since last tick
+            self.pcycles_since_last_tick -= timer_ticks * self.pcycles_per_tick;
+            trace!(
+                "TIMERs ticked, now pcycles_since_last_tick is {}",
+                self.pcycles_since_last_tick
+            );
         }
 
         Ok(())
