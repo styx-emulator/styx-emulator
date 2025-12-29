@@ -13,6 +13,7 @@ use std::array;
 use styx_core::{
     errors::UnknownError,
     hooks::CoreHandle,
+    memory::Mmu,
     prelude::{
         log::{error, info, trace},
         Context, Peripheral,
@@ -39,11 +40,12 @@ const QTIMER_OFFSET: u64 = 0x20000;
 
 const QTIMER_FREQ: u32 = 19200000;
 const QDSP_FREQ: u32 = 729600000;
+const QTIMER_NUM_TIMERS: u64 = 8;
 
 const PCYCLES_PER_PACKET: u64 = 4;
 
 /// D5.7.6 ARM manual
-#[bitfield(u32, debug)]
+#[bitfield(u32, default = 0x0, debug)]
 pub struct QTimerCNTPCTL {
     #[bit(0, rw)]
     enable: bool,
@@ -84,6 +86,12 @@ pub enum QTimerCNTBaseNFrame {
     CntPctLo = 0x0,
     /// Physical count hi register
     CntPctHi = 0x4,
+    /// Virtual count low register
+    CntVctLo = 0x8,
+    /// Virtual count hi register
+    CntVctHi = 0xc,
+    /// Counter frequency register
+    CntFrq = 0x10,
     /// Physical timer compare value register
     CntpCvalLo = 0x20,
     CntpCvalHi = 0x24,
@@ -111,8 +119,8 @@ pub struct QTimer {
     /// If a bit in this is set, then the nth timer at that bit
     /// is now accessible without secure. See D5.7.5 of the ARM manual.
     frame_secure: u32,
-    control_access_registers: [u32; 7],
-    timer_frames: [QTimerFrame; 7],
+    control_access_registers: [u32; QTIMER_NUM_TIMERS as usize],
+    timer_frames: [QTimerFrame; QTIMER_NUM_TIMERS as usize],
 }
 
 /// See D5.5 table for sizes.
@@ -148,10 +156,13 @@ pub struct QTimerFrame {
     imask: bool,
     /// Was the condition for the timer (eg. from the condition mode) met?
     istatus: bool,
+    /// Frame number of the timer. Used for updating
+    /// the lo/hi count
+    frame_number: u64,
 }
 
-impl Default for QTimerFrame {
-    fn default() -> Self {
+impl QTimerFrame {
+    fn new(frame_number: usize) -> Self {
         Self {
             counter: 0,
             decrement_counter: 0,
@@ -159,7 +170,101 @@ impl Default for QTimerFrame {
             enabled: false,
             imask: false,
             istatus: true,
+            frame_number: frame_number as u64,
         }
+    }
+
+    /// Write the frequency and physical timer control
+    /// to memory here. We use init to set this up
+    /// since this is the first point in the peripheral lifecycle
+    /// that we can get access to the Mmu.
+    fn init(
+        &mut self,
+        proc: &mut styx_core::prelude::BuildingProcessor,
+    ) -> Result<(), styx_core::prelude::UnknownError> {
+        proc.core.mmu.write_u32_le_phys_data(
+            self.frame_base() + QTimerCNTBaseNFrame::CntFrq as u64,
+            QTIMER_FREQ,
+        )?;
+        proc.core.mmu.write_u32_le_phys_data(
+            self.frame_base() + QTimerCNTBaseNFrame::CntpCtl as u64,
+            QTimerCNTPCTL::DEFAULT
+                .with_enable(self.enabled)
+                .with_imask(self.imask)
+                .with_istatus(self.istatus)
+                .raw_value(),
+        )?;
+
+        Ok(())
+    }
+
+    fn tick(&mut self, tick_amount: u64, mmu: &mut Mmu) -> Result<(), UnknownError> {
+        // Tick all the timers!
+        self.counter = self.counter.wrapping_add(tick_amount);
+        // The SelfValue needs to be decremented always
+        self.decrement_counter = self.decrement_counter.wrapping_sub(tick_amount as u32);
+
+        // Check for conditions being met and interrupt if so.
+        let irq = match self.condition_mode {
+            // B8.1.5 "Operation of the TimerValue views of the timers"
+            QTimerConditionMode::TimerValue if self.decrement_counter as i32 <= 0 => true,
+            // B8.1.5 "Operation of the CompareValue views of the timers"
+            // We have not implemented an offset.
+            QTimerConditionMode::CompareValue(value) if (self.counter - value) as i64 >= 0 => true,
+            _ => false,
+        };
+
+        // Update memory and TODO registers. Using a read hook here would mean that when accessing memory
+        // from a debugger, the hooks are not triggered. For clarity, we split our write into lo and hi.
+
+        // Physical counter
+        self.write_counter(
+            mmu,
+            QTimerCNTBaseNFrame::CntPctLo as u64,
+            QTimerCNTBaseNFrame::CntPctHi as u64,
+        )?;
+        // Virtual counter
+        self.write_counter(
+            mmu,
+            QTimerCNTBaseNFrame::CntVctLo as u64,
+            QTimerCNTBaseNFrame::CntVctHi as u64,
+        )?;
+        // TimerValue
+        // NOTE WARN: this should not overwrite a previously set value for TimerValue!
+        self.write_timervalue(mmu, QTimerCNTBaseNFrame::CntpTval as u64)?;
+
+        // Latch interrupt or something
+        // TODO: Pending l2vic implementation?
+        if irq {
+            todo!("Ring ring! The timer went off, but we haven't implemented that yet ):")
+        }
+
+        trace!("total ticks in counter {}", self.counter);
+        Ok(())
+    }
+
+    fn write_counter(&self, mmu: &mut Mmu, lo_off: u64, hi_off: u64) -> Result<(), UnknownError> {
+        mmu.write_u32_le_phys_data(self.frame_base() + lo_off, self.counter as u32)?;
+        mmu.write_u32_le_phys_data(self.frame_base() + hi_off, (self.counter >> 32) as u32)?;
+
+        Ok(())
+    }
+    fn write_timervalue(&self, mmu: &mut Mmu, off: u64) -> Result<(), UnknownError> {
+        error!(
+            "writing decrement counter as {}, frame {}",
+            self.decrement_counter, self.frame_number
+        );
+        mmu.write_u32_le_phys_data(self.frame_base() + off, self.decrement_counter)?;
+
+        Ok(())
+    }
+
+    /// Find the starting address of the individual timer frame which contains
+    /// counters and Timer/CompareValue for this frame.
+    fn frame_base(&self) -> u64 {
+        // The first 0x1000 is used for more general access control configuration
+        // The BaseN timer frames start at QTIMER_BASE + 0x1000 and are each size 0x1000.
+        QTIMER_BASE + (self.frame_number * 0x1000) + 0x1000
     }
 }
 
@@ -179,28 +284,9 @@ impl Default for QTimer {
             pcycles_since_last_tick: 0,
             frame_secure: Default::default(),
             control_access_registers: Default::default(),
-            timer_frames: array::from_fn(|_| QTimerFrame::default()),
+            timer_frames: array::from_fn(|i| QTimerFrame::new(i)),
         }
     }
-}
-
-// First it writes offset 4 sz 4 CNTSR
-// Then it writes offset 64 sz 4 CNTACR
-// Then it writes offset 0 sz 4 CNTFRQ
-fn qtimer_mmio_read_hook(
-    proc: CoreHandle,
-    address: u64,
-    size: u32,
-    data: &mut [u8],
-) -> Result<(), UnknownError> {
-    let timer_periph = proc.event_controller.peripherals.get::<QTimer>().unwrap();
-
-    error!(
-        "accessed offset {} size {size} access_type READ data {data:x?}",
-        address - QTIMER_BASE
-    );
-
-    Ok(())
 }
 
 fn qtimer_mmio_write_hook(
@@ -253,7 +339,7 @@ fn qtimer_mmio_write_hook(
     // TODO: calculate which base N
     // TODO: enforce access
     // CNTBaseN frame. each frame is 0x1000 sized.
-    else if offset >= 0x1000 && offset < 0x9000 {
+    else if offset >= 0x1000 && offset < 0x1000 + (0x1000 * QTIMER_NUM_TIMERS) {
         let offset = offset % 0x1000;
         let base_n = (offset / 0x1000) as usize;
         let qtimer_register = QTimerCNTBaseNFrame::new_with_raw_value(offset as u16);
@@ -349,22 +435,20 @@ impl Peripheral for QTimer {
             .with_context(|| "couldn't read cfgbase")? as u64;
         self.update_setup_value_hooks(proc.core.cpu.as_mut(), QTimerHookName::CfgBase, cfgbase)?;*/
 
+        for timer in self.timer_frames.iter_mut() {
+            timer.init(proc)?
+        }
+
         proc.core
             .cpu
             .mem_write_hook(
                 QTIMER_BASE,
-                QTIMER_BASE + 0x2000,
+                QTIMER_BASE + 0x1000 + (0x1000 * QTIMER_NUM_TIMERS),
                 Box::new(qtimer_mmio_write_hook),
             )
             .with_context(|| "couldn't add MMIO hooks for qtimer")?;
-        proc.core
-            .cpu
-            .mem_read_hook(
-                QTIMER_BASE,
-                QTIMER_BASE + 0x2000,
-                Box::new(qtimer_mmio_read_hook),
-            )
-            .with_context(|| "couldn't add MMIO hooks for qtimer")?;
+
+        info!("QTimer initialized.");
 
         Ok(())
     }
@@ -414,7 +498,7 @@ impl Peripheral for QTimer {
     fn tick(
         &mut self,
         _cpu: &mut dyn styx_core::prelude::CpuBackend,
-        _mmu: &mut styx_core::prelude::Mmu,
+        mmu: &mut styx_core::prelude::Mmu,
         _event_controller: &mut dyn styx_core::prelude::EventControllerImpl,
         delta: &styx_core::prelude::Delta,
     ) -> Result<(), styx_core::prelude::UnknownError> {
@@ -442,32 +526,7 @@ impl Peripheral for QTimer {
 
         if timer_ticks > 0 {
             for timer in self.timer_frames.iter_mut() {
-                // Tick all the timers!
-                timer.counter = timer.counter.wrapping_add(timer_ticks);
-                // The TimerValue needs to be decremented always
-                timer.decrement_counter = timer.decrement_counter.wrapping_sub(timer_ticks as u32);
-
-                // Check for conditions being met and interrupt if so.
-                let irq = match timer.condition_mode {
-                    // B8.1.5 "Operation of the TimerValue views of the timers"
-                    QTimerConditionMode::TimerValue if timer.decrement_counter as i32 <= 0 => true,
-                    // B8.1.5 "Operation of the CompareValue views of the timers"
-                    // We have not implemented an offset.
-                    QTimerConditionMode::CompareValue(value)
-                        if (timer.counter - value) as i64 >= 0 =>
-                    {
-                        true
-                    }
-                    _ => false,
-                };
-
-                // Latch interrupt or something
-                // TODO: Pending l2vic implementation?
-                if irq {
-                    todo!("Ring ring! The timer went off, but we haven't implemented that yet ):")
-                }
-
-                trace!("total ticks in counter {}", timer.counter);
+                timer.tick(timer_ticks, mmu)?;
             }
 
             // Remove these many ticks from the current pcycles since last tick
