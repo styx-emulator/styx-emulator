@@ -123,15 +123,6 @@ pub struct QTimer {
     timer_frames: [QTimerFrame; QTIMER_NUM_TIMERS as usize],
 }
 
-/// See D5.5 table for sizes.
-#[derive(Default)]
-pub enum QTimerConditionMode {
-    TimerValue,
-    CompareValue(u64),
-    #[default]
-    None,
-}
-
 /// This represents an individual timer.
 /// See section D5.4. We may control each timer
 /// with the control register, TimerValue register,
@@ -140,14 +131,14 @@ pub struct QTimerFrame {
     /// This is split into "lo" and "hi" in both the MMIO registers
     /// and actual utimerlo/utimerhi/timerlo/timerhi registers.
     counter: u64,
-    /// This is the condition mode. TimerValue goes down while
-    /// QTimerConditionMode waits until the timer (minus offset if that eixsts)
-    /// satisfies this value. Again see B8.1.5.
-    condition_mode: QTimerConditionMode,
+
     /// This is always being decremented, even without a condition.
     /// It will overflow when it starts at 0. This is explicitly a u32,
-    /// D5.7.8.
-    decrement_counter: u32,
+    /// D5.7.8. See B8.1.5 for more.
+    timer_value: u32,
+    /// Compare value register. This keeps track of the value set to compare against
+    /// See table D5.5 for sizes. See B8.1.5.
+    compare_value: u64,
     /// Enabled? This doesn't mean the timer doesn't stop counting down or up,
     /// it just means that the timer won't interrupt when the condition in
     /// condition_mode is met. (see D5.7.6)
@@ -165,8 +156,8 @@ impl QTimerFrame {
     fn new(frame_number: usize) -> Self {
         Self {
             counter: 0,
-            decrement_counter: 0,
-            condition_mode: QTimerConditionMode::None,
+            timer_value: 0,
+            compare_value: 0,
             enabled: false,
             imask: false,
             istatus: true,
@@ -199,43 +190,25 @@ impl QTimerFrame {
     }
 
     fn tick(&mut self, tick_amount: u64, mmu: &mut Mmu) -> Result<(), UnknownError> {
-        // Tick all the timers!
-        self.counter = self.counter.wrapping_add(tick_amount);
-        // The SelfValue needs to be decremented always
-        self.decrement_counter = self.decrement_counter.wrapping_sub(tick_amount as u32);
+        // Using a read hook here would mean that when accessing memory
+        // from a debugger, the hooks are not triggered.
+
+        // Update the counter, setting memory in the process.
+        self.increment_counter(mmu, tick_amount)?;
+
+        // Decrement TimerValue, setting memory in progress.
+        self.decrement_timer_value(mmu, tick_amount)?;
 
         // Check for conditions being met and interrupt if so.
-        let irq = match self.condition_mode {
-            // B8.1.5 "Operation of the TimerValue views of the timers"
-            QTimerConditionMode::TimerValue if self.decrement_counter as i32 <= 0 => true,
-            // B8.1.5 "Operation of the CompareValue views of the timers"
-            // We have not implemented an offset.
-            QTimerConditionMode::CompareValue(value) if (self.counter - value) as i64 >= 0 => true,
-            _ => false,
-        };
-
-        // Update memory and TODO registers. Using a read hook here would mean that when accessing memory
-        // from a debugger, the hooks are not triggered. For clarity, we split our write into lo and hi.
-
-        // Physical counter
-        self.write_counter(
-            mmu,
-            QTimerCNTBaseNFrame::CntPctLo as u64,
-            QTimerCNTBaseNFrame::CntPctHi as u64,
-        )?;
-        // Virtual counter
-        self.write_counter(
-            mmu,
-            QTimerCNTBaseNFrame::CntVctLo as u64,
-            QTimerCNTBaseNFrame::CntVctHi as u64,
-        )?;
-        // TimerValue
-        // NOTE WARN: this should not overwrite a previously set value for TimerValue!
-        self.write_timervalue(mmu, QTimerCNTBaseNFrame::CntpTval as u64)?;
-
-        // Latch interrupt or something
-        // TODO: Pending l2vic implementation?
-        if irq {
+        if (// TimerValue condition. See B8.1.5 "Operation of the TimerValue views of the timers."
+            self.timer_value as i32 <= 0 ||
+            // CompareValue condition. Offset is zero. See B8.1.5 "Operation of the CompareValue views of the timers."
+            (self.counter - self.compare_value) as i64 >= 0)
+            // Require the events to be enabled
+            && self.enabled
+        {
+            // Latch interrupt or something
+            // TODO: Pending l2vic implementation?
             todo!("Ring ring! The timer went off, but we haven't implemented that yet ):")
         }
 
@@ -243,18 +216,58 @@ impl QTimerFrame {
         Ok(())
     }
 
-    fn write_counter(&self, mmu: &mut Mmu, lo_off: u64, hi_off: u64) -> Result<(), UnknownError> {
-        mmu.write_u32_le_phys_data(self.frame_base() + lo_off, self.counter as u32)?;
-        mmu.write_u32_le_phys_data(self.frame_base() + hi_off, (self.counter >> 32) as u32)?;
+    fn increment_counter(&mut self, mmu: &mut Mmu, tick_amount: u64) -> Result<(), UnknownError> {
+        // Update the counter, setting memory in the process.
+        self.counter = self.counter.wrapping_add(tick_amount);
+
+        let mut write_counter_to_mem = |lo_off: u64, hi_off: u64| -> Result<(), UnknownError> {
+            mmu.write_u32_le_phys_data(self.frame_base() + lo_off, self.counter as u32)?;
+            mmu.write_u32_le_phys_data(self.frame_base() + hi_off, (self.counter >> 32) as u32)?;
+            Ok(())
+        };
+
+        // Physical counter
+        write_counter_to_mem(
+            QTimerCNTBaseNFrame::CntPctLo as u64,
+            QTimerCNTBaseNFrame::CntPctHi as u64,
+        )?;
+        // Virtual counter
+        write_counter_to_mem(
+            QTimerCNTBaseNFrame::CntVctLo as u64,
+            QTimerCNTBaseNFrame::CntVctHi as u64,
+        )?;
+        // TODO update registers.
 
         Ok(())
     }
-    fn write_timervalue(&self, mmu: &mut Mmu, off: u64) -> Result<(), UnknownError> {
-        error!(
-            "writing decrement counter as {}, frame {}",
-            self.decrement_counter, self.frame_number
-        );
-        mmu.write_u32_le_phys_data(self.frame_base() + off, self.decrement_counter)?;
+
+    /// NOTE WARN: this should not overwrite a previously set value for TimerValue!
+    fn decrement_timer_value(
+        &mut self,
+        mmu: &mut Mmu,
+        tick_amount: u64,
+    ) -> Result<(), UnknownError> {
+        self.timer_value = self.timer_value.wrapping_sub(tick_amount as u32);
+
+        mmu.write_u32_le_phys_data(
+            self.frame_base() + QTimerCNTBaseNFrame::CntpTval as u64,
+            self.timer_value,
+        )?;
+
+        Ok(())
+    }
+
+    fn set_compare_value(&mut self, mmu: &mut Mmu, new_value: u64) -> Result<(), UnknownError> {
+        self.compare_value = new_value;
+
+        mmu.write_u32_le_phys_data(
+            self.frame_base() + QTimerCNTBaseNFrame::CntpCvalLo as u64,
+            self.compare_value as u32,
+        )?;
+        mmu.write_u32_le_phys_data(
+            self.frame_base() + QTimerCNTBaseNFrame::CntpCvalHi as u64,
+            (self.compare_value >> 32) as u32,
+        )?;
 
         Ok(())
     }
@@ -361,35 +374,45 @@ fn qtimer_mmio_write_hook(
                 // at which point an event (an interrupt) is triggered.
                 info!("the timer value (as opposed to compare value) is equal to {data_u32:x}. COUNTING DOWN.");
 
-                // Now we must start this timer with the frequency that was set.
-                timer_periph.timer_frames[base_n].condition_mode = QTimerConditionMode::TimerValue;
-                timer_periph.timer_frames[base_n].decrement_counter = data_u32;
+                // Now we set the TimerValue.
+                //
+                // Consistency: we don't have to set memory since the memory write causing this hook will
+                // have set this in memory.
+                timer_periph.timer_frames[base_n].timer_value = data_u32;
+                // We must also set CompareValue. See the write effect on CompareValue for
+                // "Operation of the TimerValue views of the timers" in B8.1.5.
+                // the "as i64 as u64" sign extends the TimerValue. The Offset is 0.
+                //
+                // Consistency: we _do_ have to set memory since this is a "side effect" of setting
+                // the TimerValue.
+                timer_periph.timer_frames[base_n].set_compare_value(
+                    proc.mmu,
+                    timer_periph.timer_frames[base_n].counter
+                        + ((timer_periph.timer_frames[base_n].timer_value as i64) as u64),
+                )?;
             }
             // This is a compare value, so we basically go up until we hit this and trigger
             // the event at that point.
+            // TODO: this requires testing.
             Ok(QTimerCNTBaseNFrame::CntpCvalLo | QTimerCNTBaseNFrame::CntpCvalHi) => {
                 info!(
                     "the compare value LO/HI (as opposed to timer value) is equal to {data_u32:x}"
                 );
-                let (new_data_shifted, new_data_replace) = match qtimer_register {
+                let new_data_replace = match qtimer_register {
                     Ok(QTimerCNTBaseNFrame::CntPctHi) => {
                         let hi_data = (data_u32 as u64) << 32;
-                        (hi_data, hi_data | 0x0000ffff)
+                        hi_data | 0x0000ffff
                     }
                     Ok(QTimerCNTBaseNFrame::CntPctLo) => {
                         let lo_data = data_u32 as u64;
-                        (lo_data, lo_data | 0xffff0000)
+                        lo_data | 0xffff0000
                     }
                     _ => unreachable!(),
                 };
-                timer_periph.timer_frames[base_n].condition_mode =
-                    match timer_periph.timer_frames[base_n].condition_mode {
-                        // Just set the lower bits (or higher bits).
-                        QTimerConditionMode::CompareValue(old_value) => {
-                            QTimerConditionMode::CompareValue(old_value & new_data_replace)
-                        }
-                        _ => QTimerConditionMode::CompareValue(new_data_shifted),
-                    };
+
+                // Consistency: we don't have to set memory since the memory write causing this hook will
+                // have set this in memory. There are no other side effects.
+                timer_periph.timer_frames[base_n].compare_value &= new_data_replace;
             }
             Ok(QTimerCNTBaseNFrame::CntpCtl) => {
                 let register_value = QTimerCNTPCTL::new_with_raw_value(data_u32);
