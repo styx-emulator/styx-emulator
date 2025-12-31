@@ -460,7 +460,7 @@ impl StyxHook {
         hook: impl MemoryReadHook + 'static,
     ) -> Self {
         let range = range.into();
-        Self::MemoryRead(range, Box::new(hook))
+        Self::MemoryReadVirtual(range, Box::new(hook))
     }
 
     /// Construct a memory write hook **physical address range**.
@@ -545,7 +545,7 @@ impl StyxHook {
         hook: impl MemoryWriteHook + 'static,
     ) -> Self {
         let range = range.into();
-        Self::MemoryWrite(range, Box::new(hook))
+        Self::MemoryWriteVirtual(range, Box::new(hook))
     }
 
     /// Construct an unmapped memory fault callback. Whenever an unmapped memory
