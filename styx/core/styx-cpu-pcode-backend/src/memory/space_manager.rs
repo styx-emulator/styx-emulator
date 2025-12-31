@@ -432,7 +432,9 @@ impl SpaceManager {
             warn!("unexpected error while translating memory write address")
         }
 
-        trace!("write hooked at {varnode:?}");
+        trace!(
+            "write_hooked called  varnode={varnode:?} (this does not means hooks were triggered)"
+        );
 
         cpu.set_value_mmu(mmu, varnode, data)
     }

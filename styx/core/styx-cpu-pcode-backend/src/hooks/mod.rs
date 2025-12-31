@@ -398,7 +398,7 @@ impl HookManager {
         );
         let mut errors = ErrorBuffer::new();
         for hook in physical_hooks.activate(physical_addr) {
-            trace!("exec token {:?}.", hook.token);
+            trace!("trigger memory write physical hook token={:?}.", hook.token);
             let core_handler = CoreHandle::new(cpu, mmu, ev);
             let hook_callback_res = hook.callback.call(core_handler, physical_addr, size, data);
             if let Err(err) = hook_callback_res {
@@ -407,7 +407,7 @@ impl HookManager {
         }
 
         for hook in virtual_hooks.activate(virtual_addr) {
-            trace!("exec token {:?}.", hook.token);
+            trace!("trigger memory write virtual hook token={:?}.", hook.token);
             let core_handler = CoreHandle::new(cpu, mmu, ev);
             let hook_callback_res = hook.callback.call(core_handler, virtual_addr, size, data);
             if let Err(err) = hook_callback_res {
