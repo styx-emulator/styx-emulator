@@ -97,14 +97,14 @@ fn virtual_gdb_tests_builder() -> ProcessorBuilder<'static> {
 }
 
 // see documentation of the test suite for all requirements of
-// test enviornment (there are many :D)
+// test environment (there are many :D)
 gdb_core_test_suite!(
     "pc",
     FREERTOS_PATH,
     0x20c4,
     0x20d0,
     0x20dc,
-    0xFFFFFEB4,
+    0xFFFFFF54,
     Ppc4xxTargetDescription,
     Ppc32Variants::Ppc405,
     virtual_gdb_tests_builder,

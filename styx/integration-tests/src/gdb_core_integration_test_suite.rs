@@ -21,16 +21,17 @@
 ///   to check the instantiated pc.
 /// - The watchpoint must be far enough away from entry to allow harness/client to connect before
 ///   hitting. This is needed because of a race condition in lockbox/gdb-client.
-/// - All addresses given are interpreted in the virtual address space>
+/// - When the watchpoint address is triggered, it must be the first time code at that PC has been called.
+/// - All addresses given are interpreted in the virtual address space.
 ///
 #[macro_export]
 macro_rules! gdb_core_test_suite {
-    ($pc_register:expr_2021,
-     $test_bin_path:expr_2021,
-     $start_address:expr_2021,
-     $bp_one:expr_2021,
-     $bp_two:expr_2021,
-     $wp_one:expr_2021,
+    ($pc_register:expr,
+     $test_bin_path:expr,
+     $start_address:expr,
+     $bp_one:expr,
+     $bp_two:expr,
+     $wp_one:expr,
      $test_target_description_type:tt,
      $test_target_arch:expr,
      $gdb_test_processor:ident,
@@ -913,6 +914,125 @@ macro_rules! gdb_core_test_suite {
                 // now step out of the watchpoint
                 let current_pc = harness.step_instruction().unwrap();
                 assert_ne!(old_pc, current_pc);
+            }
+
+            // Test memory hook is triggered on step.
+            //
+            // This test mandates the
+            // "When the watchpoint address is triggered, it must be the
+            // first time code at that PC has been called" requirement.
+            //
+            // If this test fails on your new processor, check the above requirement.
+            #[test]
+            #[cfg_attr(miri, ignore)]
+            #[cfg_attr(asan, ignore)]
+            fn test_gdb_si_memory_hook() {
+                use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+
+                // Code is a little complicated
+                // 1. Trigger watchpoint to get a PC that does a memory write
+                // 2. Rerun the target, this time with a breakpoint on previously found PC
+                // 3. After breaking, step instruction and check that a memory_write hook is triggered
+
+                // 1. Trigger watchpoint to get a PC that does a memory write
+
+                // This will store our PC that does a memory write.
+                let memory_write_pc: &'static mut AtomicU64 =
+                    Box::leak(Box::new(AtomicU64::new(0)));
+                // This will update our memory_write_pc
+                let mem_write_hook =
+                    |mut proc: CoreHandle, address: u64, size: u32, data: &[u8]| {
+                        let pc = proc.pc().unwrap();
+                        tracing::info!("new memory write hook pc: 0x{pc:X}");
+                        memory_write_pc.store(pc, Ordering::Relaxed);
+                        Ok(())
+                    };
+
+                let proc = $gdb_test_processor()
+                    .add_hook(StyxHook::memory_write_virt(WP_ONE, mem_write_hook));
+                let harness =
+                    ::styx_integration_tests::gdb_harness::GdbHarness::from_processor_builder::<
+                        GdbTestTargetDescriptionType,
+                    >(proc);
+
+                // add watchpoint
+                tracing::info!("adding watchpoint at 0x{WP_ONE:X}");
+                let watchpoint_id = harness.add_watchpoint(WP_ONE).unwrap();
+                let watchpoints: Vec<i64> = harness.list_watchpoints().unwrap();
+                assert!(watchpoints.contains(&watchpoint_id));
+
+                // hit watchpoint
+                harness.gdb_continue().unwrap();
+                std::thread::sleep(std::time::Duration::from_millis(500));
+                let stop_reason = harness.wait_for_stop_reason().unwrap();
+
+                // assert that:
+                // - stop reason is watchpoint we created
+                // - current address is our watchpoint's address
+                let wp_id = match stop_reason {
+                    ::gdbmi::status::StopReason::Watchpoint { number } => number,
+                    _ => panic!("Did not stop due to watchpoint"),
+                };
+                assert_eq!(watchpoint_id, wp_id);
+                tracing::info!("watchpoint hit");
+
+                // get pc
+                let registers = harness.list_registers().unwrap();
+                let old_pc = *registers.get(PC_REGISTER).unwrap();
+
+                // now step out of the watchpoint
+                let current_pc = harness.step_instruction().unwrap();
+                assert_ne!(old_pc, current_pc);
+
+                let bp_pc = memory_write_pc.load(Ordering::SeqCst);
+                if bp_pc == 0 {
+                    panic!("watchpoint did not trigger memory write hook");
+                }
+
+                // 2. Rerun the target, this time with a breakpoint on previously found PC
+                tracing::info!("running again with breakpoint at 0x{bp_pc:X}");
+                let trigger: &'static mut AtomicBool = Box::leak(Box::new(AtomicBool::new(false)));
+                let hook = |mut proc: CoreHandle, address: u64, size: u32, data: &[u8]| {
+                    trigger.store(true, Ordering::SeqCst);
+                    let pc = proc.pc().unwrap();
+                    tracing::info!("memory write hook pc: 0x{pc:X}");
+                    Ok(())
+                };
+
+                let proc =
+                    $gdb_test_processor().add_hook(StyxHook::memory_write_virt(WP_ONE, hook));
+                let harness =
+                    ::styx_integration_tests::gdb_harness::GdbHarness::from_processor_builder::<
+                        GdbTestTargetDescriptionType,
+                    >(proc);
+                let bp_id = harness.add_breakpoint(bp_pc).unwrap();
+
+                harness.gdb_continue().unwrap();
+                std::thread::sleep(std::time::Duration::from_millis(500));
+                let stop_reason = harness.wait_for_stop_reason().unwrap();
+
+                // assert that:
+                // - stop reason is breakpoint we created
+                // - current address is our breakpoint's address
+                let cur_bp_id = match stop_reason {
+                    ::gdbmi::status::StopReason::Breakpoint { number } => number,
+                    _ => panic!("Did not stop due to breakpoint"),
+                };
+                let registers = harness.list_registers().unwrap();
+                let current_pc = *registers.get(PC_REGISTER).unwrap();
+
+                assert_eq!(bp_id.number, cur_bp_id);
+                assert_eq!(bp_pc, current_pc);
+
+                // 3. After breaking, step instruction and check that a memory_write hook is triggered
+                trigger.store(false, Ordering::SeqCst);
+                tracing::info!("stepping now");
+                let current_pc = harness.step_instruction().unwrap();
+                assert_ne!(bp_pc, current_pc);
+                assert!(
+                    trigger.load(Ordering::SeqCst) == true,
+                    "Memory hook was not triggered during step instruction. Make sure the watchpoint is triggered the first time code at that PC is run."
+                );
             }
 
             // test can run into watchpoint and `ni` out of it
