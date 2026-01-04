@@ -12,7 +12,7 @@ use std::array;
 
 use styx_core::{
     errors::UnknownError,
-    hooks::CoreHandle,
+    hooks::{CoreHandle, StyxHook},
     memory::Mmu,
     prelude::{
         log::{error, info, trace},
@@ -302,6 +302,16 @@ impl Default for QTimer {
     }
 }
 
+fn qtimer_mmio_read_hook(
+    proc: CoreHandle,
+    address: u64,
+    size: u32,
+    data: &mut [u8],
+) -> Result<(), UnknownError> {
+    unimplemented!("I read an mmio (:");
+    Ok(())
+}
+
 fn qtimer_mmio_write_hook(
     proc: CoreHandle,
     address: u64,
@@ -468,6 +478,15 @@ impl Peripheral for QTimer {
                 QTIMER_BASE,
                 QTIMER_BASE + 0x1000 + (0x1000 * QTIMER_NUM_TIMERS),
                 Box::new(qtimer_mmio_write_hook),
+            )
+            .with_context(|| "couldn't add MMIO hooks for qtimer")?;
+
+        proc.core
+            .cpu
+            .mem_read_hook(
+                0xfea20000,
+                0xfea20000 + 0x1000 + (0x1000 * QTIMER_NUM_TIMERS),
+                Box::new(qtimer_mmio_read_hook),
             )
             .with_context(|| "couldn't add MMIO hooks for qtimer")?;
 

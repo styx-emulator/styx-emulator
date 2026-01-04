@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! # Styx-Processors
 
-use event_controller::HexagonEventController;
+use l2vic::L2Vic;
 use qtimer::QTimer;
 use styx_core::arch::hexagon::register_fields::Ssr;
 use styx_core::arch::hexagon::HexagonRegister;
@@ -23,8 +23,8 @@ use styx_core::{
 };
 use tlb::HexagonTlb;
 
-mod event_controller;
 mod exception;
+mod l2vic;
 mod qtimer;
 mod tlb;
 
@@ -135,7 +135,7 @@ impl ProcessorImpl for HexagonBuilder {
 
         mmu.memory_map(0, 2u64.pow(32), MemoryPermissions::all())?;
 
-        let hec = Box::new(HexagonEventController::default());
+        let l2vic = Box::new(L2Vic::default());
 
         let peripherals: Vec<Box<dyn Peripheral>> = vec![Box::new(QTimer::default())];
 
@@ -145,7 +145,7 @@ impl ProcessorImpl for HexagonBuilder {
         Ok(ProcessorBundle {
             cpu,
             mmu,
-            event_controller: hec,
+            event_controller: l2vic,
             peripherals,
             loader_hints: hints,
         })
