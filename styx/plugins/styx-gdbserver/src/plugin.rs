@@ -37,7 +37,7 @@
 //!
 //! proc.run(Forever).unwrap();
 //! ```
-use crate::{event_loop, target_impl::TargetImpl};
+use crate::{event_loop, target_impl::TargetImpl, GDBOptions};
 use event_loop::WaitForConnection;
 use gdbstub::stub::{DisconnectReason, GdbStub};
 use std::marker::PhantomData;
@@ -60,6 +60,7 @@ where
     /// defaults to 0, and reports port 0 when utilizing a unix domain
     /// socket
     port_in_use: u16,
+    options: GDBOptions,
     _unused: PhantomData<GdbArchImpl>,
 }
 
@@ -116,8 +117,15 @@ where
         Ok(Self {
             params: Arc::new(params),
             port_in_use: port,
+            options: GDBOptions::default(),
             _unused: PhantomData::<GdbArchImpl> {},
         })
+    }
+
+    /// Overwrite [`GDBOptions`].
+    pub fn with_options(mut self, options: GDBOptions) -> Self {
+        self.options = options;
+        self
     }
 
     /// Getter for the port assigned to the plugin assigned by the operating
@@ -132,10 +140,11 @@ where
     }
 
     pub fn run_gdb(&mut self, proc: &mut ProcessorCore) {
+        let options = self.options.clone();
         let params = self.params.clone();
 
         // create a single handle to emulation
-        let mut emu = TargetImpl::<GdbArchImpl>::new(proc);
+        let mut emu = TargetImpl::<GdbArchImpl>::new(proc, options);
 
         // run loop, only exit's on error
         loop {

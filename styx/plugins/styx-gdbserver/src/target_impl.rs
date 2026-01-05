@@ -17,6 +17,7 @@
 use crate::{
     event_loop::{self, RunEvent},
     mem_watch::{Access, MemHookCache},
+    GDBOptions, StepIRQs,
 };
 use gdbstub::{
     common::Signal,
@@ -99,7 +100,7 @@ impl CodeHook for GdbBreakpointHook {
 
 /// Track the current gdb execution mode - used let the event loop
 /// know that we want to resume target (emulator) execution
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ExecMode {
     /// Resume cpu until an [`Event`](super::event_loop::Event)
     Continue,
@@ -146,11 +147,15 @@ where
     /// Tracks `styx_core::cpu::hooks::HookType::MEM_WRITE` hooks
     /// TODO: make sure this really does
     pub(crate) mem_hook_cache: Arc<MemHookCache>,
+    options: GDBOptions,
+    /// Used in [`Self::resume()`].
+    ///
+    /// Tracks current number of instructions run since last epoch.
+    /// For `continue` this will just add the number of instructions ran,
+    /// for `step` it increments.
+    step_cycles: u64,
     _unused: PhantomData<GdbArchImpl>,
 }
-
-/// How many instructions to segment "epoch"'s with
-const CPU_EPOCH_SIZE: u64 = 1024;
 
 /// Functions needed outside of the gdbstub `Target` traits
 impl<'a, GdbArchImpl> TargetImpl<'a, GdbArchImpl>
@@ -169,7 +174,7 @@ where
     /// Construct a new [TargetImpl] from the [ProcessorCore]
     /// Assumes that processor and cpu adhere to
     /// [Using _GdbExecutor_](super::plugin::GdbExecutor).
-    pub(crate) fn new(mach: &'a mut ProcessorCore) -> Self {
+    pub(crate) fn new(mach: &'a mut ProcessorCore, options: GDBOptions) -> Self {
         trace!("Creating TargetImpl");
         let reg_size = mach.cpu.architecture().core_register_size();
 
@@ -180,6 +185,8 @@ where
             reg_size,
             breakpoint_state: Arc::new(BreakpointManager::default()),
             mem_hook_cache: Arc::new(MemHookCache::new()),
+            options,
+            step_cycles: 0,
             _unused: PhantomData::<GdbArchImpl> {},
         }
     }
@@ -261,8 +268,7 @@ where
             return Some(event_loop::Event::Break);
         }
 
-        // NOTE: unlike in `continue` we DO NOT
-        // latch the next interrupt as the user is single-stepping through code
+        // latch the next interrupt is done in `resume`
 
         None
     }
@@ -279,95 +285,75 @@ where
     /// check for Ctrl-C and break with [`RunEvent::IncomingData`] to process
     /// the event)
     pub(crate) fn resume(&mut self, mut poll_incoming_data: impl FnMut() -> bool) -> RunEvent {
-        match self.exec_mode {
-            // if we're stepping then we are done after one step
-            ExecMode::Step => RunEvent::Event(self.step().unwrap_or(event_loop::Event::DoneStep)),
-            // continue until something pauses execution
-            // NOTE: if any watchpoints are set then we must single step
-            // because we need to check the memory state every single
-            // instruction
-            ExecMode::Continue => {
-                // If the user has any watchpoints, we need to handle
-                // the extra logic accordingly
-                if !self.watchpoints.is_empty() {
-                    let mut cycles: u64 = 0;
+        // continue until something pauses execution
+        // NOTE: if any watchpoints are set then we must single step
+        // because we need to check the memory state every single
+        // instruction
+        // Should we execute one insn at a time, or in large strides?
+        let should_step = self.exec_mode != ExecMode::Continue || !self.watchpoints.is_empty();
+        // Should we +1 to self.step_cycles?
+        // If we are in continue mode, we always should. This allows IRQs to happen if the user
+        // continues but we are stepping to catch watpoints.
+        // If we are in a step exec mode then this depends on the step irqs option.
+        let should_step_irqs =
+            self.exec_mode == ExecMode::Continue || self.options.step_irqs == StepIRQs::Enabled;
+        loop {
+            if self.step_cycles >= self.options.cpu_epoch {
+                // insert interrupt
+                _ = self
+                    .proc
+                    .event_controller
+                    .next(self.proc.cpu.as_mut(), &mut self.proc.mmu);
 
-                    loop {
-                        // every 'epoch' we need to insert an interrupt, and check
-                        // for new data from the `gdb` client
-                        if cycles % CPU_EPOCH_SIZE == 0 {
-                            // insert interrupt
-                            _ = self
-                                .proc
-                                .event_controller
-                                .next(self.proc.cpu.as_mut(), &mut self.proc.mmu);
+                // assume 1 ns per instruction
+                let delta = Delta {
+                    time: std::time::Duration::from_nanos(self.options.cpu_epoch),
+                    count: self.step_cycles,
+                };
+                self.proc
+                    .event_controller
+                    .tick(self.proc.cpu.as_mut(), &mut self.proc.mmu, &delta)
+                    .unwrap();
 
-                            // assume 1 ns per instruction
-                            let delta = Delta {
-                                time: std::time::Duration::from_nanos(CPU_EPOCH_SIZE),
-                                count: CPU_EPOCH_SIZE,
-                            };
-                            self.proc
-                                .event_controller
-                                .tick(self.proc.cpu.as_mut(), &mut self.proc.mmu, &delta)
-                                .unwrap();
-
-                            // poll for incoming data
-                            if poll_incoming_data() {
-                                break RunEvent::IncomingData;
-                            }
-                        }
-                        cycles += 1;
-
-                        // check for:
-                        // - target errors
-                        // - breakpoints
-                        // - watchpoints
-                        // Because we need to watch for memory accesses, we must single-step
-                        // because we need to know *exactly* which instruction caused the
-                        // memory access
-                        if let Some(event) = self.step() {
-                            break RunEvent::Event(event);
-                        };
-                    }
-                } else {
-                    // loop until there's a reason to exit
-                    loop {
-                        // poll for incoming data before every epoch
-                        if poll_incoming_data() {
-                            debug!("runtime poller found incoming data from gdb clien");
-                            break RunEvent::IncomingData;
-                        }
-
-                        // bump the event controller
-                        _ = self
-                            .proc
-                            .event_controller
-                            .next(self.proc.cpu.as_mut(), &mut self.proc.mmu);
-
-                        // assume 1 ns per instruction
-                        let delta = Delta {
-                            time: std::time::Duration::from_nanos(CPU_EPOCH_SIZE),
-                            count: CPU_EPOCH_SIZE,
-                        };
-                        self.proc
-                            .event_controller
-                            .tick(self.proc.cpu.as_mut(), &mut self.proc.mmu, &delta)
-                            .unwrap();
-
-                        // run the CPU epoch
-                        let cpu_exit_condition = self.proc.cpu.execute(
-                            &mut self.proc.mmu,
-                            &mut self.proc.event_controller,
-                            CPU_EPOCH_SIZE,
-                        );
-                        if let Some(event) = self.handle_cpu_exit_code(
-                            cpu_exit_condition.map(|report| report.exit_reason),
-                        ) {
-                            break RunEvent::Event(event);
-                        }
-                    }
+                // poll for incoming data
+                if poll_incoming_data() {
+                    break RunEvent::IncomingData;
                 }
+                self.step_cycles = 0
+            }
+
+            if should_step {
+                if should_step_irqs {
+                    self.step_cycles += 1;
+                }
+                // check for:
+                // - target errors
+                // - breakpoints
+                // - watchpoints
+                // Because we need to watch for memory accesses, we must single-step
+                // because we need to know *exactly* which instruction caused the
+                // memory access
+                if let Some(event) = self.step() {
+                    break RunEvent::Event(event);
+                };
+            } else {
+                self.step_cycles += self.options.cpu_epoch;
+                // run the CPU epoch
+                let cpu_exit_condition = self.proc.cpu.execute(
+                    &mut self.proc.mmu,
+                    &mut self.proc.event_controller,
+                    self.options.cpu_epoch,
+                );
+                if let Some(event) =
+                    self.handle_cpu_exit_code(cpu_exit_condition.map(|report| report.exit_reason))
+                {
+                    break RunEvent::Event(event);
+                }
+            }
+
+            // if we're stepping then we are done after one step
+            if self.exec_mode == ExecMode::Step {
+                break RunEvent::Event(event_loop::Event::DoneStep);
             }
 
             // step until the range, instead of attempting to do
@@ -375,36 +361,14 @@ where
             // architectures, we just single-step until the range is met.
             // TODO: add a temp breakpoint or breakpoint at the end of the
             // range and then remove it when hit
-            ExecMode::RangeStep(start, end) => {
-                let mut cycles: u64 = 0;
-                loop {
-                    if cycles % CPU_EPOCH_SIZE == 0 {
-                        // poll for incoming data
-                        if poll_incoming_data() {
-                            break RunEvent::IncomingData;
-                        }
-                    }
-                    cycles += 1;
-
-                    // check for:
-                    // - target errors
-                    // - breakpoints
-                    // - watchpoints
-                    // Because we need to watch for memory accesses, we must single-step
-                    // because we need to know *exactly* which instruction caused the
-                    // memory access
-                    if let Some(event) = self.step() {
-                        break RunEvent::Event(event);
-                    };
-
-                    // check and see if we are no longer in the range off addresses
-                    // to step through
-                    // XXX: this is a hack to work aroudn VLIW stuff, so it looks
-                    // disgusting
-                    let pc = self.target_cpu().pc().unwrap();
-                    if !(start..end).contains(&pc) {
-                        break RunEvent::Event(event_loop::Event::DoneStep);
-                    }
+            if let ExecMode::RangeStep(start, end) = self.exec_mode {
+                // check and see if we are no longer in the range off addresses
+                // to step through
+                // XXX: this is a hack to work around VLIW stuff, so it looks
+                // disgusting
+                let pc = self.target_cpu().pc().unwrap();
+                if !(start..end).contains(&pc) {
+                    break RunEvent::Event(event_loop::Event::DoneStep);
                 }
             }
         }

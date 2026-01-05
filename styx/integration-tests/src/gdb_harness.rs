@@ -12,7 +12,7 @@ use gdbmi::{Gdb, TimeoutError};
 use std::fmt::Write;
 use std::num::ParseIntError;
 use styx_core::prelude::*;
-use styx_plugins::gdb::{build_gdb, GdbExecutor, GdbPluginParams};
+use styx_plugins::gdb::{build_gdb, GDBOptions, GdbExecutor, GdbPluginParams};
 
 use thiserror::Error;
 use tokio::process::{Child, Command};
@@ -614,6 +614,26 @@ impl GdbHarness {
         let port = *port.lock().unwrap();
 
         Self::from_foo(builder, gdb_plugin, port)
+    }
+
+    pub fn from_processor_builder_options<GdbSupport>(
+        builder: ProcessorBuilder,
+        options: GDBOptions,
+    ) -> Self
+    where
+        GdbSupport: gdbstub::arch::Arch + 'static + std::fmt::Debug,
+        GdbSupport::Registers: styx_core::cpu::arch::GdbRegistersHelper,
+        GdbSupport::RegId: styx_core::cpu::arch::GdbArchIdSupportTrait,
+    {
+        // create gdb plugin with port 0
+        let gdb_plugin = GdbExecutor::<GdbSupport>::new(params())
+            .unwrap()
+            .with_options(options);
+
+        // get assigned port (doesn't happen until processor starts) todo
+        let port = gdb_plugin.port();
+
+        Self::from_foo(builder, Box::new(gdb_plugin), port)
     }
 
     pub fn from_processor_builder<GdbSupport>(builder: ProcessorBuilder) -> Self

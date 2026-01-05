@@ -53,11 +53,13 @@ mod builder;
 pub(crate) mod event_loop;
 pub(crate) mod mem_watch;
 pub(crate) mod monitor;
+mod options;
 pub(crate) mod plugin;
 pub(crate) mod target_impl;
 
 pub use builder::*;
 pub use event_loop::GdbPluginParams;
+pub use options::{GDBOptions, StepIRQs};
 pub use plugin::GdbExecutor;
 
 use styx_core::cpu::arch::GdbArchIdSupportTrait;
