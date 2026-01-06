@@ -5,7 +5,8 @@
 //!
 //! And Arm PrimeCell PL190 interrupt controller documentation.
 
-use bitbybit::bitenum;
+use arbitrary_int::*;
+use bitbybit::{bitenum, bitfield};
 use styx_core::{
     cpu::CpuBackend,
     errors::UnknownError,
@@ -13,9 +14,8 @@ use styx_core::{
     hooks::CoreHandle,
     memory::Mmu,
     prelude::{
-        anyhow,
         log::{error, trace},
-        BuildingProcessor, Context, EventControllerImpl, ExceptionNumber, Peripheral,
+        Context, EventControllerImpl, ExceptionNumber,
     },
 };
 
@@ -79,8 +79,11 @@ pub enum L2VicRegister {
     GRP3 = 13,
 }
 
-#[bitenum(u8, exhaustive = false)]
-pub enum FastL2VicBase {
+/// See QEMU's hw/intc/l2vic.c, specifically
+/// fastl2vic_write, for more details.
+#[derive(Debug)]
+#[bitenum(u2)]
+pub enum FastL2VicCommand {
     Enable = 0,
     Disable = 1,
     // Goes to soft int according to fastl2vic_write in
@@ -88,16 +91,58 @@ pub enum FastL2VicBase {
     Interrupt = 2,
 }
 
+/// See QEMU's hw/intc/l2vic.c, specifically
+/// fastl2vic_write, for more details.
+#[bitfield(u32, debug)]
+pub struct FastL2VicControl {
+    #[bits(0..=9, r)]
+    irq: u10,
+    #[bits(16..=17, r)]
+    command: Option<FastL2VicCommand>,
+}
+
+impl FastL2VicControl {
+    /// Each IRQ for the l2vic belongs to a specific slice. This function gets the
+    /// slice that the IRQ in the command corresponds to.
+    ///
+    /// The IRQs are split such that IRQs 0-31 are in slice 0,
+    /// 32 to 63 are in slice 1, 64 to 95 are in slice 3, etc..
+    pub fn slice(&self) -> usize {
+        self.irq().as_usize() / 32
+    }
+}
+
+/// Handle MMIO write to fastl2vic
+/// register. See QEMU's hw/intc/l2vic.c
 fn fastl2vic_mmio_write_hook(
     proc: CoreHandle,
     address: u64,
     size: u32,
     data: &[u8],
 ) -> Result<(), UnknownError> {
+    let l2vic = proc.event_controller.get_impl::<L2Vic>()?;
+    let fastl2vic_control = FastL2VicControl::new_with_raw_value(u32::from_le_bytes(
+        data.try_into()
+            .with_context(|| "couldn't convert fastl2vic access into u32")?,
+    ));
+
     error!(
-        "fastl2vic access address {address:x} {size:x} {data:x?} pc {:x?}",
-        proc.cpu.pc()
+        "fastl2vic access address {address:x} {size:x} {data:x?} pc {:x?}, register {:x?}",
+        proc.cpu.pc(),
+        fastl2vic_control
     );
+
+    match fastl2vic_control.command() {
+        // According to QEMU this is EnableSet
+        Ok(FastL2VicCommand::Enable) => {
+            l2vic.handle_register_write(
+                L2VicRegister::EnableSet,
+                fastl2vic_control.slice(),
+                fastl2vic_control.irq().as_u32(),
+            )?;
+        }
+        _ => unimplemented!(),
+    }
 
     Ok(())
 }
@@ -127,30 +172,23 @@ fn l2vic_mmio_write_hook(
     );
 
     error!(
-        "l2vic base writing at {address:x} and size {size:x} with data {data:x?}, register {register:?} interrupt {slot}, pc is {:x?}",
+        "l2vic base writing at {address:x} and size {size:x} with data {data:x?}, pc is {:x?}",
         proc.cpu.pc()
     );
-    match register {
-        Ok(L2VicRegister::Enable) => {
-            l2vic.interrupts[slot].enable = data_u32;
-        }
-        Ok(L2VicRegister::Type) => {
-            l2vic.interrupts[slot].int_type = data_u32;
-        }
-        Ok(L2VicRegister::Clear) => {
-            l2vic.interrupts[slot].clear = data_u32;
-        }
-        _ => todo!(),
-    }
 
-    l2vic.reconfigure()?;
+    match register {
+        Ok(register) => {
+            l2vic.handle_register_write(register, slot, data_u32)?;
+        }
+        Err(_) => todo!(),
+    }
 
     Ok(())
 }
 
 #[derive(Default)]
 pub struct L2Vic {
-    interrupts: [L2VicSlot; L2VIC_NUM_SLOTS as usize],
+    slots: [L2VicSlot; L2VIC_NUM_SLOTS as usize],
 }
 
 /// QEMU mentions a lot about slices... what are these so-called slices?
@@ -163,10 +201,75 @@ pub struct L2VicSlot {
     enable: u32,
     clear: u32,
     int_type: u32,
+    pending: u32,
+}
+
+impl L2VicSlot {
+    pub fn irqn_enable(&self, n: usize) -> bool {
+        ((self.enable >> n) & 1) == 1
+    }
+    pub fn irqn_clear(&self, n: usize) -> bool {
+        ((self.clear >> n) & 1) == 1
+    }
+    pub fn irqn_int_type(&self, n: usize) -> bool {
+        ((self.int_type >> n) & 1) == 1
+    }
+    pub fn irqn_pending(&self, n: usize) -> bool {
+        ((self.pending >> n) & 1) == 1
+    }
 }
 
 impl L2Vic {
-    pub fn reconfigure(&mut self) -> Result<(), UnknownError> {
+    fn handle_register_write(
+        &mut self,
+        register: L2VicRegister,
+        slot: usize,
+        data: u32,
+    ) -> Result<(), UnknownError> {
+        error!("register {register:?} slot {slot} data {data:x}");
+
+        match register {
+            L2VicRegister::Enable => {
+                self.slots[slot].enable = data;
+            }
+            // self_write in hw/intc/l2vic.c:
+            // is similar to Enable, but sets the bits in data in the
+            // current enabled field instead of overwriting the enable field with the bits.
+            L2VicRegister::EnableSet => {
+                self.slots[slot].enable |= data;
+            }
+            L2VicRegister::Type => {
+                self.slots[slot].int_type = data;
+            }
+            L2VicRegister::Clear => {
+                self.slots[slot].clear = data;
+            }
+            _ => todo!(),
+        }
+
+        self.process_changes()?;
+        Ok(())
+    }
+
+    /// This should be called after the internal state of the
+    /// L2vic is changed, such as after a register write.
+    ///
+    /// See l2vic_update_all and l2vic_update for more details
+    /// in hw/intc/l2vic.c.
+    pub fn process_changes(&mut self) -> Result<(), UnknownError> {
+        // 1. Go through every IRQ and, then see if the IRQ is
+        // enabled and pending. If it is, then indicate the interurpt
+        // has been raised
+
+        for slot in &self.slots {
+            // Now go through the IRQs
+            // As each slot is 32 bits, the IRQ is 32 bits
+            for i in 0..32 {
+                // This means the IRQ must be triggered.
+                if slot.irqn_enabled(i) && slot.irqn_pending(i) {}
+            }
+        }
+
         Ok(())
     }
 }
@@ -213,7 +316,7 @@ impl EventControllerImpl for L2Vic {
 
         cpu.mem_write_hook(
             FASTL2VIC_BASE,
-            FASTL2VIC_BASE + 0x1000,
+            FASTL2VIC_BASE + 0x4,
             Box::new(fastl2vic_mmio_write_hook),
         )?;
 
