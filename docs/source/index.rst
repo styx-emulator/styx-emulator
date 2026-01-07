@@ -81,6 +81,7 @@ Documentation Contents
    user/backends
    user/new_architectures
    user/new_architectures_pcode
+   user/timers
    user/adding_test_binaries
    user/migration
 
