@@ -16,7 +16,7 @@ use styx_core::{
     memory::Mmu,
     prelude::{
         log::{error, info, trace},
-        Context, EventControllerImpl, ExceptionNumber, Peripheral,
+        Context, EventControllerImpl, Peripheral,
     },
 };
 
@@ -225,19 +225,7 @@ impl QTimerFrame {
             // Latch interrupt or something
             // TODO: Pending l2vic implementation?
 
-            // When the timer condition is met, the status is set to one.
-            // See D5.7.6 and the ISTATUS bit.
-            self.istatus = true;
-
-            // The frame number corresponds to the IRQ.
-            event_controller.latch(self.frame_number as ExceptionNumber + QTIMER_IRQ_OFFSET)?;
-            info!(
-                "Ring ring, I am timer number {}, my and we latched {}.",
-                self.frame_number,
-                self.frame_number as ExceptionNumber + QTIMER_IRQ_OFFSET
-            );
-
-            // todo!("Ring ring! The timer went off, but we haven't implemented that yet ):")
+            todo!("Ring ring! The timer went off, but we haven't implemented that yet ):")
         }
 
         trace!("total ticks in counter {}", self.counter);

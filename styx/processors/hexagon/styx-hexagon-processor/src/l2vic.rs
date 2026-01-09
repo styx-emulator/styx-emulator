@@ -8,8 +8,6 @@
 //! It appears that the l2vic (QEMU) describes that
 //! all interrupts go to VID 0, which is IRQ 2.
 
-use std::process::exit;
-
 use arbitrary_int::*;
 use bitbybit::{bitenum, bitfield};
 use styx_core::{
@@ -278,15 +276,6 @@ pub struct L2Vic {
     vid: u32,
 }
 
-impl Default for L2Vic {
-    fn default() -> Self {
-        Self {
-            slots: Default::default(),
-            vid: u32::MAX,
-        }
-    }
-}
-
 /// QEMU mentions a lot about slices... what are these so-called slices?
 /// In our case, it seems to just compute down to 32 interrupts.
 #[derive(Default)]
@@ -311,31 +300,13 @@ impl L2VicSlot {
         ((self.enable >> n) & 1) == 1
     }
     pub fn set_irqn_pending(&mut self, n: usize, value: bool) {
-        if value {
-            // Set bit
-            self.pending |= (1 << n)
-        } else {
-            // Clear bit
-            self.pending &= !(1 << n)
-        }
+        self.pending &= !(1 << n)
     }
     pub fn set_irqn_enable(&mut self, n: usize, value: bool) {
-        if value {
-            // Set bit
-            self.enable |= (1 << n)
-        } else {
-            // Clear bit
-            self.enable &= !(1 << n)
-        }
+        self.enable &= !(1 << n)
     }
     pub fn set_irqn_status(&mut self, n: usize, value: bool) {
-        if value {
-            // Set bit
-            self.status |= (1 << n)
-        } else {
-            // Clear bit
-            self.status &= !(1 << n)
-        }
+        self.status &= !(1 << n)
     }
     pub fn irqn_pending(&self, n: usize) -> bool {
         ((self.pending >> n) & 1) == 1
@@ -387,17 +358,6 @@ impl L2Vic {
                 let irqn = (slot as u32 * L2VIC_NUM_SLOTS as u32) + slot_offset;
                 info!("SoftInt irq {irqn}");
 
-                // Cause an interrupt
-                // QEMU l2vic_write: soft int is only accepted if the interrupt is enabled
-                if self.slots[slot].irqn_int_type(slot_offset as usize) {
-                    info!("doing SoftInt for irq {irqn}");
-                    self.latch(irqn as i32)?;
-                }
-                // WARN: do I need to set INT_ENABLE here like qemu does?
-            }
-            _ => todo!(),
-        }
-
         Ok(())
     }
 }
@@ -416,22 +376,6 @@ impl EventControllerImpl for L2Vic {
         mmu: &mut Mmu,
         _peripherals: &mut Peripherals,
     ) -> Result<InterruptExecuted, UnknownError> {
-        trace!("l2vic next called, vid is 0x{:x}", self.vid);
-        // Update the VID, since the register write hook won't work
-        // from the CIAD instruction, so just take the "register" VID
-        // and if they're not equal set to whatever it is.
-
-        let vid = cpu
-            .read_register::<u32>(HexagonRegister::Vid)
-            .with_context(|| "Couldn't read VID register")?;
-        if self.vid != vid {
-            info!(
-                "l2vic: vid was set in code or by ciad, updating to 0x{:x}.",
-                vid
-            );
-            self.vid = vid;
-        }
-
         // We aren't going to do anything until
         // VID is cleared - see l2vic_updated in hw/intc/l2vic.c QEMU.
         //
@@ -444,9 +388,7 @@ impl EventControllerImpl for L2Vic {
         // first bit set to find if any int_statuses are enabled.
         //
         // Is this not equivalent?
-        //
-        // -1 is "invalid" vid
-        if self.vid != u32::MAX {
+        if self.vid != 0 {
             // ------- TEST
             let mut int_statuses = false;
             for slot in &self.slots {
@@ -470,32 +412,23 @@ impl EventControllerImpl for L2Vic {
         // and raise the highest-priority IRQ.
 
         let mut irq = None;
-        for (slot_no, slot) in self.slots.iter().enumerate() {
+        for slot in &self.slots {
             // Now go through the IRQs
             // As each slot is 32 bits, the IRQ is 32 bits
             for i in 0..32 {
-                trace!(
-                    "l2vic irqn_enable {} irqn_pending {}",
-                    slot.irqn_enable(i),
-                    slot.irqn_pending(i)
-                );
                 // This means the IRQ must be executed, as it
                 // was latched.
                 if slot.irqn_enable(i) && slot.irqn_pending(i) {
-                    trace!("the first IRQ set was {i}");
-                    irq = Some(i + (slot_no * L2VIC_NUM_SLOTS as usize));
+                    irq = Some(i);
                     break;
                 }
             }
         }
 
         match irq {
-            Some(irq) => {
-                info!("l2vic next - executing irqn {irq}");
-                self.execute(irq as i32, cpu, mmu)
-                    .with_context(|| "couldn't execute pending interrupt")
-            }
-
+            Some(irq) => self
+                .execute(irq as i32, cpu, mmu)
+                .with_context(|| "couldn't execute pending interrupt"),
             None => Ok(InterruptExecuted::NotExecuted),
         }
     }
@@ -508,11 +441,8 @@ impl EventControllerImpl for L2Vic {
     ///
     /// TODO Priority and use a queue to avoid performance issues
     fn latch(&mut self, event: ExceptionNumber) -> Result<(), ActivateIRQnError> {
-        let slot = event as usize / L2VIC_NUM_SLOTS as usize;
-        let slot_offset = (event as usize) % (L2VIC_NUM_SLOTS as usize);
-        trace!("l2vic latch slot {slot} offset {slot_offset}");
-
-        self.slots[slot].set_irqn_pending(slot_offset, true);
+        let irq = event as usize;
+        self.slots[irq].set_irqn_pending(irq, true);
         Ok(())
     }
 
@@ -520,9 +450,9 @@ impl EventControllerImpl for L2Vic {
     /// in hw/intc/l2vic.c.
     fn execute(
         &mut self,
-        irq_n: ExceptionNumber,
-        cpu: &mut dyn CpuBackend,
-        mmu: &mut Mmu,
+        irq: ExceptionNumber,
+        _cpu: &mut dyn CpuBackend,
+        _mmu: &mut Mmu,
     ) -> Result<InterruptExecuted, ActivateIRQnError> {
         // The VID is found by looking at interrupt groups
         // Each group has an IRQ encoded for each slot and some
@@ -542,14 +472,13 @@ impl EventControllerImpl for L2Vic {
         //
         // It seems like there is only one VID
         // as the "interrupt groups" are never written.
-        let vid_n = 0;
 
         // Un-enable and un-pending the IRQ.
 
         // It looks like we only have one VID
         // in use since no other VIDs are setup in FW,
         // So we shall trigger the IRQ
-        let irq = irq_n as usize;
+        let irq = irq as usize;
         let slot = &mut self.slots[irq / L2VIC_NUM_SLOTS as usize];
 
         slot.set_irqn_status(irq, true);
@@ -565,44 +494,10 @@ impl EventControllerImpl for L2Vic {
         // since no other VIDs are setup in FW, so we shall trigger the IRQ
         // on the one VID.
         self.vid = irq as u32;
-        // Update the backing register store
-        cpu.write_register(HexagonRegister::Vid, self.vid)
-            .with_context(|| "couldn't update vid register")?;
 
-        // We also need to set the SSR cause to the VID
-        // See qemu_irq_pulse in hw/intc/l2vic.c in QUIC QEMU
-        let irq_base_offset = L2VIC_VID_IRQ_BASE + vid_n;
-        let ssr = Ssr::new_with_raw_value(cpu.read_register::<u32>(HexagonRegister::Ssr).unwrap())
-            .with_cause(irq_base_offset as u8);
-        cpu.write_register(HexagonRegister::Ssr, ssr.raw_value())
-            .unwrap();
+        // Now invoke the interrupt handler with IRQ 2.
 
-        // Actual irq number of the 16 irqs here.
-        let hex_irq_number =
-            HexagonInterruptType::Int0 as ExceptionNumber + irq_base_offset as ExceptionNumber;
-
-        // Set the irq pending
-        let mut ipendad = Ipendad::new_with_raw_value(
-            cpu.read_register::<u32>(HexagonRegister::Ipendad)
-                .with_context(|| "couldn't read r0 in interrupt")?,
-        );
-        ipendad.set_ipend(ipendad.ipend() | (1 << hex_irq_number));
-        cpu.write_register(HexagonRegister::Ipendad, ipendad.raw_value())
-            .with_context(|| "couldn't write ipendad")?;
-
-        // NOTE: the interrupt number is dependent on the VID. Right now there is only
-        // one VID used, but if VID groups are used in the future, the IRQ number would change.
-        // 0x12 - VID0
-        // 0x13 - VID1
-        // 0x14 - VID2
-        // etc.
-        //
-        // As the VID base offset is 0x2, we can add the base Int0 (0x10) to compute this.
-        // TODO: should probably use the ipend reg write to trigger this.
-        async_interrupt_handler(cpu, mmu, hex_irq_number)?;
-        Ok(InterruptExecuted::Executed)
-
-        // todo!("l2vic execute")
+        todo!("l2vic execute")
     }
 
     fn finish_interrupt(
