@@ -4,6 +4,9 @@
 //! See quic qemu's docs/devel/hexagon-l2vic.rst, hw/intc/l2vic.c and include/hw/intc/l2vic.h
 //!
 //! And Arm PrimeCell PL190 interrupt controller documentation.
+//!
+//! It appears that the l2vic (QEMU) describes that
+//! all interrupts go to VID 0, which is IRQ 2.
 
 use arbitrary_int::*;
 use bitbybit::{bitenum, bitfield};
@@ -189,6 +192,7 @@ fn l2vic_mmio_write_hook(
 #[derive(Default)]
 pub struct L2Vic {
     slots: [L2VicSlot; L2VIC_NUM_SLOTS as usize],
+    vid: u32,
 }
 
 /// QEMU mentions a lot about slices... what are these so-called slices?
@@ -200,19 +204,28 @@ pub struct L2VicSlot {
     // for the nth slot.
     enable: u32,
     clear: u32,
+    // 1 = edge triggered
+    // 0 = level triggered
+    // See fastint.c in qemu-hexagon-testing for an example.
     int_type: u32,
+    // Is the IRQ being serviced at the moment?
+    status: u32,
     pending: u32,
 }
 
+/// TODO change this to use a bitvector library
 impl L2VicSlot {
     pub fn irqn_enable(&self, n: usize) -> bool {
         ((self.enable >> n) & 1) == 1
     }
-    pub fn irqn_clear(&self, n: usize) -> bool {
-        ((self.clear >> n) & 1) == 1
+    pub fn set_irqn_pending(&mut self, n: usize, value: bool) {
+        self.pending &= !(1 << n)
     }
-    pub fn irqn_int_type(&self, n: usize) -> bool {
-        ((self.int_type >> n) & 1) == 1
+    pub fn set_irqn_enable(&mut self, n: usize, value: bool) {
+        self.enable &= !(1 << n)
+    }
+    pub fn set_irqn_status(&mut self, n: usize, value: bool) {
+        self.status &= !(1 << n)
     }
     pub fn irqn_pending(&self, n: usize) -> bool {
         ((self.pending >> n) & 1) == 1
@@ -247,55 +260,146 @@ impl L2Vic {
             _ => todo!(),
         }
 
-        self.process_changes()?;
-        Ok(())
-    }
-
-    /// This should be called after the internal state of the
-    /// L2vic is changed, such as after a register write.
-    ///
-    /// See l2vic_update_all and l2vic_update for more details
-    /// in hw/intc/l2vic.c.
-    pub fn process_changes(&mut self) -> Result<(), UnknownError> {
-        // 1. Go through every IRQ and, then see if the IRQ is
-        // enabled and pending. If it is, then indicate the interurpt
-        // has been raised
-
-        for slot in &self.slots {
-            // Now go through the IRQs
-            // As each slot is 32 bits, the IRQ is 32 bits
-            for i in 0..32 {
-                // This means the IRQ must be triggered.
-                if slot.irqn_enabled(i) && slot.irqn_pending(i) {}
-            }
-        }
-
         Ok(())
     }
 }
 
 impl EventControllerImpl for L2Vic {
+    /// See l2vic_update_all for more details
+    /// in hw/intc/l2vic.c.
+    ///
+    /// This function will retrieve and execute the latest interrupt
+    /// based on which interrupts are currently pending.
+    ///
+    /// TODO: optimization as needed.
     fn next(
         &mut self,
-        _cpu: &mut dyn CpuBackend,
-        _mmu: &mut Mmu,
+        cpu: &mut dyn CpuBackend,
+        mmu: &mut Mmu,
         _peripherals: &mut Peripherals,
     ) -> Result<InterruptExecuted, UnknownError> {
-        trace!("event controller next unimplemented");
-        Ok(InterruptExecuted::NotExecuted)
+        // We aren't going to do anything until
+        // VID is cleared - see l2vic_updated in hw/intc/l2vic.c QEMU.
+        //
+        // VID seemingly holds the value of the current IRQ that was raised.
+        //
+        // As an example, msee qemu-hexagon-testing's "levelint.c" test.
+        // Also see hexagon-l2vic.rst in QUIC QEMU
+        //
+        // WARN: The QUIC implementation seems to use the
+        // first bit set to find if any int_statuses are enabled.
+        //
+        // Is this not equivalent?
+        if self.vid != 0 {
+            // ------- TEST
+            let mut int_statuses = false;
+            for slot in &self.slots {
+                if slot.status != 0 {
+                    int_statuses = true;
+                    break;
+                }
+            }
+            assert_eq!(int_statuses, self.vid != 0);
+            // --------- END TEST
+
+            return Ok(InterruptExecuted::NotExecuted);
+        }
+
+        // Hexagon Programmer's Reference Manual:
+        //
+        // 11.9.2 SYSTEM MONITOR - "highest-priority interrupt 0... lowest-
+        // priority interrupt 31"
+        //
+        // Go through IRQ numbers from lowest to highest priority,
+        // and raise the highest-priority IRQ.
+
+        let mut irq = None;
+        for slot in &self.slots {
+            // Now go through the IRQs
+            // As each slot is 32 bits, the IRQ is 32 bits
+            for i in 0..32 {
+                // This means the IRQ must be executed, as it
+                // was latched.
+                if slot.irqn_enable(i) && slot.irqn_pending(i) {
+                    irq = Some(i);
+                    break;
+                }
+            }
+        }
+
+        match irq {
+            Some(irq) => self
+                .execute(irq as i32, cpu, mmu)
+                .with_context(|| "couldn't execute pending interrupt"),
+            None => Ok(InterruptExecuted::NotExecuted),
+        }
     }
 
-    fn latch(&mut self, _event: ExceptionNumber) -> Result<(), ActivateIRQnError> {
-        todo!()
+    /// This will effectively set this IRQ to pending, and put it in the
+    /// IRQ queue.
+    ///
+    /// This means when the next event are checked and executed,
+    /// in `next`, this event an be considered.
+    ///
+    /// TODO Priority and use a queue to avoid performance issues
+    fn latch(&mut self, event: ExceptionNumber) -> Result<(), ActivateIRQnError> {
+        let irq = event as usize;
+        self.slots[irq].set_irqn_pending(irq, true);
+        Ok(())
     }
 
+    /// See l2vic_update for more details
+    /// in hw/intc/l2vic.c.
     fn execute(
         &mut self,
-        _irq: ExceptionNumber,
+        irq: ExceptionNumber,
         _cpu: &mut dyn CpuBackend,
         _mmu: &mut Mmu,
     ) -> Result<InterruptExecuted, ActivateIRQnError> {
-        todo!()
+        // The VID is found by looking at interrupt groups
+        // Each group has an IRQ encoded for each slot and some
+        // other magic..
+        //
+        //
+        // IRQ number -> interrupt groups. there are 4
+        // Interrupt group is array each slots
+        // get slot, and the VID is the last 3 bits of the irq
+        // times four shifted right
+        //
+        // (irq mod 8) * 4
+        // vid 2 bits
+        //
+        // slice mmmm mmmm mmmm mmmm mmmm mmmm mmmm mmmm
+        //
+        //
+        // It seems like there is only one VID
+        // as the "interrupt groups" are never written.
+
+        // Un-enable and un-pending the IRQ.
+
+        // It looks like we only have one VID
+        // in use since no other VIDs are setup in FW,
+        // So we shall trigger the IRQ
+        let irq = irq as usize;
+        let slot = &mut self.slots[irq / L2VIC_NUM_SLOTS as usize];
+
+        slot.set_irqn_status(irq, true);
+        slot.set_irqn_enable(irq, false);
+        slot.set_irqn_pending(irq, false);
+
+        // The L2vic has four signals (VID0-3) to interrupt the CPU,
+        // and each IRQ handled by the L2vic is signaled by
+        // raising VID corresponding to the IRQ, according to QEMU
+        // documentation.
+        //
+        // It looks like we only have one VID in use
+        // since no other VIDs are setup in FW, so we shall trigger the IRQ
+        // on the one VID.
+        self.vid = irq as u32;
+
+        // Now invoke the interrupt handler with IRQ 2.
+
+        todo!("l2vic execute")
     }
 
     fn finish_interrupt(

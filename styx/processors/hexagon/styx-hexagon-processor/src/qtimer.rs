@@ -16,7 +16,7 @@ use styx_core::{
     memory::Mmu,
     prelude::{
         log::{error, info, trace},
-        Context, Peripheral,
+        Context, EventControllerImpl, Peripheral,
     },
 };
 
@@ -189,7 +189,12 @@ impl QTimerFrame {
         Ok(())
     }
 
-    fn tick(&mut self, tick_amount: u64, mmu: &mut Mmu) -> Result<(), UnknownError> {
+    fn tick(
+        &mut self,
+        event_controller: &mut dyn EventControllerImpl,
+        tick_amount: u64,
+        mmu: &mut Mmu,
+    ) -> Result<(), UnknownError> {
         // Using a read hook here would mean that when accessing memory
         // from a debugger, the hooks are not triggered.
 
@@ -209,6 +214,7 @@ impl QTimerFrame {
         {
             // Latch interrupt or something
             // TODO: Pending l2vic implementation?
+
             todo!("Ring ring! The timer went off, but we haven't implemented that yet ):")
         }
 
@@ -541,7 +547,7 @@ impl Peripheral for QTimer {
         &mut self,
         _cpu: &mut dyn styx_core::prelude::CpuBackend,
         mmu: &mut styx_core::prelude::Mmu,
-        _event_controller: &mut dyn styx_core::prelude::EventControllerImpl,
+        event_controller: &mut dyn EventControllerImpl,
         delta: &styx_core::prelude::Delta,
     ) -> Result<(), styx_core::prelude::UnknownError> {
         self.pcycles_since_last_tick += delta.count * PCYCLES_PER_PACKET;
@@ -568,7 +574,7 @@ impl Peripheral for QTimer {
 
         if timer_ticks > 0 {
             for timer in self.timer_frames.iter_mut() {
-                timer.tick(timer_ticks, mmu)?;
+                timer.tick(event_controller, timer_ticks, mmu)?;
             }
 
             // Remove these many ticks from the current pcycles since last tick
