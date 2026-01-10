@@ -117,6 +117,9 @@ pub enum HexagonSingleInstructionAction {
 struct HexagonFetchDecodeInfo {
     total_bytes_consumed: u64,
     ordering: SmallVec<[usize; MAX_PACKET_SIZE]>,
+    load_store_info: SmallVec<[bool; 4]>,
+    // from 0 to 3, at what index in the packet did the duplex start?
+    duplex_start: u32,
 }
 
 #[derive(Default)]
@@ -323,6 +326,8 @@ impl BackendHelper<HexagonExecuteSingleInfo, Vec<Pcode>> for HexagonPcodeBackend
                 &mut execution_regs_written,
                 fetch_decode_info.total_bytes_consumed,
                 Some(i),
+                &fetch_decode_info.load_store_info,
+                fetch_decode_info.duplex_start,
             )? {
                 Ok(HexagonSingleInstructionAction::DelayedInterrupt(irqn)) => {
                     delayed_irqn = Some(irqn);
@@ -355,6 +360,7 @@ impl BackendHelper<HexagonExecuteSingleInfo, Vec<Pcode>> for HexagonPcodeBackend
         // We should only flush regs based on executed pcodes.
         trace!("end of packet, flushing registers...");
         let regs_flush_pcodes = Self::flush_regs_pcode(&execution_regs_written);
+        let load_store_info_flush: SmallVec<[bool; 4]> = smallvec![false, false, false, false];
 
         // NOTE: to my knowledge, this won't ever cause an interrupt??
         match self.execute_single_instr(
@@ -364,6 +370,9 @@ impl BackendHelper<HexagonExecuteSingleInfo, Vec<Pcode>> for HexagonPcodeBackend
             &mut execution_regs_written,
             fetch_decode_info.total_bytes_consumed,
             None,
+            &load_store_info_flush,
+            // There are no duplexes.
+            0,
         )? {
             // Only handle if there was actually an IRQ request
             Ok(HexagonSingleInstructionAction::DelayedInterrupt(irqn)) => {
@@ -622,6 +631,9 @@ impl HexagonPcodeBackend {
         execution_regs_written: &mut SmallVec<[VarnodeData; DEFAULT_REG_ALLOCATION]>,
         _bytes_consumed: u64,
         order: Option<usize>,
+        // Used for handling page faulting
+        load_store_info: &SmallVec<[bool; 4]>,
+        duplex_start: u32,
     ) -> Result<Result<HexagonSingleInstructionAction, TargetExitReason>, UnknownError> {
         // execute
         let mut i = 0;
@@ -676,24 +688,62 @@ impl HexagonPcodeBackend {
                     // hexagon specific things
 
                     let pc = self.pc().with_context(|| "couldn't get pc")?;
+
+                    // Also wrong, you need the specific instruction for this offset.
+                    // yay.
                     let instr = mmu
                         .read_u32_le_virt_code(pc, self)
                         .with_context(|| "couldn't read instr")?;
 
                     let slot_info = decode_attribs::loadstore_slot(instr)
                         .expect("couldn't get load/store slot info");
-                    info!("slot info is {:?}", slot_info);
+                    info!("slot info is {:?}, order is {order:?}", slot_info);
 
+                    // TODO convert to match statement. why did I write it like this?
                     let slot = if order == Some(3) && matches!(slot_info, SlotInfo::Slots01) {
                         // i is the last slot
                         0
                     } else if order == Some(0) && matches!(slot_info, SlotInfo::Slots01) {
                         // i is the second-to-last slot
                         0
+                    } else if order == Some(1) && matches!(slot_info, SlotInfo::Slots01) {
+                        // in the second slot, just check if zero is also a load-store
+                        if load_store_info[0] {
+                            // then this is not the first load/store so it's the second so slot 0
+                            0
+                        } else {
+                            1
+                        }
                     } else if matches!(slot_info, SlotInfo::Slots0) {
                         0
                     } else if matches!(slot_info, SlotInfo::Slots1) {
                         1
+                    } else if matches!(slot_info, SlotInfo::DuplexSlots01) {
+                        // WARN NOTE TODO
+                        // If you actually fix the duplex slot ordering,
+                        // specifically that duplex slots are the opposite
+                        // of "increasing in memory" you
+                        // need to fix this as well!!!
+                        info!("is a duplex, so the order is swapped. duplex_start {duplex_start}");
+                        if let Some(n) = order {
+                            let n = n as u32;
+
+                            // As a result of this duplex slot swapping,
+                            // if we are at the start of the duplex
+                            // then we are in slot 0 actually (since
+                            // start of duplex is encoded as first instruction
+                            // but is in the lower slot)
+                            //
+                            // HACK WARN
+                            // This is WRONG.
+                            if duplex_start == n {
+                                0
+                            } else {
+                                1
+                            }
+                        } else {
+                            unreachable!()
+                        }
                     } else {
                         unreachable!()
                     };
@@ -705,7 +755,7 @@ impl HexagonPcodeBackend {
                         self.read_register::<u32>(HexagonRegister::Ssr)
                             .with_context(|| "couldn't read ssr in exception")?,
                     );
-                    info!("slot is {slot}");
+                    info!("slot is {slot}, badva is {badva:x}");
 
                     if irqn == HexagonInterruptType::TlbMissX as i32 || slot == 0 {
                         self.write_register(HexagonRegister::BadVa0, badva)?;
@@ -780,6 +830,8 @@ impl HexagonPcodeBackend {
     ) -> Result<Result<HexagonFetchDecodeInfo, TargetExitReason>, HexagonFetchDecodeError> {
         full_pcodes.clear();
 
+        // Used for page faults
+        let mut duplex_start = 0;
         let mut pc = self.pc().unwrap() as u32;
         let initial_pc = pc;
 
@@ -807,7 +859,7 @@ impl HexagonPcodeBackend {
         let mut ordering: SmallVec<[usize; 4]> = SmallVec::new();
         let mut decode_state = PktState::PktEnded(None);
         let mut total_bytes_consumed = 0;
-        let mut dotnew_total_insns = 0;
+        let mut total_insns_without_immext = 0;
         let mut dotnew_regs_written = vec![];
         let mut all_regs_written = vec![];
 
@@ -863,10 +915,16 @@ impl HexagonPcodeBackend {
                         self,
                         insns,
                         &dotnew_regs_written,
-                        dotnew_total_insns,
+                        total_insns_without_immext,
                     ),
-                    PktState::FirstDuplex(insns) => execution_helper.pkt_first_duplex(self, insns),
+                    PktState::FirstDuplex(insns) => {
+                        duplex_start = total_insns_without_immext;
+
+                        execution_helper.pkt_first_duplex(self, insns)
+                    }
                     PktState::PktStartedFirstDuplex(insns) => {
+                        duplex_start = total_insns_without_immext;
+
                         execution_helper
                             .pkt_first_duplex(self, insns)
                             .map_err(|e| {
@@ -889,7 +947,7 @@ impl HexagonPcodeBackend {
                         //
                         // See Section 10.10 for reference.
                         execution_helper
-                            .pkt_ended(self, None, &dotnew_regs_written, dotnew_total_insns)
+                            .pkt_ended(self, None, &dotnew_regs_written, total_insns_without_immext)
                             .map_err(|e| UnknownError::from_boxed(Box::new(e)))?;
                         Ok(())
                     }
@@ -968,7 +1026,7 @@ impl HexagonPcodeBackend {
             // See section 10.10.
             if !is_immext {
                 trace!("the current instruction is an immediate extension, so we aren't adding it to the list of pcodes to execute");
-                dotnew_total_insns += 1;
+                total_insns_without_immext += 1;
                 dotnew_regs_written.push(first_general_reg);
 
                 // A packet with 5 operations (eg. op1, nop, immext, duplex1, duplex2) will skip the
@@ -1086,10 +1144,27 @@ impl HexagonPcodeBackend {
 
         self.execution_helper = Some(execution_helper);
 
+        // Try to find the load/store instructions; this can be
+        // used when executing in order to help find the slot of a
+        // load/store instruction when a page fault occurs.
+        let mut load_store_info: SmallVec<[bool; 4]> = smallvec![];
+        for (i, ins) in full_pcodes.iter().enumerate() {
+            let mut has_load_store = false;
+            for pcode in ins.iter() {
+                if matches!(pcode.opcode, Opcode::Load | Opcode::Store) {
+                    trace!("instruction {i}/{} is a load/store", full_pcodes.len());
+                    has_load_store = true;
+                }
+            }
+            load_store_info.push(true);
+        }
+
         // Cache before we return
         let info = HexagonFetchDecodeInfo {
             total_bytes_consumed,
             ordering,
+            load_store_info,
+            duplex_start,
         };
 
         self.cache.insert(

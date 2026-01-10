@@ -12,11 +12,11 @@ use std::array;
 
 use styx_core::{
     errors::UnknownError,
-    hooks::{CoreHandle, StyxHook},
+    hooks::CoreHandle,
     memory::Mmu,
     prelude::{
         log::{error, info, trace},
-        Context, EventControllerImpl, Peripheral,
+        Context, EventControllerImpl, ExceptionNumber, Peripheral,
     },
 };
 
@@ -37,6 +37,9 @@ const SUBSYSTEM_BASE: u64 = 0xfc900000;
 
 const QTIMER_BASE: u64 = SUBSYSTEM_BASE + QTIMER_OFFSET;
 const QTIMER_OFFSET: u64 = 0x20000;
+
+const QTIMER_IRQ1: ExceptionNumber = 1;
+const QTIMER_IRQ2: ExceptionNumber = 2;
 
 const QTIMER_FREQ: u32 = 19200000;
 const QDSP_FREQ: u32 = 729600000;
@@ -214,6 +217,9 @@ impl QTimerFrame {
         {
             // Latch interrupt or something
             // TODO: Pending l2vic implementation?
+
+            // The frame number corresponds to the IRQ.
+            event_controller.latch((self.frame_number + 1) as ExceptionNumber)?;
 
             todo!("Ring ring! The timer went off, but we haven't implemented that yet ):")
         }
@@ -510,8 +516,10 @@ impl Peripheral for QTimer {
         Ok(())
     }
 
+    /// Seems to imply it's irq 1 and 2.
+    /// see qtimer.c in qemu-hexagon-testing.
     fn irqs(&self) -> Vec<styx_core::prelude::ExceptionNumber> {
-        std::vec![]
+        vec![QTIMER_IRQ1, QTIMER_IRQ2]
     }
 
     fn post_event_hook(

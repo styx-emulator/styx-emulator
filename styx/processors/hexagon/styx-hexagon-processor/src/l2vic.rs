@@ -11,13 +11,14 @@
 use arbitrary_int::*;
 use bitbybit::{bitenum, bitfield};
 use styx_core::{
-    cpu::CpuBackend,
+    arch::hexagon::{register_fields::Ssr, HexagonRegister},
+    cpu::{CpuBackend, CpuBackendExt, HexagonInterruptType},
     errors::UnknownError,
     event_controller::{ActivateIRQnError, InterruptExecuted, Peripherals},
     hooks::CoreHandle,
     memory::Mmu,
     prelude::{
-        log::{error, trace},
+        log::{error, info, trace},
         Context, EventControllerImpl, ExceptionNumber,
     },
 };
@@ -135,11 +136,20 @@ fn fastl2vic_mmio_write_hook(
         fastl2vic_control
     );
 
+    // See fastl2vic_write
     match fastl2vic_control.command() {
         // According to QEMU this is EnableSet
         Ok(FastL2VicCommand::Enable) => {
             l2vic.handle_register_write(
                 L2VicRegister::EnableSet,
+                fastl2vic_control.slice(),
+                fastl2vic_control.irq().as_u32(),
+            )?;
+        }
+        // According to QEMU this is EnableClear
+        Ok(FastL2VicCommand::Disable) => {
+            l2vic.handle_register_write(
+                L2VicRegister::EnableClear,
                 fastl2vic_control.slice(),
                 fastl2vic_control.irq().as_u32(),
             )?;
@@ -251,6 +261,9 @@ impl L2Vic {
             L2VicRegister::EnableSet => {
                 self.slots[slot].enable |= data;
             }
+            L2VicRegister::EnableClear => {
+                self.slots[slot].enable &= !data;
+            }
             L2VicRegister::Type => {
                 self.slots[slot].int_type = data;
             }
@@ -352,9 +365,9 @@ impl EventControllerImpl for L2Vic {
     /// in hw/intc/l2vic.c.
     fn execute(
         &mut self,
-        irq: ExceptionNumber,
-        _cpu: &mut dyn CpuBackend,
-        _mmu: &mut Mmu,
+        irq_n: ExceptionNumber,
+        cpu: &mut dyn CpuBackend,
+        mmu: &mut Mmu,
     ) -> Result<InterruptExecuted, ActivateIRQnError> {
         // The VID is found by looking at interrupt groups
         // Each group has an IRQ encoded for each slot and some
@@ -380,7 +393,7 @@ impl EventControllerImpl for L2Vic {
         // It looks like we only have one VID
         // in use since no other VIDs are setup in FW,
         // So we shall trigger the IRQ
-        let irq = irq as usize;
+        let irq = irq_n as usize;
         let slot = &mut self.slots[irq / L2VIC_NUM_SLOTS as usize];
 
         slot.set_irqn_status(irq, true);
@@ -398,7 +411,7 @@ impl EventControllerImpl for L2Vic {
         self.vid = irq as u32;
 
         // Now invoke the interrupt handler with IRQ 2.
-
+        interrupt_handler(cpu, mmu, HexagonInterruptType::Int2 as ExceptionNumber)?;
         todo!("l2vic execute")
     }
 
@@ -426,4 +439,67 @@ impl EventControllerImpl for L2Vic {
 
         Ok(())
     }
+}
+
+/// WARN: this should always be triggered at the end of a packet, after the pc has
+/// been incremented, so the Elr should be set to the pc
+///
+/// This should only be done if the interrupt number is 0?
+pub fn interrupt_handler(
+    cpu: &mut dyn CpuBackend,
+    _mmu: &mut Mmu,
+    interrupt_number: ExceptionNumber,
+) -> Result<(), UnknownError> {
+    // get cause, if the cause is 0 then we need to do the angel stuff
+    let ssr = Ssr::new_with_raw_value(
+        cpu.read_register::<u32>(HexagonRegister::Ssr)
+            .with_context(|| "couldn't read ssr in interrupt")?,
+    );
+
+    info!("interrupt number is {}", interrupt_number);
+
+    if ssr.cause() == 0 && interrupt_number == HexagonInterruptType::Trap0 as i32 {
+        let swi_no = cpu
+            .read_register::<u32>(HexagonRegister::R0)
+            .with_context(|| "couldn't read r0 in interrupt")?;
+        let arg = cpu
+            .read_register::<u32>(HexagonRegister::R1)
+            .with_context(|| "couldn't read r1 in interrupt")?;
+
+        // Some other useful ones to implement
+        // 0x15 - get cmdline
+        // 0x16 - heap?
+
+        if swi_no == 0x43 {
+            print!("{}", arg as u8 as char);
+        } else {
+            info!("unimplemented trap: trap0 swi_no is {swi_no:x}, arg {arg:x}");
+        }
+
+        // There are some mailboxes in trap0 that are
+        // used depending on the hexagon runtime
+    }
+
+    // get evb which is the interrupt vector base
+    let evb = cpu
+        .read_register::<u32>(HexagonRegister::Evb)
+        .with_context(|| "couldn't read interrupt vector base")?;
+    let jump_point = evb + (interrupt_number * 4) as u32;
+
+    info!("interrupt jumping to {:x}", jump_point);
+
+    // set elr to pc
+    let pc = cpu
+        .pc()
+        .with_context(|| "couldn't get pc to write to elr")?;
+
+    info!("interrupt setting elr to {:x}", pc);
+
+    cpu.write_register(HexagonRegister::Elr, pc)
+        .with_context(|| "couldn't write old pc to elr")?;
+
+    cpu.write_register(HexagonRegister::Pc, jump_point)
+        .with_context(|| "couldn't write interrupt jump point to pc")?;
+
+    Ok(())
 }

@@ -18,7 +18,7 @@ use styx_core::{
 use crate::exception::{ssr_set_cause, update_badva};
 
 // See https://github.com/quic/qemu/blob/hex-next/target/hexagon/cpu.h.
-const MAX_TLB_ENTRIES: usize = 1024;
+pub const MAX_TLB_ENTRIES: usize = 1024;
 
 #[bitfield(u32, Debug)]
 pub struct TLBProbeField {
