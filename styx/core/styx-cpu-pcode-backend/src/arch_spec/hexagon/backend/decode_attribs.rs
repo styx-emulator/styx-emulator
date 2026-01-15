@@ -10,7 +10,7 @@
 // ld 01
 // st 01
 
-use log::info;
+use log::{info, trace};
 use smallvec::{smallvec, SmallVec};
 use styx_sync::lazy_static;
 
@@ -4314,9 +4314,9 @@ pub fn loadstore_slot(instr_bits: u32) -> Option<SlotInfo> {
     // There are loads and stores in duplexes, and they may page fault.
     // However, we know these loads/stores must either be in
     // slot 0 or 1.
-    info!("loadstore_slot: instr_bits is {instr_bits:x}");
+    trace!("loadstore_slot: instr_bits is {instr_bits:x}");
     if matches!(instr_parsed.parse(), PktLoopParseBits::Duplex) {
-        return Some(SlotInfo::DuplexSlots01);
+        return Some(SlotInfo::Slots01);
     }
     if !matches!(
         instr_parsed.nonduplex_iclass(),
@@ -4325,12 +4325,13 @@ pub fn loadstore_slot(instr_bits: u32) -> Option<SlotInfo> {
             | Iclass::IclassStore
             | Iclass::IclassLoad
     ) {
+        trace!("loadstore slot is not a load/store instruction");
         return None;
     }
 
     for ins in INSTRS.iter() {
         if ins.pattern.is_match(instr_bits) {
-            info!("the ins {ins:?} is a match");
+            trace!("the ins {ins:?} is a match");
             for attr in &ins.attrs {
                 match attr {
                     HexagonInsnAttributes::RestrictSlot0Only

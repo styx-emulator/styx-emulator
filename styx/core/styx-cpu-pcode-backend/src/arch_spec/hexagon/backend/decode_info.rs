@@ -55,8 +55,6 @@ pub enum SlotInfo {
     Slots01,
     Slots23,
     Slots0123,
-    // This is a generic slots 0/1 for a duplex.
-    DuplexSlots01,
 }
 
 /// Information about the instruction class for each sub-instruction of a duplex instruction.
