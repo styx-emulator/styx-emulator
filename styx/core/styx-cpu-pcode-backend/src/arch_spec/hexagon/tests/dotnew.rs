@@ -1041,3 +1041,32 @@ fn test_dotnew_misidentify_load_halfword() {
     assert_eq!(pc, 0x1010);
     assert_eq!(memval, -1);
 }
+
+#[test]
+fn test_dotnew_two_outputs_second() {
+    const MEM_START: u64 = 0x10;
+
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(
+        r#"
+       0:	00 40 00 00	00004000 { 	immext(#0x0)
+       4:	01 54 82 9b	9b825401   	r1 = memw(r2=##0x10)
+       8:	08 f0 42 24	2442f008   	if (!cmp.eq(r1.new,#0x10)) jump:t 0x10 } 
+       c:	e3 ff df 78	78dfffe3 { 	r3 = #-0x1 } 
+      10:	23 c0 00 78	7800c023 { 	r3 = #0x1 } 
+"#,
+    );
+
+    mmu.write_u32_le_phys_data(MEM_START, 0x1839)
+        .expect("Couldn't write to MEM_START");
+    cpu.write_register(HexagonRegister::R2, 0x10u32).unwrap();
+
+    let exit = cpu.execute(&mut mmu, &mut ev, 2).unwrap();
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
+
+    let pc = cpu.read_register::<u32>(HexagonRegister::Pc).unwrap();
+    let r3 = cpu.read_register::<u32>(HexagonRegister::R3).unwrap();
+
+    // The pc is moved forward by 4 after the 0x1010 packet is executed
+    assert_eq!(pc, 0x1014);
+    assert_eq!(r3, 1);
+}
