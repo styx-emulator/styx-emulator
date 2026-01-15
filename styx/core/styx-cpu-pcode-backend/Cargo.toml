@@ -17,11 +17,14 @@ default = [
   "arch_superh",
   "arch_hexagon",
 ]
+# Not enabled with --all-features (see below).
+# Manually enable with --feature blackfin/hexagon-bintuils-tests
 blackfin-binutils-tests = ["dep:styx-blackfin-testdata", "dep:styx-loader"]
 hexagon-binutils-tests = ["dep:styx-hexagon-testdata", "dep:styx-loader"]
 # This is a hack to disable the blackfin tests in the CI
 # when passing `--all-features` to cargo
 disable-blackfin-tests = []
+disable-hexagon-tests = []
 arch_arm = ["styx-pcode-translator/arch_arm"]
 arch_aarch64 = ["styx-pcode-translator/arch_aarch64"]
 arch_bfin = ["styx-pcode-translator/arch_bfin"]
