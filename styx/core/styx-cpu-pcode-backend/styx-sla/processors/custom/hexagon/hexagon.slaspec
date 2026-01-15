@@ -17381,8 +17381,8 @@ gp: reloc is epsilon [ reloc = 0; ] {
   EA = L4_loadrub_ap_U6;
   local tmp0:1;
   tmp0 = *:1 EA;
-  L4_loadrub_ap_Rd32 = zext(tmp0);
   L4_loadrub_ap_Re32d = L4_loadrub_ap_U6;
+  L4_loadrub_ap_Rd32 = zext(tmp0);
 }
 
 :L2_loadrub_pr L2_loadrub_pr_Rd32 L2_loadrub_pr_Rx32 L2_loadrub_pr_Rx32d L2_loadrub_pr_Mu2 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b7 = 0 & b12 = 0 & b21 = 1 & b22 = 0 & b23 = 0 & b24 = 1 & b25 = 0 & b26 = 1 & b27 = 1 & b28 = 1 & b29 = 0 & b30 = 0 & b31 = 1 & L2_loadrub_pr_Rd32 & L2_loadrub_pr_Rx32 & L2_loadrub_pr_Rx32d & L2_loadrub_pr_Mu2 {
@@ -17453,8 +17453,8 @@ gp: reloc is epsilon [ reloc = 0; ] {
   EA = L4_loadrb_ap_U6;
   local tmp0:1;
   tmp0 = *:1 EA;
-  L4_loadrb_ap_Rd32 = sext(tmp0);
   L4_loadrb_ap_Re32d = L4_loadrb_ap_U6;
+  L4_loadrb_ap_Rd32 = sext(tmp0);
 }
 
 :L2_loadrb_pr L2_loadrb_pr_Rd32 L2_loadrb_pr_Rx32 L2_loadrb_pr_Rx32d L2_loadrb_pr_Mu2 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b7 = 0 & b12 = 0 & b21 = 0 & b22 = 0 & b23 = 0 & b24 = 1 & b25 = 0 & b26 = 1 & b27 = 1 & b28 = 1 & b29 = 0 & b30 = 0 & b31 = 1 & L2_loadrb_pr_Rd32 & L2_loadrb_pr_Rx32 & L2_loadrb_pr_Rx32d & L2_loadrb_pr_Mu2 {
@@ -17525,8 +17525,8 @@ gp: reloc is epsilon [ reloc = 0; ] {
   EA = L4_loadruh_ap_U6;
   local tmp0:2;
   tmp0 = *:2 EA;
-  L4_loadruh_ap_Rd32 = zext(tmp0);
   L4_loadruh_ap_Re32d = L4_loadruh_ap_U6;
+  L4_loadruh_ap_Rd32 = zext(tmp0);
 }
 
 :L2_loadruh_pr L2_loadruh_pr_Rd32 L2_loadruh_pr_Rx32 L2_loadruh_pr_Rx32d L2_loadruh_pr_Mu2 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b7 = 0 & b12 = 0 & b21 = 1 & b22 = 1 & b23 = 0 & b24 = 1 & b25 = 0 & b26 = 1 & b27 = 1 & b28 = 1 & b29 = 0 & b30 = 0 & b31 = 1 & L2_loadruh_pr_Rd32 & L2_loadruh_pr_Rx32 & L2_loadruh_pr_Rx32d & L2_loadruh_pr_Mu2 {
@@ -17597,8 +17597,8 @@ gp: reloc is epsilon [ reloc = 0; ] {
   EA = L4_loadrh_ap_U6;
   local tmp0:2;
   tmp0 = *:2 EA;
-  L4_loadrh_ap_Rd32 = sext(tmp0);
   L4_loadrh_ap_Re32d = L4_loadrh_ap_U6;
+  L4_loadrh_ap_Rd32 = sext(tmp0);
 }
 
 :L2_loadrh_pr L2_loadrh_pr_Rd32 L2_loadrh_pr_Rx32 L2_loadrh_pr_Rx32d L2_loadrh_pr_Mu2 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b7 = 0 & b12 = 0 & b21 = 0 & b22 = 1 & b23 = 0 & b24 = 1 & b25 = 0 & b26 = 1 & b27 = 1 & b28 = 1 & b29 = 0 & b30 = 0 & b31 = 1 & L2_loadrh_pr_Rd32 & L2_loadrh_pr_Rx32 & L2_loadrh_pr_Rx32d & L2_loadrh_pr_Mu2 {
@@ -17663,8 +17663,8 @@ gp: reloc is epsilon [ reloc = 0; ] {
 :L4_loadri_ap L4_loadri_ap_Rd32 L4_loadri_ap_Re32 L4_loadri_ap_Re32d L4_loadri_ap_U6 is phase = 1 & Parse != 0b00 & subinsn = 0 & b12 = 1 & b13 = 0 & b21 = 0 & b22 = 0 & b23 = 1 & b24 = 1 & b25 = 1 & b26 = 0 & b27 = 1 & b28 = 1 & b29 = 0 & b30 = 0 & b31 = 1 & L4_loadri_ap_Rd32 & L4_loadri_ap_Re32 & L4_loadri_ap_Re32d & L4_loadri_ap_U6 {
   local EA:4;
   EA = L4_loadri_ap_U6;
-  L4_loadri_ap_Rd32 = *:4 EA;
   L4_loadri_ap_Re32d = L4_loadri_ap_U6;
+  L4_loadri_ap_Rd32 = *:4 EA;
 }
 
 :L2_loadri_pr L2_loadri_pr_Rd32 L2_loadri_pr_Rx32 L2_loadri_pr_Rx32d L2_loadri_pr_Mu2 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b7 = 0 & b12 = 0 & b21 = 0 & b22 = 0 & b23 = 1 & b24 = 1 & b25 = 0 & b26 = 1 & b27 = 1 & b28 = 1 & b29 = 0 & b30 = 0 & b31 = 1 & L2_loadri_pr_Rd32 & L2_loadri_pr_Rx32 & L2_loadri_pr_Rx32d & L2_loadri_pr_Mu2 {
@@ -17723,8 +17723,8 @@ gp: reloc is epsilon [ reloc = 0; ] {
 :L4_loadrd_ap L4_loadrd_ap_Rdd32 L4_loadrd_ap_Re32 L4_loadrd_ap_Re32d L4_loadrd_ap_U6 is phase = 1 & Parse != 0b00 & subinsn = 0 & b12 = 1 & b13 = 0 & b21 = 0 & b22 = 1 & b23 = 1 & b24 = 1 & b25 = 1 & b26 = 0 & b27 = 1 & b28 = 1 & b29 = 0 & b30 = 0 & b31 = 1 & L4_loadrd_ap_Rdd32 & L4_loadrd_ap_Re32 & L4_loadrd_ap_Re32d & L4_loadrd_ap_U6 {
   local EA:4;
   EA = L4_loadrd_ap_U6;
-  L4_loadrd_ap_Rdd32 = *:8 EA;
   L4_loadrd_ap_Re32d = L4_loadrd_ap_U6;
+  L4_loadrd_ap_Rdd32 = *:8 EA;
 }
 
 :L2_loadrd_pr L2_loadrd_pr_Rdd32 L2_loadrd_pr_Rx32 L2_loadrd_pr_Rx32d L2_loadrd_pr_Mu2 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b7 = 0 & b12 = 0 & b21 = 0 & b22 = 1 & b23 = 1 & b24 = 1 & b25 = 0 & b26 = 1 & b27 = 1 & b28 = 1 & b29 = 0 & b30 = 0 & b31 = 1 & L2_loadrd_pr_Rdd32 & L2_loadrd_pr_Rx32 & L2_loadrd_pr_Rx32d & L2_loadrd_pr_Mu2 {
@@ -18417,8 +18417,8 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp98 = tmp83 << tmp97;
   local tmp99:8;
   tmp99 = tmp82 | tmp98;
-  L4_loadbzw4_ap_Rdd32 = tmp99;
   L4_loadbzw4_ap_Re32d = L4_loadbzw4_ap_U6;
+  L4_loadbzw4_ap_Rdd32 = tmp99;
 }
 
 :L2_loadbzw4_pr L2_loadbzw4_pr_Rdd32 L2_loadbzw4_pr_Rx32 L2_loadbzw4_pr_Rx32d L2_loadbzw4_pr_Mu2 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b7 = 0 & b12 = 0 & b21 = 1 & b22 = 0 & b23 = 1 & b24 = 0 & b25 = 0 & b26 = 1 & b27 = 1 & b28 = 1 & b29 = 0 & b30 = 0 & b31 = 1 & L2_loadbzw4_pr_Rdd32 & L2_loadbzw4_pr_Rx32 & L2_loadbzw4_pr_Rx32d & L2_loadbzw4_pr_Mu2 {
@@ -19729,8 +19729,8 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp98 = tmp83 << tmp97;
   local tmp99:8;
   tmp99 = tmp82 | tmp98;
-  L4_loadbsw4_ap_Rdd32 = tmp99;
   L4_loadbsw4_ap_Re32d = L4_loadbsw4_ap_U6;
+  L4_loadbsw4_ap_Rdd32 = tmp99;
 }
 
 :L2_loadbsw4_pr L2_loadbsw4_pr_Rdd32 L2_loadbsw4_pr_Rx32 L2_loadbsw4_pr_Rx32d L2_loadbsw4_pr_Mu2 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b7 = 0 & b12 = 0 & b21 = 1 & b22 = 1 & b23 = 1 & b24 = 0 & b25 = 0 & b26 = 1 & b27 = 1 & b28 = 1 & b29 = 0 & b30 = 0 & b31 = 1 & L2_loadbsw4_pr_Rdd32 & L2_loadbsw4_pr_Rx32 & L2_loadbsw4_pr_Rx32d & L2_loadbsw4_pr_Mu2 {
@@ -20870,8 +20870,8 @@ gp: reloc is epsilon [ reloc = 0; ] {
 :S4_storeri_ap S4_storeri_ap_Re32 S4_storeri_ap_Re32d S4_storeri_ap_Rt32 S4_storeri_ap_U6 is phase = 1 & Parse != 0b00 & subinsn = 0 & b7 = 1 & b13 = 0 & b21 = 0 & b22 = 0 & b23 = 1 & b24 = 1 & b25 = 1 & b26 = 0 & b27 = 1 & b28 = 0 & b29 = 1 & b30 = 0 & b31 = 1 & S4_storeri_ap_Re32 & S4_storeri_ap_Re32d & S4_storeri_ap_Rt32 & S4_storeri_ap_U6 {
   local EA:4;
   EA = S4_storeri_ap_U6;
-  *:4 EA = S4_storeri_ap_Rt32;
   S4_storeri_ap_Re32d = S4_storeri_ap_U6;
+  *:4 EA = S4_storeri_ap_Rt32;
 }
 
 :S2_storeri_pr S2_storeri_pr_Rx32 S2_storeri_pr_Mu2 S2_storeri_pr_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b7 = 0 & b21 = 0 & b22 = 0 & b23 = 1 & b24 = 1 & b25 = 0 & b26 = 1 & b27 = 1 & b28 = 0 & b29 = 1 & b30 = 0 & b31 = 1 & S2_storeri_pr_Rx32 & S2_storeri_pr_Rx32d & S2_storeri_pr_Mu2 & S2_storeri_pr_Rt32 {
@@ -20930,8 +20930,8 @@ gp: reloc is epsilon [ reloc = 0; ] {
 :S4_storerd_ap S4_storerd_ap_Re32 S4_storerd_ap_Re32d S4_storerd_ap_Rtt32 S4_storerd_ap_U6 is phase = 1 & Parse != 0b00 & subinsn = 0 & b7 = 1 & b13 = 0 & b21 = 0 & b22 = 1 & b23 = 1 & b24 = 1 & b25 = 1 & b26 = 0 & b27 = 1 & b28 = 0 & b29 = 1 & b30 = 0 & b31 = 1 & S4_storerd_ap_Re32 & S4_storerd_ap_Re32d & S4_storerd_ap_Rtt32 & S4_storerd_ap_U6 {
   local EA:4;
   EA = S4_storerd_ap_U6;
-  *:8 EA = S4_storerd_ap_Rtt32;
   S4_storerd_ap_Re32d = S4_storerd_ap_U6;
+  *:8 EA = S4_storerd_ap_Rtt32;
 }
 
 :S2_storerd_pr S2_storerd_pr_Rx32 S2_storerd_pr_Mu2 S2_storerd_pr_Rtt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b7 = 0 & b21 = 0 & b22 = 1 & b23 = 1 & b24 = 1 & b25 = 0 & b26 = 1 & b27 = 1 & b28 = 0 & b29 = 1 & b30 = 0 & b31 = 1 & S2_storerd_pr_Rx32 & S2_storerd_pr_Rx32d & S2_storerd_pr_Mu2 & S2_storerd_pr_Rtt32 {
