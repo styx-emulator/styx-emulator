@@ -42406,7 +42406,13 @@ gp: reloc is epsilon [ reloc = 0; ] {
   A2_negp_Rdd32 = tmp0;
 }
 
-:A2_absp A2_absp_Rdd32 A2_absp_Rss32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b5 = 0 & b6 = 1 & b7 = 1 & b21 = 0 & b22 = 0 & b23 = 1 & b24 = 0 & b25 = 0 & b26 = 0 & b27 = 0 & b28 = 0 & b29 = 0 & b30 = 0 & b31 = 1 & A2_absp_Rdd32 & A2_absp_Rss32 unimpl
+:A2_absp A2_absp_Rdd32 A2_absp_Rss32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b5 = 0 & b6 = 1 & b7 = 1 & b21 = 0 & b22 = 0 & b23 = 1 & b24 = 0 & b25 = 0 & b26 = 0 & b27 = 0 & b28 = 0 & b29 = 0 & b30 = 0 & b31 = 1 & A2_absp_Rdd32 & A2_absp_Rss32 {
+  local tmp0:8;
+  local tmp1:8;
+  tmp0 = A2_absp_Rss32 s>> 63;
+  tmp1 = tmp0 ^ A2_absp_Rss32;
+  A2_absp_Rdd32 = tmp1 - tmp0;
+}
 
 :A2_max A2_max_Rd32 A2_max_Rs32 A2_max_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b7 = 0 & b21 = 0 & b22 = 1 & b23 = 1 & b24 = 1 & b25 = 0 & b26 = 1 & b27 = 0 & b28 = 1 & b29 = 0 & b30 = 1 & b31 = 1 & A2_max_Rd32 & A2_max_Rs32 & A2_max_Rt32 {
   local tmp0:1;

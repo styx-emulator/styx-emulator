@@ -122,3 +122,39 @@ pub fn asl_sub() {
     let r0 = cpu.read_register::<u32>(HexagonRegister::R0).unwrap();
     assert_eq!(r0, 2u32);
 }
+
+// test 64-bit absolute value
+#[test]
+pub fn test_abs64_range() {
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(
+        r#"
+        0:	c6 c0 84 80	8084c0c6 { 	r7:6 = abs(r5:4) }
+"#,
+    );
+
+    const NUMS_TO_TRY: i64 = 1000000i64;
+
+    for i in -10000000000i64..(-10000000000i64 + NUMS_TO_TRY) {
+        cpu.write_register(HexagonRegister::D2, i as u64).unwrap();
+
+        let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+        assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
+
+        let r7r6 = cpu.read_register::<u64>(HexagonRegister::D3).unwrap() as i64;
+        assert_eq!(r7r6, i.abs());
+
+        cpu.set_pc(0x1000).unwrap();
+    }
+
+    for i in (10000000000i64 - NUMS_TO_TRY)..10000000000i64 {
+        cpu.write_register(HexagonRegister::D2, i as u64).unwrap();
+
+        let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+        assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
+
+        let r7r6 = cpu.read_register::<u64>(HexagonRegister::D3).unwrap() as i64;
+        assert_eq!(r7r6, i.abs());
+
+        cpu.set_pc(0x1000).unwrap();
+    }
+}
