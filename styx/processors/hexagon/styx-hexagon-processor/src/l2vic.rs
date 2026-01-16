@@ -447,7 +447,7 @@ impl EventControllerImpl for L2Vic {
 /// This should only be done if the interrupt number is 0?
 pub fn interrupt_handler(
     cpu: &mut dyn CpuBackend,
-    _mmu: &mut Mmu,
+    mmu: &mut Mmu,
     interrupt_number: ExceptionNumber,
 ) -> Result<(), UnknownError> {
     // get cause, if the cause is 0 then we need to do the angel stuff
@@ -472,8 +472,30 @@ pub fn interrupt_handler(
 
         if swi_no == 0x43 {
             print!("{}", arg as u8 as char);
+        }
+        // SYS_WRITE
+        else if swi_no == 0x5 {
+            let arg = arg as u64;
+            let fileno = mmu.read_u32_le_virt_data(arg, cpu).unwrap();
+            let ptr = mmu.read_u32_le_virt_data(arg + 4, cpu).unwrap();
+            let bytes = mmu.read_u32_le_virt_data(arg + 8, cpu).unwrap();
+
+            let mut data = vec![0; bytes as usize];
+            mmu.virt_read_data(ptr as u64, &mut data, cpu).unwrap();
+
+            let data_str = str::from_utf8_mut(&mut data).unwrap().to_owned();
+            info!("SYS_WRITE no:{fileno} data:{data:x?} bytes:{bytes} str:{data_str}");
+
+            cpu.write_register(HexagonRegister::R0, 0u32)
+                .with_context(|| "couldn't write r0 for SYS_WRITE")?;
+        }
+        // SYS_CLOSE
+        else if swi_no == 0x2 {
+            // auto success
+            cpu.write_register(HexagonRegister::R0, 0u32)
+                .with_context(|| "couldn't write r0 for SYS_CLOSE")?;
         } else {
-            info!("unimplemented trap: trap0 swi_no is {swi_no:x}, arg {arg:x}");
+            info!("unimplemented trap: trap0 swi_no is 0x{swi_no:x}, arg 0x{arg:x}");
         }
 
         // There are some mailboxes in trap0 that are
