@@ -158,3 +158,29 @@ pub fn test_abs64_range() {
         cpu.set_pc(0x1000).unwrap();
     }
 }
+
+#[test]
+pub fn vmux() {
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(
+        r#"
+0:	04 c6 02 d1	d102c604 { 	r5:4 = vmux(p0,r3:2,r7:6) }
+"#,
+    );
+
+    // R2R3
+    cpu.write_register(HexagonRegister::D1, 0x55aabbccddeeff66u64)
+        .unwrap();
+    // R6R7
+    cpu.write_register(HexagonRegister::D3, 0x1122334466778899u64)
+        .unwrap();
+    // Predicate
+    cpu.write_register(HexagonRegister::P0, 0b11010101u32)
+        .unwrap();
+
+    let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
+
+    // R4R5
+    let r4r5 = cpu.read_register::<u64>(HexagonRegister::D2).unwrap();
+    assert_eq!(r4r5, 0x55aa33cc66ee8866);
+}

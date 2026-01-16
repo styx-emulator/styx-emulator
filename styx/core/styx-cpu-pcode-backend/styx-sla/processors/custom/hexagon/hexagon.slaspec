@@ -28829,6 +28829,31 @@ gp: reloc is epsilon [ reloc = 0; ] {
    if (!done) goto <loopstart>;
 }
 
+  local rss_ith_byte:8 = 0;
+  local rtt_ith_byte:8 = 0;
+
+  local done:1 = 0;
+
+<loopstart>
+  ith_byte = cnt * 8;
+  ith_bit = (C2_vmux_Pu4 >> cnt) & 1;
+  rss_ith_byte = (C2_vmux_Rss32 >> ith_byte) & 0xff;
+  rtt_ith_byte = (C2_vmux_Rtt32 >> ith_byte) & 0xff;
+  if (ith_bit) goto <set_rss>;
+  if (!ith_bit) goto <set_rtt>;
+
+<set_rss>
+   C2_vmux_Rdd32 = (C2_vmux_Rdd32 & ~(0xff << ith_byte)) | (rss_ith_byte << ith_byte);
+   goto <loopend>;
+<set_rtt>
+    C2_vmux_Rdd32 = (C2_vmux_Rdd32 & ~(0xff << ith_byte)) | (rtt_ith_byte << ith_byte);
+
+<loopend>
+   cnt = cnt + 1;
+   done = cnt > 7;
+   if (!done) goto <loopstart>;
+}
+
 :C2_mask C2_mask_Rdd32 C2_mask_Pt4 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b24 = 0 & b25 = 1 & b26 = 1 & b27 = 0 & b28 = 0 & b29 = 0 & b30 = 0 & b31 = 1 & C2_mask_Rdd32 & C2_mask_Pt4 {
   local cnt:1 = 0;
   local ith_bit:1 = 0;
