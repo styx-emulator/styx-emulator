@@ -274,14 +274,14 @@ fn test_basic_branching_single_insn_pkt() {
 }
 
 #[test_case(r#"
-       0:	04 c0 cb 10	10cbc004 { 	p0 = cmp.gt(r19,#0x0); if (!p0.new) jump:nt 0x8 }
-       4:	e0 ff df 78	78dfffe0 { 	r0 = #-0x1 }
-       8:	20 c0 00 78	7800c020 { 	r0 = #0x1 }
+       0:	04 c0 cb 10	10cbc004 { 	p0 = cmp.gt(r19,#0x0); if (!p0.new) jump:nt 0x8 } 
+       4:	e0 ff df 78	78dfffe0 { 	r0 = #-0x1 } 
+       8:	20 c0 00 78	7800c020 { 	r0 = #0x1 } 
 "#, -3; "nt tag")]
 #[test_case(r#"
-       0:	04 e1 cb 10	10cbe104 { 	p0 = cmp.gt(r19,#0x1); if (!p0.new) jump:t 0x8 }
-       4:	e0 ff df 78	78dfffe0 { 	r0 = #-0x1 }
-       8:	20 c0 00 78	7800c020 { 	r0 = #0x1 }
+       0:	04 e1 cb 10	10cbe104 { 	p0 = cmp.gt(r19,#0x1); if (!p0.new) jump:t 0x8 } 
+       4:	e0 ff df 78	78dfffe0 { 	r0 = #-0x1 } 
+       8:	20 c0 00 78	7800c020 { 	r0 = #0x1 } 
 "#, -3; "t tag")]
 fn test_cmpgt_signed(asm: &str, val: i32) {
     let (mut cpu, mut mmu, mut ev) = setup_objdump(asm);
