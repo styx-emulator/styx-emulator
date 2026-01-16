@@ -13736,7 +13736,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
 
 :J4_cmpgti_tp0_jump_nt J4_cmpgti_tp0_jump_nt_Rs16 J4_cmpgti_tp0_jump_nt_U5 J4_cmpgti_tp0_jump_nt_r9_2 is phase = 1 & Parse != 0b00 & subinsn = 0 & b13 = 0 & b22 = 0 & b23 = 1 & b24 = 0 & b25 = 0 & b26 = 0 & b27 = 0 & b28 = 1 & b29 = 0 & b30 = 0 & b31 = 0 & J4_cmpgti_tp0_jump_nt_Rs16 & J4_cmpgti_tp0_jump_nt_U5 & J4_cmpgti_tp0_jump_nt_r9_2 & part1 = 0 & part2 = 0 {
   local tmp0:1;
-  tmp0 = J4_cmpgti_tp0_jump_nt_Rs16 > J4_cmpgti_tp0_jump_nt_U5;
+  tmp0 = J4_cmpgti_tp0_jump_nt_Rs16 s> J4_cmpgti_tp0_jump_nt_U5;
   D_P0 = tmp0;
   local tmp1:1;
   tmp1 = newreg(P0);
@@ -13752,7 +13752,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
 
 :J4_cmpgti_tp0_jump_nt_part1 J4_cmpgti_tp0_jump_nt_Rs16 J4_cmpgti_tp0_jump_nt_U5 J4_cmpgti_tp0_jump_nt_r9_2 is phase = 1 & Parse != 0b00 & subinsn = 0 & b13 = 0 & b22 = 0 & b23 = 1 & b24 = 0 & b25 = 0 & b26 = 0 & b27 = 0 & b28 = 1 & b29 = 0 & b30 = 0 & b31 = 0 & J4_cmpgti_tp0_jump_nt_Rs16 & J4_cmpgti_tp0_jump_nt_U5 & J4_cmpgti_tp0_jump_nt_r9_2 & part1 = 1 {
   local tmp0:1;
-  tmp0 = J4_cmpgti_tp0_jump_nt_Rs16 > J4_cmpgti_tp0_jump_nt_U5;
+  tmp0 = J4_cmpgti_tp0_jump_nt_Rs16 s> J4_cmpgti_tp0_jump_nt_U5;
   D_P0 = tmp0;
 }
 
@@ -13771,7 +13771,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
 
 :J4_cmpgti_fp0_jump_nt J4_cmpgti_fp0_jump_nt_Rs16 J4_cmpgti_fp0_jump_nt_U5 J4_cmpgti_fp0_jump_nt_r9_2 is phase = 1 & Parse != 0b00 & subinsn = 0 & b13 = 0 & b22 = 1 & b23 = 1 & b24 = 0 & b25 = 0 & b26 = 0 & b27 = 0 & b28 = 1 & b29 = 0 & b30 = 0 & b31 = 0 & J4_cmpgti_fp0_jump_nt_Rs16 & J4_cmpgti_fp0_jump_nt_U5 & J4_cmpgti_fp0_jump_nt_r9_2 & part1 = 0 & part2 = 0 {
   local tmp0:1;
-  tmp0 = J4_cmpgti_fp0_jump_nt_Rs16 > J4_cmpgti_fp0_jump_nt_U5;
+  tmp0 = J4_cmpgti_fp0_jump_nt_Rs16 s> J4_cmpgti_fp0_jump_nt_U5;
   D_P0 = tmp0;
   local tmp1:1;
   tmp1 = newreg(P0);
@@ -13789,7 +13789,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
 
 :J4_cmpgti_fp0_jump_nt_part1 J4_cmpgti_fp0_jump_nt_Rs16 J4_cmpgti_fp0_jump_nt_U5 J4_cmpgti_fp0_jump_nt_r9_2 is phase = 1 & Parse != 0b00 & subinsn = 0 & b13 = 0 & b22 = 1 & b23 = 1 & b24 = 0 & b25 = 0 & b26 = 0 & b27 = 0 & b28 = 1 & b29 = 0 & b30 = 0 & b31 = 0 & J4_cmpgti_fp0_jump_nt_Rs16 & J4_cmpgti_fp0_jump_nt_U5 & J4_cmpgti_fp0_jump_nt_r9_2 & part1 = 1 {
   local tmp0:1;
-  tmp0 = J4_cmpgti_fp0_jump_nt_Rs16 > J4_cmpgti_fp0_jump_nt_U5;
+  tmp0 = J4_cmpgti_fp0_jump_nt_Rs16 s> J4_cmpgti_fp0_jump_nt_U5;
   D_P0 = tmp0;
 }
 
@@ -13810,7 +13810,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
 
 :J4_cmpgti_tp0_jump_t J4_cmpgti_tp0_jump_t_Rs16 J4_cmpgti_tp0_jump_t_U5 J4_cmpgti_tp0_jump_t_r9_2 is phase = 1 & Parse != 0b00 & subinsn = 0 & b13 = 1 & b22 = 0 & b23 = 1 & b24 = 0 & b25 = 0 & b26 = 0 & b27 = 0 & b28 = 1 & b29 = 0 & b30 = 0 & b31 = 0 & J4_cmpgti_tp0_jump_t_Rs16 & J4_cmpgti_tp0_jump_t_U5 & J4_cmpgti_tp0_jump_t_r9_2 & part1 = 0 & part2 = 0 {
   local tmp0:1;
-  tmp0 = J4_cmpgti_tp0_jump_t_Rs16 > J4_cmpgti_tp0_jump_t_U5;
+  tmp0 = J4_cmpgti_tp0_jump_t_Rs16 s> J4_cmpgti_tp0_jump_t_U5;
   D_P0 = tmp0;
   local tmp1:1;
   tmp1 = newreg(P0);
@@ -13826,7 +13826,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
 
 :J4_cmpgti_tp0_jump_t_part1 J4_cmpgti_tp0_jump_t_Rs16 J4_cmpgti_tp0_jump_t_U5 J4_cmpgti_tp0_jump_t_r9_2 is phase = 1 & Parse != 0b00 & subinsn = 0 & b13 = 1 & b22 = 0 & b23 = 1 & b24 = 0 & b25 = 0 & b26 = 0 & b27 = 0 & b28 = 1 & b29 = 0 & b30 = 0 & b31 = 0 & J4_cmpgti_tp0_jump_t_Rs16 & J4_cmpgti_tp0_jump_t_U5 & J4_cmpgti_tp0_jump_t_r9_2 & part1 = 1 {
   local tmp0:1;
-  tmp0 = J4_cmpgti_tp0_jump_t_Rs16 > J4_cmpgti_tp0_jump_t_U5;
+  tmp0 = J4_cmpgti_tp0_jump_t_Rs16 s> J4_cmpgti_tp0_jump_t_U5;
   D_P0 = tmp0;
 }
 
@@ -13845,7 +13845,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
 
 :J4_cmpgti_fp0_jump_t J4_cmpgti_fp0_jump_t_Rs16 J4_cmpgti_fp0_jump_t_U5 J4_cmpgti_fp0_jump_t_r9_2 is phase = 1 & Parse != 0b00 & subinsn = 0 & b13 = 1 & b22 = 1 & b23 = 1 & b24 = 0 & b25 = 0 & b26 = 0 & b27 = 0 & b28 = 1 & b29 = 0 & b30 = 0 & b31 = 0 & J4_cmpgti_fp0_jump_t_Rs16 & J4_cmpgti_fp0_jump_t_U5 & J4_cmpgti_fp0_jump_t_r9_2 & part1 = 0 & part2 = 0 {
   local tmp0:1;
-  tmp0 = J4_cmpgti_fp0_jump_t_Rs16 > J4_cmpgti_fp0_jump_t_U5;
+  tmp0 = J4_cmpgti_fp0_jump_t_Rs16 s> J4_cmpgti_fp0_jump_t_U5;
   D_P0 = tmp0;
   local tmp1:1;
   tmp1 = newreg(P0);
@@ -13863,7 +13863,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
 
 :J4_cmpgti_fp0_jump_t_part1 J4_cmpgti_fp0_jump_t_Rs16 J4_cmpgti_fp0_jump_t_U5 J4_cmpgti_fp0_jump_t_r9_2 is phase = 1 & Parse != 0b00 & subinsn = 0 & b13 = 1 & b22 = 1 & b23 = 1 & b24 = 0 & b25 = 0 & b26 = 0 & b27 = 0 & b28 = 1 & b29 = 0 & b30 = 0 & b31 = 0 & J4_cmpgti_fp0_jump_t_Rs16 & J4_cmpgti_fp0_jump_t_U5 & J4_cmpgti_fp0_jump_t_r9_2 & part1 = 1 {
   local tmp0:1;
-  tmp0 = J4_cmpgti_fp0_jump_t_Rs16 > J4_cmpgti_fp0_jump_t_U5;
+  tmp0 = J4_cmpgti_fp0_jump_t_Rs16 s> J4_cmpgti_fp0_jump_t_U5;
   D_P0 = tmp0;
 }
 
@@ -13884,7 +13884,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
 
 :J4_cmpgti_tp1_jump_nt J4_cmpgti_tp1_jump_nt_Rs16 J4_cmpgti_tp1_jump_nt_U5 J4_cmpgti_tp1_jump_nt_r9_2 is phase = 1 & Parse != 0b00 & subinsn = 0 & b13 = 0 & b22 = 0 & b23 = 1 & b24 = 0 & b25 = 1 & b26 = 0 & b27 = 0 & b28 = 1 & b29 = 0 & b30 = 0 & b31 = 0 & J4_cmpgti_tp1_jump_nt_Rs16 & J4_cmpgti_tp1_jump_nt_U5 & J4_cmpgti_tp1_jump_nt_r9_2 & part1 = 0 & part2 = 0 {
   local tmp0:1;
-  tmp0 = J4_cmpgti_tp1_jump_nt_Rs16 > J4_cmpgti_tp1_jump_nt_U5;
+  tmp0 = J4_cmpgti_tp1_jump_nt_Rs16 s> J4_cmpgti_tp1_jump_nt_U5;
   D_P1 = tmp0;
   local tmp1:1;
   tmp1 = newreg(P1);
@@ -13900,7 +13900,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
 
 :J4_cmpgti_tp1_jump_nt_part1 J4_cmpgti_tp1_jump_nt_Rs16 J4_cmpgti_tp1_jump_nt_U5 J4_cmpgti_tp1_jump_nt_r9_2 is phase = 1 & Parse != 0b00 & subinsn = 0 & b13 = 0 & b22 = 0 & b23 = 1 & b24 = 0 & b25 = 1 & b26 = 0 & b27 = 0 & b28 = 1 & b29 = 0 & b30 = 0 & b31 = 0 & J4_cmpgti_tp1_jump_nt_Rs16 & J4_cmpgti_tp1_jump_nt_U5 & J4_cmpgti_tp1_jump_nt_r9_2 & part1 = 1 {
   local tmp0:1;
-  tmp0 = J4_cmpgti_tp1_jump_nt_Rs16 > J4_cmpgti_tp1_jump_nt_U5;
+  tmp0 = J4_cmpgti_tp1_jump_nt_Rs16 s> J4_cmpgti_tp1_jump_nt_U5;
   D_P1 = tmp0;
 }
 
@@ -13919,7 +13919,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
 
 :J4_cmpgti_fp1_jump_nt J4_cmpgti_fp1_jump_nt_Rs16 J4_cmpgti_fp1_jump_nt_U5 J4_cmpgti_fp1_jump_nt_r9_2 is phase = 1 & Parse != 0b00 & subinsn = 0 & b13 = 0 & b22 = 1 & b23 = 1 & b24 = 0 & b25 = 1 & b26 = 0 & b27 = 0 & b28 = 1 & b29 = 0 & b30 = 0 & b31 = 0 & J4_cmpgti_fp1_jump_nt_Rs16 & J4_cmpgti_fp1_jump_nt_U5 & J4_cmpgti_fp1_jump_nt_r9_2 & part1 = 0 & part2 = 0 {
   local tmp0:1;
-  tmp0 = J4_cmpgti_fp1_jump_nt_Rs16 > J4_cmpgti_fp1_jump_nt_U5;
+  tmp0 = J4_cmpgti_fp1_jump_nt_Rs16 s> J4_cmpgti_fp1_jump_nt_U5;
   D_P1 = tmp0;
   local tmp1:1;
   tmp1 = newreg(P1);
@@ -13937,7 +13937,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
 
 :J4_cmpgti_fp1_jump_nt_part1 J4_cmpgti_fp1_jump_nt_Rs16 J4_cmpgti_fp1_jump_nt_U5 J4_cmpgti_fp1_jump_nt_r9_2 is phase = 1 & Parse != 0b00 & subinsn = 0 & b13 = 0 & b22 = 1 & b23 = 1 & b24 = 0 & b25 = 1 & b26 = 0 & b27 = 0 & b28 = 1 & b29 = 0 & b30 = 0 & b31 = 0 & J4_cmpgti_fp1_jump_nt_Rs16 & J4_cmpgti_fp1_jump_nt_U5 & J4_cmpgti_fp1_jump_nt_r9_2 & part1 = 1 {
   local tmp0:1;
-  tmp0 = J4_cmpgti_fp1_jump_nt_Rs16 > J4_cmpgti_fp1_jump_nt_U5;
+  tmp0 = J4_cmpgti_fp1_jump_nt_Rs16 s> J4_cmpgti_fp1_jump_nt_U5;
   D_P1 = tmp0;
 }
 
@@ -13958,7 +13958,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
 
 :J4_cmpgti_tp1_jump_t J4_cmpgti_tp1_jump_t_Rs16 J4_cmpgti_tp1_jump_t_U5 J4_cmpgti_tp1_jump_t_r9_2 is phase = 1 & Parse != 0b00 & subinsn = 0 & b13 = 1 & b22 = 0 & b23 = 1 & b24 = 0 & b25 = 1 & b26 = 0 & b27 = 0 & b28 = 1 & b29 = 0 & b30 = 0 & b31 = 0 & J4_cmpgti_tp1_jump_t_Rs16 & J4_cmpgti_tp1_jump_t_U5 & J4_cmpgti_tp1_jump_t_r9_2 & part1 = 0 & part2 = 0 {
   local tmp0:1;
-  tmp0 = J4_cmpgti_tp1_jump_t_Rs16 > J4_cmpgti_tp1_jump_t_U5;
+  tmp0 = J4_cmpgti_tp1_jump_t_Rs16 s> J4_cmpgti_tp1_jump_t_U5;
   D_P1 = tmp0;
   local tmp1:1;
   tmp1 = newreg(P1);
@@ -13974,7 +13974,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
 
 :J4_cmpgti_tp1_jump_t_part1 J4_cmpgti_tp1_jump_t_Rs16 J4_cmpgti_tp1_jump_t_U5 J4_cmpgti_tp1_jump_t_r9_2 is phase = 1 & Parse != 0b00 & subinsn = 0 & b13 = 1 & b22 = 0 & b23 = 1 & b24 = 0 & b25 = 1 & b26 = 0 & b27 = 0 & b28 = 1 & b29 = 0 & b30 = 0 & b31 = 0 & J4_cmpgti_tp1_jump_t_Rs16 & J4_cmpgti_tp1_jump_t_U5 & J4_cmpgti_tp1_jump_t_r9_2 & part1 = 1 {
   local tmp0:1;
-  tmp0 = J4_cmpgti_tp1_jump_t_Rs16 > J4_cmpgti_tp1_jump_t_U5;
+  tmp0 = J4_cmpgti_tp1_jump_t_Rs16 s> J4_cmpgti_tp1_jump_t_U5;
   D_P1 = tmp0;
 }
 
@@ -13993,7 +13993,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
 
 :J4_cmpgti_fp1_jump_t J4_cmpgti_fp1_jump_t_Rs16 J4_cmpgti_fp1_jump_t_U5 J4_cmpgti_fp1_jump_t_r9_2 is phase = 1 & Parse != 0b00 & subinsn = 0 & b13 = 1 & b22 = 1 & b23 = 1 & b24 = 0 & b25 = 1 & b26 = 0 & b27 = 0 & b28 = 1 & b29 = 0 & b30 = 0 & b31 = 0 & J4_cmpgti_fp1_jump_t_Rs16 & J4_cmpgti_fp1_jump_t_U5 & J4_cmpgti_fp1_jump_t_r9_2 & part1 = 0 & part2 = 0 {
   local tmp0:1;
-  tmp0 = J4_cmpgti_fp1_jump_t_Rs16 > J4_cmpgti_fp1_jump_t_U5;
+  tmp0 = J4_cmpgti_fp1_jump_t_Rs16 s> J4_cmpgti_fp1_jump_t_U5;
   D_P1 = tmp0;
   local tmp1:1;
   tmp1 = newreg(P1);
@@ -14011,7 +14011,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
 
 :J4_cmpgti_fp1_jump_t_part1 J4_cmpgti_fp1_jump_t_Rs16 J4_cmpgti_fp1_jump_t_U5 J4_cmpgti_fp1_jump_t_r9_2 is phase = 1 & Parse != 0b00 & subinsn = 0 & b13 = 1 & b22 = 1 & b23 = 1 & b24 = 0 & b25 = 1 & b26 = 0 & b27 = 0 & b28 = 1 & b29 = 0 & b30 = 0 & b31 = 0 & J4_cmpgti_fp1_jump_t_Rs16 & J4_cmpgti_fp1_jump_t_U5 & J4_cmpgti_fp1_jump_t_r9_2 & part1 = 1 {
   local tmp0:1;
-  tmp0 = J4_cmpgti_fp1_jump_t_Rs16 > J4_cmpgti_fp1_jump_t_U5;
+  tmp0 = J4_cmpgti_fp1_jump_t_Rs16 s> J4_cmpgti_fp1_jump_t_U5;
   D_P1 = tmp0;
 }
 
@@ -16410,7 +16410,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp0:4;
   tmp0 = newreg(dotnewreg);
   local tmp1:1;
-  tmp1 = tmp0 > J4_cmpgti_t_jumpnv_t_U5;
+  tmp1 = tmp0 s> J4_cmpgti_t_jumpnv_t_U5;
   local tmp2:1;
   tmp2 = tmp1;
   if (tmp2) goto <t_branch_4>;
@@ -16427,7 +16427,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp0:4;
   tmp0 = newreg(dotnewreg);
   local tmp1:1;
-  tmp1 = tmp0 > J4_cmpgti_t_jumpnv_nt_U5;
+  tmp1 = tmp0 s> J4_cmpgti_t_jumpnv_nt_U5;
   local tmp2:1;
   tmp2 = tmp1;
   if (tmp2) goto <t_branch_4>;
@@ -16444,7 +16444,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp0:4;
   tmp0 = newreg(dotnewreg);
   local tmp1:1;
-  tmp1 = tmp0 > J4_cmpgti_f_jumpnv_t_U5;
+  tmp1 = tmp0 s> J4_cmpgti_f_jumpnv_t_U5;
   local tmp2:1;
   tmp2 = ! tmp1;
   local tmp3:1;
@@ -16463,7 +16463,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp0:4;
   tmp0 = newreg(dotnewreg);
   local tmp1:1;
-  tmp1 = tmp0 > J4_cmpgti_f_jumpnv_nt_U5;
+  tmp1 = tmp0 s> J4_cmpgti_f_jumpnv_nt_U5;
   local tmp2:1;
   tmp2 = ! tmp1;
   local tmp3:1;
