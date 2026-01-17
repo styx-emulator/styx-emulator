@@ -38721,7 +38721,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp6:4;
   tmp6 = tmp4 & tmp5;
   tmp0 = tmp6:1;
-  C2_tfrrp_Pd4 = (tmp0 << 7) s>> 7;
+  C2_tfrrp_Pd4 = tmp0;
 }
 
 :C4_fastcorner9 C4_fastcorner9_Pd4 C4_fastcorner9_Ps4 C4_fastcorner9_Pt4 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b4 = 1 & b7 = 1 & b13 = 1 & b20 = 0 & b21 = 0 & b22 = 0 & b23 = 0 & b24 = 1 & b25 = 1 & b26 = 0 & b27 = 1 & b28 = 0 & b29 = 1 & b30 = 1 & b31 = 0 & C4_fastcorner9_Pd4 & C4_fastcorner9_Ps4 & C4_fastcorner9_Pt4 {
