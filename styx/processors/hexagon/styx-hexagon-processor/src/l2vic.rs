@@ -20,7 +20,7 @@ use styx_core::{
     hooks::CoreHandle,
     memory::Mmu,
     prelude::{
-        log::{error, info, trace},
+        log::{error, info, trace, warn},
         Context, EventControllerImpl, ExceptionNumber,
     },
 };
@@ -206,6 +206,9 @@ fn l2vic_mmio_read_hook(
             assert_eq!(size, 4);
             data.copy_from_slice(&l2vic.slots[slot].enable.to_le_bytes());
             error!("l2vic read data is now {data:x?}");
+        }
+        Ok(L2VicRegister::Status) => {
+            warn!("l2vic status read, unimplemented");
         }
         _ => todo!(),
     }
