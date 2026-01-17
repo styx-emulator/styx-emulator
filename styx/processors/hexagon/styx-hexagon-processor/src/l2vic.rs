@@ -116,6 +116,27 @@ impl FastL2VicControl {
     pub fn slice(&self) -> usize {
         self.irq().as_usize() / 32
     }
+
+    /// Within the slice, what is the index of the IRQ?
+    /// Eg. IRQ 66 would be index 2 within slice 2,
+    /// as slice 2 contains IRQs 64 to 95, so then
+    /// IRQ 64, slice 0
+    /// IRQ 65, slice 1
+    /// IRQ 66, slice 2
+    ///
+    /// Now, the parameter to an Enable/EnableSet/etc.
+    /// is the index stored as the nth bit set
+    /// within a 32-bit integer.
+    /// IRQ 64, slice 0, bit 0b000
+    /// IRQ 65, slice 1, bit 0b001
+    /// IRQ 66, slice 2, bit 0b010
+    /// IRQ 67, slice 3, bit 0b100
+    /// etc.
+    ///
+    /// This function returns that bit value.
+    pub fn irq_slice_bit(&self) -> u32 {
+        1 << (self.irq().as_u32() % 32)
+    }
 }
 
 /// Handle MMIO write to fastl2vic
@@ -145,7 +166,8 @@ fn fastl2vic_mmio_write_hook(
             l2vic.handle_register_write(
                 L2VicRegister::EnableSet,
                 fastl2vic_control.slice(),
-                fastl2vic_control.irq().as_u32(),
+                // As opposed to the IRQ
+                fastl2vic_control.irq_slice_bit(),
             )?;
         }
         // According to QEMU this is EnableClear
@@ -153,10 +175,39 @@ fn fastl2vic_mmio_write_hook(
             l2vic.handle_register_write(
                 L2VicRegister::EnableClear,
                 fastl2vic_control.slice(),
-                fastl2vic_control.irq().as_u32(),
+                fastl2vic_control.irq_slice_bit(),
             )?;
         }
         _ => unimplemented!(),
+    }
+
+    Ok(())
+}
+
+/// Handle MMIO read to l2vic's
+/// registers. See QEMU's hw/intc/l2vic.c
+fn l2vic_mmio_read_hook(
+    proc: CoreHandle,
+    address: u64,
+    size: u32,
+    data: &mut [u8],
+) -> Result<(), UnknownError> {
+    let l2vic = proc.event_controller.get_impl::<L2Vic>()?;
+    let (register, slot) = l2vic_get_register_slot(address);
+
+    error!(
+        "l2vic base reading at 0x{address:x} and size 0x{size:x} with data {data:x?}, register {register:?} slot {slot} pc is {:x?}",
+        proc.cpu.pc()
+    );
+
+    match register {
+        Ok(L2VicRegister::Enable) => {
+            // Enable register is 4 bytes
+            assert_eq!(size, 4);
+            data.copy_from_slice(&l2vic.slots[slot].enable.to_le_bytes());
+            error!("l2vic read data is now {data:x?}");
+        }
+        _ => todo!(),
     }
 
     Ok(())
@@ -169,15 +220,7 @@ fn l2vic_mmio_write_hook(
     data: &[u8],
 ) -> Result<(), UnknownError> {
     let l2vic = proc.event_controller.get_impl::<L2Vic>()?;
-
-    // Compute the register that we are writing to and the interrupt number
-    let register = L2VicRegister::new_with_raw_value(
-        ((address - L2VIC_BASE - L2VIC_CONFIG_START) / (L2VIC_NUM_SLOTS * 4)) as u16,
-    );
-
-    // This finds the "offset" into the register array. Since each register value
-    // is 4 bytes, we divide by four to get the actual interrupt number.
-    let slot = (((address - L2VIC_BASE - L2VIC_CONFIG_START) % (L2VIC_NUM_SLOTS * 4)) / 4) as usize;
+    let (register, slot) = l2vic_get_register_slot(address);
 
     // All the values are 32 bits, see QEMU l2vic.c and
     // L2VICState.
@@ -199,6 +242,19 @@ fn l2vic_mmio_write_hook(
     }
 
     Ok(())
+}
+
+fn l2vic_get_register_slot(address: u64) -> (Result<L2VicRegister, u16>, usize) {
+    // Compute the register that we are writing to and the interrupt number
+    let register = L2VicRegister::new_with_raw_value(
+        ((address - L2VIC_BASE - L2VIC_CONFIG_START) / (L2VIC_NUM_SLOTS * 4)) as u16,
+    );
+
+    // This finds the "offset" into the register array. Since each register value
+    // is 4 bytes, we divide by four to get the actual interrupt number.
+    let slot = (((address - L2VIC_BASE - L2VIC_CONFIG_START) % (L2VIC_NUM_SLOTS * 4)) / 4) as usize;
+
+    (register, slot)
 }
 
 #[derive(Default)]
@@ -264,7 +320,12 @@ impl L2Vic {
                 self.slots[slot].enable |= data;
             }
             L2VicRegister::EnableClear => {
+                info!(
+                    "EnableClear, enable 0x{:x} data 0x{:x}",
+                    self.slots[slot].enable, data
+                );
                 self.slots[slot].enable &= !data;
+                info!("EnableClear, new enable 0x{:x} ", self.slots[slot].enable);
             }
             L2VicRegister::Type => {
                 self.slots[slot].int_type = data;
@@ -431,6 +492,12 @@ impl EventControllerImpl for L2Vic {
             L2VIC_BASE,
             L2VIC_BASE + 0x1000,
             Box::new(l2vic_mmio_write_hook),
+        )?;
+
+        cpu.mem_read_hook(
+            L2VIC_BASE,
+            L2VIC_BASE + 0x1000,
+            Box::new(l2vic_mmio_read_hook),
         )?;
 
         cpu.mem_write_hook(
