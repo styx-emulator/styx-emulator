@@ -8,6 +8,8 @@
 //! It appears that the l2vic (QEMU) describes that
 //! all interrupts go to VID 0, which is IRQ 2.
 
+use std::process::exit;
+
 use arbitrary_int::*;
 use bitbybit::{bitenum, bitfield};
 use styx_core::{
@@ -488,12 +490,19 @@ pub fn interrupt_handler(
 
             cpu.write_register(HexagonRegister::R0, 0u32)
                 .with_context(|| "couldn't write r0 for SYS_WRITE")?;
+            print!("{data_str}");
         }
         // SYS_CLOSE
         else if swi_no == 0x2 {
             // auto success
             cpu.write_register(HexagonRegister::R0, 0u32)
                 .with_context(|| "couldn't write r0 for SYS_CLOSE")?;
+        }
+        // SYS_EXIT
+        // https://github.com/ARM-software/abi-aa/blob/main/semihosting/semihosting.rst#sys-exit-0x18
+        else if swi_no == 0x18 {
+            // TODO: what is the right way to wind down/exit?
+            exit(0)
         } else {
             info!("unimplemented trap: trap0 swi_no is 0x{swi_no:x}, arg 0x{arg:x}");
         }
