@@ -38,8 +38,7 @@ const SUBSYSTEM_BASE: u64 = 0xfc900000;
 const QTIMER_BASE: u64 = SUBSYSTEM_BASE + QTIMER_OFFSET;
 const QTIMER_OFFSET: u64 = 0x20000;
 
-const QTIMER_IRQ1: ExceptionNumber = 1;
-const QTIMER_IRQ2: ExceptionNumber = 2;
+const QTIMER_IRQ_OFFSET: ExceptionNumber = 3;
 
 const QTIMER_FREQ: u32 = 19200000;
 const QDSP_FREQ: u32 = 729600000;
@@ -218,10 +217,19 @@ impl QTimerFrame {
             // Latch interrupt or something
             // TODO: Pending l2vic implementation?
 
-            // The frame number corresponds to the IRQ.
-            event_controller.latch((self.frame_number + 1) as ExceptionNumber)?;
+            // When the timer condition is met, the status is set to one.
+            // See D5.7.6 and the ISTATUS bit.
+            self.istatus = true;
 
-            todo!("Ring ring! The timer went off, but we haven't implemented that yet ):")
+            // The frame number corresponds to the IRQ.
+            event_controller.latch(self.frame_number as ExceptionNumber + QTIMER_IRQ_OFFSET)?;
+            info!(
+                "Ring ring, I am timer number {}, my and we latched {}.",
+                self.frame_number,
+                self.frame_number + 1
+            );
+
+            // todo!("Ring ring! The timer went off, but we haven't implemented that yet ):")
         }
 
         trace!("total ticks in counter {}", self.counter);
@@ -375,9 +383,9 @@ fn qtimer_mmio_write_hook(
     // TODO: enforce access
     // CNTBaseN frame. each frame is 0x1000 sized.
     else if offset >= 0x1000 && offset < 0x1000 + (0x1000 * QTIMER_NUM_TIMERS) {
-        let offset = offset % 0x1000;
-        let base_n = (offset / 0x1000) as usize;
-        let qtimer_register = QTimerCNTBaseNFrame::new_with_raw_value(offset as u16);
+        let timer_offset = offset % 0x1000;
+        let base_n = ((offset - 0x1000) / 0x1000) as usize;
+        let qtimer_register = QTimerCNTBaseNFrame::new_with_raw_value(timer_offset as u16);
 
         let data_u32 = u32::from_le_bytes(
             data.try_into()
@@ -385,8 +393,8 @@ fn qtimer_mmio_write_hook(
         );
 
         error!(
-            "accessed base N offset {} size {size} access_type WRITE data {data:x?} reg {:?} pc {:x}",
-            offset, qtimer_register, pc
+            "accessed base N {base_n} timer_offset {} size {size} access_type WRITE data {data:x?} reg {:?} pc {:x}",
+            timer_offset, qtimer_register, pc
         );
 
         match qtimer_register {
@@ -519,7 +527,7 @@ impl Peripheral for QTimer {
     /// Seems to imply it's irq 1 and 2.
     /// see qtimer.c in qemu-hexagon-testing.
     fn irqs(&self) -> Vec<styx_core::prelude::ExceptionNumber> {
-        vec![QTIMER_IRQ1, QTIMER_IRQ2]
+        vec![]
     }
 
     fn post_event_hook(
@@ -558,6 +566,11 @@ impl Peripheral for QTimer {
         event_controller: &mut dyn EventControllerImpl,
         delta: &styx_core::prelude::Delta,
     ) -> Result<(), styx_core::prelude::UnknownError> {
+        // The delta is the number of packets; there is a fixed number of
+        // pcycles per packet. Basically the idae is that the pcycles since
+        // last tick keeps track of pcycles, and the clock gets 1 tick
+        // every "pcycles_per_tick."
+        //
         self.pcycles_since_last_tick += delta.count * PCYCLES_PER_PACKET;
         self.total_pcycles += delta.count * PCYCLES_PER_PACKET;
 
@@ -573,11 +586,9 @@ impl Peripheral for QTimer {
 
         let timer_ticks = self.pcycles_since_last_tick / self.pcycles_per_tick;
 
-        trace!(
+        info!(
             "TIMER tick: pcycles_since_last_tick {}, timer_ticks {}, pcycles_per_tick {}",
-            self.pcycles_since_last_tick,
-            timer_ticks,
-            self.pcycles_per_tick,
+            self.pcycles_since_last_tick, timer_ticks, self.pcycles_per_tick,
         );
 
         if timer_ticks > 0 {
@@ -585,7 +596,8 @@ impl Peripheral for QTimer {
                 timer.tick(event_controller, timer_ticks, mmu)?;
             }
 
-            // Remove these many ticks from the current pcycles since last tick
+            // After ticking the qtimer, we remove the "pcycles" that were consumed by the tick
+            // from this variable.
             self.pcycles_since_last_tick -= timer_ticks * self.pcycles_per_tick;
             trace!(
                 "TIMERs ticked, now pcycles_since_last_tick is {}",

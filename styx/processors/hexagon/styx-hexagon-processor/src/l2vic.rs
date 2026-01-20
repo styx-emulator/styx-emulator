@@ -210,6 +210,7 @@ fn l2vic_mmio_read_hook(
         Ok(L2VicRegister::Status) => {
             warn!("l2vic status read, unimplemented");
         }
+        Ok(L2VicRegister::Type) => {}
         _ => todo!(),
     }
 
@@ -290,13 +291,31 @@ impl L2VicSlot {
         ((self.enable >> n) & 1) == 1
     }
     pub fn set_irqn_pending(&mut self, n: usize, value: bool) {
-        self.pending &= !(1 << n)
+        if value {
+            // Set bit
+            self.pending |= (1 << n)
+        } else {
+            // Clear bit
+            self.pending &= !((value as u32) << n)
+        }
     }
     pub fn set_irqn_enable(&mut self, n: usize, value: bool) {
-        self.enable &= !(1 << n)
+        if value {
+            // Set bit
+            self.enable |= (1 << n)
+        } else {
+            // Clear bit
+            self.enable &= !((value as u32) << n)
+        }
     }
     pub fn set_irqn_status(&mut self, n: usize, value: bool) {
-        self.status &= !(1 << n)
+        if value {
+            // Set bit
+            self.status |= (1 << n)
+        } else {
+            // Clear bit
+            self.status &= !((value as u32) << n)
+        }
     }
     pub fn irqn_pending(&self, n: usize) -> bool {
         ((self.pending >> n) & 1) == 1
@@ -357,6 +376,7 @@ impl EventControllerImpl for L2Vic {
         mmu: &mut Mmu,
         _peripherals: &mut Peripherals,
     ) -> Result<InterruptExecuted, UnknownError> {
+        info!("l2vic next called, vid is {}", self.vid);
         // We aren't going to do anything until
         // VID is cleared - see l2vic_updated in hw/intc/l2vic.c QEMU.
         //
@@ -400,6 +420,7 @@ impl EventControllerImpl for L2Vic {
                 // This means the IRQ must be executed, as it
                 // was latched.
                 if slot.irqn_enable(i) && slot.irqn_pending(i) {
+                    info!("the first IRQ set was {i}");
                     irq = Some(i);
                     break;
                 }
@@ -422,8 +443,11 @@ impl EventControllerImpl for L2Vic {
     ///
     /// TODO Priority and use a queue to avoid performance issues
     fn latch(&mut self, event: ExceptionNumber) -> Result<(), ActivateIRQnError> {
-        let irq = event as usize;
-        self.slots[irq].set_irqn_pending(irq, true);
+        let slot = event as usize / L2VIC_NUM_SLOTS as usize;
+        let slot_offset = (event as usize) % (L2VIC_NUM_SLOTS as usize);
+        trace!("l2vic latch slot {slot} offset {slot_offset}");
+
+        self.slots[slot].set_irqn_pending(slot_offset, true);
         Ok(())
     }
 

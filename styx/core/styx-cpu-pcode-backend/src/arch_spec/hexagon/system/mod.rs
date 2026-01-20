@@ -7,4 +7,5 @@ pub mod l2;
 pub mod mem;
 pub mod supervisor;
 pub mod sync;
+pub mod thread;
 pub mod tlb;
