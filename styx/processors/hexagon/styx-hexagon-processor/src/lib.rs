@@ -47,7 +47,7 @@ impl ProcessorImpl for HexagonBuilder {
                 self.variant.clone(),
                 ArchEndian::LittleEndian,
                 &PcodeBackendConfiguration {
-                    register_read_hooks: false,
+                    register_read_hooks: true,
                     register_write_hooks: true,
                     exception: args.exception,
                 },

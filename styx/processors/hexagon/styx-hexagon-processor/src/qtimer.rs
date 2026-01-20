@@ -38,7 +38,7 @@ const SUBSYSTEM_BASE: u64 = 0xfc900000;
 const QTIMER_BASE: u64 = SUBSYSTEM_BASE + QTIMER_OFFSET;
 const QTIMER_OFFSET: u64 = 0x20000;
 
-const QTIMER_IRQ_OFFSET: ExceptionNumber = 3;
+const QTIMER_IRQ_OFFSET: ExceptionNumber = 2;
 
 const QTIMER_FREQ: u32 = 19200000;
 const QDSP_FREQ: u32 = 729600000;
@@ -426,14 +426,14 @@ fn qtimer_mmio_write_hook(
             // TODO: this requires testing.
             Ok(QTimerCNTBaseNFrame::CntpCvalLo | QTimerCNTBaseNFrame::CntpCvalHi) => {
                 info!(
-                    "the compare value LO/HI (as opposed to timer value) is equal to {data_u32:x}"
+                    "the compare value LO/HI (as opposed to timer value) is equal to {data_u32:x}, the timer register is {qtimer_register:?}"
                 );
                 let new_data_replace = match qtimer_register {
-                    Ok(QTimerCNTBaseNFrame::CntPctHi) => {
+                    Ok(QTimerCNTBaseNFrame::CntpCvalHi) => {
                         let hi_data = (data_u32 as u64) << 32;
                         hi_data | 0x0000ffff
                     }
-                    Ok(QTimerCNTBaseNFrame::CntPctLo) => {
+                    Ok(QTimerCNTBaseNFrame::CntpCvalLo) => {
                         let lo_data = data_u32 as u64;
                         lo_data | 0xffff0000
                     }

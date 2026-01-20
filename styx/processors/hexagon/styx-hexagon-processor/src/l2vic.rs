@@ -13,7 +13,10 @@ use std::process::exit;
 use arbitrary_int::*;
 use bitbybit::{bitenum, bitfield};
 use styx_core::{
-    arch::hexagon::{register_fields::Ssr, HexagonRegister},
+    arch::{
+        hexagon::{register_fields::Ssr, HexagonRegister},
+        RegisterValue,
+    },
     cpu::{CpuBackend, CpuBackendExt, HexagonInterruptType},
     errors::UnknownError,
     event_controller::{ActivateIRQnError, InterruptExecuted, Peripherals},
@@ -21,7 +24,7 @@ use styx_core::{
     memory::Mmu,
     prelude::{
         log::{error, info, trace, warn},
-        Context, EventControllerImpl, ExceptionNumber,
+        ArchRegister, BasicArchRegister, Context, EventControllerImpl, ExceptionNumber,
     },
 };
 
@@ -31,6 +34,7 @@ const L2VIC_BASE: u64 = SUBSYSTEM_BASE + L2VIC_OFFSET;
 const L2VIC_OFFSET: u64 = 0x10000;
 const L2VIC_NUM_SLOTS: u64 = 32;
 const L2VIC_CONFIG_START: u64 = 0x100;
+const L2VIC_VID_IRQ_BASE: u64 = 2;
 
 const FASTL2VIC_BASE: u64 = 0xd83e0000;
 
@@ -137,6 +141,24 @@ impl FastL2VicControl {
     pub fn irq_slice_bit(&self) -> u32 {
         1 << (self.irq().as_u32() % 32)
     }
+}
+
+fn l2vic_vid_read_hook(
+    proc: CoreHandle,
+    register: ArchRegister,
+    data: &mut RegisterValue,
+) -> Result<(), UnknownError> {
+    let l2vic = proc.event_controller.get_impl::<L2Vic>()?;
+    match register {
+        ArchRegister::Basic(BasicArchRegister::Hexagon(HexagonRegister::Vid)) => match data {
+            RegisterValue::u32(vid_data) => *vid_data = l2vic.vid,
+            _ => unreachable!("vid wrong size"),
+        },
+        // Don't do anything for registers other than Vid
+        _ => {}
+    }
+
+    Ok(())
 }
 
 /// Handle MMIO write to fastl2vic
@@ -296,7 +318,7 @@ impl L2VicSlot {
             self.pending |= (1 << n)
         } else {
             // Clear bit
-            self.pending &= !((value as u32) << n)
+            self.pending &= !(1 << n)
         }
     }
     pub fn set_irqn_enable(&mut self, n: usize, value: bool) {
@@ -305,7 +327,7 @@ impl L2VicSlot {
             self.enable |= (1 << n)
         } else {
             // Clear bit
-            self.enable &= !((value as u32) << n)
+            self.enable &= !(1 << n)
         }
     }
     pub fn set_irqn_status(&mut self, n: usize, value: bool) {
@@ -314,7 +336,7 @@ impl L2VicSlot {
             self.status |= (1 << n)
         } else {
             // Clear bit
-            self.status &= !((value as u32) << n)
+            self.status &= !(1 << n)
         }
     }
     pub fn irqn_pending(&self, n: usize) -> bool {
@@ -340,6 +362,7 @@ impl L2Vic {
             // current enabled field instead of overwriting the enable field with the bits.
             L2VicRegister::EnableSet => {
                 self.slots[slot].enable |= data;
+                info!("EnableSet, new enable 0x{:x}", self.slots[slot].enable);
             }
             L2VicRegister::EnableClear => {
                 info!(
@@ -417,6 +440,11 @@ impl EventControllerImpl for L2Vic {
             // Now go through the IRQs
             // As each slot is 32 bits, the IRQ is 32 bits
             for i in 0..32 {
+                info!(
+                    "l2vic irqn_enable {} irqn_pending {}",
+                    slot.irqn_enable(i),
+                    slot.irqn_pending(i)
+                );
                 // This means the IRQ must be executed, as it
                 // was latched.
                 if slot.irqn_enable(i) && slot.irqn_pending(i) {
@@ -428,9 +456,12 @@ impl EventControllerImpl for L2Vic {
         }
 
         match irq {
-            Some(irq) => self
-                .execute(irq as i32, cpu, mmu)
-                .with_context(|| "couldn't execute pending interrupt"),
+            Some(irq) => {
+                info!("l2vic next - executing irqn {irq}");
+                self.execute(irq as i32, cpu, mmu)
+                    .with_context(|| "couldn't execute pending interrupt")
+            }
+
             None => Ok(InterruptExecuted::NotExecuted),
         }
     }
@@ -477,6 +508,7 @@ impl EventControllerImpl for L2Vic {
         //
         // It seems like there is only one VID
         // as the "interrupt groups" are never written.
+        let vid_n = 0;
 
         // Un-enable and un-pending the IRQ.
 
@@ -500,9 +532,30 @@ impl EventControllerImpl for L2Vic {
         // on the one VID.
         self.vid = irq as u32;
 
-        // Now invoke the interrupt handler with IRQ 2.
-        interrupt_handler(cpu, mmu, HexagonInterruptType::Int2 as ExceptionNumber)?;
-        todo!("l2vic execute")
+        // We also need to set the SSR cause to the VID
+        // See qemu_irq_pulse in hw/intc/l2vic.c in QUIC QEMU
+        let irq_base_offset = L2VIC_VID_IRQ_BASE + vid_n;
+        let ssr = Ssr::new_with_raw_value(cpu.read_register::<u32>(HexagonRegister::Ssr).unwrap())
+            .with_cause(irq_base_offset as u8);
+        cpu.write_register(HexagonRegister::Ssr, ssr.raw_value())
+            .unwrap();
+
+        // NOTE: the interrupt number is dependent on the VID. Right now there is only
+        // one VID used, but if VID groups are used in the future, the IRQ number would change.
+        // 0x12 - VID0
+        // 0x13 - VID1
+        // 0x14 - VID2
+        // etc.
+        //
+        // As the VID base offset is 0x2, we can add the base Int0 (0x10) to compute this.
+        interrupt_handler(
+            cpu,
+            mmu,
+            HexagonInterruptType::Int0 as ExceptionNumber + irq_base_offset as ExceptionNumber,
+        )?;
+        Ok(InterruptExecuted::Executed)
+
+        // todo!("l2vic execute")
     }
 
     fn finish_interrupt(
@@ -532,6 +585,11 @@ impl EventControllerImpl for L2Vic {
             FASTL2VIC_BASE + 0x4,
             Box::new(fastl2vic_mmio_write_hook),
         )?;
+
+        cpu.add_hook(styx_core::hooks::StyxHook::RegisterRead(
+            HexagonRegister::Vid.into(),
+            Box::new(l2vic_vid_read_hook),
+        ))?;
 
         Ok(())
     }
