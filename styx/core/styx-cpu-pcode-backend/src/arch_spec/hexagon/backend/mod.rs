@@ -461,7 +461,7 @@ impl CpuBackend for HexagonPcodeBackend {
 
             self.set_pc(hi)?;
             RegisterManager::write_register(self, HexagonRegister::Usr.into(), lo.into())
-                .with_context(|| "could not write_register_raw")?;
+                .with_context(|| "could not write_register_raw (pc)")?;
         } else {
             RegisterManager::write_register(self, reg, sized_value)
                 .with_context(|| "could not write_register_raw")?;
