@@ -38,7 +38,7 @@ const SUBSYSTEM_BASE: u64 = 0xfc900000;
 const QTIMER_BASE: u64 = SUBSYSTEM_BASE + QTIMER_OFFSET;
 const QTIMER_OFFSET: u64 = 0x20000;
 
-const QTIMER_IRQ_OFFSET: ExceptionNumber = 2;
+const QTIMER_IRQ_OFFSET: ExceptionNumber = 3;
 
 const QTIMER_FREQ: u32 = 19200000;
 const QDSP_FREQ: u32 = 729600000;
@@ -206,13 +206,19 @@ impl QTimerFrame {
         // Decrement TimerValue, setting memory in progress.
         self.decrement_timer_value(mmu, tick_amount)?;
 
+        info!(
+            "timer number is {} value is {} counter is {} compare value is {} istatus is {}",
+            self.frame_number, self.timer_value, self.counter, self.compare_value, self.istatus
+        );
+
         // Check for conditions being met and interrupt if so.
+        // Don't latch an interrupt if one is already occurring.
         if (// TimerValue condition. See B8.1.5 "Operation of the TimerValue views of the timers."
             self.timer_value as i32 <= 0 ||
             // CompareValue condition. Offset is zero. See B8.1.5 "Operation of the CompareValue views of the timers."
             (self.counter - self.compare_value) as i64 >= 0)
             // Require the events to be enabled
-            && self.enabled
+            && self.enabled && !self.istatus
         {
             // Latch interrupt or something
             // TODO: Pending l2vic implementation?
@@ -226,7 +232,7 @@ impl QTimerFrame {
             info!(
                 "Ring ring, I am timer number {}, my and we latched {}.",
                 self.frame_number,
-                self.frame_number + 1
+                self.frame_number as ExceptionNumber + QTIMER_IRQ_OFFSET
             );
 
             // todo!("Ring ring! The timer went off, but we haven't implemented that yet ):")
@@ -428,21 +434,37 @@ fn qtimer_mmio_write_hook(
                 info!(
                     "the compare value LO/HI (as opposed to timer value) is equal to {data_u32:x}, the timer register is {qtimer_register:?}"
                 );
-                let new_data_replace = match qtimer_register {
+                let (new_data_replace, data_mask) = match qtimer_register {
                     Ok(QTimerCNTBaseNFrame::CntpCvalHi) => {
                         let hi_data = (data_u32 as u64) << 32;
-                        hi_data | 0x0000ffff
+                        (hi_data, 0x00000000ffffffff)
                     }
                     Ok(QTimerCNTBaseNFrame::CntpCvalLo) => {
+                        // According to the write case in hex_timer_write for CNTP_CVAL_LO,
+                        // writing this register should reset the timer.
+                        timer_periph.timer_frames[base_n].istatus = false;
+                        timer_periph.timer_frames[base_n].counter = 0;
+
                         let lo_data = data_u32 as u64;
-                        lo_data | 0xffff0000
+                        (lo_data, 0xffffffff00000000)
                     }
                     _ => unreachable!(),
                 };
 
+                let new_compare_value = (timer_periph.timer_frames[base_n].compare_value
+                    & data_mask)
+                    | new_data_replace;
+                info!(
+                    "writing new Compare Value as {new_compare_value:x}, old was {:x}",
+                    timer_periph.timer_frames[base_n].compare_value
+                );
+
                 // Consistency: we don't have to set memory since the memory write causing this hook will
                 // have set this in memory. There are no other side effects.
-                timer_periph.timer_frames[base_n].compare_value &= new_data_replace;
+                timer_periph.timer_frames[base_n].set_compare_value(proc.mmu, new_compare_value)?;
+                // The TimerValue (count down) also has to be set!
+                // TODO: get rid of this
+                timer_periph.timer_frames[base_n].timer_value = new_compare_value as u32;
             }
             Ok(QTimerCNTBaseNFrame::CntpCtl) => {
                 let register_value = QTimerCNTPCTL::new_with_raw_value(data_u32);

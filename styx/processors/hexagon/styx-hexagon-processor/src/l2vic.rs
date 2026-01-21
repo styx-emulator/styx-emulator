@@ -14,7 +14,10 @@ use arbitrary_int::*;
 use bitbybit::{bitenum, bitfield};
 use styx_core::{
     arch::{
-        hexagon::{register_fields::Ssr, HexagonRegister},
+        hexagon::{
+            register_fields::{Ipendad, Ssr},
+            HexagonRegister,
+        },
         RegisterValue,
     },
     cpu::{CpuBackend, CpuBackendExt, HexagonInterruptType},
@@ -143,24 +146,6 @@ impl FastL2VicControl {
     }
 }
 
-fn l2vic_vid_read_hook(
-    proc: CoreHandle,
-    register: ArchRegister,
-    data: &mut RegisterValue,
-) -> Result<(), UnknownError> {
-    let l2vic = proc.event_controller.get_impl::<L2Vic>()?;
-    match register {
-        ArchRegister::Basic(BasicArchRegister::Hexagon(HexagonRegister::Vid)) => match data {
-            RegisterValue::u32(vid_data) => *vid_data = l2vic.vid,
-            _ => unreachable!("vid wrong size"),
-        },
-        // Don't do anything for registers other than Vid
-        _ => {}
-    }
-
-    Ok(())
-}
-
 /// Handle MMIO write to fastl2vic
 /// register. See QEMU's hw/intc/l2vic.c
 fn fastl2vic_mmio_write_hook(
@@ -283,10 +268,18 @@ fn l2vic_get_register_slot(address: u64) -> (Result<L2VicRegister, u16>, usize) 
     (register, slot)
 }
 
-#[derive(Default)]
 pub struct L2Vic {
     slots: [L2VicSlot; L2VIC_NUM_SLOTS as usize],
     vid: u32,
+}
+
+impl Default for L2Vic {
+    fn default() -> Self {
+        Self {
+            slots: Default::default(),
+            vid: u32::MAX,
+        }
+    }
 }
 
 /// QEMU mentions a lot about slices... what are these so-called slices?
@@ -399,7 +392,22 @@ impl EventControllerImpl for L2Vic {
         mmu: &mut Mmu,
         _peripherals: &mut Peripherals,
     ) -> Result<InterruptExecuted, UnknownError> {
-        info!("l2vic next called, vid is {}", self.vid);
+        info!("l2vic next called, vid is 0x{:x}", self.vid);
+        // Update the VID, since the register write hook won't work
+        // from the CIAD instruction, so just take the "register" VID
+        // and if they're not equal set to whatever it is.
+
+        let vid = cpu
+            .read_register::<u32>(HexagonRegister::Vid)
+            .with_context(|| "Couldn't read VID register")?;
+        if self.vid != vid {
+            info!(
+                "l2vic: vid was set in code or by ciad, updating to 0x{:x}.",
+                vid
+            );
+            self.vid = vid;
+        }
+
         // We aren't going to do anything until
         // VID is cleared - see l2vic_updated in hw/intc/l2vic.c QEMU.
         //
@@ -412,7 +420,9 @@ impl EventControllerImpl for L2Vic {
         // first bit set to find if any int_statuses are enabled.
         //
         // Is this not equivalent?
-        if self.vid != 0 {
+        //
+        // -1 is "invalid" vid
+        if self.vid != u32::MAX {
             // ------- TEST
             let mut int_statuses = false;
             for slot in &self.slots {
@@ -531,6 +541,9 @@ impl EventControllerImpl for L2Vic {
         // since no other VIDs are setup in FW, so we shall trigger the IRQ
         // on the one VID.
         self.vid = irq as u32;
+        // Update the backing register store
+        cpu.write_register(HexagonRegister::Vid, self.vid)
+            .with_context(|| "couldn't update vid register")?;
 
         // We also need to set the SSR cause to the VID
         // See qemu_irq_pulse in hw/intc/l2vic.c in QUIC QEMU
@@ -540,6 +553,19 @@ impl EventControllerImpl for L2Vic {
         cpu.write_register(HexagonRegister::Ssr, ssr.raw_value())
             .unwrap();
 
+        // Actual irq number of the 16 irqs here.
+        let hex_irq_number =
+            HexagonInterruptType::Int0 as ExceptionNumber + irq_base_offset as ExceptionNumber;
+
+        // Set the irq pending
+        let mut ipendad = Ipendad::new_with_raw_value(
+            cpu.read_register::<u32>(HexagonRegister::Ipendad)
+                .with_context(|| "couldn't read r0 in interrupt")?,
+        );
+        ipendad.set_ipend(ipendad.ipend() | (1 << hex_irq_number));
+        cpu.write_register(HexagonRegister::Ipendad, ipendad.raw_value())
+            .with_context(|| "couldn't write ipendad")?;
+
         // NOTE: the interrupt number is dependent on the VID. Right now there is only
         // one VID used, but if VID groups are used in the future, the IRQ number would change.
         // 0x12 - VID0
@@ -548,11 +574,8 @@ impl EventControllerImpl for L2Vic {
         // etc.
         //
         // As the VID base offset is 0x2, we can add the base Int0 (0x10) to compute this.
-        interrupt_handler(
-            cpu,
-            mmu,
-            HexagonInterruptType::Int0 as ExceptionNumber + irq_base_offset as ExceptionNumber,
-        )?;
+        // TODO: should probably use the ipend reg write to trigger this.
+        async_interrupt_handler(cpu, mmu, hex_irq_number)?;
         Ok(InterruptExecuted::Executed)
 
         // todo!("l2vic execute")
@@ -586,13 +609,35 @@ impl EventControllerImpl for L2Vic {
             Box::new(fastl2vic_mmio_write_hook),
         )?;
 
-        cpu.add_hook(styx_core::hooks::StyxHook::RegisterRead(
-            HexagonRegister::Vid.into(),
-            Box::new(l2vic_vid_read_hook),
-        ))?;
-
         Ok(())
     }
+}
+
+pub fn async_interrupt_handler(
+    cpu: &mut dyn CpuBackend,
+    mmu: &mut Mmu,
+    interrupt_number: ExceptionNumber,
+) -> Result<(), UnknownError> {
+    // bail if the interrupt is not pending or disabled
+    let mut ipendad = Ipendad::new_with_raw_value(
+        cpu.read_register::<u32>(HexagonRegister::Ipendad)
+            .with_context(|| "couldn't read r0 in interrupt")?,
+    );
+    let iad = (ipendad.iad() >> interrupt_number) & 1;
+    let ipend = (ipendad.ipend() >> interrupt_number) & 1;
+    if iad == 1 || (ipend == 0) {
+        warn!("interrupt not taken, as it is currently disabled/pending");
+        return Ok(());
+    }
+
+    // Now disable the interrupt and make it not pending
+    ipendad.set_iad(ipendad.iad() & !(1 << interrupt_number));
+    ipendad.set_ipend(ipendad.ipend() & !(1 << interrupt_number));
+
+    cpu.write_register(HexagonRegister::Ipendad, ipendad.raw_value())
+        .with_context(|| "couldn't write ipendad")?;
+
+    interrupt_handler(cpu, mmu, interrupt_number)
 }
 
 /// WARN: this should always be triggered at the end of a packet, after the pc has
@@ -604,7 +649,7 @@ pub fn interrupt_handler(
     mmu: &mut Mmu,
     interrupt_number: ExceptionNumber,
 ) -> Result<(), UnknownError> {
-    // get cause, if the cause is 0 then we need to do the angel stuff
+    // Get cause, if the cause is 0 with a Trap0 call, then we need to do the angel stuff
     let ssr = Ssr::new_with_raw_value(
         cpu.read_register::<u32>(HexagonRegister::Ssr)
             .with_context(|| "couldn't read ssr in interrupt")?,
