@@ -217,7 +217,9 @@ fn l2vic_mmio_read_hook(
         Ok(L2VicRegister::Status) => {
             warn!("l2vic status read, unimplemented");
         }
-        Ok(L2VicRegister::Type) => {}
+        Ok(L2VicRegister::Pending) => {
+            data.copy_from_slice(&l2vic.slots[slot].pending.to_le_bytes());
+        }
         _ => todo!(),
     }
 
@@ -450,7 +452,7 @@ impl EventControllerImpl for L2Vic {
             // Now go through the IRQs
             // As each slot is 32 bits, the IRQ is 32 bits
             for i in 0..32 {
-                info!(
+                trace!(
                     "l2vic irqn_enable {} irqn_pending {}",
                     slot.irqn_enable(i),
                     slot.irqn_pending(i)
