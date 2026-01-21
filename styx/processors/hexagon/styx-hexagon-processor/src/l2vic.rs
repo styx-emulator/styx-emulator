@@ -394,7 +394,7 @@ impl EventControllerImpl for L2Vic {
         mmu: &mut Mmu,
         _peripherals: &mut Peripherals,
     ) -> Result<InterruptExecuted, UnknownError> {
-        info!("l2vic next called, vid is 0x{:x}", self.vid);
+        trace!("l2vic next called, vid is 0x{:x}", self.vid);
         // Update the VID, since the register write hook won't work
         // from the CIAD instruction, so just take the "register" VID
         // and if they're not equal set to whatever it is.
@@ -460,7 +460,7 @@ impl EventControllerImpl for L2Vic {
                 // This means the IRQ must be executed, as it
                 // was latched.
                 if slot.irqn_enable(i) && slot.irqn_pending(i) {
-                    info!("the first IRQ set was {i}");
+                    trace!("the first IRQ set was {i}");
                     irq = Some(i);
                     break;
                 }

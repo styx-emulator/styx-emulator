@@ -134,12 +134,12 @@ pub struct QTimerFrame {
     /// and actual utimerlo/utimerhi/timerlo/timerhi registers.
     counter: u64,
 
-    /// This is always being decremented, even without a condition.
-    /// It will overflow when it starts at 0. This is explicitly a u32,
-    /// D5.7.8. See B8.1.5 for more.
-    timer_value: u32,
     /// Compare value register. This keeps track of the value set to compare against
     /// See table D5.5 for sizes. See B8.1.5.
+    ///
+    /// The timer value, according to "Operation of the TimerValue views of the timers"
+    /// in B8.1.5, is equal to compare_value - (counter - offset). Since we don't
+    /// have the virtual timer value seemingly, we can ignore the offset.
     compare_value: u64,
     /// Enabled? This doesn't mean the timer doesn't stop counting down or up,
     /// it just means that the timer won't interrupt when the condition in
@@ -158,7 +158,6 @@ impl QTimerFrame {
     fn new(frame_number: usize) -> Self {
         Self {
             counter: 0,
-            timer_value: 0,
             compare_value: 0,
             enabled: false,
             imask: false,
@@ -204,18 +203,21 @@ impl QTimerFrame {
         self.increment_counter(mmu, tick_amount)?;
 
         // Decrement TimerValue, setting memory in progress.
-        self.decrement_timer_value(mmu, tick_amount)?;
+        self.write_timer_value(mmu, tick_amount)?;
 
-        info!(
-            "timer number is {} value is {} counter is {} compare value is {} istatus is {}",
-            self.frame_number, self.timer_value, self.counter, self.compare_value, self.istatus
+        trace!(
+            "timer number is {} counter is {} compare value is {} istatus is {}",
+            self.frame_number,
+            self.counter,
+            self.compare_value,
+            self.istatus
         );
 
         // Check for conditions being met and interrupt if so.
         // Don't latch an interrupt if one is already occurring.
-        if (// TimerValue condition. See B8.1.5 "Operation of the TimerValue views of the timers."
-            self.timer_value as i32 <= 0 ||
+        if (
             // CompareValue condition. Offset is zero. See B8.1.5 "Operation of the CompareValue views of the timers."
+            // TimerValue condition should be equivalent, see "Operation of the TimerValue views of the timers" B8.1.5
             (self.counter - self.compare_value) as i64 >= 0)
             // Require the events to be enabled
             && self.enabled && !self.istatus
@@ -267,17 +269,18 @@ impl QTimerFrame {
         Ok(())
     }
 
-    /// NOTE WARN: this should not overwrite a previously set value for TimerValue!
-    fn decrement_timer_value(
-        &mut self,
-        mmu: &mut Mmu,
-        tick_amount: u64,
-    ) -> Result<(), UnknownError> {
-        self.timer_value = self.timer_value.wrapping_sub(tick_amount as u32);
+    /// The timer value, according to "Operation of the TimerValue views of the timers"
+    /// in B8.1.5, is equal to compare_value - (counter - offset). Since we don't
+    /// have the virtual timer value seemingly, we can ignore the offset.
+    fn timer_value(&mut self) -> u32 {
+        (self.compare_value - self.counter) as u32
+    }
 
+    /// NOTE WARN: this should not overwrite a previously set value for TimerValue!
+    fn write_timer_value(&mut self, mmu: &mut Mmu, tick_amount: u64) -> Result<(), UnknownError> {
         mmu.write_u32_le_phys_data(
             self.frame_base() + QTimerCNTBaseNFrame::CntpTval as u64,
-            self.timer_value,
+            self.timer_value(),
         )?;
 
         Ok(())
@@ -410,21 +413,18 @@ fn qtimer_mmio_write_hook(
                 // at which point an event (an interrupt) is triggered.
                 info!("the timer value (as opposed to compare value) is equal to {data_u32:x}. COUNTING DOWN.");
 
-                // Now we set the TimerValue.
-                //
-                // Consistency: we don't have to set memory since the memory write causing this hook will
-                // have set this in memory.
-                timer_periph.timer_frames[base_n].timer_value = data_u32;
                 // We must also set CompareValue. See the write effect on CompareValue for
                 // "Operation of the TimerValue views of the timers" in B8.1.5.
                 // the "as i64 as u64" sign extends the TimerValue. The Offset is 0.
+                // See Reads within this section.
                 //
                 // Consistency: we _do_ have to set memory since this is a "side effect" of setting
                 // the TimerValue.
+                //
+                // data_u32 is the starting timer value.
                 timer_periph.timer_frames[base_n].set_compare_value(
                     proc.mmu,
-                    timer_periph.timer_frames[base_n].counter
-                        + ((timer_periph.timer_frames[base_n].timer_value as i64) as u64),
+                    timer_periph.timer_frames[base_n].counter + ((data_u32 as i64) as u64),
                 )?;
             }
             // This is a compare value, so we basically go up until we hit this and trigger
@@ -462,9 +462,6 @@ fn qtimer_mmio_write_hook(
                 // Consistency: we don't have to set memory since the memory write causing this hook will
                 // have set this in memory. There are no other side effects.
                 timer_periph.timer_frames[base_n].set_compare_value(proc.mmu, new_compare_value)?;
-                // The TimerValue (count down) also has to be set!
-                // TODO: get rid of this
-                timer_periph.timer_frames[base_n].timer_value = new_compare_value as u32;
             }
             Ok(QTimerCNTBaseNFrame::CntpCtl) => {
                 let register_value = QTimerCNTPCTL::new_with_raw_value(data_u32);
@@ -608,9 +605,11 @@ impl Peripheral for QTimer {
 
         let timer_ticks = self.pcycles_since_last_tick / self.pcycles_per_tick;
 
-        info!(
+        trace!(
             "TIMER tick: pcycles_since_last_tick {}, timer_ticks {}, pcycles_per_tick {}",
-            self.pcycles_since_last_tick, timer_ticks, self.pcycles_per_tick,
+            self.pcycles_since_last_tick,
+            timer_ticks,
+            self.pcycles_per_tick,
         );
 
         if timer_ticks > 0 {
