@@ -77,7 +77,7 @@ pub enum L2VicRegister {
     // 0x400
     Clear = 6,
     // 0x480
-    Int = 7,
+    SoftInt = 7,
     // 0x500
     Pending = 8,
     // 0x580
@@ -220,6 +220,9 @@ fn l2vic_mmio_read_hook(
         Ok(L2VicRegister::Pending) => {
             data.copy_from_slice(&l2vic.slots[slot].pending.to_le_bytes());
         }
+        Ok(L2VicRegister::Type) => {
+            data.copy_from_slice(&l2vic.slots[slot].int_type.to_le_bytes());
+        }
         _ => todo!(),
     }
 
@@ -337,6 +340,10 @@ impl L2VicSlot {
     pub fn irqn_pending(&self, n: usize) -> bool {
         ((self.pending >> n) & 1) == 1
     }
+
+    pub fn irqn_int_type(&self, n: usize) -> bool {
+        ((self.int_type >> n) & 1) == 1
+    }
 }
 
 impl L2Vic {
@@ -372,6 +379,21 @@ impl L2Vic {
             }
             L2VicRegister::Clear => {
                 self.slots[slot].clear = data;
+            }
+            L2VicRegister::SoftInt => {
+                // The irq number is the "first" bit set according
+                // to QEMU's l2vic write
+                let slot_offset = data.trailing_zeros();
+                let irqn = (slot as u32 * L2VIC_NUM_SLOTS as u32) + slot_offset;
+                info!("SoftInt irq {irqn}");
+
+                // Cause an interrupt
+                // QEMU l2vic_write: soft int is only accepted if the interrupt is enabled
+                if self.slots[slot].irqn_int_type(slot_offset as usize) {
+                    info!("doing SoftInt for irq {irqn}");
+                    self.latch(irqn as i32)?;
+                }
+                // WARN: do I need to set INT_ENABLE here like qemu does?
             }
             _ => todo!(),
         }
@@ -448,7 +470,7 @@ impl EventControllerImpl for L2Vic {
         // and raise the highest-priority IRQ.
 
         let mut irq = None;
-        for slot in &self.slots {
+        for (slot_no, slot) in self.slots.iter().enumerate() {
             // Now go through the IRQs
             // As each slot is 32 bits, the IRQ is 32 bits
             for i in 0..32 {
@@ -461,7 +483,7 @@ impl EventControllerImpl for L2Vic {
                 // was latched.
                 if slot.irqn_enable(i) && slot.irqn_pending(i) {
                     trace!("the first IRQ set was {i}");
-                    irq = Some(i);
+                    irq = Some(i + (slot_no * L2VIC_NUM_SLOTS as usize));
                     break;
                 }
             }

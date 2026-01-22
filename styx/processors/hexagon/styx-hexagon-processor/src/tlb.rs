@@ -249,8 +249,9 @@ impl TlbImpl for HexagonTlb {
             let virt_addr = virt_addr as u32;
 
             for ent in &self.entries {
+                trace!("pte {ent:x?}");
                 if !ent.v() || (ent.asid() != ssr.asid() && !ent.g()) {
-                    trace!("skipping {ent:x?}");
+                    trace!("skipping pte");
                     continue;
                 }
 
@@ -278,11 +279,12 @@ impl TlbImpl for HexagonTlb {
 
                 let page_type = Self::get_entry_page_type(ent);
                 let page_mask = PAGE_MASK[page_type];
+                trace!("page_mask is {page_mask:x}");
 
                 let va_vpn = (virt_addr as u64) & !page_mask;
                 let va_offset = virt_addr as u64 & page_mask;
 
-                let ent_vpn = u64::from(ent.vpn()) << PAGE_SIZE_BITS;
+                let ent_vpn = (u64::from(ent.vpn()) << PAGE_SIZE_BITS) & !page_mask;
 
                 trace!("ent vpn {ent_vpn:x} real vpn {va_vpn:x} va_offset {va_offset:x}",);
                 if va_vpn == ent_vpn {
