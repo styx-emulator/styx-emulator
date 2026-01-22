@@ -28,7 +28,7 @@ use gdbstub::{
     },
 };
 use num_traits::{FromPrimitive, ToPrimitive};
-use std::marker::PhantomData;
+use std::{marker::PhantomData, time::Instant};
 use styx_core::{
     cpu::{
         arch::{CpuRegister, GdbRegistersHelper},
@@ -297,6 +297,7 @@ where
         // If we are in a step exec mode then this depends on the step irqs option.
         let should_step_irqs =
             self.exec_mode == ExecMode::Continue || self.options.step_irqs == StepIRQs::Enabled;
+        let mut last_tick = Instant::now();
         loop {
             if self.step_cycles >= self.options.cpu_epoch {
                 // insert interrupt
@@ -305,9 +306,8 @@ where
                     .event_controller
                     .next(self.proc.cpu.as_mut(), &mut self.proc.mmu);
 
-                // assume 1 ns per instruction
                 let delta = Delta {
-                    time: std::time::Duration::from_nanos(self.options.cpu_epoch),
+                    time: Instant::now() - last_tick,
                     count: self.step_cycles,
                 };
                 self.proc
@@ -315,6 +315,10 @@ where
                     .tick(self.proc.cpu.as_mut(), &mut self.proc.mmu, &delta)
                     .unwrap();
 
+                // Use Instant::now() *after* ticks to start clock after ticking logic runs
+                // Not sure if really important but seems more correct than using the "same now"
+                // as last_tick.
+                last_tick = Instant::now();
                 // poll for incoming data
                 if poll_incoming_data() {
                     break RunEvent::IncomingData;

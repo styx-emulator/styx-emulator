@@ -157,7 +157,7 @@ impl Default for Executor {
 #[derive(Debug, Clone)]
 /// Represents a length of emulation.
 pub struct Delta {
-    /// Elapsed time.
+    /// Elapsed wall clock time since last tick.
     pub time: std::time::Duration,
     /// Number of instructions executed.
     pub count: u64,
