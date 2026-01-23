@@ -513,7 +513,6 @@ macro_rules! gdb_core_test_suite {
                 // now continue into the next breakpoint
                 harness.gdb_continue().unwrap();
 
-                std::thread::sleep(std::time::Duration::from_millis(200));
                 // get the stop reason from gdb
                 let stop_reason = harness.wait_for_stop_reason().unwrap();
 
@@ -572,7 +571,6 @@ macro_rules! gdb_core_test_suite {
                 // now continue into the next breakpoint
                 harness.gdb_continue().unwrap();
 
-                std::thread::sleep(std::time::Duration::from_millis(200));
                 // get the stop reason from gdb
                 let stop_reason = harness.wait_for_stop_reason().unwrap();
 
@@ -693,7 +691,6 @@ macro_rules! gdb_core_test_suite {
                 // now continue into the next breakpoint
                 harness.gdb_continue().unwrap();
 
-                std::thread::sleep(std::time::Duration::from_millis(200));
                 // get the stop reason from gdb
                 let stop_reason = harness.wait_for_stop_reason().unwrap();
 
@@ -830,7 +827,6 @@ macro_rules! gdb_core_test_suite {
 
                 // hit watchpoint
                 harness.gdb_continue().unwrap();
-                std::thread::sleep(std::time::Duration::from_millis(500));
                 let stop_reason = harness.wait_for_stop_reason().unwrap();
 
                 // assert that:
@@ -860,7 +856,6 @@ macro_rules! gdb_core_test_suite {
 
                 // hit watchpoint
                 harness.gdb_continue().unwrap();
-                std::thread::sleep(std::time::Duration::from_millis(500));
                 let stop_reason = harness.wait_for_stop_reason().unwrap();
 
                 // assert that:
@@ -895,7 +890,6 @@ macro_rules! gdb_core_test_suite {
 
                 // hit watchpoint
                 harness.gdb_continue().unwrap();
-                std::thread::sleep(std::time::Duration::from_millis(500));
                 let stop_reason = harness.wait_for_stop_reason().unwrap();
 
                 // assert that:
@@ -963,7 +957,6 @@ macro_rules! gdb_core_test_suite {
 
                 // hit watchpoint
                 harness.gdb_continue().unwrap();
-                std::thread::sleep(std::time::Duration::from_millis(500));
                 let stop_reason = harness.wait_for_stop_reason().unwrap();
 
                 // assert that:
@@ -1008,7 +1001,6 @@ macro_rules! gdb_core_test_suite {
                 let bp_id = harness.add_breakpoint(bp_pc).unwrap();
 
                 harness.gdb_continue().unwrap();
-                std::thread::sleep(std::time::Duration::from_millis(500));
                 let stop_reason = harness.wait_for_stop_reason().unwrap();
 
                 // assert that:
@@ -1052,7 +1044,6 @@ macro_rules! gdb_core_test_suite {
 
                 // hit watchpoint
                 harness.gdb_continue().unwrap();
-                std::thread::sleep(std::time::Duration::from_millis(500));
                 let stop_reason = harness.wait_for_stop_reason().unwrap();
 
                 // assert that:
@@ -1090,7 +1081,6 @@ macro_rules! gdb_core_test_suite {
 
                 // hit watchpoint
                 harness.gdb_continue().unwrap();
-                std::thread::sleep(std::time::Duration::from_millis(500));
                 let stop_reason = harness.wait_for_stop_reason().unwrap();
 
                 // assert that:
@@ -1133,7 +1123,6 @@ macro_rules! gdb_core_test_suite {
 
                 // hit watchpoint
                 harness.gdb_continue().unwrap();
-                std::thread::sleep(std::time::Duration::from_millis(500));
                 let stop_reason = harness.wait_for_stop_reason().unwrap();
 
                 // assert that:

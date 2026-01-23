@@ -72,7 +72,7 @@ const GDB_MULTIARCH: &str = "gdb-multiarch";
 const GDB: &str = "gdb";
 /// Determine the path to the `gdb-multiarch` binary
 ///
-/// Determines which gdb binary to use baased on the archetectues available.
+/// Determines which gdb binary to use based on the architectures available.
 /// If `gdb-multiarch` is available, it will be used. Otherwise, the default
 /// gdb binary will be used. If the architecture list is not long, a warning
 /// message will be printed.
@@ -91,7 +91,7 @@ fn determine_gdb_binary() -> &'static str {
     // 2. the `gdb` has aa long list of supported archs (probably not the greatest
     //    assumption to make but #YOLO -- we'll say it implies built with `--enable-targets=all`)
     //
-    // We do this by executing `set architecture` with no specific architecure and
+    // We do this by executing `set architecture` with no specific architecture and
     // checking the output. If the output is long, we'll assume its a full list of
     // supported archs.
     if let Ok(output) = std::process::Command::new(GDB)
@@ -146,6 +146,7 @@ fn create_gdb_multiarch_process(port: u16, runtime: Runtime) -> BlockingGdbClien
 pub struct BlockingGdbClient {
     inner: Arc<Gdb>,
     runtime: Runtime,
+    timeout: std::time::Duration,
 }
 
 impl BlockingGdbClient {
@@ -153,6 +154,7 @@ impl BlockingGdbClient {
         Self {
             inner: client,
             runtime,
+            timeout: DEFAULT_TIMEOUT_OP,
         }
     }
 
@@ -537,6 +539,17 @@ impl BlockingGdbClient {
         Ok(stop_reason)
     }
 
+    pub fn wait_for_continue(&self) -> Result<(), GdbHarnessError> {
+        let inner = self.inner.clone();
+
+        self.runtime.block_on(async {
+            inner
+                .await_status(|s| s == &Status::Running, Some(self.timeout))
+                .await
+        })?;
+
+        Ok(())
+    }
     fn check_for_stop_reason(&self) -> Result<Option<StopReason>, GdbHarnessError> {
         let inner = self.inner.clone();
 
@@ -592,6 +605,9 @@ impl BlockingGdbClient {
         Ok(())
     }
 }
+
+/// Default timeout for sending a GDB command to the client.
+const DEFAULT_TIMEOUT_OP: std::time::Duration = std::time::Duration::from_millis(500);
 
 pub struct GdbHarness {
     gdb_client: BlockingGdbClient,
@@ -726,7 +742,11 @@ impl GdbHarness {
     }
 
     pub fn gdb_continue(&self) -> Result<(), GdbHarnessError> {
-        self.gdb_client.gdb_continue()
+        self.gdb_client.gdb_continue()?;
+        // ensures that the target is running before we continue
+        // otherwise, an immediate wait_for_stop() might return before the target has started
+        self.gdb_client.wait_for_continue()?;
+        Ok(())
     }
 
     pub fn gdb_status(&self) -> Result<Status, GdbHarnessError> {
