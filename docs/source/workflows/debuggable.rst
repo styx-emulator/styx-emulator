@@ -128,10 +128,9 @@ Open an issue if it is not working as expected.
 - Read/write registers
 - Read/write memory
 - Breakpoints
-- Watch points
-- Watch registers
+- Watchpoints (register, memory)
 
-  - This known to have a significant performance impact
+  - This known to have a significant performance impact [#perf-note]_
 
 - Interrupt execution with ctrl-c
 - Stop execution in Styx hooks via ``cpu.stop()``
@@ -154,3 +153,10 @@ this to interact with the emulator during debugging.
     Options:
       -v, --verbose  Print backtraces on error
       -h, --help     Print help (see more with '--help')
+
+.. [#perf-note]
+   Adding watchpoints requires the gdb executor to execute a single instruction
+   at a time, instead of larger strides that improve emulation performance.
+
+   The implementation can be found in
+   ``styx/plugins/styx-gdbserver/src/target_impl.rs``
