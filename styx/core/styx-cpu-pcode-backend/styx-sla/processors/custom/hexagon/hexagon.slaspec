@@ -11806,23 +11806,23 @@ S4_storeirbfnew_io_S6: reloc is immext = 0xffffffff & S4_storeirbfnew_io_S6_0 & 
 
 S4_storeirht_io_u6_1: reloc is S4_storeirht_io_u6_1_0 [ reloc = (S4_storeirht_io_u6_1_0 << 0) << 1; ] { export *[const]:4 reloc; }
 
-S4_storeirht_io_S6: reloc is                       S4_storeirht_io_S6_0 & S4_storeirht_io_S6_1 [ reloc = ((((S4_storeirht_io_S6_0 << 0) + (S4_storeirht_io_S6_1 << 5)) & 0b111111) | immext); ] { export *[const]:4 reloc; }
-S4_storeirht_io_S6: reloc is immext = 0xffffffff & S4_storeirht_io_S6_0 & S4_storeirht_io_S6_1 [ reloc = (S4_storeirht_io_S6_0 << 0) + (S4_storeirht_io_S6_1 << 5); ] { export *[const]:4 reloc; }
+S4_storeirht_io_S6: reloc is                       S4_storeirht_io_S6_0 & S4_storeirht_io_S6_1 [ reloc = ((((S4_storeirht_io_S6_0 << 0) + (S4_storeirht_io_S6_1 << 5)) & 0b111111) | immext); ] { export *[const]:2 reloc; }
+S4_storeirht_io_S6: reloc is immext = 0xffffffff & S4_storeirht_io_S6_0 & S4_storeirht_io_S6_1 [ reloc = (S4_storeirht_io_S6_0 << 0) + (S4_storeirht_io_S6_1 << 5); ] { export *[const]:2 reloc; }
 
 S4_storeirhf_io_u6_1: reloc is S4_storeirhf_io_u6_1_0 [ reloc = (S4_storeirhf_io_u6_1_0 << 0) << 1; ] { export *[const]:4 reloc; }
 
-S4_storeirhf_io_S6: reloc is                       S4_storeirhf_io_S6_0 & S4_storeirhf_io_S6_1 [ reloc = ((((S4_storeirhf_io_S6_0 << 0) + (S4_storeirhf_io_S6_1 << 5)) & 0b111111) | immext); ] { export *[const]:4 reloc; }
-S4_storeirhf_io_S6: reloc is immext = 0xffffffff & S4_storeirhf_io_S6_0 & S4_storeirhf_io_S6_1 [ reloc = (S4_storeirhf_io_S6_0 << 0) + (S4_storeirhf_io_S6_1 << 5); ] { export *[const]:4 reloc; }
+S4_storeirhf_io_S6: reloc is                       S4_storeirhf_io_S6_0 & S4_storeirhf_io_S6_1 [ reloc = ((((S4_storeirhf_io_S6_0 << 0) + (S4_storeirhf_io_S6_1 << 5)) & 0b111111) | immext); ] { export *[const]:2 reloc; }
+S4_storeirhf_io_S6: reloc is immext = 0xffffffff & S4_storeirhf_io_S6_0 & S4_storeirhf_io_S6_1 [ reloc = (S4_storeirhf_io_S6_0 << 0) + (S4_storeirhf_io_S6_1 << 5); ] { export *[const]:2 reloc; }
 
 S4_storeirhtnew_io_u6_1: reloc is S4_storeirhtnew_io_u6_1_0 [ reloc = (S4_storeirhtnew_io_u6_1_0 << 0) << 1; ] { export *[const]:4 reloc; }
 
-S4_storeirhtnew_io_S6: reloc is                       S4_storeirhtnew_io_S6_0 & S4_storeirhtnew_io_S6_1 [ reloc = ((((S4_storeirhtnew_io_S6_0 << 0) + (S4_storeirhtnew_io_S6_1 << 5)) & 0b111111) | immext); ] { export *[const]:4 reloc; }
-S4_storeirhtnew_io_S6: reloc is immext = 0xffffffff & S4_storeirhtnew_io_S6_0 & S4_storeirhtnew_io_S6_1 [ reloc = (S4_storeirhtnew_io_S6_0 << 0) + (S4_storeirhtnew_io_S6_1 << 5); ] { export *[const]:4 reloc; }
+S4_storeirhtnew_io_S6: reloc is                       S4_storeirhtnew_io_S6_0 & S4_storeirhtnew_io_S6_1 [ reloc = ((((S4_storeirhtnew_io_S6_0 << 0) + (S4_storeirhtnew_io_S6_1 << 5)) & 0b111111) | immext); ] { export *[const]:2 reloc; }
+S4_storeirhtnew_io_S6: reloc is immext = 0xffffffff & S4_storeirhtnew_io_S6_0 & S4_storeirhtnew_io_S6_1 [ reloc = (S4_storeirhtnew_io_S6_0 << 0) + (S4_storeirhtnew_io_S6_1 << 5); ] { export *[const]:2 reloc; }
 
 S4_storeirhfnew_io_u6_1: reloc is S4_storeirhfnew_io_u6_1_0 [ reloc = (S4_storeirhfnew_io_u6_1_0 << 0) << 1; ] { export *[const]:4 reloc; }
 
-S4_storeirhfnew_io_S6: reloc is                       S4_storeirhfnew_io_S6_0 & S4_storeirhfnew_io_S6_1 [ reloc = ((((S4_storeirhfnew_io_S6_0 << 0) + (S4_storeirhfnew_io_S6_1 << 5)) & 0b111111) | immext); ] { export *[const]:4 reloc; }
-S4_storeirhfnew_io_S6: reloc is immext = 0xffffffff & S4_storeirhfnew_io_S6_0 & S4_storeirhfnew_io_S6_1 [ reloc = (S4_storeirhfnew_io_S6_0 << 0) + (S4_storeirhfnew_io_S6_1 << 5); ] { export *[const]:4 reloc; }
+S4_storeirhfnew_io_S6: reloc is                       S4_storeirhfnew_io_S6_0 & S4_storeirhfnew_io_S6_1 [ reloc = ((((S4_storeirhfnew_io_S6_0 << 0) + (S4_storeirhfnew_io_S6_1 << 5)) & 0b111111) | immext); ] { export *[const]:2 reloc; }
+S4_storeirhfnew_io_S6: reloc is immext = 0xffffffff & S4_storeirhfnew_io_S6_0 & S4_storeirhfnew_io_S6_1 [ reloc = (S4_storeirhfnew_io_S6_0 << 0) + (S4_storeirhfnew_io_S6_1 << 5); ] { export *[const]:2 reloc; }
 
 S4_storeirit_io_u6_2: reloc is S4_storeirit_io_u6_2_0 [ reloc = (S4_storeirit_io_u6_2_0 << 0) << 2; ] { export *[const]:4 reloc; }
 
@@ -67370,7 +67370,19 @@ gp: reloc is epsilon [ reloc = 0; ] {
 
 :S2_tableidxh S2_tableidxh_Rx32 S2_tableidxh_Rx32d S2_tableidxh_Rs32 S2_tableidxh_u4 S2_tableidxh_S6 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b22 = 1 & b23 = 0 & b24 = 1 & b25 = 1 & b26 = 1 & b27 = 0 & b28 = 0 & b29 = 0 & b30 = 0 & b31 = 1 & S2_tableidxh_Rx32 & S2_tableidxh_Rx32d & S2_tableidxh_Rs32 & S2_tableidxh_u4 & S2_tableidxh_S6 unimpl
 
-:S2_tableidxw S2_tableidxw_Rx32 S2_tableidxw_Rx32d S2_tableidxw_Rs32 S2_tableidxw_u4 S2_tableidxw_S6 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b22 = 0 & b23 = 1 & b24 = 1 & b25 = 1 & b26 = 1 & b27 = 0 & b28 = 0 & b29 = 0 & b30 = 0 & b31 = 1 & S2_tableidxw_Rx32 & S2_tableidxw_Rx32d & S2_tableidxw_Rs32 & S2_tableidxw_u4 & S2_tableidxw_S6 unimpl
+:S2_tableidxw S2_tableidxw_Rx32 S2_tableidxw_Rx32d S2_tableidxw_Rs32 S2_tableidxw_u4 S2_tableidxw_S6 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b22 = 0 & b23 = 1 & b24 = 1 & b25 = 1 & b26 = 1 & b27 = 0 & b28 = 0 & b29 = 0 & b30 = 0 & b31 = 1 & S2_tableidxw_Rx32 & S2_tableidxw_Rx32d & S2_tableidxw_Rs32 & S2_tableidxw_u4 & S2_tableidxw_S6 {
+  local width = S2_tableidxw_u4;
+  local offset = S2_tableidxw_S6 + 2;
+  local mask = (1 << width) - 1;
+  # last shift is for field
+  local field = ((S2_tableidxw_Rs32 >> offset) & mask) << 2;
+
+  # clear the bits in Rx  
+  local not_mask = ~(mask << 2);
+  S2_tableidxw_Rx32d = S2_tableidxw_Rx32 & not_mask;
+  S2_tableidxw_Rx32d = S2_tableidxw_Rx32d | field;
+
+} 
 
 :S2_tableidxd S2_tableidxd_Rx32 S2_tableidxd_Rx32d S2_tableidxd_Rs32 S2_tableidxd_u4 S2_tableidxd_S6 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b22 = 1 & b23 = 1 & b24 = 1 & b25 = 1 & b26 = 1 & b27 = 0 & b28 = 0 & b29 = 0 & b30 = 0 & b31 = 1 & S2_tableidxd_Rx32 & S2_tableidxd_Rx32d & S2_tableidxd_Rs32 & S2_tableidxd_u4 & S2_tableidxd_S6 unimpl
 

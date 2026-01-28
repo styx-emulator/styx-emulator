@@ -184,3 +184,22 @@ pub fn vmux() {
     let r4r5 = cpu.read_register::<u64>(HexagonRegister::D2).unwrap();
     assert_eq!(r4r5, 0x55aa33cc66ee8866);
 }
+
+// just a small range test
+#[test_case(0xafab8673, 0xaf78557c, 0xaf785540; "rx_all_ones")]
+#[test_case(0xafab8673, 0xaf785558, 0xaf785540; "rx_some_ones")]
+pub fn tableidxw(r4: u32, r5: u32, r5_expected: u32) {
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(
+        r#"
+       0:	a5 c9 84 87	8784c9a5 { 	r5 = tableidxw(r4,#0x5,#0x9):raw } 
+"#,
+    );
+    cpu.write_register(HexagonRegister::R4, r4).unwrap();
+    cpu.write_register(HexagonRegister::R5, r5).unwrap();
+
+    let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
+
+    let r5 = cpu.read_register::<u32>(HexagonRegister::R5).unwrap();
+    assert_eq!(r5, r5_expected);
+}
