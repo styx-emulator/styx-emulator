@@ -20,6 +20,7 @@ mod arith;
 mod attribs;
 mod banking;
 mod branching;
+mod broken_instructions;
 mod compound;
 mod dotnew;
 mod dual_jumps;
