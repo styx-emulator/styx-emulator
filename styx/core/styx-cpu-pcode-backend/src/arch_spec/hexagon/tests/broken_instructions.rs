@@ -236,6 +236,22 @@ fn wrong_size_sext_wrapper(
        0:	7d fe 20 3c	3c20fe7d { 	memh(r0+#0x78) = #-0x3 } 
 	"#, 1, 2, 3, 4, 1, 2; "S4_storeirh_io"
 )]
+// Duplexes, which I did by hand since I can't be bothered to add the logic
+// to my test generator
+#[test_case(
+    r#"
+       0:	00 40 00 7f	7f004000 { 	nop
+       4:	00 40 00 7f	7f004000   	nop
+       8:	02 32 0e 7a	7a0e3202   	r22 = #-0x1; 	memb(r0+#0x2) = #0 } 
+    "#, 1, 2, 3, 4, 1, 1; "SS2_storebi0"
+)]
+#[test_case(
+    r#"
+       0:	00 40 00 7f	7f004000 { 	nop
+       4:	00 40 00 7f	7f004000   	nop
+       8:	02 33 0e 7a	7a0e3302   	r22 = #-0x1; 	memb(r0+#0x2) = #1 } 
+    "#, 1, 2, 3, 4, 1, 1; "SS2_storebi1"
+)]
 fn wrong_size_stores(
     objdump: &str,
     r21: u32,
