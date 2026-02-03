@@ -518,3 +518,98 @@ fn wrong_sext_loads(
 ) {
     wrong_size_sext_wrapper(objdump, r21, r22, r23, r24, num_packets, data_size, true)
 }
+
+/// These should be sign-extended.
+#[test_case(
+	r#"
+       0:	02 c4 00 80	8000c402 { 	r3:2 = asr(r1:0,#0x4) }
+	"#, 0xf800000000000000, HexagonRegister::D1, 0, 0xff80000000000000; "S2_asr_i_p"
+)]
+#[test_case(
+	r#"
+       0:	84 c4 00 82	8200c484 { 	r5:4 += asr(r1:0,#0x4) }
+	"#, 0xf800000000000000, HexagonRegister::D2, 0, 0xff80000000000000; "S2_asr_i_p_acc"
+)]
+#[test_case(
+	r#"
+       0:	04 c4 00 82	8200c404 { 	r5:4 -= asr(r1:0,#0x4) }
+	"#, 0xf800000000000000, HexagonRegister::D2, 0xff00000000000000u64, 0xff80000000000000; "S2_asr_i_p_nac"
+)]
+#[test_case(
+	r#"
+       0:	04 c4 40 82	8240c404 { 	r5:4 &= asr(r1:0,#0x4) }
+	"#, 0xf800000000000000, HexagonRegister::D2, u64::MAX, 0xff80000000000000; "S2_asr_i_p_and"
+)]
+#[test_case(
+	r#"
+       0:	84 c4 40 82	8240c484 { 	r5:4 |= asr(r1:0,#0x4) }
+	"#, 0xf800000000000000, HexagonRegister::D2, 0, 0xff80000000000000; "S2_asr_i_p_or"
+)]
+#[test_case(
+	r#"
+       0:	e2 c4 c0 80	80c0c4e2 { 	r3:2 = asr(r1:0,#0x4):rnd }
+	"#, 0xf800000000000010, HexagonRegister::D1, 0, 0xffc0000000000001; "S2_asr_i_p_rnd"
+)]
+fn arithmetic_shift_right_doubleword(
+    objdump: &str,
+    in_reg_startval: u64,
+    out_reg: HexagonRegister,
+    out_reg_startval: u64,
+    expected_output: u64,
+) {
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(objdump);
+    // We want to set things such that causes a sign extension to occur
+    cpu.write_register(HexagonRegister::D0, in_reg_startval)
+        .unwrap();
+    cpu.write_register(out_reg, out_reg_startval).unwrap();
+
+    let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
+
+    let out_reg_endval = cpu.read_register::<u64>(out_reg).unwrap();
+    assert_eq!(out_reg_endval, expected_output);
+}
+
+#[test_case(
+	r#"
+       0:	02 c4 80 80	8080c402 { 	r3:2 = vasrh(r1:0,#0x4) }
+	"#; "S2_asr_i_vh"
+)]
+#[test_case(
+	r#"
+       0:	02 c4 20 80	8020c402 { 	r3:2 = vasrh(r1:0,#0x4):raw }
+	"#; "S5_vasrhrnd"
+)]
+#[test_case(
+	r#"
+       0:	02 c4 40 80	8040c402 { 	r3:2 = vasrw(r1:0,#0x4) }
+	"#; "S2_asr_i_vw"
+)]
+#[test_case(
+	r#"
+       0:	41 c4 c0 88	88c0c441 { 	r1 = vasrw(r1:0,#0x4) }
+	"#; "S2_asr_i_svw_trun"
+)]
+fn vector_asr(objdump: &str) {}
+
+#[test_case(
+	r#"
+       0:	01 c4 00 8c	8c00c401 { 	r1 = asr(r0,#0x4) }
+	"#; "S2_asr_i_r"
+)]
+#[test_case(
+	r#"
+       0:	02 c4 40 8e	8e40c402 { 	r2 &= asr(r0,#0x4) }
+	"#; "S2_asr_i_r_and"
+)]
+#[test_case(
+	r#"
+       0:	82 c4 40 8e	8e40c482 { 	r2 |= asr(r0,#0x4) }
+	"#; "S2_asr_i_r_or"
+)]
+#[test_case(
+	r#"
+       0:	01 c4 40 8c	8c40c401 { 	r1 = asr(r0,#0x4):rnd }
+	"#; "S2_asr_i_r_rnd"
+)]
+fn arithmetic_shift_right_word(objdump: &str) {}
