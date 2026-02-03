@@ -520,35 +520,36 @@ fn wrong_sext_loads(
 }
 
 /// These should be sign-extended.
+// We want to set the "in" register such that a sign extension occurs
 #[test_case(
 	r#"
        0:	02 c4 00 80	8000c402 { 	r3:2 = asr(r1:0,#0x4) }
-	"#, 0xf800000000000000, HexagonRegister::D1, 0, 0xff80000000000000; "S2_asr_i_p"
+	"#, 0x8000000000000000, HexagonRegister::D1, 0, 0xf800000000000000; "S2_asr_i_p"
 )]
 #[test_case(
 	r#"
        0:	84 c4 00 82	8200c484 { 	r5:4 += asr(r1:0,#0x4) }
-	"#, 0xf800000000000000, HexagonRegister::D2, 0, 0xff80000000000000; "S2_asr_i_p_acc"
+	"#, 0x8000000000000000, HexagonRegister::D2, 0, 0xf800000000000000; "S2_asr_i_p_acc"
 )]
 #[test_case(
 	r#"
        0:	04 c4 00 82	8200c404 { 	r5:4 -= asr(r1:0,#0x4) }
-	"#, 0xf800000000000000, HexagonRegister::D2, 0xff00000000000000u64, 0xff80000000000000; "S2_asr_i_p_nac"
+	"#, 0x8000000000000000, HexagonRegister::D2, 0xf000000000000000u64, 0xf800000000000000; "S2_asr_i_p_nac"
 )]
 #[test_case(
 	r#"
        0:	04 c4 40 82	8240c404 { 	r5:4 &= asr(r1:0,#0x4) }
-	"#, 0xf800000000000000, HexagonRegister::D2, u64::MAX, 0xff80000000000000; "S2_asr_i_p_and"
+	"#, 0x8000000000000000, HexagonRegister::D2, u64::MAX, 0xf800000000000000; "S2_asr_i_p_and"
 )]
 #[test_case(
 	r#"
        0:	84 c4 40 82	8240c484 { 	r5:4 |= asr(r1:0,#0x4) }
-	"#, 0xf800000000000000, HexagonRegister::D2, 0, 0xff80000000000000; "S2_asr_i_p_or"
+	"#, 0x8000000000000000, HexagonRegister::D2, 0, 0xf800000000000000; "S2_asr_i_p_or"
 )]
 #[test_case(
 	r#"
        0:	e2 c4 c0 80	80c0c4e2 { 	r3:2 = asr(r1:0,#0x4):rnd }
-	"#, 0xf800000000000010, HexagonRegister::D1, 0, 0xffc0000000000001; "S2_asr_i_p_rnd"
+	"#, 0x8000000000000010, HexagonRegister::D1, 0, 0xfc00000000000001; "S2_asr_i_p_rnd"
 )]
 fn arithmetic_shift_right_doubleword(
     objdump: &str,
@@ -558,7 +559,6 @@ fn arithmetic_shift_right_doubleword(
     expected_output: u64,
 ) {
     let (mut cpu, mut mmu, mut ev) = setup_objdump(objdump);
-    // We want to set things such that causes a sign extension to occur
     cpu.write_register(HexagonRegister::D0, in_reg_startval)
         .unwrap();
     cpu.write_register(out_reg, out_reg_startval).unwrap();
@@ -595,21 +595,48 @@ fn vector_asr(objdump: &str) {}
 #[test_case(
 	r#"
        0:	01 c4 00 8c	8c00c401 { 	r1 = asr(r0,#0x4) }
-	"#; "S2_asr_i_r"
+	"#, 0x80000000, HexagonRegister::R1, 0, 0xf8000000; "S2_asr_i_r"
 )]
 #[test_case(
 	r#"
        0:	02 c4 40 8e	8e40c402 { 	r2 &= asr(r0,#0x4) }
-	"#; "S2_asr_i_r_and"
+	"#, 0x80000000, HexagonRegister::R2, u32::MAX, 0xf8000000; "S2_asr_i_r_and"
 )]
 #[test_case(
 	r#"
        0:	82 c4 40 8e	8e40c482 { 	r2 |= asr(r0,#0x4) }
-	"#; "S2_asr_i_r_or"
+	"#, 0x80000000, HexagonRegister::R2, 0, 0xf8000000; "S2_asr_i_r_or"
 )]
 #[test_case(
 	r#"
        0:	01 c4 40 8c	8c40c401 { 	r1 = asr(r0,#0x4):rnd }
-	"#; "S2_asr_i_r_rnd"
+	"#, 0x80000010, HexagonRegister::R1, 0, 0xfc000001; "S2_asr_i_r_rnd"
 )]
-fn arithmetic_shift_right_word(objdump: &str) {}
+#[test_case(
+	r#"
+       0:	82 c4 00 8e	8e00c482 { 	r2 += asr(r0,#0x4) }
+	"#, 0x80000000, HexagonRegister::R2, 0, 0xf8000000; "S2_asr_i_r_acc"
+)]
+#[test_case(
+	r#"
+       0:	02 c4 00 8e	8e00c402 { 	r2 -= asr(r0,#0x4) }
+	"#, 0x80000000, HexagonRegister::R2, 0xf0000000, 0xf8000000; "S2_asr_i_r_nac"
+)]
+fn arithmetic_shift_right_word(
+    objdump: &str,
+    in_reg_startval: u32,
+    out_reg: HexagonRegister,
+    out_reg_startval: u32,
+    expected_output: u32,
+) {
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(objdump);
+    cpu.write_register(HexagonRegister::R0, in_reg_startval)
+        .unwrap();
+    cpu.write_register(out_reg, out_reg_startval).unwrap();
+
+    let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
+
+    let out_reg_endval = cpu.read_register::<u32>(out_reg).unwrap();
+    assert_eq!(out_reg_endval, expected_output);
+}
