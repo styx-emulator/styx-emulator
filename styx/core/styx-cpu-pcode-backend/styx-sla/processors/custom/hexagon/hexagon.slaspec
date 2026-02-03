@@ -65264,7 +65264,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp0:4;
   tmp0 = S2_asr_i_r_Rs32;
   local tmp1:4;
-  tmp1 = tmp0 >> S2_asr_i_r_u5;
+  tmp1 = tmp0 s>> S2_asr_i_r_u5;
   S2_asr_i_r_Rd32 = tmp1;
 }
 
@@ -65396,7 +65396,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp0:4;
   tmp0 = S2_asr_i_r_acc_Rs32;
   local tmp1:4;
-  tmp1 = tmp0 >> S2_asr_i_r_acc_u5;
+  tmp1 = tmp0 s>> S2_asr_i_r_acc_u5;
   local tmp2:4;
   tmp2 = S2_asr_i_r_acc_Rx32 + tmp1;
   S2_asr_i_r_acc_Rx32d = tmp2;
@@ -65544,7 +65544,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp0:4;
   tmp0 = S2_asr_i_r_nac_Rs32;
   local tmp1:4;
-  tmp1 = tmp0 >> S2_asr_i_r_nac_u5;
+  tmp1 = tmp0 s>> S2_asr_i_r_nac_u5;
   local tmp2:4;
   tmp2 = S2_asr_i_r_nac_Rx32 - tmp1;
   S2_asr_i_r_nac_Rx32d = tmp2;
@@ -65818,7 +65818,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp0:4;
   tmp0 = S2_asr_i_r_and_Rs32;
   local tmp1:4;
-  tmp1 = tmp0 >> S2_asr_i_r_and_u5;
+  tmp1 = tmp0 s>> S2_asr_i_r_and_u5;
   local tmp2:4;
   tmp2 = S2_asr_i_r_and_Rx32 & tmp1;
   S2_asr_i_r_and_Rx32d = tmp2;
@@ -65887,7 +65887,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp0:4;
   tmp0 = S2_asr_i_r_or_Rs32;
   local tmp1:4;
-  tmp1 = tmp0 >> S2_asr_i_r_or_u5;
+  tmp1 = tmp0 s>> S2_asr_i_r_or_u5;
   local tmp2:4;
   tmp2 = S2_asr_i_r_or_Rx32 | tmp1;
   S2_asr_i_r_or_Rx32d = tmp2;
@@ -66117,11 +66117,11 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp1:8;
   local tmp2:4;
   tmp2 = S2_asr_i_r_rnd_Rs32;
-  tmp1 = zext(tmp2);
+  tmp1 = sext(tmp2);
   local tmp3:8;
   tmp3 = sext(S2_asr_i_r_rnd_u5);
   local tmp4:8;
-  tmp4 = tmp1 >> tmp3;
+  tmp4 = tmp1 s>> tmp3;
   local tmp5:4;
   tmp5 = 1;
   local tmp6:8;
