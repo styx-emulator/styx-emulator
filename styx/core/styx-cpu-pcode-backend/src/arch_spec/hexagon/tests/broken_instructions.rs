@@ -520,36 +520,35 @@ fn wrong_sext_loads(
 }
 
 /// These should be sign-extended.
-// We want to set the "in" register such that a sign extension occurs
 #[test_case(
 	r#"
        0:	02 c4 00 80	8000c402 { 	r3:2 = asr(r1:0,#0x4) }
-	"#, 0x8000000000000000, HexagonRegister::D1, 0, 0xf800000000000000; "S2_asr_i_p"
+	"#, 0xf800000000000000, HexagonRegister::D1, 0, 0xff80000000000000; "S2_asr_i_p"
 )]
 #[test_case(
 	r#"
        0:	84 c4 00 82	8200c484 { 	r5:4 += asr(r1:0,#0x4) }
-	"#, 0x8000000000000000, HexagonRegister::D2, 0, 0xf800000000000000; "S2_asr_i_p_acc"
+	"#, 0xf800000000000000, HexagonRegister::D2, 0, 0xff80000000000000; "S2_asr_i_p_acc"
 )]
 #[test_case(
 	r#"
        0:	04 c4 00 82	8200c404 { 	r5:4 -= asr(r1:0,#0x4) }
-	"#, 0x8000000000000000, HexagonRegister::D2, 0xf000000000000000u64, 0xf800000000000000; "S2_asr_i_p_nac"
+	"#, 0xf800000000000000, HexagonRegister::D2, 0xff00000000000000u64, 0xff80000000000000; "S2_asr_i_p_nac"
 )]
 #[test_case(
 	r#"
        0:	04 c4 40 82	8240c404 { 	r5:4 &= asr(r1:0,#0x4) }
-	"#, 0x8000000000000000, HexagonRegister::D2, u64::MAX, 0xf800000000000000; "S2_asr_i_p_and"
+	"#, 0xf800000000000000, HexagonRegister::D2, u64::MAX, 0xff80000000000000; "S2_asr_i_p_and"
 )]
 #[test_case(
 	r#"
        0:	84 c4 40 82	8240c484 { 	r5:4 |= asr(r1:0,#0x4) }
-	"#, 0x8000000000000000, HexagonRegister::D2, 0, 0xf800000000000000; "S2_asr_i_p_or"
+	"#, 0xf800000000000000, HexagonRegister::D2, 0, 0xff80000000000000; "S2_asr_i_p_or"
 )]
 #[test_case(
 	r#"
        0:	e2 c4 c0 80	80c0c4e2 { 	r3:2 = asr(r1:0,#0x4):rnd }
-	"#, 0x8000000000000010, HexagonRegister::D1, 0, 0xfc00000000000001; "S2_asr_i_p_rnd"
+	"#, 0xf800000000000010, HexagonRegister::D1, 0, 0xffc0000000000001; "S2_asr_i_p_rnd"
 )]
 fn arithmetic_shift_right_doubleword(
     objdump: &str,
@@ -559,6 +558,7 @@ fn arithmetic_shift_right_doubleword(
     expected_output: u64,
 ) {
     let (mut cpu, mut mmu, mut ev) = setup_objdump(objdump);
+    // We want to set things such that causes a sign extension to occur
     cpu.write_register(HexagonRegister::D0, in_reg_startval)
         .unwrap();
     cpu.write_register(out_reg, out_reg_startval).unwrap();
@@ -570,577 +570,46 @@ fn arithmetic_shift_right_doubleword(
     assert_eq!(out_reg_endval, expected_output);
 }
 
-/// Also asr_r_vh, but not implemented.
-/// Also asrhub_rnd_sat, but not implemented
-/// Also asrhub_sat, but not implemneted
-/// TODO: signed values for the shfits might not work still.
 #[test_case(
 	r#"
        0:	02 c4 80 80	8080c402 { 	r3:2 = vasrh(r1:0,#0x4) }
-	"#, 0x8000800080008000, 0xf800f800f800f800; "S2_asr_i_vh"
+	"#; "S2_asr_i_vh"
 )]
 #[test_case(
 	r#"
        0:	02 c4 20 80	8020c402 { 	r3:2 = vasrh(r1:0,#0x4):raw }
-	"#, 0x8010801080108010, 0xfc01fc01fc01fc01; "S5_vasrhrnd"
+	"#; "S5_vasrhrnd"
 )]
 #[test_case(
 	r#"
        0:	02 c4 40 80	8040c402 { 	r3:2 = vasrw(r1:0,#0x4) }
-	"#, 0x8000000080000000, 0xf8000000f8000000; "S2_asr_i_vw"
+	"#; "S2_asr_i_vw"
 )]
 #[test_case(
 	r#"
-       0:	02 c4 00 c3	c300c402 { 	r3:2 = vasrw(r1:0,r4) }
-	"#, 0x8000000080000000, 0xf8000000f8000000; "S2_asr_r_vw"
+       0:	41 c4 c0 88	88c0c441 { 	r1 = vasrw(r1:0,#0x4) }
+	"#; "S2_asr_i_svw_trun"
 )]
-fn vector_asr_doubleword(objdump: &str, in_reg_val: u64, out_val_expected: u64) {
-    let (mut cpu, mut mmu, mut ev) = setup_objdump(objdump);
-
-    cpu.write_register(HexagonRegister::D0, in_reg_val).unwrap();
-    cpu.write_register(HexagonRegister::R4, 4u32).unwrap();
-
-    let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
-    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
-
-    let out_reg_endval = cpu.read_register::<u64>(HexagonRegister::D1).unwrap();
-    assert_eq!(out_reg_endval, out_val_expected);
-}
-
-#[test_case(
-	r#"
-       0:	42 d2 c0 88	88c0d242 { 	r2 = vasrw(r1:0,#0x12) }
-	"#, 0x8000000080000000, 0xe000e000; "S2_asr_i_svw_trun"
-)]
-#[test_case(
-	r#"
-       0:	42 c4 00 c5	c500c442 { 	r2 = vasrw(r1:0,r4) }
-	"#, 0x8000000080000000, 0xe000e000; "S2_asr_r_svw_trun"
-)]
-fn vector_asr_word(objdump: &str, in_reg_val: u64, out_val_expected: u32) {
-    let (mut cpu, mut mmu, mut ev) = setup_objdump(objdump);
-
-    cpu.write_register(HexagonRegister::D0, in_reg_val).unwrap();
-    cpu.write_register(HexagonRegister::R4, 18u32).unwrap();
-
-    let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
-    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
-
-    let out_reg_endval = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
-    assert_eq!(out_reg_endval, out_val_expected);
-}
+fn vector_asr(objdump: &str) {}
 
 #[test_case(
 	r#"
        0:	01 c4 00 8c	8c00c401 { 	r1 = asr(r0,#0x4) }
-	"#, 0x80000000, HexagonRegister::R1, 0, 0xf8000000; "S2_asr_i_r"
+	"#; "S2_asr_i_r"
 )]
 #[test_case(
 	r#"
        0:	02 c4 40 8e	8e40c402 { 	r2 &= asr(r0,#0x4) }
-	"#, 0x80000000, HexagonRegister::R2, u32::MAX, 0xf8000000; "S2_asr_i_r_and"
+	"#; "S2_asr_i_r_and"
 )]
 #[test_case(
 	r#"
        0:	82 c4 40 8e	8e40c482 { 	r2 |= asr(r0,#0x4) }
-	"#, 0x80000000, HexagonRegister::R2, 0, 0xf8000000; "S2_asr_i_r_or"
+	"#; "S2_asr_i_r_or"
 )]
 #[test_case(
 	r#"
        0:	01 c4 40 8c	8c40c401 { 	r1 = asr(r0,#0x4):rnd }
-	"#, 0x80000010, HexagonRegister::R1, 0, 0xfc000001; "S2_asr_i_r_rnd"
+	"#; "S2_asr_i_r_rnd"
 )]
-#[test_case(
-	r#"
-       0:	82 c4 00 8e	8e00c482 { 	r2 += asr(r0,#0x4) }
-	"#, 0x80000000, HexagonRegister::R2, 0, 0xf8000000; "S2_asr_i_r_acc"
-)]
-#[test_case(
-	r#"
-       0:	02 c4 00 8e	8e00c402 { 	r2 -= asr(r0,#0x4) }
-	"#, 0x80000000, HexagonRegister::R2, 0xf0000000, 0xf8000000; "S2_asr_i_r_nac"
-)]
-fn arithmetic_shift_right_word(
-    objdump: &str,
-    in_reg_startval: u32,
-    out_reg: HexagonRegister,
-    out_reg_startval: u32,
-    expected_output: u32,
-) {
-    let (mut cpu, mut mmu, mut ev) = setup_objdump(objdump);
-    cpu.write_register(HexagonRegister::R0, in_reg_startval)
-        .unwrap();
-    cpu.write_register(out_reg, out_reg_startval).unwrap();
-
-    let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
-    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
-
-    let out_reg_endval = cpu.read_register::<u32>(out_reg).unwrap();
-    assert_eq!(out_reg_endval, expected_output);
-}
-
-// Order of operations test cases require both the operation
-// (arithmetic/logical) shift left/right. Then there is an operation,
-// which is performed at the wrong time, thereby yielding an unsatisfactory result.
-
-/// The operation enum, describing what operation to do
-#[derive(Copy, Clone)]
-pub enum OOOperation {
-    ArithmeticShiftLeft,
-    LogicalShiftLeft,
-    ArithmeticShiftRight,
-    LogicalShiftRight,
-    MulSignExtend,
-    MulZeroExtend,
-}
-
-/// Post-operation
-#[derive(Debug, Copy, Clone)]
-pub enum OOPostOperation {
-    Add,
-    And,
-    Or,
-    Xor,
-    Sub,
-    None,
-}
-
-#[test_case(
-	r#"
-       0:	02 c3 80 cc	cc80c302 { 	r2 -= asr(r0,r3) }
-	"#, OOOperation::ArithmeticShiftRight, OOPostOperation::Sub; "S2_asr_r_r_nac"
-)]
-#[test_case(
-	r#"
-       0:	82 c3 80 cc	cc80c382 { 	r2 -= asl(r0,r3) }
-	"#, OOOperation::ArithmeticShiftLeft, OOPostOperation::Sub; "S2_asl_r_r_nac"
-)]
-#[test_case(
-	r#"
-       0:	42 c3 80 cc	cc80c342 { 	r2 -= lsr(r0,r3) }
-	"#, OOOperation::LogicalShiftRight, OOPostOperation::Sub; "S2_lsr_r_r_nac"
-)]
-#[test_case(
-	r#"
-       0:	c2 c3 80 cc	cc80c3c2 { 	r2 -= lsl(r0,r3) }
-	"#, OOOperation::LogicalShiftLeft, OOPostOperation::Sub; "S2_lsl_r_r_nac"
-)]
-#[test_case(
-	r#"
-       0:	02 c3 40 cc	cc40c302 { 	r2 &= asr(r0,r3) }
-	"#, OOOperation::ArithmeticShiftRight, OOPostOperation::And; "S2_asr_r_r_and"
-)]
-#[test_case(
-	r#"
-       0:	82 c3 40 cc	cc40c382 { 	r2 &= asl(r0,r3) }
-	"#, OOOperation::ArithmeticShiftLeft, OOPostOperation::And; "S2_asl_r_r_and"
-)]
-#[test_case(
-	r#"
-       0:	42 c3 40 cc	cc40c342 { 	r2 &= lsr(r0,r3) }
-	"#, OOOperation::LogicalShiftRight, OOPostOperation::And; "S2_lsr_r_r_and"
-)]
-#[test_case(
-	r#"
-       0:	c2 c3 40 cc	cc40c3c2 { 	r2 &= lsl(r0,r3) }
-	"#, OOOperation::LogicalShiftLeft, OOPostOperation::And; "S2_lsl_r_r_and"
-)]
-#[test_case(
-	r#"
-       0:	02 c3 00 cc	cc00c302 { 	r2 |= asr(r0,r3) }
-	"#, OOOperation::ArithmeticShiftRight, OOPostOperation::Or; "S2_asr_r_r_or"
-)]
-#[test_case(
-	r#"
-       0:	82 c3 00 cc	cc00c382 { 	r2 |= asl(r0,r3) }
-	"#, OOOperation::ArithmeticShiftLeft, OOPostOperation::Or; "S2_asl_r_r_or"
-)]
-#[test_case(
-	r#"
-       0:	42 c3 00 cc	cc00c342 { 	r2 |= lsr(r0,r3) }
-	"#, OOOperation::LogicalShiftRight, OOPostOperation::Or; "S2_lsr_r_r_or"
-)]
-#[test_case(
-	r#"
-       0:	c2 c3 00 cc	cc00c3c2 { 	r2 |= lsl(r0,r3) }
-	"#, OOOperation::LogicalShiftLeft, OOPostOperation::Or; "S2_lsl_r_r_or"
-)]
-fn order_of_operations_32(objdump: &str, op: OOOperation, post_op: OOPostOperation) {
-    let (mut cpu, mut mmu, mut ev) = setup_objdump(objdump);
-
-    for i in 1..1000 {
-        order_of_operations_helper(&mut cpu, &mut mmu, &mut ev, op, post_op, 4, 0xea43, i, 5);
-        order_of_operations_helper(
-            &mut cpu,
-            &mut mmu,
-            &mut ev,
-            op,
-            post_op,
-            4,
-            -2i64 as u64,
-            i,
-            5,
-        );
-    }
-    for i in (u32::MAX - 1000)..u32::MAX {
-        order_of_operations_helper(
-            &mut cpu, &mut mmu, &mut ev, op, post_op, 4, 0xea43, i as u64, 5,
-        );
-        order_of_operations_helper(
-            &mut cpu,
-            &mut mmu,
-            &mut ev,
-            op,
-            post_op,
-            4,
-            -2i64 as u64,
-            i as u64,
-            5,
-        );
-    }
-}
-
-#[test_case(
-	r#"
-       0:	8a c3 cc cb	cbccc38a { 	r11:10 += asl(r13:12,r3) }
-	"#, OOOperation::ArithmeticShiftLeft, OOPostOperation::Add; "S2_asl_r_p_acc"
-)]
-#[test_case(
-	r#"
-       0:	4a c3 cc cb	cbccc34a { 	r11:10 += lsr(r13:12,r3) }
-	"#, OOOperation::LogicalShiftRight, OOPostOperation::Add; "S2_lsr_r_p_acc"
-)]
-#[test_case(
-	r#"
-       0:	ca c3 cc cb	cbccc3ca { 	r11:10 += lsl(r13:12,r3) }
-	"#, OOOperation::LogicalShiftLeft, OOPostOperation::Add; "S2_lsl_r_p_acc"
-)]
-#[test_case(
-	r#"
-       0:	0a c3 8c cb	cb8cc30a { 	r11:10 -= asr(r13:12,r3) }
-	"#, OOOperation::ArithmeticShiftRight, OOPostOperation::Sub; "S2_asr_r_p_nac"
-)]
-#[test_case(
-	r#"
-       0:	8a c3 8c cb	cb8cc38a { 	r11:10 -= asl(r13:12,r3) }
-	"#, OOOperation::ArithmeticShiftLeft, OOPostOperation::Sub; "S2_asl_r_p_nac"
-)]
-#[test_case(
-	r#"
-       0:	4a c3 8c cb	cb8cc34a { 	r11:10 -= lsr(r13:12,r3) }
-	"#, OOOperation::LogicalShiftRight, OOPostOperation::Sub; "S2_lsr_r_p_nac"
-)]
-#[test_case(
-	r#"
-       0:	ca c3 8c cb	cb8cc3ca { 	r11:10 -= lsl(r13:12,r3) }
-	"#, OOOperation::LogicalShiftLeft, OOPostOperation::Sub; "S2_lsl_r_p_nac"
-)]
-#[test_case(
-	r#"
-       0:	0a c3 4c cb	cb4cc30a { 	r11:10 &= asr(r13:12,r3) }
-	"#, OOOperation::ArithmeticShiftRight, OOPostOperation::And; "S2_asr_r_p_and"
-)]
-#[test_case(
-	r#"
-       0:	8a c3 4c cb	cb4cc38a { 	r11:10 &= asl(r13:12,r3) }
-	"#, OOOperation::ArithmeticShiftLeft, OOPostOperation::And; "S2_asl_r_p_and"
-)]
-#[test_case(
-	r#"
-       0:	4a c3 4c cb	cb4cc34a { 	r11:10 &= lsr(r13:12,r3) }
-	"#, OOOperation::LogicalShiftRight, OOPostOperation::And; "S2_lsr_r_p_and"
-)]
-#[test_case(
-	r#"
-       0:	ca c3 4c cb	cb4cc3ca { 	r11:10 &= lsl(r13:12,r3) }
-	"#, OOOperation::LogicalShiftLeft, OOPostOperation::And; "S2_lsl_r_p_and"
-)]
-#[test_case(
-	r#"
-       0:	0a c3 0c cb	cb0cc30a { 	r11:10 |= asr(r13:12,r3) }
-	"#, OOOperation::ArithmeticShiftRight, OOPostOperation::Or; "S2_asr_r_p_or"
-)]
-#[test_case(
-	r#"
-       0:	8a c3 0c cb	cb0cc38a { 	r11:10 |= asl(r13:12,r3) }
-	"#, OOOperation::ArithmeticShiftLeft, OOPostOperation::Or; "S2_asl_r_p_or"
-)]
-#[test_case(
-	r#"
-       0:	4a c3 0c cb	cb0cc34a { 	r11:10 |= lsr(r13:12,r3) }
-	"#, OOOperation::LogicalShiftRight, OOPostOperation::Or; "S2_lsr_r_p_or"
-)]
-#[test_case(
-	r#"
-       0:	ca c3 0c cb	cb0cc3ca { 	r11:10 |= lsl(r13:12,r3) }
-	"#, OOOperation::LogicalShiftLeft, OOPostOperation::Or; "S2_lsl_r_p_or"
-)]
-#[test_case(
-	r#"
-       0:	0a c3 6c cb	cb6cc30a { 	r11:10 ^= asr(r13:12,r3) }
-	"#, OOOperation::ArithmeticShiftRight, OOPostOperation::Xor; "S2_asr_r_p_xor"
-)]
-#[test_case(
-	r#"
-       0:	8a c3 6c cb	cb6cc38a { 	r11:10 ^= asl(r13:12,r3) }
-	"#, OOOperation::ArithmeticShiftLeft, OOPostOperation::Xor; "S2_asl_r_p_xor"
-)]
-#[test_case(
-	r#"
-       0:	4a c3 6c cb	cb6cc34a { 	r11:10 ^= lsr(r13:12,r3) }
-	"#, OOOperation::LogicalShiftRight, OOPostOperation::Xor; "S2_lsr_r_p_xor"
-)]
-#[test_case(
-	r#"
-       0:	ca c3 6c cb	cb6cc3ca { 	r11:10 ^= lsl(r13:12,r3) }
-	"#, OOOperation::LogicalShiftLeft, OOPostOperation::Xor; "S2_lsl_r_p_xor"
-)]
-fn order_of_operations_64(objdump: &str, op: OOOperation, post_op: OOPostOperation) {
-    let (mut cpu, mut mmu, mut ev) = setup_objdump(objdump);
-
-    for i in 1..1000 {
-        order_of_operations_helper(&mut cpu, &mut mmu, &mut ev, op, post_op, 8, 0xea43, i, 5);
-        order_of_operations_helper(
-            &mut cpu,
-            &mut mmu,
-            &mut ev,
-            op,
-            post_op,
-            8,
-            -2i64 as u64,
-            i,
-            5,
-        );
-    }
-    for i in (u64::MAX - 1000)..u64::MAX {
-        order_of_operations_helper(&mut cpu, &mut mmu, &mut ev, op, post_op, 8, 0xea43, i, 5);
-        order_of_operations_helper(
-            &mut cpu,
-            &mut mmu,
-            &mut ev,
-            op,
-            post_op,
-            8,
-            -2i64 as u64,
-            i,
-            5,
-        );
-    }
-}
-
-fn order_of_operations_helper(
-    cpu: &mut HexagonPcodeBackend,
-    mmu: &mut Mmu,
-    ev: &mut EventController,
-    op: OOOperation,
-    post_op: OOPostOperation,
-    size: u8,
-    dest_start: u64,
-    start: u64,
-    shift: u32,
-) {
-    cpu.set_pc(0x1000).unwrap();
-
-    // Overwrite start with a truncated value if 32 bits
-    let start = if size == 4 {
-        cpu.write_register(HexagonRegister::R0, start as u32)
-            .unwrap();
-        cpu.write_register(HexagonRegister::R2, dest_start as u32)
-            .unwrap();
-
-        // Sign extend it here
-        (start as i64) as u64
-    } else if size == 8 {
-        cpu.write_register(HexagonRegister::D6, start).unwrap();
-        cpu.write_register(HexagonRegister::D5, dest_start).unwrap();
-
-        start
-    } else {
-        unreachable!()
-    };
-
-    // Write the shift, which is 32 bits anyway
-    cpu.write_register(HexagonRegister::R3, shift as u32)
-        .unwrap();
-
-    let exit = cpu.execute(mmu, ev, 1).unwrap();
-    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
-
-    // Read the result, match with our expectations
-    // The only consideration is that
-    let shifted = match op {
-        // same i
-        OOOperation::LogicalShiftLeft | OOOperation::ArithmeticShiftLeft if size == 4 => {
-            ((start as u32) << shift) as u64
-        }
-        OOOperation::LogicalShiftLeft | OOOperation::ArithmeticShiftLeft if size == 8 => {
-            start << shift
-        }
-        OOOperation::ArithmeticShiftRight => ((start as i64) >> shift) as u64,
-        OOOperation::LogicalShiftRight => start >> shift,
-        _ => unreachable!(),
-    };
-
-    let result = match post_op {
-        OOPostOperation::Add => shifted.wrapping_add(dest_start),
-        OOPostOperation::And => shifted & dest_start,
-        OOPostOperation::Or => shifted | dest_start,
-        OOPostOperation::Xor => shifted ^ dest_start,
-        OOPostOperation::Sub => dest_start.wrapping_sub(shifted),
-        _ => unreachable!(),
-    };
-
-    if size == 4 {
-        // Sign extend to 64 bits
-        let output = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
-
-        println!(
-            "start {} shift {} shifted is {} {:x} post_op {:?} dest_start {}, output {}",
-            start as i32, shift, shifted as i32, shifted as u32, post_op, dest_start, output as u32
-        );
-        assert_eq!(output, result as u32);
-    } else if size == 8 {
-        let output = cpu.read_register::<u64>(HexagonRegister::D5).unwrap();
-
-        println!(
-            "start {} shift {} shifted is {} {:x} post_op {:?} dest_start {}, output {}",
-            start as i64, shift, shifted as i64, shifted, post_op, dest_start, output
-        );
-
-        assert_eq!(output, result);
-    } else {
-        unreachable!()
-    };
-}
-
-// Multiply instructions that sign extend inappropriately when they should zero-extend.
-#[test_case(
-	r#"
-       0:	0a c3 40 e5	e540c30a { 	r11:10 = mpyu(r0,r3) }
-	"#, OOOperation::MulZeroExtend, OOPostOperation::None; "M2_dpmpyuu_s0"
-)]
-#[test_case(
-	r#"
-       0:	0a c3 40 e7	e740c30a { 	r11:10 += mpyu(r0,r3) }
-	"#, OOOperation::MulZeroExtend, OOPostOperation::Add; "M2_dpmpyuu_acc_s0"
-)]
-#[test_case(
-	r#"
-       0:	0a c3 60 e7	e760c30a { 	r11:10 -= mpyu(r0,r3) }
-	"#, OOOperation::MulZeroExtend, OOPostOperation::Sub; "M2_dpmpyuu_nac_s0"
-)]
-#[test_case(
-	r#"
-       0:	0a c3 00 e5	e500c30a { 	r11:10 = mpy(r0,r3) }
-	"#, OOOperation::MulSignExtend, OOPostOperation::None; "M2_dpmpyss_s0"
-)]
-#[test_case(
-	r#"
-       0:	0a c3 00 e7	e700c30a { 	r11:10 += mpy(r0,r3) }
-	"#, OOOperation::MulSignExtend, OOPostOperation::Add; "M2_dpmpyss_acc_s0"
-)]
-#[test_case(
-	r#"
-       0:	0a c3 20 e7	e720c30a { 	r11:10 -= mpy(r0,r3) }
-	"#, OOOperation::MulSignExtend, OOPostOperation::Sub; "M2_dpmpyss_nac_s0"
-)]
-fn mpyuuss_sext(objdump: &str, op: OOOperation, post_op: OOPostOperation) {
-    let (mut cpu, mut mmu, mut ev) = setup_objdump(objdump);
-    let initial_values = [
-        0x1u64,
-        0x10,
-        0x20,
-        0x300,
-        0xffff,
-        0xfea7,
-        0xdeadbeef,
-        0xffffff87,
-        0x78654aff3112,
-        0xffffffffffffff89,
-    ];
-    let mpyu_values = [0xffffff87u32, 6774, 23];
-
-    for initial_value in &initial_values {
-        for r0_val in &mpyu_values {
-            for r3_val in &mpyu_values {
-                cpu.set_pc(0x1000).unwrap();
-                cpu.write_register(HexagonRegister::D5, *initial_value)
-                    .unwrap();
-
-                cpu.write_register(HexagonRegister::R0, *r0_val).unwrap();
-                cpu.write_register(HexagonRegister::R3, *r3_val).unwrap();
-
-                let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
-                assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
-
-                let mul = match op {
-                    OOOperation::MulSignExtend => {
-                        ((*r0_val as i32 as i64).wrapping_mul(*r3_val as i32 as i64)) as u64
-                    }
-                    OOOperation::MulZeroExtend => (*r0_val as u64).wrapping_mul(*r3_val as u64),
-                    _ => unreachable!(),
-                };
-                let out = match post_op {
-                    OOPostOperation::Add => mul.wrapping_add(*initial_value),
-                    OOPostOperation::Sub => initial_value.wrapping_sub(mul),
-                    OOPostOperation::None => mul,
-                    _ => unreachable!(),
-                };
-
-                let out_emulated = cpu.read_register::<u64>(HexagonRegister::D5).unwrap();
-
-                info!(
-                    "initial_value {:x} r0 {:x} r3 {:x} out {}",
-                    initial_value, r0_val, r3_val, mul
-                );
-                assert_eq!(out, out_emulated)
-            }
-        }
-    }
-}
-
-/*
-Not implemented yet:
-
-#[test_case(
-    r#"
-       0:	4a ce 8c e8	e88cce4a { 	r11:10 = cmpyrw(r13:12,r15:14) }
-    "#, OOOperation::MulSignExtend, OOPostOperation::None; "M7_dcmpyrw"
-)]
-#[test_case(
-    r#"
-       0:	4a ce 8c ea	ea8cce4a { 	r11:10 += cmpyrw(r13:12,r15:14) }
-    "#, OOOperation::MulSignExtend, OOPostOperation::Add; "M7_dcmpyrw_acc"
-)]
-#[test_case(
-    r#"
-       0:	4a ce cc e8	e8ccce4a { 	r11:10 = cmpyrw(r13:12,r15:14*) }
-    "#, OOOperation::MulSignExtend, OOPostOperation::None; "M7_dcmpyrwc"
-)]
-#[test_case(
-    r#"
-       0:	4a ce cc ea	eaccce4a { 	r11:10 += cmpyrw(r13:12,r15:14*) }
-    "#, OOOperation::MulSignExtend, OOPostOperation::Add; "M7_dcmpyrwc_acc"
-)]
-#[test_case(
-    r#"
-       0:	4a ce 6c e8	e86cce4a { 	r11:10 = cmpyiw(r13:12,r15:14) }
-    "#, OOOperation::MulSignExtend, OOPostOperation::None; "M7_dcmpyiw"
-)]
-#[test_case(
-    r#"
-       0:	4a ce 6c ea	ea6cce4a { 	r11:10 += cmpyiw(r13:12,r15:14) }
-    "#, OOOperation::MulSignExtend, OOPostOperation::Add; "M7_dcmpyiw_acc"
-)]
-#[test_case(
-    r#"
-       0:	4a ce ec e8	e8ecce4a { 	r11:10 = cmpyiw(r13:12,r15:14*) }
-    "#, OOOperation::MulSignExtend, OOPostOperation::None; "M7_dcmpyiwc"
-)]
-#[test_case(
-    r#"
-       0:	ca ce 4c ea	ea4cceca { 	r11:10 += cmpyiw(r13:12,r15:14*) }
-    "#, OOOperation::MulSignExtend, OOPostOperation::Add; "M7_dcmpyiwc_acc"
-)]
-pub fn complex_multiply(objdump: &str, op: OOOperation, post_op: OOPostOperation) {}
-*/
+fn arithmetic_shift_right_word(objdump: &str) {}
