@@ -570,27 +570,65 @@ fn arithmetic_shift_right_doubleword(
     assert_eq!(out_reg_endval, expected_output);
 }
 
+/// Also asr_r_vh, but not implemented.
+/// Also asrhub_rnd_sat, but not implemented
+/// Also asrhub_sat, but not implemneted
+/// TODO: signed values for the shfits might not work still.
 #[test_case(
 	r#"
        0:	02 c4 80 80	8080c402 { 	r3:2 = vasrh(r1:0,#0x4) }
-	"#; "S2_asr_i_vh"
+	"#, 0x8000800080008000, 0xf800f800f800f800; "S2_asr_i_vh"
 )]
 #[test_case(
 	r#"
        0:	02 c4 20 80	8020c402 { 	r3:2 = vasrh(r1:0,#0x4):raw }
-	"#; "S5_vasrhrnd"
+	"#, 0x8010801080108010, 0xfc01fc01fc01fc01; "S5_vasrhrnd"
 )]
 #[test_case(
 	r#"
        0:	02 c4 40 80	8040c402 { 	r3:2 = vasrw(r1:0,#0x4) }
-	"#; "S2_asr_i_vw"
+	"#, 0x8000000080000000, 0xf8000000f8000000; "S2_asr_i_vw"
 )]
 #[test_case(
 	r#"
-       0:	41 c4 c0 88	88c0c441 { 	r1 = vasrw(r1:0,#0x4) }
-	"#; "S2_asr_i_svw_trun"
+       0:	02 c4 00 c3	c300c402 { 	r3:2 = vasrw(r1:0,r4) }
+	"#, 0x8000000080000000, 0xf8000000f8000000; "S2_asr_r_vw"
 )]
-fn vector_asr(objdump: &str) {}
+fn vector_asr_doubleword(objdump: &str, in_reg_val: u64, out_val_expected: u64) {
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(objdump);
+
+    cpu.write_register(HexagonRegister::D0, in_reg_val).unwrap();
+    cpu.write_register(HexagonRegister::R4, 4u32).unwrap();
+
+    let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
+
+    let out_reg_endval = cpu.read_register::<u64>(HexagonRegister::D1).unwrap();
+    assert_eq!(out_reg_endval, out_val_expected);
+}
+
+#[test_case(
+	r#"
+       0:	42 d2 c0 88	88c0d242 { 	r2 = vasrw(r1:0,#0x12) }
+	"#, 0x8000000080000000, 0xe000e000; "S2_asr_i_svw_trun"
+)]
+#[test_case(
+	r#"
+       0:	42 c4 00 c5	c500c442 { 	r2 = vasrw(r1:0,r4) }
+	"#, 0x8000000080000000, 0xe000e000; "S2_asr_r_svw_trun"
+)]
+fn vector_asr_word(objdump: &str, in_reg_val: u64, out_val_expected: u32) {
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(objdump);
+
+    cpu.write_register(HexagonRegister::D0, in_reg_val).unwrap();
+    cpu.write_register(HexagonRegister::R4, 18u32).unwrap();
+
+    let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
+
+    let out_reg_endval = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
+    assert_eq!(out_reg_endval, out_val_expected);
+}
 
 #[test_case(
 	r#"

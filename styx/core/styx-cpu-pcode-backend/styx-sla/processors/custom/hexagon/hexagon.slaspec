@@ -69220,7 +69220,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp17 = tmp14 & tmp16;
   tmp9 = tmp17:2;
   local tmp18:4;
-  tmp18 = zext(tmp9);
+  tmp18 = sext(tmp9);
   local tmp19:4;
   tmp19 = tmp18 >> S2_asr_i_vh_u4;
   local tmp20:4;
@@ -69277,7 +69277,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp45 = tmp42 & tmp44;
   tmp37 = tmp45:2;
   local tmp46:4;
-  tmp46 = zext(tmp37);
+  tmp46 = sext(tmp37);
   local tmp47:4;
   tmp47 = tmp46 >> S2_asr_i_vh_u4;
   local tmp48:4;
@@ -69334,7 +69334,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp73 = tmp70 & tmp72;
   tmp65 = tmp73:2;
   local tmp74:4;
-  tmp74 = zext(tmp65);
+  tmp74 = sext(tmp65);
   local tmp75:4;
   tmp75 = tmp74 >> S2_asr_i_vh_u4;
   local tmp76:4;
@@ -69391,7 +69391,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp101 = tmp98 & tmp100;
   tmp93 = tmp101:2;
   local tmp102:4;
-  tmp102 = zext(tmp93);
+  tmp102 = sext(tmp93);
   local tmp103:4;
   tmp103 = tmp102 >> S2_asr_i_vh_u4;
   local tmp104:4;
@@ -69922,7 +69922,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp17 = tmp14 & tmp16;
   tmp9 = tmp17:2;
   local tmp18:4;
-  tmp18 = zext(tmp9);
+  tmp18 = sext(tmp9);
   local tmp19:4;
   tmp19 = tmp18 >> S5_vasrhrnd_u4;
   local tmp20:4;
@@ -69987,7 +69987,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp49 = tmp46 & tmp48;
   tmp41 = tmp49:2;
   local tmp50:4;
-  tmp50 = zext(tmp41);
+  tmp50 = sext(tmp41);
   local tmp51:4;
   tmp51 = tmp50 >> S5_vasrhrnd_u4;
   local tmp52:4;
@@ -70052,7 +70052,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp81 = tmp78 & tmp80;
   tmp73 = tmp81:2;
   local tmp82:4;
-  tmp82 = zext(tmp73);
+  tmp82 = sext(tmp73);
   local tmp83:4;
   tmp83 = tmp82 >> S5_vasrhrnd_u4;
   local tmp84:4;
@@ -70117,7 +70117,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp113 = tmp110 & tmp112;
   tmp105 = tmp113:2;
   local tmp114:4;
-  tmp114 = zext(tmp105);
+  tmp114 = sext(tmp105);
   local tmp115:4;
   tmp115 = tmp114 >> S5_vasrhrnd_u4;
   local tmp116:4;
@@ -70189,7 +70189,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp16:8;
   tmp16 = tmp14 & tmp15;
   tmp9 = tmp16:4;
-  tmp8 = zext(tmp9);
+  tmp8 = sext(tmp9);
   local tmp17:8;
   tmp17 = sext(S2_asr_i_vw_u5);
   local tmp18:8;
@@ -70244,7 +70244,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp43:8;
   tmp43 = tmp41 & tmp42;
   tmp36 = tmp43:4;
-  tmp35 = zext(tmp36);
+  tmp35 = sext(tmp36);
   local tmp44:8;
   tmp44 = sext(S2_asr_i_vw_u5);
   local tmp45:8;
@@ -70307,7 +70307,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp19:8;
   tmp19 = tmp17 & tmp18;
   tmp12 = tmp19:4;
-  tmp11 = zext(tmp12);
+  tmp11 = sext(tmp12);
   local tmp20:8;
   tmp20 = sext(S2_asr_i_svw_trun_u5);
   local tmp21:8;
@@ -70386,7 +70386,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp58:8;
   tmp58 = tmp56 & tmp57;
   tmp51 = tmp58:4;
-  tmp50 = zext(tmp51);
+  tmp50 = sext(tmp51);
   local tmp59:8;
   tmp59 = sext(S2_asr_i_svw_trun_u5);
   local tmp60:8;
@@ -70518,7 +70518,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp36 = tmp43:4;
   tmp35 = zext(tmp36);
   tmp34 = tmp35:4;
-  tmp33 = zext(tmp34);
+  tmp33 = sext(tmp34);
   local tmp44:4;
   tmp44 = 1;
   local tmp45:4;
@@ -70750,7 +70750,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp149 = tmp156:4;
   tmp148 = zext(tmp149);
   tmp147 = tmp148:4;
-  tmp146 = zext(tmp147);
+  tmp146 = sext(tmp147);
   local tmp157:4;
   tmp157 = 1;
   local tmp158:4;
@@ -71210,7 +71210,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp33 = tmp40:4;
   tmp32 = zext(tmp33);
   tmp31 = tmp32:4;
-  tmp30 = zext(tmp31);
+  tmp30 = sext(tmp31);
   local tmp41:4;
   tmp41 = 1;
   local tmp42:4;
@@ -71418,7 +71418,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp134 = tmp141:4;
   tmp133 = zext(tmp134);
   tmp132 = tmp133:4;
-  tmp131 = zext(tmp132);
+  tmp131 = sext(tmp132);
   local tmp142:4;
   tmp142 = 1;
   local tmp143:4;
