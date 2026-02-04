@@ -104,6 +104,44 @@ pub fn testbit_reg_oob() {
     assert_eq!(p0, 0x00);
 }
 
+// TODO: what if the r1 value is negative?
+#[test_case(0x1000, 0x5;"toggle_on")]
+#[test_case(0x1020, 0x5;"toggle_off")]
+pub fn togglebit_r(r0: u32, r1: u32) {
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(
+        r#"
+       0:	82 c1 80 c6	c680c182 { 	r2 = togglebit(r0,r1) }
+"#,
+    );
+
+    cpu.write_register(HexagonRegister::R1, r1).unwrap();
+    cpu.write_register(HexagonRegister::R0, r0).unwrap();
+    let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
+
+    let r2 = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
+    assert_eq!(r2, r0 ^ (1 << r1));
+}
+
+// TODO: what if the r1 value is negative?
+#[test_case(0x1020, 0x5, 0x1000;"already_set")]
+#[test_case(0x1000, 0x5, 0x1000;"not_set")]
+pub fn clearbit_r(r0: u32, r1: u32, expected: u32) {
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(
+        r#"
+       0:	42 c1 80 c6	c680c142 { 	r2 = clrbit(r0,r1) }
+"#,
+    );
+
+    cpu.write_register(HexagonRegister::R1, r1).unwrap();
+    cpu.write_register(HexagonRegister::R0, r0).unwrap();
+    let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
+
+    let r2 = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
+    assert_eq!(r2, expected);
+}
+
 #[test]
 pub fn asl_sub() {
     let (mut cpu, mut mmu, mut ev) = setup_objdump(
