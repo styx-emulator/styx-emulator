@@ -68879,154 +68879,30 @@ gp: reloc is epsilon [ reloc = 0; ] {
 }
 
 :S2_togglebit_r S2_togglebit_r_Rd32 S2_togglebit_r_Rs32 S2_togglebit_r_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b6 = 0 & b7 = 1 & b22 = 0 & b23 = 1 & b24 = 0 & b25 = 1 & b26 = 1 & b27 = 0 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & S2_togglebit_r_Rd32 & S2_togglebit_r_Rs32 & S2_togglebit_r_Rt32 {
-  local tmp0:4;
-  tmp0 = 1;
-  local tmp1:4;
-  tmp1 = 7;
-  local tmp2:4;
-  tmp2 = tmp0 << tmp1;
-  local tmp3:4;
-  tmp3 = 1;
-  local tmp4:4;
-  tmp4 = tmp2 - tmp3;
-  local tmp5:4;
-  tmp5 = S2_togglebit_r_Rt32 & tmp4;
-  local tmp6:4;
-  tmp6 = 1;
-  local tmp7:4;
-  tmp7 = 7;
-  local tmp8:4;
-  tmp8 = 1;
-  local tmp9:4;
-  tmp9 = tmp7 - tmp8;
-  local tmp10:4;
-  tmp10 = tmp6 << tmp9;
-  local tmp11:4;
-  tmp11 = tmp5 ^ tmp10;
-  local tmp12:4;
-  tmp12 = 1;
-  local tmp13:4;
-  tmp13 = 7;
-  local tmp14:4;
-  tmp14 = 1;
-  local tmp15:4;
-  tmp15 = tmp13 - tmp14;
-  local tmp16:4;
-  tmp16 = tmp12 << tmp15;
-  local tmp17:4;
-  tmp17 = tmp11 - tmp16;
-  local tmp18:4;
-  tmp18 = 0;
-  local tmp19:1;
-  tmp19 = tmp17 s> tmp18;
-  local tmp20:4;
-  tmp20 = zext(tmp19);
-  local tmp21:4;
-  tmp21 = S2_togglebit_r_Rs32 ^ tmp20;
-  local tmp22:1;
-  tmp22 = tmp21:1;
-  if (tmp22) goto <t_branch_24>;
-  goto <f_branch_24>;
-<t_branch_24>
-  local tmp24:8;
-  local tmp25:4;
-  local tmp26:4;
-  tmp26 = 1;
-  tmp25 = tmp26;
-  tmp24 = sext(tmp25);
-  local tmp27:4;
-  tmp27 = 1;
-  local tmp28:4;
-  tmp28 = 7;
-  local tmp29:4;
-  tmp29 = tmp27 << tmp28;
-  local tmp30:4;
-  tmp30 = 1;
-  local tmp31:4;
-  tmp31 = tmp29 - tmp30;
-  local tmp32:4;
-  tmp32 = S2_togglebit_r_Rt32 & tmp31;
-  local tmp33:4;
-  tmp33 = 1;
-  local tmp34:4;
-  tmp34 = 7;
-  local tmp35:4;
-  tmp35 = 1;
-  local tmp36:4;
-  tmp36 = tmp34 - tmp35;
-  local tmp37:4;
-  tmp37 = tmp33 << tmp36;
-  local tmp38:4;
-  tmp38 = tmp32 ^ tmp37;
-  local tmp39:4;
-  tmp39 = 1;
-  local tmp40:4;
-  tmp40 = 7;
-  local tmp41:4;
-  tmp41 = 1;
-  local tmp42:4;
-  tmp42 = tmp40 - tmp41;
-  local tmp43:4;
-  tmp43 = tmp39 << tmp42;
-  local tmp44:4;
-  tmp44 = tmp38 - tmp43;
-  local tmp45:8;
-  tmp45 = zext(tmp44);
-  local tmp46:8;
-  tmp46 = tmp24 << tmp45;
-  local tmp47:8;
-  tmp47 = tmp46;
-  goto <done_24>;
-<f_branch_24>
-  local tmp48:8;
-  local tmp49:4;
-  local tmp50:4;
-  tmp50 = 1;
-  tmp49 = tmp50;
-  tmp48 = sext(tmp49);
-  local tmp51:4;
-  tmp51 = 1;
-  local tmp52:4;
-  tmp52 = 7;
-  local tmp53:4;
-  tmp53 = tmp51 << tmp52;
-  local tmp54:4;
-  tmp54 = 1;
-  local tmp55:4;
-  tmp55 = tmp53 - tmp54;
-  local tmp56:4;
-  tmp56 = S2_togglebit_r_Rt32 & tmp55;
-  local tmp57:4;
-  tmp57 = 1;
-  local tmp58:4;
-  tmp58 = 7;
-  local tmp59:4;
-  tmp59 = 1;
-  local tmp60:4;
-  tmp60 = tmp58 - tmp59;
-  local tmp61:4;
-  tmp61 = tmp57 << tmp60;
-  local tmp62:4;
-  tmp62 = tmp56 ^ tmp61;
-  local tmp63:4;
-  tmp63 = 1;
-  local tmp64:4;
-  tmp64 = 7;
-  local tmp65:4;
-  tmp65 = 1;
-  local tmp66:4;
-  tmp66 = tmp64 - tmp65;
-  local tmp67:4;
-  tmp67 = tmp63 << tmp66;
-  local tmp68:4;
-  tmp68 = tmp62 - tmp67;
-  local tmp69:8;
-  tmp69 = zext(tmp68);
-  local tmp70:8;
-  tmp70 = tmp48 >> tmp69;
-  tmp47 = tmp70;
-<done_24>
-  S2_togglebit_r_Rd32 = tmp47:4;
+  local sxt_rt:4;
+  local res:4;
+
+  # Sign extend rt 
+  # From https://stackoverflow.com/questions/5814072/sign-extend-a-nine-bit-number-in-c
+  local m:4;
+  m = (1 << (7-1));
+  sxt_rt = (S2_togglebit_r_Rt32 ^ m) - m;
+
+  local sxt_rt_gt;
+  sxt_rt_gt = sxt_rt s> 0;
+  if (sxt_rt_gt) goto <rt_gt_zero>;
+  goto <rt_lt_zero>;
+
+<rt_gt_zero>
+  res = 1 << sxt_rt;
+  goto <done>;
+
+<rt_lt_zero>
+  res = 1 >> sxt_rt;
+  goto <done>;
+
+<done>
+  S2_togglebit_r_Rd32 = S2_togglebit_r_Rs32 ^ res;
 }
 
 :S2_clrbit_r S2_clrbit_r_Rd32 S2_clrbit_r_Rs32 S2_clrbit_r_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b6 = 1 & b7 = 0 & b22 = 0 & b23 = 1 & b24 = 0 & b25 = 1 & b26 = 1 & b27 = 0 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & S2_clrbit_r_Rd32 & S2_clrbit_r_Rs32 & S2_clrbit_r_Rt32 {
