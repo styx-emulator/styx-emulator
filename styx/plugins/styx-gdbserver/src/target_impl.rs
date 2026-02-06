@@ -361,7 +361,7 @@ where
             }
 
             // step until the range, instead of attempting to do
-            // a bunch of fun math because variable length instruction (VLIW)
+            // a bunch of fun math because variable length instruction
             // architectures, we just single-step until the range is met.
             // TODO: add a temp breakpoint or breakpoint at the end of the
             // range and then remove it when hit
