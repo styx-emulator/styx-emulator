@@ -470,6 +470,12 @@ impl CpuBackend for PcodeBackend {
         if reg == pc_reg_variant {
             self.set_pc(sized_value.to_u64().with_context(|| "too big")?)?;
         } else {
+            if !reg.register_value_enum().size_equal(value) {
+                return Err(WriteRegisterError::RegisterBadSize(
+                    value.to_byte_size() as u32,
+                    reg,
+                ));
+            }
             RegisterManager::write_register(self, reg, sized_value)
                 .with_context(|| "could not write_register_raw")?;
         }
@@ -571,6 +577,20 @@ mod tests {
         cpu.write_register(Ppc32Register::R0, 10u32).unwrap();
         let val = cpu.read_register::<u32>(Ppc32Register::R0).unwrap();
         assert_eq!(val, 10);
+    }
+
+    #[test]
+    fn test_register_read_write_wrong_size() {
+        let mut cpu =
+            PcodeBackend::new_engine(Arch::Ppc32, Ppc32Variants::Ppc405, ArchEndian::BigEndian);
+
+        let reg = Ppc32Register::R0.conv::<ArchRegister>();
+        let res = cpu.write_register(reg, 10u64);
+        assert!(res.is_err());
+        let res = cpu.write_register(reg, 10u16);
+        assert!(res.is_err());
+        let res = cpu.read_register::<u64>(reg);
+        assert!(res.is_err());
     }
 
     /// test writing/reading to pc using set_pc()/pc() as well as read/write_register
