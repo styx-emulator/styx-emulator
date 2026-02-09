@@ -273,7 +273,7 @@ impl QTimerFrame {
     /// in B8.1.5, is equal to compare_value - (counter - offset). Since we don't
     /// have the virtual timer value seemingly, we can ignore the offset.
     fn timer_value(&mut self) -> u32 {
-        (self.compare_value - self.counter) as u32
+        (self.compare_value.wrapping_sub(self.counter)) as u32
     }
 
     /// NOTE WARN: this should not overwrite a previously set value for TimerValue!

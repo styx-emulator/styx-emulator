@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! # Styx-Processors
 
+use clade::Clade;
 use l2vic::L2Vic;
 use qtimer::QTimer;
 use styx_core::arch::hexagon::HexagonRegister;
@@ -22,6 +23,7 @@ use styx_core::{
 };
 use tlb::HexagonTlb;
 
+mod clade;
 mod exception;
 mod l2vic;
 mod qtimer;
@@ -79,7 +81,8 @@ impl ProcessorImpl for HexagonBuilder {
 
         let l2vic = Box::new(L2Vic::default());
 
-        let peripherals: Vec<Box<dyn Peripheral>> = vec![Box::new(QTimer::default())];
+        let peripherals: Vec<Box<dyn Peripheral>> =
+            vec![Box::new(QTimer::default()), Box::new(Clade::default())];
 
         let mut hints = LoaderHints::new();
         hints.insert("arch".to_string().into_boxed_str(), Box::new(Arch::Hexagon));
