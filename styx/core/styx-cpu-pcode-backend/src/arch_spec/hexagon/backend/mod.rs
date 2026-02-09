@@ -685,6 +685,7 @@ impl HexagonPcodeBackend {
                     // Don't increment PC, jump to next instruction
                 }
                 PCodeStateChange::Exception(irqn) => {
+                    info!("load_store_slot_info is {load_store_slot_info:?} order is {order:?}");
                     let slot = load_store_slot_info[order.expect("could not get load/store order")]
                         .expect("load/store instruction does not have a slot!");
                     error!("exception: slot is {slot}");
@@ -699,6 +700,13 @@ impl HexagonPcodeBackend {
                     info!("slot is {slot}, badva is {badva:x}");
 
                     if irqn == HexagonInterruptType::TlbMissX as i32 || slot == 0 {
+                        info!(
+                            "writing slot0 badva0/badva1, badva0 offset is {:x?}",
+                            self.pcode_generator
+                                .get_register(&HexagonRegister::BadVa0.into())
+                                .unwrap()
+                                .offset
+                        );
                         self.write_register(HexagonRegister::BadVa0, badva)?;
                         self.write_register(HexagonRegister::BadVa1, 0xbadabadau32)?;
 
@@ -706,6 +714,7 @@ impl HexagonPcodeBackend {
                         ssr.set_v1(false);
                         ssr.set_bvs(false);
                     } else if slot == 1 {
+                        info!("writing slot1 badva0/badva1");
                         self.write_register(HexagonRegister::BadVa1, badva)?;
                         self.write_register(HexagonRegister::BadVa0, 0xbadabadau32)?;
 
@@ -1100,10 +1109,12 @@ impl HexagonPcodeBackend {
         //
         // If the slot info is 1, then we are not done and check the
         // next instruction.
+        //
+        // TODO: Just make sure this works with packet reordering.
         let mut load_store_slot_info: SmallVec<[Option<usize>; 4]> = smallvec![];
+        let mut current_slot = None;
         for (i, ins) in full_pcodes.iter().enumerate() {
             let mut this_slot_info = None;
-            let mut current_slot = None;
             for pcode in ins.iter() {
                 if matches!(pcode.opcode, Opcode::Load | Opcode::Store) {
                     trace!("instruction {i}/{} is a load/store", full_pcodes.len());
@@ -1130,6 +1141,7 @@ impl HexagonPcodeBackend {
                     match decode_attribs::loadstore_slot(ins.raw_value()) {
                         Some(SlotInfo::Slots0) => {
                             this_slot_info = Some(0);
+                            trace!("slot0 this_slot_info");
                         }
                         Some(SlotInfo::Slots1 | SlotInfo::Slots01) => {
                             let new_slot_num = match current_slot {
@@ -1137,12 +1149,17 @@ impl HexagonPcodeBackend {
                                 // Load/store always starts with slot 1
                                 None => 1,
                             };
+
                             current_slot = Some(new_slot_num);
+                            trace!("slots1/slots01 current slot is {current_slot:?} new_slot_num {new_slot_num}");
 
                             // Flip slot if duplex insert
                             // TODO change when we sequence duplexes properly
                             match ins.parse() {
-                                PktLoopParseBits::Duplex => this_slot_info = Some(1 - new_slot_num),
+                                PktLoopParseBits::Duplex => {
+                                    trace!("reversing duplex");
+                                    this_slot_info = Some(1 - new_slot_num)
+                                }
                                 _ => this_slot_info = current_slot,
                             }
                         }

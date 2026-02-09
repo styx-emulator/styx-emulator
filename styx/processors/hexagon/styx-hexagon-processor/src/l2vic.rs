@@ -747,10 +747,11 @@ pub fn interrupt_handler(
 
     info!("interrupt setting elr to {:x}", pc);
 
-    cpu.write_register(HexagonRegister::Elr, pc)
+    // Very insidious! PC is u64
+    cpu.write_register(HexagonRegister::Elr, pc as u32)
         .with_context(|| "couldn't write old pc to elr")?;
 
-    cpu.write_register(HexagonRegister::Pc, jump_point)
+    cpu.write_register(HexagonRegister::Pc, jump_point as u32)
         .with_context(|| "couldn't write interrupt jump point to pc")?;
 
     Ok(())
