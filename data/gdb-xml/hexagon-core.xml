@@ -10,6 +10,8 @@
   see:
   https://github.com/llvm/llvm-project/blob/287aa6c4536408413b860e61fca0318a27214cf3/lldb/docs/lldb-gdb-remote.txt#L738-L860
   https://github.com/llvm/llvm-project/blob/287aa6c4536408413b860e61fca0318a27214cf3/lldb/source/Plugins/Process/gdb-remote/ProcessGDBRemote.cpp#L4275-L4335
+
+  Styx note: the data in these files were concatenated from gdb-xml/hexagon-core.xml, gdb-xml/hexagon-hvx.xml, and gdb-xml/hexagon-sys.xml.
 -->
 
 <feature name="org.gnu.gdb.hexagon.core">
