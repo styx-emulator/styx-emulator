@@ -17,8 +17,8 @@ fn test_cond_branching() {
       18:	20 f4 01 78	7801f420 { 	r0 = #0x3a1 }
 "#,
     );
-    cpu.write_register(HexagonRegister::R0, 32u64).unwrap();
-    cpu.write_register(HexagonRegister::R1, 32u64).unwrap();
+    cpu.write_register(HexagonRegister::R0, 32u32).unwrap();
+    cpu.write_register(HexagonRegister::R1, 32u32).unwrap();
 
     let exit = cpu.execute(&mut mmu, &mut ev, 3).unwrap();
     assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);

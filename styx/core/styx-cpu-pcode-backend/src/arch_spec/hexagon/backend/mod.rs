@@ -230,6 +230,10 @@ impl RegisterCallbackCpu<HexagonPcodeBackend> for HexagonPcodeBackend {
     ) {
         (&mut self.space_manager, &mut self.pcode_generator)
     }
+
+    fn pc_register(&self) -> styx_cpu_type::arch::CpuRegister {
+        self.arch_def.registers().pc()
+    }
 }
 
 impl BackendHelper<HexagonExecuteSingleInfo, Vec<Pcode>> for HexagonPcodeBackend {
@@ -515,10 +519,6 @@ impl CpuBackend for HexagonPcodeBackend {
 }
 
 impl HexagonPcodeBackend {
-    fn pc_register(&self) -> styx_cpu_type::arch::CpuRegister {
-        self.arch_def.registers().pc()
-    }
-
     pub fn new_engine(
         _arch: Arch, // Kept to keep interface the same as unicorn
         arch_variant: impl Into<ArchVariant>,

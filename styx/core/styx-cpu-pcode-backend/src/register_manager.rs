@@ -10,7 +10,7 @@ use std::fmt::Debug;
 use styx_cpu_type::arch::backends::ArchRegister;
 use styx_errors::anyhow::Context;
 use styx_errors::UnknownError;
-use styx_processor::cpu::CpuBackend;
+use styx_processor::cpu::{CpuBackend, WriteRegisterError};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -185,8 +185,19 @@ impl<T: CpuBackend> RegisterManager<T> {
         cpu: &mut dyn RegisterCallbackCpu<T>,
         register: ArchRegister,
         value: SizedValue,
-    ) -> Result<(), RegisterHandleError> {
+    ) -> Result<(), WriteRegisterError> {
         trace!("Triggering write_register index {register}.",);
+
+        let pc_reg_variant = cpu.pc_register().variant();
+        if register != pc_reg_variant
+            && register.register_value_enum().to_byte_size() != value.size() as usize
+        {
+            trace!("register write, sizes not equal - returning error");
+            return Err(WriteRegisterError::RegisterBadSize(
+                value.size() as u32,
+                register,
+            ));
+        }
 
         // Try to handle with added handler
         let first_handler = cpu.register_manager().handlers.remove(&register);
@@ -196,6 +207,7 @@ impl<T: CpuBackend> RegisterManager<T> {
                 cpu.register_manager()
                     .handlers
                     .insert(register, first_handler);
+
                 res
             }
             None => Err(RegisterHandleError::CannotHandleRegister(register)),
@@ -210,8 +222,9 @@ impl<T: CpuBackend> RegisterManager<T> {
                 RegisterHandleError::CannotHandleRegister(_) => {
                     let (spc, gen) = cpu.borrow_space_gen();
                     default_register_write(register, value, spc, gen)
+                        .map_err(|e| WriteRegisterError::Other(e.into()))
                 }
-                _ => Err(err),
+                _ => Err(WriteRegisterError::Other(err.into())),
             },
         }
     }
@@ -318,11 +331,16 @@ pub(crate) trait RegisterCallbackCpu<T: CpuBackend>:
     /// As such, this trait requires an implementation that allows both the space maanger
     /// and P-code generator to be borrowed at the same time.
     fn borrow_space_gen(&mut self) -> (&mut SpaceManager, &mut GhidraPcodeGenerator<T>);
+    /// This is used to know if we should skip the register size check.
+    fn pc_register(&self) -> styx_cpu_type::arch::CpuRegister;
 }
 
 impl RegisterCallbackCpu<PcodeBackend> for PcodeBackend {
     fn borrow_space_gen(&mut self) -> (&mut SpaceManager, &mut GhidraPcodeGenerator<PcodeBackend>) {
         (&mut self.space_manager, &mut self.pcode_generator)
+    }
+    fn pc_register(&self) -> styx_cpu_type::arch::CpuRegister {
+        self.arch_def.registers().pc()
     }
 }
 
