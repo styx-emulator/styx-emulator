@@ -17,9 +17,10 @@ use crate::{
 /// when to handle events, when to update the state of peripherals, and when to stop emulation.
 ///
 /// Both `halt_emulation` and `post_stride_processing` take a [`Delta`] representing the number of
-/// instructions and time elapsed during execution. It's recommended to forward this to the `tick`
-/// events in the event controller, peripherals, and plugins, but an [`ExecutorImpl`] can choose to
-/// modify this to change the speed of time.
+/// instructions and wall clock time elapsed during execution. Note that `Delta::time` is wall
+/// clock time (real-world duration), not any processor-specific or simulated time. It's
+/// recommended to forward this to the `tick` events in the event controller, peripherals, and
+/// plugins, but an [`ExecutorImpl`] can choose to modify this to change the speed of time.
 ///
 /// ## Included Executors
 ///

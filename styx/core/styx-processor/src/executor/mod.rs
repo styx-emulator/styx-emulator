@@ -154,10 +154,12 @@ impl Default for Executor {
     }
 }
 
+/// Reports metrics after a stride of of emulation.
 #[derive(Debug, Clone)]
-/// Represents a length of emulation.
 pub struct Delta {
     /// Elapsed wall clock time since last tick.
+    ///
+    /// This is the real-world duration of the stride, not a processor-specific or simulated time.
     pub time: std::time::Duration,
     /// Number of instructions executed.
     pub count: u64,
