@@ -74,6 +74,10 @@ pub trait Peripheral: AsAny + Send {
     ///
     /// Useful for checking and handling asynchronous events and acting on the
     /// cpu on behalf of them.
+    ///
+    /// The `delta` parameter contains the number of instructions executed and the wall clock
+    /// time elapsed during the previous stride. Note that `delta.time` is wall clock time, not
+    /// any processor-specific or simulated time.
     fn tick(
         &mut self,
         _cpu: &mut dyn CpuBackend,

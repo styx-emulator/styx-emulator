@@ -76,10 +76,12 @@ MMIO registers used to configure the timers. The ``tick()`` function reduces
 the performance penalties compared to the Code Hook method (though not entirely)
 while maintaining reasonably accurate emulated state.
 
-Critically, the ``tick()`` function supplies the number of instructions executed
-in the previous stride. This can be used to properly calculate the progress
-to the next timer trigger ensuring each timer interrupt latches after the same
-number of instructions.
+Critically, the ``tick()`` function supplies a ``Delta`` containing the number
+of instructions executed in the previous stride and the elapsed wall clock time.
+Note that ``delta.time`` is wall clock time (real-world duration), not any
+processor-specific or simulated time. The instruction count can be used to
+properly calculate the progress to the next timer trigger ensuring each timer
+interrupt latches after the same number of instructions.
 
 Optionally, this method can be used without writing to the register, if the
 target program doesn't read from the timer and only operates off of the IRQs.
