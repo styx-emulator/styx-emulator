@@ -498,9 +498,12 @@ impl CpuBackend for PcodeBackend {
     fn set_pc(&mut self, value: u64) -> Result<(), UnknownError> {
         let mut pc_manager = self.pc_manager.take().unwrap();
         pc_manager.set_internal_pc(value, self, false);
-        let isa_pc = SizedValue::from_u128(pc_manager.isa_pc() as u128, 4);
-        self.pc_manager = Some(pc_manager);
         let pc_reg_variant = self.pc_register().variant();
+        let isa_pc = SizedValue::from_u128(
+            pc_manager.isa_pc() as u128,
+            pc_reg_variant.register_value_enum().to_byte_size() as u8,
+        );
+        self.pc_manager = Some(pc_manager);
         RegisterManager::write_register(self, pc_reg_variant, isa_pc)?;
         Ok(())
     }
