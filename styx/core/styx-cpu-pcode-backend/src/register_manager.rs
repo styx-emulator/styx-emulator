@@ -188,10 +188,7 @@ impl<T: CpuBackend> RegisterManager<T> {
     ) -> Result<(), WriteRegisterError> {
         trace!("Triggering write_register index {register}.",);
 
-        let pc_reg_variant = cpu.pc_register().variant();
-        if register != pc_reg_variant
-            && register.register_value_enum().to_byte_size() != value.size() as usize
-        {
+        if register.register_value_enum().to_byte_size() != value.size() as usize {
             trace!("register write, sizes not equal - returning error");
             return Err(WriteRegisterError::RegisterBadSize(
                 value.size() as u32,
