@@ -22,7 +22,8 @@ use styx_memory::MemoryRegion;
 /// an err if the hint variable exists and is the incorrect type.
 ///
 /// ```rust
-/// use styx_loader::{LoaderHints, hints_contain};
+/// use styx_processor::loader::LoaderHints;
+/// use styx_processor::hints_contain;
 /// use std::collections::HashMap;
 ///
 /// let mut map: LoaderHints = HashMap::new();
@@ -71,11 +72,12 @@ pub fn call_loader_fn(
     target_program: Cow<[u8]>,
     arch: Arch,
     endian: ArchEndian,
+    config: &Config,
 ) -> Result<MemoryLoaderDesc, StyxLoaderError> {
     let mut hints: LoaderHints = LoaderHints::new();
     hints.insert(Box::from("arch"), Box::new(arch));
     hints.insert(Box::from("endian"), Box::new(endian));
-    loader.load_bytes(target_program, hints)
+    loader.load_bytes(target_program, hints, config)
 }
 
 /// Hashmap of hints to help the loader or to provide options / parameters
@@ -85,7 +87,7 @@ pub type LoaderHints = HashMap<Box<str>, Box<dyn Any>>;
 pub type RegisterLoaderDesc = (ArchRegister, u64);
 pub type EnvStateLoaderDesc = (Box<str>, Box<dyn Any>);
 
-/// Central trait to the [`styx-loader`] crate.
+/// Loader of bytes to target memory.
 ///
 /// This trait defines a series of methods used to initialize target address spaces and setup the
 /// cpu register and memory as required in order to perform valid cpu emulation of the target
@@ -107,6 +109,7 @@ pub trait Loader: std::fmt::Debug + Send {
         &self,
         data: Cow<[u8]>,
         hints: LoaderHints,
+        config: &Config,
     ) -> Result<MemoryLoaderDesc, StyxLoaderError>;
 }
 
@@ -122,6 +125,7 @@ mock! {
             &self,
             data: Cow<'a, [u8]>,
             hints: LoaderHints,
+            config: &Config,
         ) -> Result<MemoryLoaderDesc, StyxLoaderError>;
     }
 }
@@ -160,7 +164,7 @@ impl MemoryLoaderDesc {
     /// should be set
     ///
     /// ```rust
-    /// use styx_loader::MemoryLoaderDesc;
+    /// use styx_processor::loader::MemoryLoaderDesc;
     /// use styx_cpu_type::arch::{backends::{ArchRegister, BasicArchRegister}, arm::ArmRegister};
     ///
     /// let r1 = ArmRegister::R1;
@@ -180,7 +184,7 @@ impl MemoryLoaderDesc {
     /// Take ownership of the memory regions to be populated
     ///
     /// ```rust
-    /// use styx_loader::MemoryLoaderDesc;
+    /// use styx_processor::loader::MemoryLoaderDesc;
     /// use styx_memory::MemoryRegion;
     /// # use styx_memory::MemoryPermissions;
     /// # let all_perms = MemoryPermissions::all();
@@ -212,7 +216,7 @@ impl MemoryLoaderDesc {
     /// in the description
     ///
     /// ```rust
-    /// use styx_loader::MemoryLoaderDesc;
+    /// use styx_processor::loader::MemoryLoaderDesc;
     /// use styx_memory::MemoryRegion;
     /// # use styx_memory::MemoryPermissions;
     /// # let all_perms = MemoryPermissions::all();
@@ -236,7 +240,7 @@ impl MemoryLoaderDesc {
     /// in the description
     ///
     /// ```rust
-    /// use styx_loader::MemoryLoaderDesc;
+    /// use styx_processor::loader::MemoryLoaderDesc;
     /// use styx_memory::MemoryRegion;
     /// # use styx_memory::MemoryPermissions;
     /// # let all_perms = MemoryPermissions::all();
@@ -264,7 +268,7 @@ impl MemoryLoaderDesc {
     /// set
     ///
     /// ```rust
-    /// use styx_loader::MemoryLoaderDesc;
+    /// use styx_processor::loader::MemoryLoaderDesc;
     ///
     /// let var1 = Box::new("hello world".to_owned());
     ///
@@ -285,7 +289,7 @@ impl MemoryLoaderDesc {
     /// is checked for duplicates.
     ///
     /// ```rust
-    /// use styx_loader::MemoryLoaderDesc;
+    /// use styx_processor::loader::MemoryLoaderDesc;
     /// use styx_cpu_type::arch::{backends::ArchRegister, arm::ArmRegister};
     ///
     /// let r1 = ArmRegister::R1;
@@ -316,7 +320,7 @@ impl MemoryLoaderDesc {
     /// is checked for duplicates.
     ///
     /// ```rust
-    /// use styx_loader::MemoryLoaderDesc;
+    /// use styx_processor::loader::MemoryLoaderDesc;
     ///
     /// let var1 = Box::new("hello world".to_owned());
     /// let var2 = Box::new("hello".to_owned());
@@ -344,7 +348,7 @@ impl MemoryLoaderDesc {
     /// size of the region (but *not* the contents) are checked for duplicates.
     ///
     /// ```rust
-    /// use styx_loader::MemoryLoaderDesc;
+    /// use styx_processor::loader::MemoryLoaderDesc;
     /// use styx_memory::MemoryRegion;
     /// # use styx_memory::MemoryPermissions;
     /// # let all = MemoryPermissions::all();
@@ -371,7 +375,7 @@ impl MemoryLoaderDesc {
     /// Create a new [`MemoryLoaderDesc`] with an initial set of regions
     ///
     /// ```rust
-    /// use styx_loader::MemoryLoaderDesc;
+    /// use styx_processor::loader::MemoryLoaderDesc;
     /// use styx_memory::MemoryRegion;
     /// # use styx_memory::MemoryPermissions;
     /// # let all = MemoryPermissions::all();
@@ -449,6 +453,8 @@ impl<'a> Iterator for LoaderRegionIterMut<'a> {
 
 mod loaders;
 pub use loaders::*;
+
+use crate::processor::Config;
 
 #[cfg(test)]
 mod tests {

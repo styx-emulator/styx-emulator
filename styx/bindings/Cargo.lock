@@ -5220,25 +5220,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "styx-loader"
-version = "1.2.0"
-dependencies = [
-  "binrw",
-  "bitflags 2.9.4",
-  "goblin",
-  "iset",
-  "log",
-  "serde",
-  "serde_yaml",
-  "styx-cpu-type",
-  "styx-errors",
-  "styx-memory",
-  "styx-memory-type",
-  "styx-workspace-hack",
-  "thiserror 2.0.17",
-]
-
-[[package]]
 name = "styx-macros"
 version = "1.2.0"
 dependencies = [
@@ -5453,38 +5434,40 @@ dependencies = [
 name = "styx-processor"
 version = "1.2.0"
 dependencies = [
-  "as-any",
-  "bitflags 2.9.4",
-  "delegate",
-  "derive_more",
-  "enum_dispatch",
-  "getset",
-  "itertools 0.14.0",
-  "log",
-  "nix 0.30.1",
-  "num",
-  "paste",
-  "replace_with",
-  "rustc-hash 2.1.1",
-  "serde",
-  "serde_yaml",
-  "smallvec",
-  "static_assertions",
-  "styx-cpu-type",
-  "styx-errors",
-  "styx-loader",
-  "styx-macros",
-  "styx-memory",
-  "styx-memory-type",
-  "styx-sync",
-  "styx-util",
-  "styx-workspace-hack",
-  "tap",
-  "thiserror 2.0.17",
-  "tokio",
-  "tokio-stream",
-  "tonic",
-  "zstd",
+ "as-any",
+ "binrw",
+ "bitflags 2.9.4",
+ "delegate",
+ "derive_more",
+ "enum_dispatch",
+ "getset",
+ "goblin",
+ "iset",
+ "itertools 0.14.0",
+ "log",
+ "nix 0.30.1",
+ "num",
+ "paste",
+ "replace_with",
+ "rustc-hash 2.1.1",
+ "serde",
+ "serde_yaml",
+ "smallvec",
+ "static_assertions",
+ "styx-cpu-type",
+ "styx-errors",
+ "styx-macros",
+ "styx-memory",
+ "styx-memory-type",
+ "styx-sync",
+ "styx-util",
+ "styx-workspace-hack",
+ "tap",
+ "thiserror 2.0.17",
+ "tokio",
+ "tokio-stream",
+ "tonic",
+ "zstd",
 ]
 
 [[package]]
@@ -5777,6 +5760,7 @@ dependencies = [
  "num-traits",
  "num_enum",
  "num_enum_derive",
+ "once_cell",
  "percent-encoding",
  "prettyplease",
  "proc-macro2",

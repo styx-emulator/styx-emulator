@@ -3,7 +3,6 @@
 //!
 //! Valid actions are:
 //!   - FileElf - load an ELF
-//!   - FileIhex - load an Intel HEX file
 //!   - FileRaw - load a raw file
 //!   - MemoryRegion - map a memory region
 //!   - RegisterImmediate - initialize a register with an immediate value
@@ -12,14 +11,17 @@
 //!     processor.
 //!
 //! See `src/styx-loader/example-input/parameterized.yaml` for an example file.
-use crate::loaders::elf::ElfLoaderConfig;
-use crate::{Loader, LoaderHints, MemoryLoaderDesc, RegisterMap};
+use crate::loader::{
+    loaders::elf::ElfLoaderConfig, Loader, LoaderHints, MemoryLoaderDesc, RegisterMap,
+};
+use crate::processor::Config;
 use log::{info, warn};
 use serde::Deserialize;
 use std::{borrow::Cow, collections::HashMap, fs, path::Path};
 use styx_cpu_type::arch::backends::ArchRegister;
 use styx_cpu_type::arch::Arch;
 use styx_errors::anyhow::Context;
+use styx_errors::styx_loader::StyxLoaderError;
 use styx_memory::{MemoryPermissions, MemoryRegion};
 
 use super::elf::load_elf;
@@ -74,7 +76,7 @@ impl From<LoadMemoryPermissions> for MemoryPermissions {
 /// to a single memory region with the specified permissions.
 #[derive(Deserialize, PartialEq, Debug, Clone)]
 pub struct LoadFileRaw {
-    /// Base physical address for the mapped memory region.
+    /// Base address for the mapped memory region.
     pub base: u64,
     /// Path to the raw file to be loaded.
     pub file: String,
@@ -87,7 +89,7 @@ pub struct LoadFileRaw {
 /// is created with the specified permissions.
 #[derive(Deserialize, PartialEq, Debug, Clone)]
 pub struct LoadMemoryRegion {
-    /// Base physical address for the mapped memory region.
+    /// Base address for the mapped memory region.
     pub base: u64,
     /// Size of the requested region.
     pub size: u64,
@@ -170,7 +172,7 @@ impl Loader for ParameterizedLoader {
     /// Returns the name of the [`Loader`]
     ///
     /// ```rust
-    /// use styx_loader::{Loader, ParameterizedLoader};
+    /// use styx_processor::loader::{Loader, ParameterizedLoader};
     ///
     /// assert_eq!("parameterized", ParameterizedLoader::default().name());
     /// ```
@@ -183,7 +185,6 @@ impl Loader for ParameterizedLoader {
     /// contain a list of [`LoadRecordType`] structures. These structures describe the action to be
     /// performed. The available actions are:
     /// - Load an ELF file.
-    /// - Load an Intel HEX file.
     /// - Load a raw data file to a specified address with provided permissions.
     /// - Map a memory region to the specified address with provided permissions.
     /// - Initialize a register with an immediate value.
@@ -192,12 +193,13 @@ impl Loader for ParameterizedLoader {
         &self,
         data: Cow<[u8]>,
         hints: LoaderHints,
-    ) -> Result<MemoryLoaderDesc, crate::StyxLoaderError> {
+        config: &Config,
+    ) -> Result<MemoryLoaderDesc, StyxLoaderError> {
         let arch: &Arch;
         if let Some(arch_hint) = hints_contain!(hints, "arch", Arch)? {
             arch = arch_hint;
         } else {
-            return Err(crate::StyxLoaderError::MissingHintInfo(
+            return Err(StyxLoaderError::MissingHintInfo(
                 "No architecture provided.".to_string(),
             ));
         }
@@ -239,8 +241,9 @@ impl Loader for ParameterizedLoader {
                         format!("Failed to read Intel HEX file {}", path.display())
                     })?;
                     let loader = IhexLoader;
-                    let mut ihex_desc: MemoryLoaderDesc =
-                        loader.load_bytes(Cow::Owned(data), HashMap::new()).unwrap();
+                    let mut ihex_desc: MemoryLoaderDesc = loader
+                        .load_bytes(Cow::Owned(data), HashMap::new(), config)
+                        .unwrap();
 
                     // Save generated regions and register values to add to our final descriptor.
                     warn_key_overwrite(&registers, &ihex_desc.registers);

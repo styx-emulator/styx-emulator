@@ -45,8 +45,6 @@ members = [
   "./styx/core/styx-cpu-unicorn-backend",
   "./styx/core/styx-errors",
   "./styx/core/styx-grpc",
-  "./styx/core/styx-loader",
-  "./styx/core/styx-loader-mock",
   "./styx/core/styx-macros",
   "./styx/core/styx-memory",
   "./styx/core/styx-memory-type",

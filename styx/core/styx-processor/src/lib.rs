@@ -38,6 +38,7 @@ pub mod cpu;
 pub mod event_controller;
 pub mod executor;
 pub mod hooks;
+pub mod loader;
 pub mod memory;
 pub mod plugins;
 pub mod processor;

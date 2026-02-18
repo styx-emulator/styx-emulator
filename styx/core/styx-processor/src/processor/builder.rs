@@ -2,10 +2,10 @@
 //! `ProcessorBuilder` logic and utilities
 use std::{borrow::Cow, sync::Arc};
 
+use crate::loader::{Loader, LoaderHints, RawLoader};
 use log::{debug, info};
 use styx_cpu_type::Backend;
 use styx_errors::{anyhow::Context, UnknownError};
-use styx_loader::{Loader, LoaderHints, RawLoader};
 use tokio::{net::TcpListener, runtime::Handle};
 use tonic::{service::RoutesBuilder, transport::Server};
 
@@ -54,7 +54,7 @@ impl<'a> TargetProgramSource<'a> {
 /// byte slice via [`ProcessorBuilder::with_input_bytes()`] or by file name with
 /// [`ProcessorBuilder::with_target_program()`]. These are loaded by the loader which is set by
 /// default to the [`RawLoader`] which loads the target program at address 0. Other loaders are
-/// available in [`styx_loader`].
+/// available in [`styx_processor::loader`](crate::loader).
 ///
 /// See the documentation for [`Self::build()`] for more information.
 ///
@@ -308,9 +308,9 @@ impl<'a> ProcessorBuilder<'a> {
     /// - [`ProcessorImpl`] via [`Self::with_builder()`]
     /// - A `TargetProgram` stored as [`TargetProgramSource`] via
     ///   [`Self::with_input_bytes()`] or [`Self::with_target_program`].
-    ///   - **NOTE**: If the loader is [`ParameterizedLoader`](styx_loader::ParameterizedLoader::default()) then things
+    ///   - **NOTE**: If the loader is [`ParameterizedLoader`](crate::loader::ParameterizedLoader) then things
     ///     get a little more complicated, see the documentation for
-    ///     [`ParameterizedLoader`](styx_loader::ParameterizedLoader::default()) for more information.
+    ///     [`ParameterizedLoader`](crate::loader::ParameterizedLoader) for more information.
     ///
     /// Once this method returns you'll have a [`Processor`] ready to run code!
     ///
@@ -457,7 +457,7 @@ fn autobots_load_up(
 
     // loader hints?
     let mut memory_desc = loader
-        .load_bytes(source_bytes, hints)
+        .load_bytes(source_bytes, hints, config)
         .context("Loader failed to load bytes")?;
 
     // todo these should be more compatible

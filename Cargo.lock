@@ -5945,7 +5945,6 @@ dependencies = [
  "styx-cpu",
  "styx-errors",
  "styx-grpc",
- "styx-loader",
  "styx-macros",
  "styx-memory",
  "styx-peripheral-clients",
@@ -6005,7 +6004,6 @@ dependencies = [
  "styx-cpu-type",
  "styx-errors",
  "styx-hexagon-testdata",
- "styx-loader",
  "styx-macros",
  "styx-memory",
  "styx-pcode",
@@ -6411,38 +6409,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "styx-loader"
-version = "1.2.0"
-dependencies = [
- "binrw",
- "bitflags 2.9.4",
- "goblin",
- "iset",
- "log",
- "mockall",
- "serde",
- "serde_yaml",
- "styx-cpu-type",
- "styx-errors",
- "styx-memory",
- "styx-memory-type",
- "styx-util",
- "styx-workspace-hack",
- "test-case",
- "thiserror 2.0.17",
-]
-
-[[package]]
-name = "styx-loader-mock"
-version = "1.2.0"
-dependencies = [
- "mockall",
- "styx-errors",
- "styx-loader",
- "styx-workspace-hack",
-]
-
-[[package]]
 name = "styx-macros"
 version = "1.2.0"
 dependencies = [
@@ -6708,13 +6674,17 @@ name = "styx-processor"
 version = "1.2.0"
 dependencies = [
  "as-any",
+ "binrw",
  "bitflags 2.9.4",
  "delegate",
  "derive_more 1.0.0",
  "enum_dispatch",
  "getset",
+ "goblin",
+ "iset",
  "itertools 0.14.0",
  "log",
+ "mockall",
  "nix 0.30.1",
  "num",
  "paste",
@@ -6726,8 +6696,8 @@ dependencies = [
  "static_assertions",
  "styx-cpu-type",
  "styx-errors",
- "styx-loader",
  "styx-macros",
+ "styx-memory",
  "styx-memory-type",
  "styx-sync",
  "styx-util",
@@ -7126,6 +7096,7 @@ dependencies = [
  "num-traits",
  "num_enum",
  "num_enum_derive",
+ "once_cell",
  "percent-encoding",
  "prettyplease",
  "proc-macro2",
@@ -7154,6 +7125,7 @@ dependencies = [
  "tokio-util",
  "toml_datetime 0.7.2",
  "toml_parser",
+ "toml_writer",
  "tracing",
  "tracing-core",
  "uuid",
