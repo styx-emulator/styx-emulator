@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
+use crate::loader::LoaderHints;
 use styx_cpu_type::Backend;
 use styx_errors::UnknownError;
-use styx_loader::LoaderHints;
 use tokio::runtime::Handle;
 
 use crate::{

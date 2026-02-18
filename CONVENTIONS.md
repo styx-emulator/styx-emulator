@@ -57,16 +57,14 @@ eg.
 
 ```toml
 styx-cpu = { path = "../styx-cpu" }
-styx-memory = { path = "../styx-memory" }
-styx-loader = { path = "../styx-loader" }
+styx-processor = { path = "../styx-processor" }
 ```
 
 which would result in possible import like:
 
 ```rust
 use styx_cpu::Arch;
-use styx_memory::MemoryRegion;
-use styx_loader::Loader;
+use styx_processor::Processor;
 ```
 
 #### Non-core Library Code

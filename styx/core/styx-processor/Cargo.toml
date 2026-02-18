@@ -13,7 +13,7 @@ styx-errors = { path = "../styx-errors" }
 styx-util = { path = "../styx-util" }
 styx-cpu-type = { path = "../styx-cpu-type" }
 styx-memory-type = { path = "../styx-memory-type" }
-styx-loader = { path = "../styx-loader" }
+styx-memory = { path = "../styx-memory" }
 styx-sync = { path = "../styx-sync" }
 styx-macros = { path = "../styx-macros" }
 
@@ -40,7 +40,14 @@ tap = { workspace = true }
 nix = { workspace = true, features = ["signal"] }
 smallvec = { workspace = true }
 itertools = { workspace = true }
+# Used in ElfLoader
+goblin = { workspace = true }
+# Used in BlackfinLoader
+binrw = { workspace = true }
+# Used for LoaderRegionIter[Mut]
+iset = { workspace = true }
 styx-workspace-hack = { version = "0.1", path = "../../workspace-hack" }
 
 [dev-dependencies]
 test-case = { workspace = true }
+mockall = { workspace = true }

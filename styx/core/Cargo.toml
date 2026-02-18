@@ -37,7 +37,6 @@ styx-cpu = { path = "./styx-cpu" }
 styx-errors = { path = "./styx-errors" }
 styx-peripheral-clients = { path = "./styx-peripheral-clients" }
 styx-grpc = { path = "./styx-grpc" }
-styx-loader = { path = "./styx-loader" }
 styx-macros = { path = "./styx-macros" }
 styx-memory = { path = "./styx-memory" }
 styx-processor = { path = "./styx-processor" }

@@ -45,6 +45,7 @@ nom = { version = "7" }
 num-bigint = { version = "0.4" }
 num-traits = { version = "0.2", features = ["i128"] }
 num_enum = { version = "0.7" }
+once_cell = { version = "1" }
 percent-encoding = { version = "2" }
 proc-macro2 = { version = "1", features = ["span-locations"] }
 prost = { version = "0.13", features = ["prost-derive"] }
@@ -69,6 +70,7 @@ tokio-stream = { version = "0.1", features = ["full"] }
 tokio-util = { version = "0.7", features = ["codec", "io"] }
 toml_datetime = { version = "0.7", features = ["serde"] }
 toml_parser = { version = "1" }
+toml_writer = { version = "1" }
 tracing = { version = "0.1", features = ["async-await", "log"] }
 tracing-core = { version = "0.1" }
 uuid = { version = "1", features = ["fast-rng", "macro-diagnostics", "serde", "v4"] }
@@ -109,6 +111,7 @@ num-bigint = { version = "0.4" }
 num-traits = { version = "0.2", features = ["i128"] }
 num_enum = { version = "0.7" }
 num_enum_derive = { version = "0.7", default-features = false, features = ["std"] }
+once_cell = { version = "1" }
 percent-encoding = { version = "2" }
 prettyplease = { version = "0.2", default-features = false, features = ["verbatim"] }
 proc-macro2 = { version = "1", features = ["span-locations"] }
@@ -134,6 +137,7 @@ tokio-stream = { version = "0.1", features = ["full"] }
 tokio-util = { version = "0.7", features = ["codec", "io"] }
 toml_datetime = { version = "0.7", features = ["serde"] }
 toml_parser = { version = "1" }
+toml_writer = { version = "1" }
 tracing = { version = "0.1", features = ["async-await", "log"] }
 tracing-core = { version = "0.1" }
 uuid = { version = "1", features = ["fast-rng", "macro-diagnostics", "serde", "v4"] }
