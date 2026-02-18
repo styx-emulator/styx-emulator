@@ -20,4 +20,4 @@ profile = "release"
 auditwheel = "check"
 strip = true
 sdist-generator = "cargo"
-python-source = "python/styx_emulator"
+python-source = "python"
