@@ -38,7 +38,7 @@ const HAKARI_GENERATE_FAIL_MSG: &str = r#"
     To update the installation please run the following commands and
     then commit the changes:
 
-    cargo xtask hakari --verify
+    cargo xtask hakari
 
     Follow any further prompts from cargo-hakari as necessary
 "#;
