@@ -318,6 +318,7 @@ impl HookManager {
             .activate(physical_addr)
             .chain(virtual_hooks.activate(virtual_addr))
         {
+            trace!("triggering hook {hook:?}");
             let core_handler = CoreHandle::new(cpu, mmu, ev);
             let hook_callback_res = hook.callback.call(core_handler);
             if let Err(err) = hook_callback_res {

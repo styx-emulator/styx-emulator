@@ -207,6 +207,7 @@ pub trait BackendHelper<ExecuteSingleData, PcodesContainer>:
         self.set_last_was_branch(false);
         while current_stop.is_none() {
             // call code hooks, can change pc/execution path
+            trace!("calling code hooks :D");
             self.pre_execute_hooks(mmu, event_controller)
                 .with_context(|| "pre execute hooks failed")
                 .unwrap();

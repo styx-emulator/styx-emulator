@@ -706,6 +706,7 @@ pub fn interrupt_handler(
             let mut data = vec![0; bytes as usize];
             mmu.virt_read_data(ptr as u64, &mut data, cpu).unwrap();
 
+            info!("SYS_WRITE data is {data:?}");
             let data_str = str::from_utf8_mut(&mut data).unwrap().to_owned();
             info!("SYS_WRITE no:{fileno} data:{data:x?} bytes:{bytes} str:{data_str}");
 
