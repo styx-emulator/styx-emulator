@@ -5789,6 +5789,7 @@ dependencies = [
  "tokio-util",
  "toml_datetime 0.7.2",
  "toml_parser",
+ "toml_writer",
  "tracing",
  "tracing-core",
  "uuid",
