@@ -678,3 +678,289 @@ fn arithmetic_shift_right_word(
     let out_reg_endval = cpu.read_register::<u32>(out_reg).unwrap();
     assert_eq!(out_reg_endval, expected_output);
 }
+
+// Order of operations test cases require both the operation
+// (arithmetic/logical) shift left/right. Then there is an operation,
+// which is performed at the wrong time, thereby yielding an unsatisfactory result.
+
+/// The operation enum, describing what operation to do
+#[derive(Copy, Clone)]
+pub enum OOOperation {
+    ArithmeticShiftLeft,
+    LogicalShiftLeft,
+    ArithmeticShiftRight,
+    LogicalShiftRight,
+}
+
+/// Post-operation
+#[derive(Debug, Copy, Clone)]
+pub enum OOPostOperation {
+    Add,
+    And,
+    Or,
+    Xor,
+    Sub,
+}
+
+#[test_case(
+	r#"
+       0:	02 c3 80 cc	cc80c302 { 	r2 -= asr(r0,r3) }
+	"#, OOOperation::ArithmeticShiftRight, OOPostOperation::Sub; "S2_asr_r_r_nac"
+)]
+#[test_case(
+	r#"
+       0:	82 c3 80 cc	cc80c382 { 	r2 -= asl(r0,r3) }
+	"#, OOOperation::ArithmeticShiftLeft, OOPostOperation::Sub; "S2_asl_r_r_nac"
+)]
+#[test_case(
+	r#"
+       0:	42 c3 80 cc	cc80c342 { 	r2 -= lsr(r0,r3) }
+	"#, OOOperation::LogicalShiftRight, OOPostOperation::Sub; "S2_lsr_r_r_nac"
+)]
+#[test_case(
+	r#"
+       0:	c2 c3 80 cc	cc80c3c2 { 	r2 -= lsl(r0,r3) }
+	"#, OOOperation::LogicalShiftLeft, OOPostOperation::Sub; "S2_lsl_r_r_nac"
+)]
+#[test_case(
+	r#"
+       0:	02 c3 40 cc	cc40c302 { 	r2 &= asr(r0,r3) }
+	"#, OOOperation::ArithmeticShiftRight, OOPostOperation::And; "S2_asr_r_r_and"
+)]
+#[test_case(
+	r#"
+       0:	82 c3 40 cc	cc40c382 { 	r2 &= asl(r0,r3) }
+	"#, OOOperation::ArithmeticShiftLeft, OOPostOperation::And; "S2_asl_r_r_and"
+)]
+#[test_case(
+	r#"
+       0:	42 c3 40 cc	cc40c342 { 	r2 &= lsr(r0,r3) }
+	"#, OOOperation::LogicalShiftRight, OOPostOperation::And; "S2_lsr_r_r_and"
+)]
+#[test_case(
+	r#"
+       0:	c2 c3 40 cc	cc40c3c2 { 	r2 &= lsl(r0,r3) }
+	"#, OOOperation::LogicalShiftLeft, OOPostOperation::And; "S2_lsl_r_r_and"
+)]
+#[test_case(
+	r#"
+       0:	02 c3 00 cc	cc00c302 { 	r2 |= asr(r0,r3) }
+	"#, OOOperation::ArithmeticShiftRight, OOPostOperation::Or; "S2_asr_r_r_or"
+)]
+#[test_case(
+	r#"
+       0:	82 c3 00 cc	cc00c382 { 	r2 |= asl(r0,r3) }
+	"#, OOOperation::ArithmeticShiftLeft, OOPostOperation::Or; "S2_asl_r_r_or"
+)]
+#[test_case(
+	r#"
+       0:	42 c3 00 cc	cc00c342 { 	r2 |= lsr(r0,r3) }
+	"#, OOOperation::LogicalShiftRight, OOPostOperation::Or; "S2_lsr_r_r_or"
+)]
+#[test_case(
+	r#"
+       0:	c2 c3 00 cc	cc00c3c2 { 	r2 |= lsl(r0,r3) }
+	"#, OOOperation::LogicalShiftLeft, OOPostOperation::Or; "S2_lsl_r_r_or"
+)]
+fn order_of_operations_32(objdump: &str, op: OOOperation, post_op: OOPostOperation) {
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(objdump);
+
+    for i in 1..1000 {
+        order_of_operations_helper(&mut cpu, &mut mmu, &mut ev, op, post_op, 4, 0xea43, i, 5);
+    }
+    for i in (u32::MAX - 1000)..u32::MAX {
+        order_of_operations_helper(
+            &mut cpu, &mut mmu, &mut ev, op, post_op, 4, 0xea43, i as u64, 5,
+        );
+    }
+}
+
+#[test_case(
+	r#"
+       0:	8a c3 cc cb	cbccc38a { 	r11:10 += asl(r13:12,r3) }
+	"#, OOOperation::ArithmeticShiftLeft, OOPostOperation::Add; "S2_asl_r_p_acc"
+)]
+#[test_case(
+	r#"
+       0:	4a c3 cc cb	cbccc34a { 	r11:10 += lsr(r13:12,r3) }
+	"#, OOOperation::LogicalShiftRight, OOPostOperation::Add; "S2_lsr_r_p_acc"
+)]
+#[test_case(
+	r#"
+       0:	ca c3 cc cb	cbccc3ca { 	r11:10 += lsl(r13:12,r3) }
+	"#, OOOperation::LogicalShiftLeft, OOPostOperation::Add; "S2_lsl_r_p_acc"
+)]
+#[test_case(
+	r#"
+       0:	0a c3 8c cb	cb8cc30a { 	r11:10 -= asr(r13:12,r3) }
+	"#, OOOperation::ArithmeticShiftRight, OOPostOperation::Sub; "S2_asr_r_p_nac"
+)]
+#[test_case(
+	r#"
+       0:	8a c3 8c cb	cb8cc38a { 	r11:10 -= asl(r13:12,r3) }
+	"#, OOOperation::ArithmeticShiftLeft, OOPostOperation::Sub; "S2_asl_r_p_nac"
+)]
+#[test_case(
+	r#"
+       0:	4a c3 8c cb	cb8cc34a { 	r11:10 -= lsr(r13:12,r3) }
+	"#, OOOperation::LogicalShiftRight, OOPostOperation::Sub; "S2_lsr_r_p_nac"
+)]
+#[test_case(
+	r#"
+       0:	ca c3 8c cb	cb8cc3ca { 	r11:10 -= lsl(r13:12,r3) }
+	"#, OOOperation::LogicalShiftLeft, OOPostOperation::Sub; "S2_lsl_r_p_nac"
+)]
+#[test_case(
+	r#"
+       0:	0a c3 4c cb	cb4cc30a { 	r11:10 &= asr(r13:12,r3) }
+	"#, OOOperation::ArithmeticShiftRight, OOPostOperation::And; "S2_asr_r_p_and"
+)]
+#[test_case(
+	r#"
+       0:	8a c3 4c cb	cb4cc38a { 	r11:10 &= asl(r13:12,r3) }
+	"#, OOOperation::ArithmeticShiftLeft, OOPostOperation::And; "S2_asl_r_p_and"
+)]
+#[test_case(
+	r#"
+       0:	4a c3 4c cb	cb4cc34a { 	r11:10 &= lsr(r13:12,r3) }
+	"#, OOOperation::LogicalShiftRight, OOPostOperation::And; "S2_lsr_r_p_and"
+)]
+#[test_case(
+	r#"
+       0:	ca c3 4c cb	cb4cc3ca { 	r11:10 &= lsl(r13:12,r3) }
+	"#, OOOperation::LogicalShiftLeft, OOPostOperation::And; "S2_lsl_r_p_and"
+)]
+#[test_case(
+	r#"
+       0:	0a c3 0c cb	cb0cc30a { 	r11:10 |= asr(r13:12,r3) }
+	"#, OOOperation::ArithmeticShiftRight, OOPostOperation::Or; "S2_asr_r_p_or"
+)]
+#[test_case(
+	r#"
+       0:	8a c3 0c cb	cb0cc38a { 	r11:10 |= asl(r13:12,r3) }
+	"#, OOOperation::ArithmeticShiftLeft, OOPostOperation::Or; "S2_asl_r_p_or"
+)]
+#[test_case(
+	r#"
+       0:	4a c3 0c cb	cb0cc34a { 	r11:10 |= lsr(r13:12,r3) }
+	"#, OOOperation::LogicalShiftRight, OOPostOperation::Or; "S2_lsr_r_p_or"
+)]
+#[test_case(
+	r#"
+       0:	ca c3 0c cb	cb0cc3ca { 	r11:10 |= lsl(r13:12,r3) }
+	"#, OOOperation::LogicalShiftLeft, OOPostOperation::Or; "S2_lsl_r_p_or"
+)]
+#[test_case(
+	r#"
+       0:	0a c3 6c cb	cb6cc30a { 	r11:10 ^= asr(r13:12,r3) }
+	"#, OOOperation::ArithmeticShiftRight, OOPostOperation::Xor; "S2_asr_r_p_xor"
+)]
+#[test_case(
+	r#"
+       0:	8a c3 6c cb	cb6cc38a { 	r11:10 ^= asl(r13:12,r3) }
+	"#, OOOperation::ArithmeticShiftLeft, OOPostOperation::Xor; "S2_asl_r_p_xor"
+)]
+#[test_case(
+	r#"
+       0:	4a c3 6c cb	cb6cc34a { 	r11:10 ^= lsr(r13:12,r3) }
+	"#, OOOperation::LogicalShiftRight, OOPostOperation::Xor; "S2_lsr_r_p_xor"
+)]
+#[test_case(
+	r#"
+       0:	ca c3 6c cb	cb6cc3ca { 	r11:10 ^= lsl(r13:12,r3) }
+	"#, OOOperation::LogicalShiftLeft, OOPostOperation::Xor; "S2_lsl_r_p_xor"
+)]
+fn order_of_operations_64(objdump: &str, op: OOOperation, post_op: OOPostOperation) {
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(objdump);
+
+    for i in 1..1000 {
+        order_of_operations_helper(&mut cpu, &mut mmu, &mut ev, op, post_op, 8, 0xea43, i, 5);
+    }
+    for i in (u64::MAX - 1000)..u64::MAX {
+        order_of_operations_helper(&mut cpu, &mut mmu, &mut ev, op, post_op, 8, 0xea43, i, 5);
+    }
+}
+
+fn order_of_operations_helper(
+    cpu: &mut HexagonPcodeBackend,
+    mmu: &mut Mmu,
+    ev: &mut EventController,
+    op: OOOperation,
+    post_op: OOPostOperation,
+    size: u8,
+    dest_start: u64,
+    start: u64,
+    shift: u32,
+) {
+    cpu.set_pc(0x1000).unwrap();
+
+    // Overwrite start with a truncated value if 32 bits
+    let start = if size == 4 {
+        cpu.write_register(HexagonRegister::R0, start as u32)
+            .unwrap();
+        cpu.write_register(HexagonRegister::R2, dest_start as u32)
+            .unwrap();
+
+        // Sign extend it here
+        (start as i64) as u64
+    } else if size == 8 {
+        cpu.write_register(HexagonRegister::D6, start).unwrap();
+        cpu.write_register(HexagonRegister::D5, dest_start).unwrap();
+
+        start
+    } else {
+        unreachable!()
+    };
+
+    // Write the shift, which is 32 bits anyway
+    cpu.write_register(HexagonRegister::R3, shift as u32)
+        .unwrap();
+
+    let exit = cpu.execute(mmu, ev, 1).unwrap();
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
+
+    // Read the result, match with our expectations
+    // The only consideration is that
+    let shifted = match op {
+        // same i
+        OOOperation::LogicalShiftLeft | OOOperation::ArithmeticShiftLeft if size == 4 => {
+            ((start as u32) << shift) as u64
+        }
+        OOOperation::LogicalShiftLeft | OOOperation::ArithmeticShiftLeft if size == 8 => {
+            start << shift
+        }
+        OOOperation::ArithmeticShiftRight => ((start as i64) >> shift) as u64,
+        OOOperation::LogicalShiftRight => start >> shift,
+        _ => unreachable!(),
+    };
+
+    let result = match post_op {
+        OOPostOperation::Add => shifted.wrapping_add(dest_start),
+        OOPostOperation::And => shifted & dest_start,
+        OOPostOperation::Or => shifted | dest_start,
+        OOPostOperation::Xor => shifted ^ dest_start,
+        OOPostOperation::Sub => dest_start.wrapping_sub(shifted),
+    };
+
+    if size == 4 {
+        // Sign extend to 64 bits
+        let output = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
+
+        println!(
+            "start {} shift {} shifted is {} {:x} post_op {:?} dest_start {}, output {}",
+            start as i32, shift, shifted as i32, shifted as u32, post_op, dest_start, output as u32
+        );
+        assert_eq!(output, result as u32);
+    } else if size == 8 {
+        let output = cpu.read_register::<u64>(HexagonRegister::D5).unwrap();
+
+        println!(
+            "start {} shift {} shifted is {} {:x} post_op {:?} dest_start {}, output {}",
+            start as i64, shift, shifted as i64, shifted, post_op, dest_start, output
+        );
+
+        assert_eq!(output, result);
+    } else {
+        unreachable!()
+    };
+}

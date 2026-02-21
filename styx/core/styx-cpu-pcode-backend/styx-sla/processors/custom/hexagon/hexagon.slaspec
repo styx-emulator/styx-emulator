@@ -62616,7 +62616,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp20:4;
   tmp20 = zext(tmp19);
   local tmp21:4;
-  tmp21 = S2_asr_r_r_acc_Rx32 + tmp20;
+  tmp21 = tmp20;
   local tmp22:1;
   tmp22 = tmp21:1;
   if (tmp22) goto <t_branch_24>;
@@ -62644,7 +62644,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp32 = tmp29 << tmp31;
   tmp28 = tmp32;
 <done_24>
-  S2_asr_r_r_acc_Rx32d = tmp28:4;
+  S2_asr_r_r_acc_Rx32d = S2_asr_r_r_acc_Rx32 + tmp28:4;
 }
 
 :S2_asl_r_r_acc S2_asl_r_r_acc_Rx32 S2_asl_r_r_acc_Rx32d S2_asl_r_r_acc_Rs32 S2_asl_r_r_acc_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b6 = 0 & b7 = 1 & b22 = 1 & b23 = 1 & b24 = 0 & b25 = 0 & b26 = 1 & b27 = 1 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & S2_asl_r_r_acc_Rx32 & S2_asl_r_r_acc_Rx32d & S2_asl_r_r_acc_Rs32 & S2_asl_r_r_acc_Rt32 {
@@ -62693,7 +62693,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp20:4;
   tmp20 = zext(tmp19);
   local tmp21:4;
-  tmp21 = S2_asl_r_r_acc_Rx32 + tmp20;
+  tmp21 = tmp20;
   local tmp22:1;
   tmp22 = tmp21:1;
   if (tmp22) goto <t_branch_24>;
@@ -62721,7 +62721,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp32 = tmp29 s>> tmp31;
   tmp28 = tmp32;
 <done_24>
-  S2_asl_r_r_acc_Rx32d = tmp28:4;
+  S2_asl_r_r_acc_Rx32d = S2_asl_r_r_acc_Rx32 + tmp28:4;
 }
 
 :S2_lsr_r_r_acc S2_lsr_r_r_acc_Rx32 S2_lsr_r_r_acc_Rx32d S2_lsr_r_r_acc_Rs32 S2_lsr_r_r_acc_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b6 = 1 & b7 = 0 & b22 = 1 & b23 = 1 & b24 = 0 & b25 = 0 & b26 = 1 & b27 = 1 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & S2_lsr_r_r_acc_Rx32 & S2_lsr_r_r_acc_Rx32d & S2_lsr_r_r_acc_Rs32 & S2_lsr_r_r_acc_Rt32 {
@@ -62779,7 +62779,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp24:8;
   local tmp25:4;
   tmp25 = S2_lsr_r_r_acc_Rs32;
-  tmp24 = sext(tmp25);
+  tmp24 = zext(tmp25);
   local tmp26:8;
   tmp26 = zext(shamt);
   local tmp27:8;
@@ -62791,7 +62791,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp29:8;
   local tmp30:4;
   tmp30 = S2_lsr_r_r_acc_Rs32;
-  tmp29 = sext(tmp30);
+  tmp29 = zext(tmp30);
   local tmp31:8;
   tmp31 = zext(shamt);
   local tmp32:8;
@@ -62924,7 +62924,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp20:8;
   tmp20 = zext(tmp19);
   local tmp21:8;
-  tmp21 = S2_asr_r_p_acc_Rxx32 + tmp20;
+  tmp21 = tmp20;
   local tmp22:1;
   tmp22 = tmp21:1;
   if (tmp22) goto <t_branch_24>;
@@ -62948,7 +62948,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp30 = tmp28 << tmp29;
   tmp27 = tmp30;
 <done_24>
-  S2_asr_r_p_acc_Rxx32d = tmp27;
+  S2_asr_r_p_acc_Rxx32d = S2_asr_r_p_acc_Rxx32 + tmp27;
 }
 
 :S2_asl_r_p_acc S2_asl_r_p_acc_Rxx32 S2_asl_r_p_acc_Rxx32d S2_asl_r_p_acc_Rss32 S2_asl_r_p_acc_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b6 = 0 & b7 = 1 & b21 = 0 & b22 = 1 & b23 = 1 & b24 = 1 & b25 = 1 & b26 = 0 & b27 = 1 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & S2_asl_r_p_acc_Rxx32 & S2_asl_r_p_acc_Rxx32d & S2_asl_r_p_acc_Rss32 & S2_asl_r_p_acc_Rt32 {
@@ -62997,7 +62997,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp20:8;
   tmp20 = zext(tmp19);
   local tmp21:8;
-  tmp21 = S2_asl_r_p_acc_Rxx32 + tmp20;
+  tmp21 = tmp20;
   local tmp22:1;
   tmp22 = tmp21:1;
   if (tmp22) goto <t_branch_24>;
@@ -63021,7 +63021,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp30 = tmp28 s>> tmp29;
   tmp27 = tmp30;
 <done_24>
-  S2_asl_r_p_acc_Rxx32d = tmp27;
+  S2_asl_r_p_acc_Rxx32d = S2_asl_r_p_acc_Rxx32 + tmp27;
 }
 
 :S2_lsr_r_p_acc S2_lsr_r_p_acc_Rxx32 S2_lsr_r_p_acc_Rxx32d S2_lsr_r_p_acc_Rss32 S2_lsr_r_p_acc_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b6 = 1 & b7 = 0 & b21 = 0 & b22 = 1 & b23 = 1 & b24 = 1 & b25 = 1 & b26 = 0 & b27 = 1 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & S2_lsr_r_p_acc_Rxx32 & S2_lsr_r_p_acc_Rxx32d & S2_lsr_r_p_acc_Rss32 & S2_lsr_r_p_acc_Rt32 {
@@ -63070,7 +63070,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp20:8;
   tmp20 = zext(tmp19);
   local tmp21:8;
-  tmp21 = S2_lsr_r_p_acc_Rxx32 + tmp20;
+  tmp21 = tmp20;
   local tmp22:1;
   tmp22 = tmp21:1;
   if (tmp22) goto <t_branch_24>;
@@ -63094,7 +63094,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp30 = tmp28 << tmp29;
   tmp27 = tmp30;
 <done_24>
-  S2_lsr_r_p_acc_Rxx32d = tmp27;
+  S2_lsr_r_p_acc_Rxx32d = S2_lsr_r_p_acc_Rxx32 + tmp27;
 }
 
 :S2_lsl_r_p_acc S2_lsl_r_p_acc_Rxx32 S2_lsl_r_p_acc_Rxx32d S2_lsl_r_p_acc_Rss32 S2_lsl_r_p_acc_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b6 = 1 & b7 = 1 & b21 = 0 & b22 = 1 & b23 = 1 & b24 = 1 & b25 = 1 & b26 = 0 & b27 = 1 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & S2_lsl_r_p_acc_Rxx32 & S2_lsl_r_p_acc_Rxx32d & S2_lsl_r_p_acc_Rss32 & S2_lsl_r_p_acc_Rt32 {
@@ -63143,7 +63143,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp20:8;
   tmp20 = zext(tmp19);
   local tmp21:8;
-  tmp21 = S2_lsl_r_p_acc_Rxx32 + tmp20;
+  tmp21 = tmp20;
   local tmp22:1;
   tmp22 = tmp21:1;
   if (tmp22) goto <t_branch_24>;
@@ -63167,7 +63167,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp30 = tmp28 >> tmp29;
   tmp27 = tmp30;
 <done_24>
-  S2_lsl_r_p_acc_Rxx32d = tmp27;
+  S2_lsl_r_p_acc_Rxx32d = S2_lsl_r_p_acc_Rxx32 + tmp27;
 }
 
 :S2_asr_r_r_nac S2_asr_r_r_nac_Rx32 S2_asr_r_r_nac_Rx32d S2_asr_r_r_nac_Rs32 S2_asr_r_r_nac_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b6 = 0 & b7 = 0 & b22 = 0 & b23 = 1 & b24 = 0 & b25 = 0 & b26 = 1 & b27 = 1 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & S2_asr_r_r_nac_Rx32 & S2_asr_r_r_nac_Rx32d & S2_asr_r_r_nac_Rs32 & S2_asr_r_r_nac_Rt32 {
@@ -63216,7 +63216,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp20:4;
   tmp20 = zext(tmp19);
   local tmp21:4;
-  tmp21 = S2_asr_r_r_nac_Rx32 - tmp20;
+  tmp21 = tmp20;
   local tmp22:1;
   tmp22 = tmp21:1;
   if (tmp22) goto <t_branch_24>;
@@ -63244,7 +63244,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp32 = tmp29 << tmp31;
   tmp28 = tmp32;
 <done_24>
-  S2_asr_r_r_nac_Rx32d = tmp28:4;
+  S2_asr_r_r_nac_Rx32d = S2_asr_r_r_nac_Rx32 - tmp28:4;
 }
 
 :S2_asl_r_r_nac S2_asl_r_r_nac_Rx32 S2_asl_r_r_nac_Rx32d S2_asl_r_r_nac_Rs32 S2_asl_r_r_nac_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b6 = 0 & b7 = 1 & b22 = 0 & b23 = 1 & b24 = 0 & b25 = 0 & b26 = 1 & b27 = 1 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & S2_asl_r_r_nac_Rx32 & S2_asl_r_r_nac_Rx32d & S2_asl_r_r_nac_Rs32 & S2_asl_r_r_nac_Rt32 {
@@ -63364,7 +63364,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp20:4;
   tmp20 = zext(tmp19);
   local tmp21:4;
-  tmp21 = S2_lsr_r_r_nac_Rx32 - tmp20;
+  tmp21 = tmp20;
   local tmp22:1;
   tmp22 = tmp21:1;
   if (tmp22) goto <t_branch_24>;
@@ -63373,7 +63373,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp24:8;
   local tmp25:4;
   tmp25 = S2_lsr_r_r_nac_Rs32;
-  tmp24 = sext(tmp25);
+  tmp24 = zext(tmp25);
   local tmp26:8;
   tmp26 = zext(shamt);
   local tmp27:8;
@@ -63385,14 +63385,14 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp29:8;
   local tmp30:4;
   tmp30 = S2_lsr_r_r_nac_Rs32;
-  tmp29 = sext(tmp30);
+  tmp29 = zext(tmp30);
   local tmp31:8;
   tmp31 = zext(shamt);
   local tmp32:8;
   tmp32 = tmp29 << tmp31;
   tmp28 = tmp32;
 <done_24>
-  S2_lsr_r_r_nac_Rx32d = tmp28:4;
+  S2_lsr_r_r_nac_Rx32d = S2_lsr_r_r_nac_Rx32 - tmp28:4;
 }
 
 :S2_lsl_r_r_nac S2_lsl_r_r_nac_Rx32 S2_lsl_r_r_nac_Rx32d S2_lsl_r_r_nac_Rs32 S2_lsl_r_r_nac_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b6 = 1 & b7 = 1 & b22 = 0 & b23 = 1 & b24 = 0 & b25 = 0 & b26 = 1 & b27 = 1 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & S2_lsl_r_r_nac_Rx32 & S2_lsl_r_r_nac_Rx32d & S2_lsl_r_r_nac_Rs32 & S2_lsl_r_r_nac_Rt32 {
@@ -63441,7 +63441,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp20:4;
   tmp20 = zext(tmp19);
   local tmp21:4;
-  tmp21 = S2_lsl_r_r_nac_Rx32 - tmp20;
+  tmp21 = tmp20;
   local tmp22:1;
   tmp22 = tmp21:1;
   if (tmp22) goto <t_branch_24>;
@@ -63469,7 +63469,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp32 = tmp29 >> tmp31;
   tmp28 = tmp32;
 <done_24>
-  S2_lsl_r_r_nac_Rx32d = tmp28:4;
+  S2_lsl_r_r_nac_Rx32d = S2_lsl_r_r_nac_Rx32 - tmp28:4;
 }
 
 :S2_asr_r_p_nac S2_asr_r_p_nac_Rxx32 S2_asr_r_p_nac_Rxx32d S2_asr_r_p_nac_Rss32 S2_asr_r_p_nac_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b6 = 0 & b7 = 0 & b21 = 0 & b22 = 0 & b23 = 1 & b24 = 1 & b25 = 1 & b26 = 0 & b27 = 1 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & S2_asr_r_p_nac_Rxx32 & S2_asr_r_p_nac_Rxx32d & S2_asr_r_p_nac_Rss32 & S2_asr_r_p_nac_Rt32 {
@@ -63518,7 +63518,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp20:8;
   tmp20 = zext(tmp19);
   local tmp21:8;
-  tmp21 = S2_asr_r_p_nac_Rxx32 - tmp20;
+  tmp21 = tmp20;
   local tmp22:1;
   tmp22 = tmp21:1;
   if (tmp22) goto <t_branch_24>;
@@ -63542,7 +63542,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp30 = tmp28 << tmp29;
   tmp27 = tmp30;
 <done_24>
-  S2_asr_r_p_nac_Rxx32d = tmp27;
+  S2_asr_r_p_nac_Rxx32d = S2_asr_r_p_nac_Rxx32 - tmp27;
 }
 
 :S2_asl_r_p_nac S2_asl_r_p_nac_Rxx32 S2_asl_r_p_nac_Rxx32d S2_asl_r_p_nac_Rss32 S2_asl_r_p_nac_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b6 = 0 & b7 = 1 & b21 = 0 & b22 = 0 & b23 = 1 & b24 = 1 & b25 = 1 & b26 = 0 & b27 = 1 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & S2_asl_r_p_nac_Rxx32 & S2_asl_r_p_nac_Rxx32d & S2_asl_r_p_nac_Rss32 & S2_asl_r_p_nac_Rt32 {
@@ -63591,7 +63591,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp20:8;
   tmp20 = zext(tmp19);
   local tmp21:8;
-  tmp21 = S2_asl_r_p_nac_Rxx32 - tmp20;
+  tmp21 = tmp20;
   local tmp22:1;
   tmp22 = tmp21:1;
   if (tmp22) goto <t_branch_24>;
@@ -63615,7 +63615,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp30 = tmp28 s>> tmp29;
   tmp27 = tmp30;
 <done_24>
-  S2_asl_r_p_nac_Rxx32d = tmp27;
+  S2_asl_r_p_nac_Rxx32d = S2_asl_r_p_nac_Rxx32 - tmp27;
 }
 
 :S2_lsr_r_p_nac S2_lsr_r_p_nac_Rxx32 S2_lsr_r_p_nac_Rxx32d S2_lsr_r_p_nac_Rss32 S2_lsr_r_p_nac_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b6 = 1 & b7 = 0 & b21 = 0 & b22 = 0 & b23 = 1 & b24 = 1 & b25 = 1 & b26 = 0 & b27 = 1 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & S2_lsr_r_p_nac_Rxx32 & S2_lsr_r_p_nac_Rxx32d & S2_lsr_r_p_nac_Rss32 & S2_lsr_r_p_nac_Rt32 {
@@ -63664,7 +63664,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp20:8;
   tmp20 = zext(tmp19);
   local tmp21:8;
-  tmp21 = S2_lsr_r_p_nac_Rxx32 - tmp20;
+  tmp21 = tmp20;
   local tmp22:1;
   tmp22 = tmp21:1;
   if (tmp22) goto <t_branch_24>;
@@ -63688,7 +63688,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp30 = tmp28 << tmp29;
   tmp27 = tmp30;
 <done_24>
-  S2_lsr_r_p_nac_Rxx32d = tmp27;
+  S2_lsr_r_p_nac_Rxx32d = S2_lsr_r_p_nac_Rxx32 - tmp27;
 }
 
 :S2_lsl_r_p_nac S2_lsl_r_p_nac_Rxx32 S2_lsl_r_p_nac_Rxx32d S2_lsl_r_p_nac_Rss32 S2_lsl_r_p_nac_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b6 = 1 & b7 = 1 & b21 = 0 & b22 = 0 & b23 = 1 & b24 = 1 & b25 = 1 & b26 = 0 & b27 = 1 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & S2_lsl_r_p_nac_Rxx32 & S2_lsl_r_p_nac_Rxx32d & S2_lsl_r_p_nac_Rss32 & S2_lsl_r_p_nac_Rt32 {
@@ -63737,7 +63737,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp20:8;
   tmp20 = zext(tmp19);
   local tmp21:8;
-  tmp21 = S2_lsl_r_p_nac_Rxx32 - tmp20;
+  tmp21 = tmp20;
   local tmp22:1;
   tmp22 = tmp21:1;
   if (tmp22) goto <t_branch_24>;
@@ -63761,7 +63761,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp30 = tmp28 >> tmp29;
   tmp27 = tmp30;
 <done_24>
-  S2_lsl_r_p_nac_Rxx32d = tmp27;
+  S2_lsl_r_p_nac_Rxx32d = S2_lsl_r_p_nac_Rxx32 - tmp27;
 }
 
 :S2_asr_r_r_and S2_asr_r_r_and_Rx32 S2_asr_r_r_and_Rx32d S2_asr_r_r_and_Rs32 S2_asr_r_r_and_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b6 = 0 & b7 = 0 & b22 = 1 & b23 = 0 & b24 = 0 & b25 = 0 & b26 = 1 & b27 = 1 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & S2_asr_r_r_and_Rx32 & S2_asr_r_r_and_Rx32d & S2_asr_r_r_and_Rs32 & S2_asr_r_r_and_Rt32 {
@@ -63810,7 +63810,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp20:4;
   tmp20 = zext(tmp19);
   local tmp21:4;
-  tmp21 = S2_asr_r_r_and_Rx32 & tmp20;
+  tmp21 = tmp20;
   local tmp22:1;
   tmp22 = tmp21:1;
   if (tmp22) goto <t_branch_24>;
@@ -63838,7 +63838,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp32 = tmp29 << tmp31;
   tmp28 = tmp32;
 <done_24>
-  S2_asr_r_r_and_Rx32d = tmp28:4;
+  S2_asr_r_r_and_Rx32d = S2_asr_r_r_and_Rx32 & tmp28:4;
 }
 
 :S2_asl_r_r_and S2_asl_r_r_and_Rx32 S2_asl_r_r_and_Rx32d S2_asl_r_r_and_Rs32 S2_asl_r_r_and_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b6 = 0 & b7 = 1 & b22 = 1 & b23 = 0 & b24 = 0 & b25 = 0 & b26 = 1 & b27 = 1 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & S2_asl_r_r_and_Rx32 & S2_asl_r_r_and_Rx32d & S2_asl_r_r_and_Rs32 & S2_asl_r_r_and_Rt32 {
@@ -63887,7 +63887,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp20:4;
   tmp20 = zext(tmp19);
   local tmp21:4;
-  tmp21 = S2_asl_r_r_and_Rx32 & tmp20;
+  tmp21 = tmp20;
   local tmp22:1;
   tmp22 = tmp21:1;
   if (tmp22) goto <t_branch_24>;
@@ -63915,7 +63915,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp32 = tmp29 s>> tmp31;
   tmp28 = tmp32;
 <done_24>
-  S2_asl_r_r_and_Rx32d = tmp28:4;
+  S2_asl_r_r_and_Rx32d = S2_asl_r_r_and_Rx32 & tmp28:4;
 }
 
 :S2_lsr_r_r_and S2_lsr_r_r_and_Rx32 S2_lsr_r_r_and_Rx32d S2_lsr_r_r_and_Rs32 S2_lsr_r_r_and_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b6 = 1 & b7 = 0 & b22 = 1 & b23 = 0 & b24 = 0 & b25 = 0 & b26 = 1 & b27 = 1 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & S2_lsr_r_r_and_Rx32 & S2_lsr_r_r_and_Rx32d & S2_lsr_r_r_and_Rs32 & S2_lsr_r_r_and_Rt32 {
@@ -63964,7 +63964,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp20:4;
   tmp20 = zext(tmp19);
   local tmp21:4;
-  tmp21 = S2_lsr_r_r_and_Rx32 & tmp20;
+  tmp21 = tmp20;
   local tmp22:1;
   tmp22 = tmp21:1;
   if (tmp22) goto <t_branch_24>;
@@ -63973,7 +63973,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp24:8;
   local tmp25:4;
   tmp25 = S2_lsr_r_r_and_Rs32;
-  tmp24 = sext(tmp25);
+  tmp24 = zext(tmp25);
   local tmp26:8;
   tmp26 = zext(shamt);
   local tmp27:8;
@@ -63985,14 +63985,14 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp29:8;
   local tmp30:4;
   tmp30 = S2_lsr_r_r_and_Rs32;
-  tmp29 = sext(tmp30);
+  tmp29 = zext(tmp30);
   local tmp31:8;
   tmp31 = zext(shamt);
   local tmp32:8;
   tmp32 = tmp29 << tmp31;
   tmp28 = tmp32;
 <done_24>
-  S2_lsr_r_r_and_Rx32d = tmp28:4;
+  S2_lsr_r_r_and_Rx32d = S2_lsr_r_r_and_Rx32 & tmp28:4;
 }
 
 :S2_lsl_r_r_and S2_lsl_r_r_and_Rx32 S2_lsl_r_r_and_Rx32d S2_lsl_r_r_and_Rs32 S2_lsl_r_r_and_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b6 = 1 & b7 = 1 & b22 = 1 & b23 = 0 & b24 = 0 & b25 = 0 & b26 = 1 & b27 = 1 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & S2_lsl_r_r_and_Rx32 & S2_lsl_r_r_and_Rx32d & S2_lsl_r_r_and_Rs32 & S2_lsl_r_r_and_Rt32 {
@@ -64041,7 +64041,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp20:4;
   tmp20 = zext(tmp19);
   local tmp21:4;
-  tmp21 = S2_lsl_r_r_and_Rx32 & tmp20;
+  tmp21 = tmp20;
   local tmp22:1;
   tmp22 = tmp21:1;
   if (tmp22) goto <t_branch_24>;
@@ -64069,7 +64069,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp32 = tmp29 >> tmp31;
   tmp28 = tmp32;
 <done_24>
-  S2_lsl_r_r_and_Rx32d = tmp28:4;
+  S2_lsl_r_r_and_Rx32d = S2_lsl_r_r_and_Rx32 & tmp28:4;
 }
 
 :S2_asr_r_r_or S2_asr_r_r_or_Rx32 S2_asr_r_r_or_Rx32d S2_asr_r_r_or_Rs32 S2_asr_r_r_or_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b6 = 0 & b7 = 0 & b22 = 0 & b23 = 0 & b24 = 0 & b25 = 0 & b26 = 1 & b27 = 1 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & S2_asr_r_r_or_Rx32 & S2_asr_r_r_or_Rx32d & S2_asr_r_r_or_Rs32 & S2_asr_r_r_or_Rt32 {
@@ -64118,7 +64118,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp20:4;
   tmp20 = zext(tmp19);
   local tmp21:4;
-  tmp21 = S2_asr_r_r_or_Rx32 | tmp20;
+  tmp21 = tmp20;
   local tmp22:1;
   tmp22 = tmp21:1;
   if (tmp22) goto <t_branch_24>;
@@ -64146,7 +64146,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp32 = tmp29 << tmp31;
   tmp28 = tmp32;
 <done_24>
-  S2_asr_r_r_or_Rx32d = tmp28:4;
+  S2_asr_r_r_or_Rx32d = S2_asr_r_r_or_Rx32 | tmp28:4;
 }
 
 :S2_asl_r_r_or S2_asl_r_r_or_Rx32 S2_asl_r_r_or_Rx32d S2_asl_r_r_or_Rs32 S2_asl_r_r_or_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b6 = 0 & b7 = 1 & b22 = 0 & b23 = 0 & b24 = 0 & b25 = 0 & b26 = 1 & b27 = 1 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & S2_asl_r_r_or_Rx32 & S2_asl_r_r_or_Rx32d & S2_asl_r_r_or_Rs32 & S2_asl_r_r_or_Rt32 {
@@ -64195,7 +64195,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp20:4;
   tmp20 = zext(tmp19);
   local tmp21:4;
-  tmp21 = S2_asl_r_r_or_Rx32 | tmp20;
+  tmp21 = tmp20;
   local tmp22:1;
   tmp22 = tmp21:1;
   if (tmp22) goto <t_branch_24>;
@@ -64223,7 +64223,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp32 = tmp29 s>> tmp31;
   tmp28 = tmp32;
 <done_24>
-  S2_asl_r_r_or_Rx32d = tmp28:4;
+  S2_asl_r_r_or_Rx32d = S2_asl_r_r_or_Rx32 | tmp28:4;
 }
 
 :S2_lsr_r_r_or S2_lsr_r_r_or_Rx32 S2_lsr_r_r_or_Rx32d S2_lsr_r_r_or_Rs32 S2_lsr_r_r_or_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b6 = 1 & b7 = 0 & b22 = 0 & b23 = 0 & b24 = 0 & b25 = 0 & b26 = 1 & b27 = 1 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & S2_lsr_r_r_or_Rx32 & S2_lsr_r_r_or_Rx32d & S2_lsr_r_r_or_Rs32 & S2_lsr_r_r_or_Rt32 {
@@ -64272,7 +64272,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp20:4;
   tmp20 = zext(tmp19);
   local tmp21:4;
-  tmp21 = S2_lsr_r_r_or_Rx32 | tmp20;
+  tmp21 = tmp20;
   local tmp22:1;
   tmp22 = tmp21:1;
   if (tmp22) goto <t_branch_24>;
@@ -64281,7 +64281,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp24:8;
   local tmp25:4;
   tmp25 = S2_lsr_r_r_or_Rs32;
-  tmp24 = sext(tmp25);
+  tmp24 = zext(tmp25);
   local tmp26:8;
   tmp26 = zext(shamt);
   local tmp27:8;
@@ -64293,14 +64293,14 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp29:8;
   local tmp30:4;
   tmp30 = S2_lsr_r_r_or_Rs32;
-  tmp29 = sext(tmp30);
+  tmp29 = zext(tmp30);
   local tmp31:8;
   tmp31 = zext(shamt);
   local tmp32:8;
   tmp32 = tmp29 << tmp31;
   tmp28 = tmp32;
 <done_24>
-  S2_lsr_r_r_or_Rx32d = tmp28:4;
+  S2_lsr_r_r_or_Rx32d = S2_lsr_r_r_or_Rx32 | tmp28:4;
 }
 
 :S2_lsl_r_r_or S2_lsl_r_r_or_Rx32 S2_lsl_r_r_or_Rx32d S2_lsl_r_r_or_Rs32 S2_lsl_r_r_or_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b6 = 1 & b7 = 1 & b22 = 0 & b23 = 0 & b24 = 0 & b25 = 0 & b26 = 1 & b27 = 1 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & S2_lsl_r_r_or_Rx32 & S2_lsl_r_r_or_Rx32d & S2_lsl_r_r_or_Rs32 & S2_lsl_r_r_or_Rt32 {
@@ -64349,7 +64349,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp20:4;
   tmp20 = zext(tmp19);
   local tmp21:4;
-  tmp21 = S2_lsl_r_r_or_Rx32 | tmp20;
+  tmp21 = tmp20;
   local tmp22:1;
   tmp22 = tmp21:1;
   if (tmp22) goto <t_branch_24>;
@@ -64358,7 +64358,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp24:8;
   local tmp25:4;
   tmp25 = S2_lsl_r_r_or_Rs32;
-  tmp24 = sext(tmp25);
+  tmp24 = zext(tmp25);
   local tmp26:8;
   tmp26 = zext(shamt);
   local tmp27:8;
@@ -64370,14 +64370,14 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp29:8;
   local tmp30:4;
   tmp30 = S2_lsl_r_r_or_Rs32;
-  tmp29 = sext(tmp30);
+  tmp29 = zext(tmp30);
   local tmp31:8;
   tmp31 = zext(shamt);
   local tmp32:8;
   tmp32 = tmp29 >> tmp31;
   tmp28 = tmp32;
 <done_24>
-  S2_lsl_r_r_or_Rx32d = tmp28:4;
+  S2_lsl_r_r_or_Rx32d = S2_lsl_r_r_or_Rx32 | tmp28:4;
 }
 
 :S2_asr_r_p_and S2_asr_r_p_and_Rxx32 S2_asr_r_p_and_Rxx32d S2_asr_r_p_and_Rss32 S2_asr_r_p_and_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b6 = 0 & b7 = 0 & b21 = 0 & b22 = 1 & b23 = 0 & b24 = 1 & b25 = 1 & b26 = 0 & b27 = 1 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & S2_asr_r_p_and_Rxx32 & S2_asr_r_p_and_Rxx32d & S2_asr_r_p_and_Rss32 & S2_asr_r_p_and_Rt32 {
@@ -64426,7 +64426,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp20:8;
   tmp20 = zext(tmp19);
   local tmp21:8;
-  tmp21 = S2_asr_r_p_and_Rxx32 & tmp20;
+  tmp21 = tmp20;
   local tmp22:1;
   tmp22 = tmp21:1;
   if (tmp22) goto <t_branch_24>;
@@ -64450,7 +64450,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp30 = tmp28 << tmp29;
   tmp27 = tmp30;
 <done_24>
-  S2_asr_r_p_and_Rxx32d = tmp27;
+  S2_asr_r_p_and_Rxx32d = S2_asr_r_p_and_Rxx32 & tmp27;
 }
 
 :S2_asl_r_p_and S2_asl_r_p_and_Rxx32 S2_asl_r_p_and_Rxx32d S2_asl_r_p_and_Rss32 S2_asl_r_p_and_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b6 = 0 & b7 = 1 & b21 = 0 & b22 = 1 & b23 = 0 & b24 = 1 & b25 = 1 & b26 = 0 & b27 = 1 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & S2_asl_r_p_and_Rxx32 & S2_asl_r_p_and_Rxx32d & S2_asl_r_p_and_Rss32 & S2_asl_r_p_and_Rt32 {
@@ -64499,7 +64499,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp20:8;
   tmp20 = zext(tmp19);
   local tmp21:8;
-  tmp21 = S2_asl_r_p_and_Rxx32 & tmp20;
+  tmp21 = tmp20;
   local tmp22:1;
   tmp22 = tmp21:1;
   if (tmp22) goto <t_branch_24>;
@@ -64523,7 +64523,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp30 = tmp28 s>> tmp29;
   tmp27 = tmp30;
 <done_24>
-  S2_asl_r_p_and_Rxx32d = tmp27;
+  S2_asl_r_p_and_Rxx32d = S2_asl_r_p_and_Rxx32 & tmp27;
 }
 
 :S2_lsr_r_p_and S2_lsr_r_p_and_Rxx32 S2_lsr_r_p_and_Rxx32d S2_lsr_r_p_and_Rss32 S2_lsr_r_p_and_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b6 = 1 & b7 = 0 & b21 = 0 & b22 = 1 & b23 = 0 & b24 = 1 & b25 = 1 & b26 = 0 & b27 = 1 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & S2_lsr_r_p_and_Rxx32 & S2_lsr_r_p_and_Rxx32d & S2_lsr_r_p_and_Rss32 & S2_lsr_r_p_and_Rt32 {
@@ -64572,7 +64572,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp20:8;
   tmp20 = zext(tmp19);
   local tmp21:8;
-  tmp21 = S2_lsr_r_p_and_Rxx32 & tmp20;
+  tmp21 = tmp20;
   local tmp22:1;
   tmp22 = tmp21:1;
   if (tmp22) goto <t_branch_24>;
@@ -64596,7 +64596,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp30 = tmp28 << tmp29;
   tmp27 = tmp30;
 <done_24>
-  S2_lsr_r_p_and_Rxx32d = tmp27;
+  S2_lsr_r_p_and_Rxx32d = S2_lsr_r_p_and_Rxx32 & tmp27;
 }
 
 :S2_lsl_r_p_and S2_lsl_r_p_and_Rxx32 S2_lsl_r_p_and_Rxx32d S2_lsl_r_p_and_Rss32 S2_lsl_r_p_and_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b6 = 1 & b7 = 1 & b21 = 0 & b22 = 1 & b23 = 0 & b24 = 1 & b25 = 1 & b26 = 0 & b27 = 1 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & S2_lsl_r_p_and_Rxx32 & S2_lsl_r_p_and_Rxx32d & S2_lsl_r_p_and_Rss32 & S2_lsl_r_p_and_Rt32 {
@@ -64645,7 +64645,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp20:8;
   tmp20 = zext(tmp19);
   local tmp21:8;
-  tmp21 = S2_lsl_r_p_and_Rxx32 & tmp20;
+  tmp21 = tmp20;
   local tmp22:1;
   tmp22 = tmp21:1;
   if (tmp22) goto <t_branch_24>;
@@ -64669,7 +64669,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp30 = tmp28 >> tmp29;
   tmp27 = tmp30;
 <done_24>
-  S2_lsl_r_p_and_Rxx32d = tmp27;
+  S2_lsl_r_p_and_Rxx32d = S2_lsl_r_p_and_Rxx32 & tmp27;
 }
 
 :S2_asr_r_p_or S2_asr_r_p_or_Rxx32 S2_asr_r_p_or_Rxx32d S2_asr_r_p_or_Rss32 S2_asr_r_p_or_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b6 = 0 & b7 = 0 & b21 = 0 & b22 = 0 & b23 = 0 & b24 = 1 & b25 = 1 & b26 = 0 & b27 = 1 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & S2_asr_r_p_or_Rxx32 & S2_asr_r_p_or_Rxx32d & S2_asr_r_p_or_Rss32 & S2_asr_r_p_or_Rt32 {
@@ -64718,7 +64718,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp20:8;
   tmp20 = zext(tmp19);
   local tmp21:8;
-  tmp21 = S2_asr_r_p_or_Rxx32 | tmp20;
+  tmp21 = tmp20;
   local tmp22:1;
   tmp22 = tmp21:1;
   if (tmp22) goto <t_branch_24>;
@@ -64742,7 +64742,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp30 = tmp28 << tmp29;
   tmp27 = tmp30;
 <done_24>
-  S2_asr_r_p_or_Rxx32d = tmp27;
+  S2_asr_r_p_or_Rxx32d = S2_asr_r_p_or_Rxx32 | tmp27;
 }
 
 :S2_asl_r_p_or S2_asl_r_p_or_Rxx32 S2_asl_r_p_or_Rxx32d S2_asl_r_p_or_Rss32 S2_asl_r_p_or_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b6 = 0 & b7 = 1 & b21 = 0 & b22 = 0 & b23 = 0 & b24 = 1 & b25 = 1 & b26 = 0 & b27 = 1 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & S2_asl_r_p_or_Rxx32 & S2_asl_r_p_or_Rxx32d & S2_asl_r_p_or_Rss32 & S2_asl_r_p_or_Rt32 {
@@ -64791,7 +64791,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp20:8;
   tmp20 = zext(tmp19);
   local tmp21:8;
-  tmp21 = S2_asl_r_p_or_Rxx32 | tmp20;
+  tmp21 = tmp20;
   local tmp22:1;
   tmp22 = tmp21:1;
   if (tmp22) goto <t_branch_24>;
@@ -64815,7 +64815,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp30 = tmp28 s>> tmp29;
   tmp27 = tmp30;
 <done_24>
-  S2_asl_r_p_or_Rxx32d = tmp27;
+  S2_asl_r_p_or_Rxx32d = S2_asl_r_p_or_Rxx32 | tmp27;
 }
 
 :S2_lsr_r_p_or S2_lsr_r_p_or_Rxx32 S2_lsr_r_p_or_Rxx32d S2_lsr_r_p_or_Rss32 S2_lsr_r_p_or_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b6 = 1 & b7 = 0 & b21 = 0 & b22 = 0 & b23 = 0 & b24 = 1 & b25 = 1 & b26 = 0 & b27 = 1 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & S2_lsr_r_p_or_Rxx32 & S2_lsr_r_p_or_Rxx32d & S2_lsr_r_p_or_Rss32 & S2_lsr_r_p_or_Rt32 {
@@ -64864,7 +64864,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp20:8;
   tmp20 = zext(tmp19);
   local tmp21:8;
-  tmp21 = S2_lsr_r_p_or_Rxx32 | tmp20;
+  tmp21 = tmp20;
   local tmp22:1;
   tmp22 = tmp21:1;
   if (tmp22) goto <t_branch_24>;
@@ -64888,7 +64888,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp30 = tmp28 << tmp29;
   tmp27 = tmp30;
 <done_24>
-  S2_lsr_r_p_or_Rxx32d = tmp27;
+  S2_lsr_r_p_or_Rxx32d = S2_lsr_r_p_or_Rxx32 | tmp27;
 }
 
 :S2_lsl_r_p_or S2_lsl_r_p_or_Rxx32 S2_lsl_r_p_or_Rxx32d S2_lsl_r_p_or_Rss32 S2_lsl_r_p_or_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b6 = 1 & b7 = 1 & b21 = 0 & b22 = 0 & b23 = 0 & b24 = 1 & b25 = 1 & b26 = 0 & b27 = 1 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & S2_lsl_r_p_or_Rxx32 & S2_lsl_r_p_or_Rxx32d & S2_lsl_r_p_or_Rss32 & S2_lsl_r_p_or_Rt32 {
@@ -64937,7 +64937,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp20:8;
   tmp20 = zext(tmp19);
   local tmp21:8;
-  tmp21 = S2_lsl_r_p_or_Rxx32 | tmp20;
+  tmp21 = tmp20;
   local tmp22:1;
   tmp22 = tmp21:1;
   if (tmp22) goto <t_branch_24>;
@@ -64961,7 +64961,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp30 = tmp28 >> tmp29;
   tmp27 = tmp30;
 <done_24>
-  S2_lsl_r_p_or_Rxx32d = tmp27;
+  S2_lsl_r_p_or_Rxx32d = S2_lsl_r_p_or_Rxx32 | tmp27;
 }
 
 :S2_asr_r_p_xor S2_asr_r_p_xor_Rxx32 S2_asr_r_p_xor_Rxx32d S2_asr_r_p_xor_Rss32 S2_asr_r_p_xor_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b6 = 0 & b7 = 0 & b21 = 1 & b22 = 1 & b23 = 0 & b24 = 1 & b25 = 1 & b26 = 0 & b27 = 1 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & S2_asr_r_p_xor_Rxx32 & S2_asr_r_p_xor_Rxx32d & S2_asr_r_p_xor_Rss32 & S2_asr_r_p_xor_Rt32 {
@@ -65010,7 +65010,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp20:8;
   tmp20 = zext(tmp19);
   local tmp21:8;
-  tmp21 = S2_asr_r_p_xor_Rxx32 ^ tmp20;
+  tmp21 = tmp20;
   local tmp22:1;
   tmp22 = tmp21:1;
   if (tmp22) goto <t_branch_24>;
@@ -65034,7 +65034,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp30 = tmp28 << tmp29;
   tmp27 = tmp30;
 <done_24>
-  S2_asr_r_p_xor_Rxx32d = tmp27;
+  S2_asr_r_p_xor_Rxx32d = S2_asr_r_p_xor_Rxx32 ^ tmp27;
 }
 
 :S2_asl_r_p_xor S2_asl_r_p_xor_Rxx32 S2_asl_r_p_xor_Rxx32d S2_asl_r_p_xor_Rss32 S2_asl_r_p_xor_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b6 = 0 & b7 = 1 & b21 = 1 & b22 = 1 & b23 = 0 & b24 = 1 & b25 = 1 & b26 = 0 & b27 = 1 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & S2_asl_r_p_xor_Rxx32 & S2_asl_r_p_xor_Rxx32d & S2_asl_r_p_xor_Rss32 & S2_asl_r_p_xor_Rt32 {
@@ -65083,7 +65083,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp20:8;
   tmp20 = zext(tmp19);
   local tmp21:8;
-  tmp21 = S2_asl_r_p_xor_Rxx32 ^ tmp20;
+  tmp21 = tmp20;
   local tmp22:1;
   tmp22 = tmp21:1;
   if (tmp22) goto <t_branch_24>;
@@ -65107,7 +65107,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp30 = tmp28 s>> tmp29;
   tmp27 = tmp30;
 <done_24>
-  S2_asl_r_p_xor_Rxx32d = tmp27;
+  S2_asl_r_p_xor_Rxx32d = S2_asl_r_p_xor_Rxx32 ^ tmp27;
 }
 
 :S2_lsr_r_p_xor S2_lsr_r_p_xor_Rxx32 S2_lsr_r_p_xor_Rxx32d S2_lsr_r_p_xor_Rss32 S2_lsr_r_p_xor_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b6 = 1 & b7 = 0 & b21 = 1 & b22 = 1 & b23 = 0 & b24 = 1 & b25 = 1 & b26 = 0 & b27 = 1 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & S2_lsr_r_p_xor_Rxx32 & S2_lsr_r_p_xor_Rxx32d & S2_lsr_r_p_xor_Rss32 & S2_lsr_r_p_xor_Rt32 {
@@ -65156,7 +65156,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp20:8;
   tmp20 = zext(tmp19);
   local tmp21:8;
-  tmp21 = S2_lsr_r_p_xor_Rxx32 ^ tmp20;
+  tmp21 = tmp20;
   local tmp22:1;
   tmp22 = tmp21:1;
   if (tmp22) goto <t_branch_24>;
@@ -65180,7 +65180,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp30 = tmp28 << tmp29;
   tmp27 = tmp30;
 <done_24>
-  S2_lsr_r_p_xor_Rxx32d = tmp27;
+  S2_lsr_r_p_xor_Rxx32d = S2_lsr_r_p_xor_Rxx32 ^ tmp27;
 }
 
 :S2_lsl_r_p_xor S2_lsl_r_p_xor_Rxx32 S2_lsl_r_p_xor_Rxx32d S2_lsl_r_p_xor_Rss32 S2_lsl_r_p_xor_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b6 = 1 & b7 = 1 & b21 = 1 & b22 = 1 & b23 = 0 & b24 = 1 & b25 = 1 & b26 = 0 & b27 = 1 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & S2_lsl_r_p_xor_Rxx32 & S2_lsl_r_p_xor_Rxx32d & S2_lsl_r_p_xor_Rss32 & S2_lsl_r_p_xor_Rt32 {
@@ -65229,7 +65229,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   local tmp20:8;
   tmp20 = zext(tmp19);
   local tmp21:8;
-  tmp21 = S2_lsl_r_p_xor_Rxx32 ^ tmp20;
+  tmp21 = tmp20;
   local tmp22:1;
   tmp22 = tmp21:1;
   if (tmp22) goto <t_branch_24>;
@@ -65253,7 +65253,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
   tmp30 = tmp28 >> tmp29;
   tmp27 = tmp30;
 <done_24>
-  S2_lsl_r_p_xor_Rxx32d = tmp27;
+  S2_lsl_r_p_xor_Rxx32d = S2_lsl_r_p_xor_Rxx32 ^ tmp27;
 }
 
 :S2_asr_r_r_sat S2_asr_r_r_sat_Rd32 S2_asr_r_r_sat_Rs32 S2_asr_r_r_sat_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b6 = 0 & b7 = 0 & b22 = 0 & b23 = 0 & b24 = 0 & b25 = 1 & b26 = 1 & b27 = 0 & b28 = 0 & b29 = 0 & b30 = 1 & b31 = 1 & S2_asr_r_r_sat_Rd32 & S2_asr_r_r_sat_Rs32 & S2_asr_r_r_sat_Rt32 unimpl
