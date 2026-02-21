@@ -767,10 +767,32 @@ fn order_of_operations_32(objdump: &str, op: OOOperation, post_op: OOPostOperati
 
     for i in 1..1000 {
         order_of_operations_helper(&mut cpu, &mut mmu, &mut ev, op, post_op, 4, 0xea43, i, 5);
+        order_of_operations_helper(
+            &mut cpu,
+            &mut mmu,
+            &mut ev,
+            op,
+            post_op,
+            4,
+            -2i64 as u64,
+            i,
+            5,
+        );
     }
     for i in (u32::MAX - 1000)..u32::MAX {
         order_of_operations_helper(
             &mut cpu, &mut mmu, &mut ev, op, post_op, 4, 0xea43, i as u64, 5,
+        );
+        order_of_operations_helper(
+            &mut cpu,
+            &mut mmu,
+            &mut ev,
+            op,
+            post_op,
+            4,
+            -2i64 as u64,
+            i as u64,
+            5,
         );
     }
 }
@@ -875,9 +897,31 @@ fn order_of_operations_64(objdump: &str, op: OOOperation, post_op: OOPostOperati
 
     for i in 1..1000 {
         order_of_operations_helper(&mut cpu, &mut mmu, &mut ev, op, post_op, 8, 0xea43, i, 5);
+        order_of_operations_helper(
+            &mut cpu,
+            &mut mmu,
+            &mut ev,
+            op,
+            post_op,
+            8,
+            -2i64 as u64,
+            i,
+            5,
+        );
     }
     for i in (u64::MAX - 1000)..u64::MAX {
         order_of_operations_helper(&mut cpu, &mut mmu, &mut ev, op, post_op, 8, 0xea43, i, 5);
+        order_of_operations_helper(
+            &mut cpu,
+            &mut mmu,
+            &mut ev,
+            op,
+            post_op,
+            8,
+            -2i64 as u64,
+            i,
+            5,
+        );
     }
 }
 
