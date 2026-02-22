@@ -700,6 +700,7 @@ pub enum OOPostOperation {
     Or,
     Xor,
     Sub,
+    None,
 }
 
 #[test_case(
@@ -984,6 +985,7 @@ fn order_of_operations_helper(
         OOPostOperation::Or => shifted | dest_start,
         OOPostOperation::Xor => shifted ^ dest_start,
         OOPostOperation::Sub => dest_start.wrapping_sub(shifted),
+        _ => unreachable!(),
     };
 
     if size == 4 {
@@ -1007,4 +1009,69 @@ fn order_of_operations_helper(
     } else {
         unreachable!()
     };
+}
+
+// Multiply instructions that sign extend inappropriately when they should zero-extend.
+#[test_case(
+	r#"
+       0:	0a c3 40 e5	e540c30a { 	r11:10 = mpyu(r0,r3) }
+	"#, OOPostOperation::None; "M2_dpmpyuu_s0"
+)]
+#[test_case(
+	r#"
+       0:	0a c3 40 e7	e740c30a { 	r11:10 += mpyu(r0,r3) }
+	"#, OOPostOperation::Add; "M2_dpmpyuu_acc_s0"
+)]
+#[test_case(
+	r#"
+       0:	0a c3 60 e7	e760c30a { 	r11:10 -= mpyu(r0,r3) }
+	"#, OOPostOperation::Sub; "M2_dpmpyuu_nac_s0"
+)]
+fn mpyuu_sext(objdump: &str, post_op: OOPostOperation) {
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(objdump);
+    let initial_values = [
+        0x1u64,
+        0x10,
+        0x20,
+        0x300,
+        0xffff,
+        0xfea7,
+        0xdeadbeef,
+        0xffffff87,
+        0x78654aff3112,
+        0xffffffffffffff89,
+    ];
+    let mpyu_values = [0xffffff87u32, 6774, 23];
+
+    for initial_value in &initial_values {
+        for r0_val in &mpyu_values {
+            for r3_val in &mpyu_values {
+                cpu.set_pc(0x1000).unwrap();
+                cpu.write_register(HexagonRegister::D5, *initial_value)
+                    .unwrap();
+
+                cpu.write_register(HexagonRegister::R0, *r0_val).unwrap();
+                cpu.write_register(HexagonRegister::R3, *r3_val).unwrap();
+
+                let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+                assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
+
+                let mul = (*r0_val as u64).wrapping_mul(*r3_val as u64);
+                let out = match post_op {
+                    OOPostOperation::Add => mul.wrapping_add(*initial_value),
+                    OOPostOperation::Sub => initial_value.wrapping_sub(mul),
+                    OOPostOperation::None => mul,
+                    _ => unreachable!(),
+                };
+
+                let out_emulated = cpu.read_register::<u64>(HexagonRegister::D5).unwrap();
+
+                info!(
+                    "initial_value {:x} r0 {:x} r3 {:x} out {}",
+                    initial_value, r0_val, r3_val, mul
+                );
+                assert_eq!(out, out_emulated)
+            }
+        }
+    }
 }
