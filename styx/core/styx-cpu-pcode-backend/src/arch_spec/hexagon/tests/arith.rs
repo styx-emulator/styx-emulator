@@ -2,6 +2,7 @@
 //! For arithmetic operations we had to implement
 
 use crate::arch_spec::hexagon::tests::*;
+use log::info;
 use test_case::test_case;
 
 // TODO: robustize
@@ -240,4 +241,54 @@ pub fn tableidxw(r4: u32, r5: u32, r5_expected: u32) {
 
     let r5 = cpu.read_register::<u32>(HexagonRegister::R5).unwrap();
     assert_eq!(r5, r5_expected);
+}
+
+/// Some manual test cases in case the "corresponding u64" in the mask_all
+/// is computed wrong
+#[test_case(0b01011010, 0x00ff00ffff00ff00; "mask_four_bits_set")]
+#[test_case(0b11001100, 0xffff0000ffff0000; "mask_some_bits_set")]
+pub fn mask(p0: u8, r1_r0_expected: u64) {
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(
+        r#"
+	0:	00 c0 00 86	8600c000 { 	r1:0 = mask(p0) }
+"#,
+    );
+
+    cpu.write_register(HexagonRegister::P0, p0).unwrap();
+
+    let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
+
+    let d0 = cpu.read_register::<u64>(HexagonRegister::D0).unwrap();
+    assert_eq!(r1_r0_expected, d0);
+}
+
+/// Mask only has 256 possible inputs, so why not test them all?
+#[test]
+pub fn mask_all() {
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(
+        r#"
+	0:	00 c0 00 86	8600c000 { 	r1:0 = mask(p0) }
+"#,
+    );
+
+    for i in 0u8..=255 {
+        cpu.set_pc(0x1000).unwrap();
+
+        let mut corresp_u64 = 0;
+        for j in 0..8 {
+            if ((i >> j) & 1) == 1 {
+                corresp_u64 |= (0xff << (j * 8));
+            }
+        }
+
+        info!("iter {i}");
+        cpu.write_register(HexagonRegister::P0, i).unwrap();
+
+        let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+        assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
+
+        let d0 = cpu.read_register::<u64>(HexagonRegister::D0).unwrap();
+        assert_eq!(corresp_u64, d0);
+    }
 }
