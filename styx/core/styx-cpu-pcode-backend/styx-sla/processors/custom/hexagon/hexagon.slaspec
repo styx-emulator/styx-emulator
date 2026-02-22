@@ -28823,7 +28823,26 @@ gp: reloc is epsilon [ reloc = 0; ] {
    if (!done) goto <loopstart>;
 }
 
-:C2_mask C2_mask_Rdd32 C2_mask_Pt4 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b24 = 0 & b25 = 1 & b26 = 1 & b27 = 0 & b28 = 0 & b29 = 0 & b30 = 0 & b31 = 1 & C2_mask_Rdd32 & C2_mask_Pt4 unimpl
+:C2_mask C2_mask_Rdd32 C2_mask_Pt4 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b24 = 0 & b25 = 1 & b26 = 1 & b27 = 0 & b28 = 0 & b29 = 0 & b30 = 0 & b31 = 1 & C2_mask_Rdd32 & C2_mask_Pt4 {
+  local cnt:1 = 0;
+  local ith_bit:1 = 0;
+
+<loopstart>
+  ith_bit = (C2_mask_Pt4 >> cnt) & 1; 
+  if (ith_bit) goto <set_ff>;
+  if (!ith_bit) goto <set_zero>;
+
+<set_ff>
+  C2_mask_Rdd32 = C2_mask_Rdd32 | (0xff << (cnt * 8));
+  goto <loopend>;
+<set_zero>
+  C2_mask_Rdd32 = C2_mask_Rdd32 & ~(0xff << (cnt * 8));
+
+<loopend>
+  cnt = cnt + 1;
+  done = cnt > 7;
+  if (!done) goto <loopstart>;
+}
 
 :A2_vcmpbeq A2_vcmpbeq_Pd4 A2_vcmpbeq_Rss32 A2_vcmpbeq_Rtt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b5 = 0 & b6 = 1 & b7 = 1 & b13 = 0 & b23 = 0 & b24 = 0 & b25 = 1 & b26 = 0 & b27 = 0 & b28 = 1 & b29 = 0 & b30 = 1 & b31 = 1 & A2_vcmpbeq_Pd4 & A2_vcmpbeq_Rss32 & A2_vcmpbeq_Rtt32 {
   local i:4;
