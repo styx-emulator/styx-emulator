@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use super::{CommunicationsProcessorModule, CpmError, CpmEvent, CpmPeripheral};
-use crate::Mpc8xxVariants;
 use derive_more::Display;
 use styx_core::errors::UnknownError;
 use styx_core::prelude::Peripheral;
 use styx_core::sync::sync::{Arc, Weak};
+
+use super::{CommunicationsProcessorModule, CpmError, CpmEvent, CpmPeripheral};
+use crate::Mpc8xxVariants;
 
 /// Event abstraction for IMMR related IPC for the CPM Interrupt
 /// Controller

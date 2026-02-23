@@ -1,17 +1,12 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! Stub emulation for the STM32F405 processor
 #![allow(non_upper_case_globals)]
-use styx_core::core::builder::BuildProcessorImplArgs;
+use styx_core::core::builder::{BuildProcessorImplArgs, ProcessorImpl};
+use styx_core::cpu::arch::arm::{ArmRegister, ArmVariants};
+use styx_core::cpu::arch::backends::ArchVariant;
 use styx_core::cpu::PcodeBackend;
 use styx_core::memory::{DummyTlb, HasRegions};
 use styx_core::prelude::*;
-use styx_core::{
-    core::builder::ProcessorImpl,
-    cpu::arch::{
-        arm::{ArmRegister, ArmVariants},
-        backends::ArchVariant,
-    },
-};
 use styx_nvic::Nvic;
 use styx_peripherals::uart::UartController;
 use thiserror::Error;

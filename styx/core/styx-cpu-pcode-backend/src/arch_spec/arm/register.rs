@@ -1,18 +1,16 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use super::helpers::StackPointerManager;
-use crate::register_manager::RegisterCallbackCpu;
-use crate::{
-    memory::{sized_value::SizedValue, space_manager::SpaceManager},
-    register_manager::{RegisterCallback, RegisterHandleError},
-};
 use log::{trace, warn};
-use styx_cpu_type::arch::{arm::ArmRegister, backends::ArchRegister};
+use styx_cpu_type::arch::arm::ArmRegister;
+use styx_cpu_type::arch::backends::ArchRegister;
 use styx_pcode::pcode::{SpaceName, VarnodeData};
 use styx_processor::cpu::{CpuBackend, CpuBackendExt};
-use styx_sync::sync::{
-    atomic::{AtomicU64, Ordering},
-    Arc,
-};
+use styx_sync::sync::atomic::{AtomicU64, Ordering};
+use styx_sync::sync::Arc;
+
+use super::helpers::StackPointerManager;
+use crate::memory::sized_value::SizedValue;
+use crate::memory::space_manager::SpaceManager;
+use crate::register_manager::{RegisterCallback, RegisterCallbackCpu, RegisterHandleError};
 
 // APSR constants
 /// APSR bit offset for the condition flags.

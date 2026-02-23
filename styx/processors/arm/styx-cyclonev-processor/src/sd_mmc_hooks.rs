@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use styx_core::prelude::*;
+use styx_cyclone_v_hps_sys::generic::RegisterSpec;
+use styx_cyclone_v_hps_sys::sdmmc;
 use tracing::{debug, warn};
 
 use super::sd_mmc::{SDMMC_BASE, SDMMC_STRUCT_SIZE};
-use styx_cyclone_v_hps_sys::{generic::RegisterSpec, sdmmc};
 
 // userdata is `Arc<CycloneVSDMMC>`
 pub fn sdmmc_region_read_debug_hook(

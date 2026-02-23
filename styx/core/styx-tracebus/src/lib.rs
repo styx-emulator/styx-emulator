@@ -9,14 +9,17 @@ pub mod event_listener;
 
 mod ipc_impl;
 mod null_impl;
-pub use crate::ipc_impl::{IPCTracer, TracerReader, TracerReaderOptions, SRB_TRACE_FILE_EXT};
-pub use crate::null_impl::NullTracer;
-use serde::{Deserialize, Serialize};
 use std::time::Duration;
+
+use serde::{Deserialize, Serialize};
 use styx_macros::{styx_event, styx_event_dispatch, Traceable};
 pub use styx_sync;
-use styx_sync::{lazy_static, sync::atomic::AtomicU64};
+use styx_sync::lazy_static;
+use styx_sync::sync::atomic::AtomicU64;
 use thiserror::Error;
+
+pub use crate::ipc_impl::{IPCTracer, TracerReader, TracerReaderOptions, SRB_TRACE_FILE_EXT};
+pub use crate::null_impl::NullTracer;
 
 pub extern crate log;
 
@@ -634,8 +637,9 @@ pub struct InterruptEvent {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use test_case::test_case;
+
+    use super::*;
     #[test]
     fn test_binary_serde_c() {
         let mut event = InsnFetchEvent::new();

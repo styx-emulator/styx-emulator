@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use styx_core::prelude::*;
-
 use enum_map::{Enum, EnumMap};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
+use styx_core::prelude::*;
 use tracing::{debug, trace};
 
 use crate::core_event_controller::{PeripheralId, SicHandle};

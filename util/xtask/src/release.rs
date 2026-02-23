@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use anyhow::{bail, Context};
 use std::fs;
 use std::process::Command;
+
+use anyhow::{bail, Context};
 use styx_util::resolve_path;
 use toml_edit::{DocumentMut, Formatted, Value as TomlValue};
 

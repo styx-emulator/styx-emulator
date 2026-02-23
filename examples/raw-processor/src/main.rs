@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use styx_emulator::core::executor::DefaultExecutor;
 use styx_emulator::cpu::arch::superh::SuperHVariants;
-use styx_emulator::plugins::{debug_tools::*, tracing_plugins::ProcessorTracingPlugin};
+use styx_emulator::plugins::debug_tools::*;
+use styx_emulator::plugins::tracing_plugins::ProcessorTracingPlugin;
 use styx_emulator::prelude::*;
 use styx_emulator::processors::RawProcessor;
 use tracing::info;

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! Maps the various mips64 architecture variants
-use super::gdb_targets::{Mips64CaviumTargetDescription, Mips64CpuTargetDescription};
-use crate::arch::Mips64Register;
-use crate::arch::{Arch, ArchitectureDef, ArchitectureVariant, CpuRegisterBank};
 use derive_more::Display;
+
+use super::gdb_targets::{Mips64CaviumTargetDescription, Mips64CpuTargetDescription};
+use crate::arch::{Arch, ArchitectureDef, ArchitectureVariant, CpuRegisterBank, Mips64Register};
 
 const GENERAL_REGISTERS: &[Mips64Register] = &[
     Mips64Register::R0,

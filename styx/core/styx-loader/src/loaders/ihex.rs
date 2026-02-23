@@ -9,12 +9,14 @@
 //! - Extended Linear Address records (04)
 //! - Start Linear Address records (05)
 
-use crate::{Loader, LoaderHints, MemoryLoaderDesc, StyxLoaderError};
 use std::borrow::Cow;
 use std::collections::BTreeMap;
+
 use styx_cpu_type::Arch;
 use styx_errors::anyhow::Context;
 use styx_memory::{MemoryPermissions, MemoryRegion};
+
+use crate::{Loader, LoaderHints, MemoryLoaderDesc, StyxLoaderError};
 
 /// Intel HEX record types
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -417,9 +419,11 @@ impl Loader for IhexLoader {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::collections::HashMap;
+
     use test_case::test_case;
+
+    use super::*;
 
     #[test]
     fn test_parse_hex_string() {

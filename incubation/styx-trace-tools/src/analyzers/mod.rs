@@ -1,13 +1,17 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! Analyzers - functions that process [AggregateEvents](crate::event::AggregateEvent)
-use crate::event::{AggregateEvent, StreamEndReason};
+use std::collections::HashMap;
+use std::time::Duration;
+
 use futures_core::stream::Stream;
 use futures_util::stream::StreamExt;
-use std::{collections::HashMap, time::Duration};
 use styx_core::grpc::traceapp::StartTraceAppSessionResponse;
-use tokio::{sync::mpsc::Receiver, time::timeout};
+use tokio::sync::mpsc::Receiver;
+use tokio::time::timeout;
 use tokio_util::sync::CancellationToken;
 use tracing::{info, trace};
+
+use crate::event::{AggregateEvent, StreamEndReason};
 
 #[derive(clap::ValueEnum, Clone, Debug)]
 pub enum OutputFormat {

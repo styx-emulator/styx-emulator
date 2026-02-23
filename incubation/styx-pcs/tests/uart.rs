@@ -1,24 +1,19 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use std::{pin::Pin, time::Duration};
+use std::pin::Pin;
+use std::time::Duration;
 
-use styx_core::{
-    grpc::{
-        io::uart::{
-            self,
-            bytes_message::Data,
-            uart_port_server::{UartPort, UartPortServer},
-            BytesMessage, SubscribeDirection, TxData,
-        },
-        ExpectField,
-    },
-    prelude::*,
-    util::logging::init_logging,
-};
+use styx_core::grpc::io::uart::bytes_message::Data;
+use styx_core::grpc::io::uart::uart_port_server::{UartPort, UartPortServer};
+use styx_core::grpc::io::uart::{self, BytesMessage, SubscribeDirection, TxData};
+use styx_core::grpc::ExpectField;
+use styx_core::prelude::*;
+use styx_core::util::logging::init_logging;
 use styx_pcs::{start_pcs, PcsConfig};
-use tokio::sync::broadcast;
-use tokio::sync::mpsc;
+use tokio::sync::{broadcast, mpsc};
 use tokio_stream::Stream;
-use tonic::{async_trait, service::RoutesBuilder, transport::Server};
+use tonic::async_trait;
+use tonic::service::RoutesBuilder;
+use tonic::transport::Server;
 
 /// Test Uart sender that simply sends a test message and contains channel to process received messages.
 #[derive(Clone)]

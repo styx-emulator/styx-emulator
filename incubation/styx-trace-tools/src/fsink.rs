@@ -2,18 +2,17 @@
 //! fsink - drain live traces to a file. Watch `/tmp` for `*.srb` files, open
 //! consume events, store as a raw file.
 
+use std::collections::HashSet;
+use std::fs::File;
+use std::io::{Error, Write};
+use std::path::Path;
+use std::time::Duration;
+
 use clap::Parser;
 use futures::stream::StreamExt;
 use ipmpsc::{Receiver, SharedRingBuffer};
 use signal_hook::consts::signal::*;
 use signal_hook_tokio::Signals;
-use std::collections::HashSet;
-use std::fs::File;
-use std::time::Duration;
-use std::{
-    io::{Error, Write},
-    path::Path,
-};
 use styx_core::sync::sync::atomic::{AtomicBool, Ordering};
 use styx_core::tracebus::{BaseTraceEvent, TraceError, Traceable};
 use styx_core::util::logging::init_logging;
@@ -86,8 +85,7 @@ async fn sink(
 
 /// wait for/return a single /tmp/strace*.srb file
 async fn next_file(exclude: HashSet<String>) -> Result<Option<String>, String> {
-    use glob::glob_with;
-    use glob::MatchOptions;
+    use glob::{glob_with, MatchOptions};
     let options = MatchOptions::new();
 
     let srb_files: Vec<String> = glob_with("/tmp/strace*.srb", options)

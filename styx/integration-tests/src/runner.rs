@@ -2,20 +2,16 @@
 //! Defines [ProcessorIntegrationTest] and [run_test] for testing emulations
 //! end-to-end with styx events.
 
+use std::time::{Duration, Instant};
+
 #[cfg(feature = "factory")]
 use emulation_service::processor_factory::ProcessorFactory;
 #[cfg(feature = "factory")]
 use styx_core::grpc::args::HasEmulationArgs;
-
-use std::time::{Duration, Instant};
-use styx_core::{
-    grpc::args::Target,
-    prelude::*,
-    tracebus::{
-        event_listener::{BufferedEventListener, ListenResult},
-        TraceEventType, TraceableItem,
-    },
-};
+use styx_core::grpc::args::Target;
+use styx_core::prelude::*;
+use styx_core::tracebus::event_listener::{BufferedEventListener, ListenResult};
+use styx_core::tracebus::{TraceEventType, TraceableItem};
 use tokio_util::sync::CancellationToken;
 use tracing::debug;
 

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use super::*;
 use tracing::debug;
+
+use super::*;
 
 pub(crate) fn i2c_cr1_w_hook(
     proc: CoreHandle,

@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! GRPC async client and functions
 
-use styx_emulator::grpc::typhunix_interop::symbolic::ProgramIdentifier;
-use styx_emulator::grpc::typhunix_interop::{
-    symbolic::{DataType, Program, ProgramFilter, Symbol},
-    typhunix_client::TyphunixClient,
+use styx_emulator::grpc::typhunix_interop::symbolic::{
+    DataType, Program, ProgramFilter, ProgramIdentifier, Symbol,
 };
-use tonic::{transport::Channel, IntoRequest};
+use styx_emulator::grpc::typhunix_interop::typhunix_client::TyphunixClient;
+use tonic::transport::Channel;
+use tonic::IntoRequest;
 
 type StdError = Box<dyn std::error::Error + Send + Sync + 'static>;
 // Boxed because tonic::Status is LARGE

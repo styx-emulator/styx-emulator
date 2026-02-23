@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use log::trace;
-use styx_cpu_type::{arch::hexagon::HexagonRegister, TargetExitReason};
-use styx_processor::{
-    cpu::{CpuBackend, CpuBackendExt},
-    hooks::{CoreHandle, Hookable, StyxHook},
-};
+use styx_cpu_type::arch::hexagon::HexagonRegister;
+use styx_cpu_type::TargetExitReason;
+use styx_processor::cpu::{CpuBackend, CpuBackendExt};
+use styx_processor::hooks::{CoreHandle, Hookable, StyxHook};
 
 use crate::arch_spec::hexagon::tests::setup_objdump;
 

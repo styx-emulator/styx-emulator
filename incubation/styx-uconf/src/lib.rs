@@ -119,17 +119,15 @@ use std::borrow::Cow;
 use std::fmt::Debug;
 
 use serde::Deserialize;
-use styx_core::{
-    core::ExceptionBehavior,
-    prelude::{log::debug, *},
-};
+use styx_core::core::ExceptionBehavior;
+use styx_core::prelude::log::debug;
+use styx_core::prelude::*;
 
 pub mod components;
 mod core_components;
 mod mapper;
 
-pub use mapper::ComponentGenerator;
-pub use mapper::ProcessorComponentsStore;
+pub use mapper::{ComponentGenerator, ProcessorComponentsStore};
 
 // Ideally, `version` would be an enum with each variant being a newtype with that version config
 // structure. This is theoretically possible, but serde_yaml errors with the following error:

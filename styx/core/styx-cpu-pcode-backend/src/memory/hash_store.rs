@@ -48,9 +48,8 @@ impl<const ALIGNMENT: u64> SimpleStore<ALIGNMENT> for HashStore<ALIGNMENT> {
 
 #[cfg(test)]
 mod tests {
-    use crate::memory::simple_store::SimpleStore;
-
     use super::HashStore;
+    use crate::memory::simple_store::SimpleStore;
 
     #[test]
     fn test_get_mask() {

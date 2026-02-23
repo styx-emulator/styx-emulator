@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: BSD-2-Clause
 #![cfg(target_os = "linux")]
 
-use libc::{c_void, close, dup, ftruncate, memfd_create, mmap, mremap, munmap};
-use libc::{MAP_FAILED, MAP_PRIVATE, MAP_SHARED, MREMAP_MAYMOVE, PROT_READ, PROT_WRITE};
 use std::io::Error;
 use std::slice;
+
+use libc::{
+    c_void, close, dup, ftruncate, memfd_create, mmap, mremap, munmap, MAP_FAILED, MAP_PRIVATE,
+    MAP_SHARED, MREMAP_MAYMOVE, PROT_READ, PROT_WRITE,
+};
 use thiserror::Error;
 
 // file descriptor name, required for memfd_create
@@ -163,9 +166,9 @@ impl Drop for Cow {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use libc::{fcntl, F_GETFD};
+
+    use super::*;
 
     #[test]
     #[cfg_attr(miri, ignore)]

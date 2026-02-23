@@ -7,9 +7,9 @@ mod registers;
 pub mod variants;
 
 pub use registers::{HexagonRegister, SpecialHexagonRegister};
+use variants::*;
 
 use super::ArchitectureDef;
-use variants::*;
 
 #[enum_dispatch(ArchitectureVariant, ArchitectureDef)]
 #[derive(Debug, PartialEq, Eq, Clone, Display, Copy, serde::Deserialize)]

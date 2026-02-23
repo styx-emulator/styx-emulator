@@ -1,27 +1,18 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use serde::Deserialize;
-use styx_core::{
-    errors::UnknownError,
-    grpc::io::uart::{
-        bytes_message::Data::{self},
-        uart_port_client::UartPortClient,
-        BytesMessage, PortRequest, SubscribeRequest, TX_DIRECTION,
-    },
-    prelude::{
-        anyhow,
-        log::{debug, error, trace, warn},
-        Context,
-    },
-};
+use styx_core::errors::UnknownError;
+use styx_core::grpc::io::uart::bytes_message::Data::{self};
+use styx_core::grpc::io::uart::uart_port_client::UartPortClient;
+use styx_core::grpc::io::uart::{BytesMessage, PortRequest, SubscribeRequest, TX_DIRECTION};
+use styx_core::prelude::log::{debug, error, trace, warn};
+use styx_core::prelude::{anyhow, Context};
 use tokio::runtime::Handle;
 use tokio_stream::StreamExt;
 use tonic::transport::{Channel, Uri};
 
-use crate::{
-    config::ProcessorId,
-    peripherals::{peripheral_service_handle, ProxyHandle, ProxyService},
-    processor::Processors,
-};
+use crate::config::ProcessorId;
+use crate::peripherals::{peripheral_service_handle, ProxyHandle, ProxyService};
+use crate::processor::Processors;
 
 #[derive(Deserialize, Clone, Copy, Debug)]
 enum UartDirection {

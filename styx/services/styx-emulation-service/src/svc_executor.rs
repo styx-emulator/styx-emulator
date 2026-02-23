@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use styx_core::cpu::ExecutionReport;
+use styx_core::executor::ExecutorImpl;
+use styx_core::prelude::*;
 use styx_core::sync::sync::Condvar;
-use styx_core::{executor::ExecutorImpl, prelude::*};
 
 /// A processor is either started or paused.
 #[derive(PartialEq, Eq, Clone, Copy, Debug, Default)]

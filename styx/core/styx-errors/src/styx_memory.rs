@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::styx_hooks::StyxHookError;
 use styx_memory_type::{MemoryOperation, MemoryPermissions};
 use thiserror::Error;
+
+use crate::styx_hooks::StyxHookError;
 
 #[derive(Error, Debug)]
 pub enum StyxMemorySnaphotError {

@@ -70,13 +70,14 @@
 //!
 //! ```
 #![allow(rustdoc::private_intra_doc_links)]
+use std::num::NonZeroUsize;
+use std::str::FromStr;
+
 pub use arbitrary_int::{u1, u20, u4, u40, u80, TryNewError as TryNewIntError};
 use derive_more::Display;
 use enum_as_inner::EnumAsInner;
 use enum_dispatch::enum_dispatch;
 use log::warn;
-use std::num::NonZeroUsize;
-use std::str::FromStr;
 use thiserror::Error;
 
 // import the architectures
@@ -94,18 +95,27 @@ pub mod superh;
 // by anything consuming this), but also for `enum_dispatch`, it needs
 // the items implementing the [`Architecture`] placeholder trait to be
 // explicitly in-scope.
-use aarch64::{variants::*, Aarch64MetaVariants, Aarch64Register, SpecialAarch64Register};
-use arm::{variants::*, ArmMetaVariants, ArmRegister, SpecialArmRegister};
-use blackfin::{variants::*, BlackfinMetaVariants, BlackfinRegister, SpecialBlackfinRegister};
-use hexagon::{variants::*, HexagonMetaVariants, HexagonRegister, SpecialHexagonRegister};
-use mips32::{variants::*, Mips32MetaVariants, Mips32Register, SpecialMips32Register};
-use mips64::{variants::*, Mips64MetaVariants, Mips64Register, SpecialMips64Register};
+use aarch64::variants::*;
+use aarch64::{Aarch64MetaVariants, Aarch64Register, SpecialAarch64Register};
+use arm::variants::*;
+use arm::{ArmMetaVariants, ArmRegister, SpecialArmRegister};
+use blackfin::variants::*;
+use blackfin::{BlackfinMetaVariants, BlackfinRegister, SpecialBlackfinRegister};
+use hexagon::variants::*;
+use hexagon::{HexagonMetaVariants, HexagonRegister, SpecialHexagonRegister};
+use mips32::variants::*;
+use mips32::{Mips32MetaVariants, Mips32Register, SpecialMips32Register};
+use mips64::variants::*;
+use mips64::{Mips64MetaVariants, Mips64Register, SpecialMips64Register};
+use msp430::variants::*;
 use msp430::{
-    variants::*, Msp430MetaVariants, Msp430Register, Msp430XRegister, SpecialMsp430Register,
+    Msp430MetaVariants, Msp430Register, Msp430XRegister, SpecialMsp430Register,
     SpecialMsp430XRegister,
 };
-use ppc32::{variants::*, Ppc32MetaVariants, Ppc32Register, SpecialPpc32Register};
-use superh::{variants::*, SpecialSuperHRegister, SuperHMetaVariants, SuperHRegister};
+use ppc32::variants::*;
+use ppc32::{Ppc32MetaVariants, Ppc32Register, SpecialPpc32Register};
+use superh::variants::*;
+use superh::{SpecialSuperHRegister, SuperHMetaVariants, SuperHRegister};
 
 /// Enum used for endianness selection of target cpu emulation
 #[derive(serde::Deserialize, Debug, Display, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
@@ -447,8 +457,9 @@ impl Ord for RegisterValue {
 
 #[cfg(test)]
 mod register_value_conversion_tests {
-    use super::*;
     use test_case::test_case;
+
+    use super::*;
 
     #[test_case(0u8, RegisterValue::u8(0); "into u8")]
     #[test_case(0u16, RegisterValue::u16(0); "into u16")]
@@ -1284,8 +1295,9 @@ pub trait GdbArchIdSupportTrait:
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use test_case::test_case;
+
+    use super::*;
 
     // Test the deserialization of arch variants
     // one from each arch is probably enough

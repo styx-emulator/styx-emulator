@@ -18,7 +18,8 @@ mod rust_version;
 use clap::Parser;
 use commands::Commands;
 use tracing::error;
-use tracing_subscriber::{fmt, prelude::*, EnvFilter};
+use tracing_subscriber::prelude::*;
+use tracing_subscriber::{fmt, EnvFilter};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]

@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::arch_spec::hexagon::{backend::GeneralHexagonInstruction, tests::*};
 use log::info;
 use test_case::test_case;
+
+use crate::arch_spec::hexagon::backend::GeneralHexagonInstruction;
+use crate::arch_spec::hexagon::tests::*;
 
 // need a separate conditional too
 #[test_case(

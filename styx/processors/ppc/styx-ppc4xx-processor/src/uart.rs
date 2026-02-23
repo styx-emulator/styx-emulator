@@ -75,9 +75,11 @@ use tokio::sync::broadcast;
 use tracing::{debug, trace, warn};
 mod hooks;
 
-use crate::core_event_controller::Event;
-use derivative::Derivative;
 use std::collections::VecDeque;
+
+use derivative::Derivative;
+
+use crate::core_event_controller::Event;
 
 const UART_BASE: u64 = 0x84000000;
 

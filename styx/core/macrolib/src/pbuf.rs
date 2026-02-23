@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::debug::PrintDebug;
-use crate::named_field_ex::ArgType;
-use crate::{parse_single_path, path_to_string};
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens};
 use syn::parse::Parser;
+
+use crate::debug::PrintDebug;
+use crate::named_field_ex::ArgType;
+use crate::{parse_single_path, path_to_string};
 
 pub const PROST_OPTION_STR: &str = "::core::option::Option<";
 

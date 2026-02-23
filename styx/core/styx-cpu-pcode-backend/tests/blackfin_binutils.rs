@@ -15,22 +15,16 @@
 use log::{debug, warn};
 use styx_blackfin_testdata::{binutils_tests, TestData};
 use styx_cpu_pcode_backend::PcodeBackend;
-use styx_cpu_type::{
-    arch::blackfin::{BlackfinRegister, BlackfinVariants},
-    Arch, ArchEndian, TargetExitReason,
-};
+use styx_cpu_type::arch::blackfin::{BlackfinRegister, BlackfinVariants};
+use styx_cpu_type::{Arch, ArchEndian, TargetExitReason};
 use styx_errors::UnknownError;
 use styx_loader::{Loader, MemoryLoaderDesc};
-use styx_processor::{
-    cpu::{CpuBackend, CpuBackendExt},
-    event_controller::EventController,
-    hooks::{CoreHandle, Hookable, Resolution, StyxHook},
-    memory::{
-        helpers::{ReadExt, WriteExt},
-        memory_region::MemoryRegion,
-        MemoryPermissions, Mmu,
-    },
-};
+use styx_processor::cpu::{CpuBackend, CpuBackendExt};
+use styx_processor::event_controller::EventController;
+use styx_processor::hooks::{CoreHandle, Hookable, Resolution, StyxHook};
+use styx_processor::memory::helpers::{ReadExt, WriteExt};
+use styx_processor::memory::memory_region::MemoryRegion;
+use styx_processor::memory::{MemoryPermissions, Mmu};
 use test_case::test_case;
 
 // List all tests and remove their extension (to paste into here).

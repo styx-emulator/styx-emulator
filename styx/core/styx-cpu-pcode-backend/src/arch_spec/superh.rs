@@ -8,15 +8,15 @@ pub mod sh2a;
 pub mod sh4eb;
 pub mod sh4el;
 
-use super::{
-    generator_helper::CONTEXT_OPTION_LEN,
-    pc_manager::{apply_difference, PcOverflow},
-    ArchPcManager, GeneratorHelp,
-};
-use crate::{pcode_gen::GeneratePcodeError, PcodeBackend, DEFAULT_REG_ALLOCATION};
 use smallvec::{smallvec, SmallVec};
 use styx_pcode::pcode::VarnodeData;
 use styx_pcode_translator::ContextOption;
+
+use super::generator_helper::CONTEXT_OPTION_LEN;
+use super::pc_manager::{apply_difference, PcOverflow};
+use super::{ArchPcManager, GeneratorHelp};
+use crate::pcode_gen::GeneratePcodeError;
+use crate::{PcodeBackend, DEFAULT_REG_ALLOCATION};
 
 /// Program Counter manager for SuperH processors.
 ///

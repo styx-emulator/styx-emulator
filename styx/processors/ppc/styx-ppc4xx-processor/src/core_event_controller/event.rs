@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
-use styx_core::{event_controller::Exception, prelude::*};
-
 use enum_map::Enum;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
+use styx_core::event_controller::Exception;
+use styx_core::prelude::*;
 use thiserror::Error;
 
 /// Possible interrupts events.
@@ -194,6 +194,7 @@ impl From<Event> for Exception {
 #[cfg(test)]
 mod tests {
     use std::cmp::Ordering;
+
     use test_case::test_case;
 
     use super::*;

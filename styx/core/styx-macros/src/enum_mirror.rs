@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use proc_macro2::{Span, TokenStream};
-use syn::{parse::Parse, Error, ItemEnum, LitStr, Token, Type};
+use syn::parse::Parse;
+use syn::{Error, ItemEnum, LitStr, Token, Type};
 
 pub(crate) fn enum_mirror(attr: TokenStream, item: TokenStream) -> Result<TokenStream, Error> {
     let item: ItemEnum = syn::parse2(item)?;

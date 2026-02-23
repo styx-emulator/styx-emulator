@@ -37,14 +37,18 @@
 //!
 //! proc.run(Forever).unwrap();
 //! ```
-use crate::{event_loop, target_impl::TargetImpl, GDBOptions};
+use std::marker::PhantomData;
+
 use event_loop::WaitForConnection;
 use gdbstub::stub::{DisconnectReason, GdbStub};
-use std::marker::PhantomData;
+use styx_core::executor::ExecutorImpl;
 use styx_core::plugins::Plugins;
 use styx_core::prelude::*;
-use styx_core::{executor::ExecutorImpl, sync::sync::Arc};
+use styx_core::sync::sync::Arc;
 use tracing::{error, info, warn};
+
+use crate::target_impl::TargetImpl;
+use crate::{event_loop, GDBOptions};
 
 #[derive(Debug)]
 pub struct GdbExecutor<GdbArchImpl>

@@ -30,6 +30,7 @@
 //! On an alias read, the band region is read and the alias word's lsb is set accordingly.
 //!
 use std::ops::Range;
+
 use styx_core::hooks::{MemoryReadHook, MemoryWriteHook};
 use styx_core::prelude::*;
 use tracing::{debug, info};
@@ -187,10 +188,10 @@ impl MemoryWriteHook for BitBand {
 #[cfg(test)]
 mod test {
     use keystone_engine::{Arch, Keystone, Mode};
-
-    use crate::Kinetis21Builder;
     use styx_core::cpu::arch::arm::*;
     use styx_core::prelude::*;
+
+    use crate::Kinetis21Builder;
 
     struct TestMachine {
         proc: Processor,

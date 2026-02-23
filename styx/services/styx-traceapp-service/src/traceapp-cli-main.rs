@@ -2,22 +2,22 @@
 //! Client tool for connecting to
 //! [TraceAppSessionService](styx_core::grpc::traceapp::trace_app_session_service_server::TraceAppSessionService).
 
-use clap::{Args, Parser, Subcommand};
-use serde_json::{json, Value};
+use std::error::Error;
 use std::fs::File;
 use std::io::BufReader;
+use std::path::Path;
 use std::time::Duration;
-use std::{error::Error, path::Path};
-use styx_core::grpc::{
-    args::{
-        EmulationArgs, ProgramIdentifierArgs, RawEventLimits, SymbolSearchOptions,
-        TraceAppSessionArgs,
-    },
-    traceapp::{
-        InitializeTraceRequest, StartTraceAppSessionResponse, StartTraceAppSessionResponseSummary,
-    },
+
+use clap::{Args, Parser, Subcommand};
+use serde_json::{json, Value};
+use styx_core::grpc::args::{
+    EmulationArgs, ProgramIdentifierArgs, RawEventLimits, SymbolSearchOptions, TraceAppSessionArgs,
 };
-use styx_trace_tools::{event::StreamEndReason, util::ghidra_program_id_from_env};
+use styx_core::grpc::traceapp::{
+    InitializeTraceRequest, StartTraceAppSessionResponse, StartTraceAppSessionResponseSummary,
+};
+use styx_trace_tools::event::StreamEndReason;
+use styx_trace_tools::util::ghidra_program_id_from_env;
 use tokio::sync::mpsc;
 use tokio::time::{sleep, timeout};
 use tokio_util::sync::CancellationToken;

@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use std::mem::offset_of;
+
 use styx_core::errors::anyhow::anyhow;
 use styx_core::prelude::*;
 use tracing::trace;
 
 // base FTM type
 use super::mk21f12_sys::FTM_Type;
-
 // interrupt numbers
 use super::mk21f12_sys::{IRQn_FTM0_IRQn, IRQn_FTM1_IRQn, IRQn_FTM2_IRQn, IRQn_FTM3_IRQn};
-
 // ftm base addresses
 use super::mk21f12_sys::{FTM0_BASE, FTM1_BASE, FTM2_BASE, FTM3_BASE};
 

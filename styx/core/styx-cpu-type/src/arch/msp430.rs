@@ -9,10 +9,9 @@ pub mod variants;
 mod xregisters;
 
 pub use registers::{Msp430Register, SpecialMsp430Register};
-pub use xregisters::{Msp430XRegister, SpecialMsp430XRegister};
-
 // for enum dispatch
 use variants::*;
+pub use xregisters::{Msp430XRegister, SpecialMsp430XRegister};
 
 use super::ArchitectureDef;
 

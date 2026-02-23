@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use log::log_enabled;
 use std::mem::size_of;
+
+use log::log_enabled;
 use styx_core::prelude::*;
+use styx_cyclone_v_hps_sys::generic::FromBytes;
+use styx_cyclone_v_hps_sys::{sdmmc, Sdmmc};
 
 use super::sd_mmc_hooks;
-use styx_cyclone_v_hps_sys::{generic::FromBytes, sdmmc, Sdmmc};
 
 pub const SDMMC_BASE: u64 = Sdmmc::BASE as u64;
 pub const SDMMC_STRUCT_SIZE: usize = size_of::<sdmmc::RegisterBlock>();
@@ -136,12 +138,12 @@ impl Peripheral for CycloneVSDMMC {
 
 #[cfg(test)]
 mod tests {
+    use std::borrow::Cow;
+
     use styx_core::prelude::*;
 
-    use crate::CycloneVBuilder;
-
     use super::*;
-    use std::borrow::Cow;
+    use crate::CycloneVBuilder;
 
     struct TestMachine {
         proc: Processor,

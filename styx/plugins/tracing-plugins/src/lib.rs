@@ -50,13 +50,13 @@
 use anyhow::Context;
 use opentelemetry::trace::TracerProvider as _;
 use styx_core::hooks::StyxHook;
-use tracing::{trace, Level};
-use tracing_subscriber::layer::Layer;
-use tracing_subscriber::{filter, prelude::*, EnvFilter, Registry};
-
 use styx_core::prelude::*;
 use styx_sync::lazy_static;
 use styx_sync::sync::{Arc, Mutex};
+use tracing::{trace, Level};
+use tracing_subscriber::layer::Layer;
+use tracing_subscriber::prelude::*;
+use tracing_subscriber::{filter, EnvFilter, Registry};
 
 type BoxedLayer<S> = Box<dyn Layer<S> + Send + Sync>;
 

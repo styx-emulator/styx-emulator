@@ -2,34 +2,26 @@
 //! Compares the behaviour of Pcode and Unicorn backends to make sure we maintain
 //! parity between the two.
 #![cfg(feature = "unicorn-backend")]
-use std::{
-    collections::{BTreeMap, HashMap},
-    sync::Mutex,
-};
+use std::collections::{BTreeMap, HashMap};
+use std::fmt::Debug;
+use std::sync::Mutex;
 
 use keystone_engine::Keystone;
-use std::fmt::Debug;
+use styx_cpu::arch::arm::{ArmMetaVariants, ArmRegister};
+use styx_cpu::arch::backends::{ArchRegister, ArchVariant};
 use styx_cpu::{
-    arch::{
-        arm::{ArmMetaVariants, ArmRegister},
-        backends::{ArchRegister, ArchVariant},
-    },
     Arch, ArchEndian, Backend, BackendNotSupported, PcodeBackend, TargetExitReason, UnicornBackend,
 };
 use styx_errors::UnknownError;
-use styx_processor::{
-    core::{
-        builder::{BuildProcessorImplArgs, ProcessorImpl},
-        ProcessorBundle,
-    },
-    cpu::{CpuBackend, CpuBackendExt},
-    event_controller::DummyEventController,
-    executor::Forever,
-    hooks::{CoreHandle, Hookable, MemFaultData, Resolution, StyxHook},
-    memory::{memory_region::MemoryRegion, DummyTlb, MemoryBackend, MemoryPermissions},
-    processor::{Processor, ProcessorBuilder},
-};
-
+use styx_processor::core::builder::{BuildProcessorImplArgs, ProcessorImpl};
+use styx_processor::core::ProcessorBundle;
+use styx_processor::cpu::{CpuBackend, CpuBackendExt};
+use styx_processor::event_controller::DummyEventController;
+use styx_processor::executor::Forever;
+use styx_processor::hooks::{CoreHandle, Hookable, MemFaultData, Resolution, StyxHook};
+use styx_processor::memory::memory_region::MemoryRegion;
+use styx_processor::memory::{DummyTlb, MemoryBackend, MemoryPermissions};
+use styx_processor::processor::{Processor, ProcessorBuilder};
 use styx_sync::sync::{Arc, OnceLock};
 
 /// Compare TargetExitReason when terminating because of instruction count met.

@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::{pcode_gen::GeneratePcodeError, DEFAULT_REG_ALLOCATION};
+use smallvec::{smallvec, SmallVec};
 use styx_pcode::pcode::VarnodeData;
 use styx_pcode_translator::ContextOption;
 
-use crate::{arch_spec::pc_manager::PcOverflow, PcodeBackend};
-use smallvec::{smallvec, SmallVec};
-
-use super::{
-    generator_helper::CONTEXT_OPTION_LEN, pc_manager::apply_difference, ArchPcManager,
-    GeneratorHelp,
-};
+use super::generator_helper::CONTEXT_OPTION_LEN;
+use super::pc_manager::apply_difference;
+use super::{ArchPcManager, GeneratorHelp};
+use crate::arch_spec::pc_manager::PcOverflow;
+use crate::pcode_gen::GeneratePcodeError;
+use crate::{PcodeBackend, DEFAULT_REG_ALLOCATION};
 
 mod call_other;
 pub mod generic;

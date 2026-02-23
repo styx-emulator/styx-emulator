@@ -1,32 +1,25 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use super::{
-    call_other::{self},
-    hooks::HookManager,
-    memory::space_manager::SpaceManager,
-    Bool, Float, Int, PCodeStateChange, PcodeType, SInt,
-};
-use crate::{
-    call_other::{CallOtherCpu, CallOtherManager},
-    hooks::HasHookManager,
-    memory::{
-        sized_value::SizedValue,
-        space::SpaceError,
-        space_manager::{HasSpaceManager, MmuSpaceOps, VarnodeError},
-    },
-    pcode_gen::HasPcodeGenerator,
-    HasConfig, DEFAULT_REG_ALLOCATION, FALSE,
-};
 use log::trace;
 use smallvec::SmallVec;
 use styx_errors::anyhow::anyhow;
 use styx_pcode::pcode::{Opcode, Pcode, SpaceId, SpaceName, VarnodeData};
-use styx_processor::{
-    core::{Exception, HandleExceptionAction},
-    cpu::CpuBackend,
-    event_controller::EventController,
-    hooks::MemFaultData,
-    memory::{MemoryOperationError, Mmu, MmuOpError},
-};
+use styx_processor::core::{Exception, HandleExceptionAction};
+use styx_processor::cpu::CpuBackend;
+use styx_processor::event_controller::EventController;
+use styx_processor::hooks::MemFaultData;
+use styx_processor::memory::{MemoryOperationError, Mmu, MmuOpError};
+
+use super::call_other::{self};
+use super::hooks::HookManager;
+use super::memory::space_manager::SpaceManager;
+use super::{Bool, Float, Int, PCodeStateChange, PcodeType, SInt};
+use crate::call_other::{CallOtherCpu, CallOtherManager};
+use crate::hooks::HasHookManager;
+use crate::memory::sized_value::SizedValue;
+use crate::memory::space::SpaceError;
+use crate::memory::space_manager::{HasSpaceManager, MmuSpaceOps, VarnodeError};
+use crate::pcode_gen::HasPcodeGenerator;
+use crate::{HasConfig, DEFAULT_REG_ALLOCATION, FALSE};
 
 /// This is a trait encapsulating a `CpuBackend` plus
 /// the other traits that are used during over the course of P-code execution,
@@ -1045,18 +1038,15 @@ fn get_mask(size: u8) -> u128 {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        execute_pcode::{execute_pcode_inner, PcodeHelpers},
-        memory::sized_value::SizedValue,
-        Bool, PCodeStateChange, PcodeBackend,
-    };
     use styx_cpu_type::arch::arm::ArmVariants;
     use styx_pcode::pcode::{Opcode, Pcode, SpaceName, VarnodeData};
     use styx_processor::event_controller::{DummyEventController, EventController};
+    use test_case::test_case;
 
     use super::*;
-
-    use test_case::test_case;
+    use crate::execute_pcode::{execute_pcode_inner, PcodeHelpers};
+    use crate::memory::sized_value::SizedValue;
+    use crate::{Bool, PCodeStateChange, PcodeBackend};
 
     #[test_case(0, 0x00000000000000000000000000000000; "zero bytes")]
     #[test_case(1, 0x000000000000000000000000000000FF; "one byte")]

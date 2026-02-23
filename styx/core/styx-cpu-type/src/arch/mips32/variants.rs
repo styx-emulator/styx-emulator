@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! Maps the various mips32 architecture variants
-use super::gdb_targets::{Mips32CpuTargetDescription, MIPS32_CPU_REGISTER_MAP};
-use crate::arch::Mips32Register;
-use crate::arch::{Arch, ArchitectureDef, ArchitectureVariant, CpuRegisterBank};
 use derive_more::Display;
+
+use super::gdb_targets::{Mips32CpuTargetDescription, MIPS32_CPU_REGISTER_MAP};
+use crate::arch::{Arch, ArchitectureDef, ArchitectureVariant, CpuRegisterBank, Mips32Register};
 
 #[derive(Default)]
 pub struct Mips32GeneralRegisters {}

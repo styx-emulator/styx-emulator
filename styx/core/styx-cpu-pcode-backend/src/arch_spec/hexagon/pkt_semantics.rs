@@ -2,12 +2,12 @@
 use log::trace;
 use styx_errors::anyhow::Context;
 use styx_pcode::pcode::VarnodeData;
-use styx_processor::{cpu::CpuBackend, event_controller::EventController, memory::Mmu};
+use styx_processor::cpu::CpuBackend;
+use styx_processor::event_controller::EventController;
+use styx_processor::memory::Mmu;
 
-use crate::{
-    call_other::{CallOtherCallback, CallOtherCpu, CallOtherHandleError},
-    PCodeStateChange,
-};
+use crate::call_other::{CallOtherCallback, CallOtherCpu, CallOtherHandleError};
+use crate::PCodeStateChange;
 
 // See the Hexagon slaspec for more details,
 // this constant is also defined there.

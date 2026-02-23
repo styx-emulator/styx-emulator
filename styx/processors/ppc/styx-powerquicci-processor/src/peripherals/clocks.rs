@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: BSD-2-Clause
 #![allow(dead_code, unused_variables)]
+use styx_core::errors::UnknownError;
+use styx_core::prelude::*;
+
 use super::super::communications_processor::CpmPeripheral;
-use styx_core::{errors::UnknownError, prelude::*};
 
 #[derive(Debug)]
 pub struct SystemControlClock;

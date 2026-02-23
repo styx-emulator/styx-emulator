@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! Generic top level container for ARM registers.
-use crate::{
-    arch::{CpuRegister, RegisterValue},
-    macros::create_special_register_enums,
-};
 use std::num::NonZeroUsize;
+
+use crate::arch::{CpuRegister, RegisterValue};
+use crate::macros::create_special_register_enums;
 
 crate::macros::create_basic_register_enums!(
     Blackfin,

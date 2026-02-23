@@ -5,14 +5,16 @@
 //! This implementation supports `1..*` producers (trace emitters), but only
 //! a **single consumer**.
 
-use crate::{mkpath, BinaryTraceEventType, TraceError, TraceOptions, TraceProvider, Traceable};
-use ipmpsc::{Receiver, Sender, SharedRingBuffer};
-use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use std::mem::transmute;
 use std::path::Path;
 use std::thread::sleep;
 use std::time::Duration;
+
+use ipmpsc::{Receiver, Sender, SharedRingBuffer};
+use serde::{Deserialize, Serialize};
+
+use crate::{mkpath, BinaryTraceEventType, TraceError, TraceOptions, TraceProvider, Traceable};
 
 /// SharedRingBuffer trace file extension
 pub const SRB_TRACE_FILE_EXT: &str = "srb";
@@ -191,6 +193,7 @@ pub fn open_srb(
 mod tests {
     use std::fs::remove_file;
     use std::thread;
+
     use styx_sync::sync::mpsc::channel;
     use styx_util::bytes_to_tmp_file;
 

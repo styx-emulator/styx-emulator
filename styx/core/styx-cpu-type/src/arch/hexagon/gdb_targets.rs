@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use std::collections::BTreeMap;
+use std::marker::PhantomData;
+
+use styx_macros::gdb_target_description;
+use styx_sync::lazy_static;
+use styx_util::gdb_xml::{HEXAGON_CORE, HEXAGON_HVX};
 
 use super::HexagonRegister;
 use crate::arch::backends::{ArchRegister, BasicArchRegister};
 use crate::arch::CpuRegister;
-use std::marker::PhantomData;
-use styx_macros::gdb_target_description;
-use styx_sync::lazy_static;
-use styx_util::gdb_xml::{HEXAGON_CORE, HEXAGON_HVX};
 
 lazy_static! {
     // This mapping was generated from XML files in

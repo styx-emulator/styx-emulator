@@ -46,7 +46,6 @@ pub use peripherals::*;
 /// Processors that can be configured to connect to.
 mod processor;
 pub use processor::*;
-
 use styx_core::prelude::*;
 use tokio::runtime::Handle;
 

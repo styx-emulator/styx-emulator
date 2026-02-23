@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::entity_schema_gen::MigrationScript;
 use extension::postgres::Type;
-use sea_orm::ActiveModelTrait;
 use sea_orm::ActiveValue::NotSet;
-use sea_orm::DbBackend;
-use sea_orm::Set;
+use sea_orm::{ActiveModelTrait, DbBackend, Set};
 use sea_orm_migration::prelude::*;
 use sea_orm_migration::SchemaManager;
 use styx_core::util::dtutil::UtcDateTime;
 use styx_dbmodel::model::prelude::*;
 use tracing::debug;
+
+use crate::entity_schema_gen::MigrationScript;
 
 #[derive(DeriveMigrationName)]
 pub struct Migration;

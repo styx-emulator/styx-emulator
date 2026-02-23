@@ -3,11 +3,13 @@
 //!
 //! This should get replaced with a database
 
+use std::path::Path;
+
+use styx_core::grpc::typhunix_interop::Signature;
+
 use crate::emu_observer::EmulationObserver;
 use crate::util::{output_dst, truncate, OutDst};
 use crate::variable::Variable;
-use std::path::Path;
-use styx_core::grpc::typhunix_interop::Signature;
 
 const VARIABLES_JSON: &str = "variables.json";
 const MEMORY: &str = "memory.bin";

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use styx_core::{event_controller::ActivateIRQnError, prelude::*};
-
 use enum_map::Enum;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
+use styx_core::event_controller::ActivateIRQnError;
+use styx_core::prelude::*;
 
 /// Variant representation is the event's event number.
 ///
@@ -144,6 +144,7 @@ impl From<Event> for ExceptionNumber {
 #[cfg(test)]
 mod tests {
     use std::cmp::Ordering;
+
     use test_case::test_case;
 
     use super::*;

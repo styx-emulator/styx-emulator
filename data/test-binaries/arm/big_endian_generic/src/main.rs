@@ -5,12 +5,11 @@
 //! where name_of_file is a folder and the path to it from where the /src/ folder is.
 //!
 //! A dockerfile, makefile, and testutils.inc file must all be present in the working directory of the
+use std::env;
+use std::io::Write;
+use std::process::{Child, Command, Output, Stdio};
+
 use anyhow::Context;
-use std::{
-    env,
-    io::Write,
-    process::{Child, Command, Output, Stdio},
-};
 use thiserror::Error;
 
 fn main() -> anyhow::Result<()> {

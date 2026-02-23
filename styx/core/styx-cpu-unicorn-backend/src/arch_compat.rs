@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! Styx to unicorn architecture and cpu model compatibility layer
-use styx_cpu_type::arch::StyxCpuArchError;
-use styx_cpu_type::arch::{backends::ArchVariant, Arch, ArchEndian};
+use styx_cpu_type::arch::backends::ArchVariant;
+use styx_cpu_type::arch::{Arch, ArchEndian, StyxCpuArchError};
 use styx_cpu_type::Backend;
 use unicorn_engine::unicorn_const;
 

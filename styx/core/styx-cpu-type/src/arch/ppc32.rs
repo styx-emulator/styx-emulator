@@ -8,7 +8,6 @@ pub mod variants;
 pub use registers::{
     Ppc32Register, SpecialPpc32Register, SpecialPpc32RegisterValues, SprRegister, SprRegisterValue,
 };
-
 // for enum dispatch
 use variants::*;
 

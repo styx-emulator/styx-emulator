@@ -1,12 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
 #![allow(dead_code)]
-use super::mmu_store::MmuSpace;
-use super::sized_value::SizedValue;
-use super::space::{Space, SpaceError};
-use crate::hooks::{HasHookManager, HookManager};
-use crate::pcode_gen::HasPcodeGenerator;
-use crate::{HasConfig, PcodeBackend};
 use core::panic;
+
 use log::{info, trace, warn};
 use smallvec::SmallVec;
 use styx_cpu_type::arch::backends::ArchRegister;
@@ -18,6 +13,13 @@ use styx_processor::event_controller::EventController;
 use styx_processor::memory::{MemoryOperation, MemoryType, Mmu, MmuOpError};
 use thiserror::Error;
 use vector_map::VecMap;
+
+use super::mmu_store::MmuSpace;
+use super::sized_value::SizedValue;
+use super::space::{Space, SpaceError};
+use crate::hooks::{HasHookManager, HookManager};
+use crate::pcode_gen::HasPcodeGenerator;
+use crate::{HasConfig, PcodeBackend};
 
 /// Simple wrapper trait that requires a `CpuBackend` to have some extra
 /// traits that are used over the course of various `SpaceManager` methods
@@ -558,8 +560,9 @@ impl SpaceManager {
     /// Typical space manager for testing. Default ram space, unique space, and register space.
     #[cfg(test)]
     pub fn create_test_instance(address_size: u64, endian: ArchEndian) -> Self {
-        use crate::memory::hash_store::HashStore;
         use styx_pcode::pcode::SpaceInfo;
+
+        use crate::memory::hash_store::HashStore;
 
         let create_info = |id: u64| SpaceInfo {
             word_size: 1,
@@ -685,11 +688,11 @@ mod tests {
     use styx_cpu_type::ArchEndian;
     use styx_pcode::pcode::{AddressSpaceName, SpaceId, SpaceInfo, SpaceName, VarnodeData};
 
-    use crate::memory::{
-        blob_store::BlobStore, mmu_store::MmuSpace, sized_value::SizedValue, space::Space,
-    };
-
     use super::SpaceManager;
+    use crate::memory::blob_store::BlobStore;
+    use crate::memory::mmu_store::MmuSpace;
+    use crate::memory::sized_value::SizedValue;
+    use crate::memory::space::Space;
 
     #[test]
     fn test_space_manager_simple() {

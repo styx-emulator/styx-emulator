@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use styx_core::prelude::*;
-
 use enum_map::EnumMap;
+use styx_core::prelude::*;
 use tracing::debug;
 
 use super::Event;

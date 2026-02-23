@@ -1,59 +1,43 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
+use std::collections::BTreeMap;
+
 use anyhow::anyhow;
 pub use decode_info::{GeneralHexagonInstruction, Iclass};
+use derive_more::Debug;
 use execution_helper::DefaultHexagonExecutionHelper;
 use log::trace;
 pub use saved_context_opts::SavedContextOpts;
 use smallvec::{smallvec, SmallVec};
-use std::collections::BTreeMap;
-use styx_cpu_type::{
-    arch::{
-        backends::{ArchRegister, ArchVariant, BasicArchRegister},
-        hexagon::HexagonRegister,
-        ArchitectureDef, RegisterValue,
-    },
-    Arch, ArchEndian, TargetExitReason,
-};
-use styx_errors::{
-    anyhow::{self, Context},
-    styx_cpu::StyxCpuBackendError,
-    UnknownError,
-};
+use styx_cpu_type::arch::backends::{ArchRegister, ArchVariant, BasicArchRegister};
+use styx_cpu_type::arch::hexagon::HexagonRegister;
+use styx_cpu_type::arch::{ArchitectureDef, RegisterValue};
+use styx_cpu_type::{Arch, ArchEndian, TargetExitReason};
+use styx_errors::anyhow::{self, Context};
+use styx_errors::styx_cpu::StyxCpuBackendError;
+use styx_errors::UnknownError;
 use styx_pcode::pcode::{Opcode, Pcode, SpaceName, VarnodeData};
 use styx_pcode_translator::ContextOption;
-use styx_processor::{
-    cpu::{CpuBackend, ExecutionReport, ReadRegisterError, WriteRegisterError},
-    event_controller::EventController,
-    hooks::{AddHookError, DeleteHookError, HookToken, Hookable, StyxHook},
-    memory::Mmu,
-};
+use styx_processor::cpu::{CpuBackend, ExecutionReport, ReadRegisterError, WriteRegisterError};
+use styx_processor::event_controller::EventController;
+use styx_processor::hooks::{AddHookError, DeleteHookError, HookToken, Hookable, StyxHook};
+use styx_processor::memory::Mmu;
 use thiserror::Error;
 
-use crate::execute_pcode;
+use crate::arch_spec::hexagon::pkt_semantics::DEST_REG_OFFSET;
+use crate::arch_spec::hexagon_build_arch_spec;
+use crate::backend_helper::BackendHelper;
+use crate::call_other::CallOtherManager;
+use crate::get_pcode::{get_pcode_at_address, handle_pcode_exception, GetPcodeError};
+use crate::hooks::{HasHookManager, HookManager};
+use crate::memory::sized_value::SizedValue;
+use crate::memory::space_manager::{HasSpaceManager, SpaceManager};
+use crate::pcode_gen::{GeneratePcodeError, HasPcodeGenerator, RegisterTranslator};
+use crate::register_manager::{HasRegisterManager, RegisterCallbackCpu};
 use crate::{
-    arch_spec::hexagon::pkt_semantics::DEST_REG_OFFSET,
-    backend_helper::BackendHelper,
-    get_pcode::GetPcodeError,
-    pcode_gen::{GeneratePcodeError, RegisterTranslator},
-    PcodeBackendConfiguration,
+    backend_helper, execute_pcode, GhidraPcodeGenerator, HasConfig, PCodeStateChange,
+    PcodeBackendConfiguration, RegisterManager, DEFAULT_REG_ALLOCATION, MAX_PACKET_SIZE,
 };
-use crate::{
-    arch_spec::hexagon_build_arch_spec,
-    backend_helper,
-    call_other::CallOtherManager,
-    get_pcode::{get_pcode_at_address, handle_pcode_exception},
-    hooks::{HasHookManager, HookManager},
-    memory::{
-        sized_value::SizedValue,
-        space_manager::{HasSpaceManager, SpaceManager},
-    },
-    pcode_gen::HasPcodeGenerator,
-    register_manager::{HasRegisterManager, RegisterCallbackCpu},
-    GhidraPcodeGenerator, HasConfig, RegisterManager, MAX_PACKET_SIZE,
-};
-use crate::{PCodeStateChange, DEFAULT_REG_ALLOCATION};
-use derive_more::Debug;
 
 mod decode_info;
 mod execution_helper;

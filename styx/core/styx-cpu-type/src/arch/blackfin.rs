@@ -3,12 +3,11 @@ pub mod gdb_targets;
 mod registers;
 pub mod variants;
 
-use crate::arch::ArchitectureDef;
 use enum_dispatch::enum_dispatch;
-
+pub use registers::{BlackfinRegister, SpecialBlackfinRegister};
 use variants::*;
 
-pub use registers::{BlackfinRegister, SpecialBlackfinRegister};
+use crate::arch::ArchitectureDef;
 
 #[enum_dispatch(ArchitectureVariant, ArchitectureDef)]
 #[derive(Debug, PartialEq, Eq, Clone, Copy, serde::Deserialize)]

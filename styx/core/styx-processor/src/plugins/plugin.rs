@@ -2,7 +2,8 @@
 use static_assertions::assert_obj_safe;
 use styx_errors::UnknownError;
 
-use crate::{core::ProcessorCore, processor::BuildingProcessor};
+use crate::core::ProcessorCore;
+use crate::processor::BuildingProcessor;
 
 assert_obj_safe!(UninitPlugin);
 

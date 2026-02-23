@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::register_manager::RegisterCallbackCpu;
-use crate::{
-    memory::sized_value::SizedValue,
-    pcode_gen::RegisterTranslator,
-    register_manager::{RegisterCallback, RegisterHandleError},
-};
 use styx_cpu_type::arch::backends::ArchRegister;
 use styx_errors::anyhow::Context;
 use styx_processor::cpu::CpuBackend;
+
+use crate::memory::sized_value::SizedValue;
+use crate::pcode_gen::RegisterTranslator;
+use crate::register_manager::{RegisterCallback, RegisterCallbackCpu, RegisterHandleError};
 
 /// Handler for A0 and A1 to explicitly convert size from sla specs 8 bytes to styx's expected 5
 /// bytes.

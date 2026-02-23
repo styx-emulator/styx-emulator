@@ -95,8 +95,9 @@ impl ProcessorState {
 
 #[cfg(test)]
 mod processor_state_tests {
-    use super::*;
     use test_case::test_case;
+
+    use super::*;
 
     #[test]
     fn test_default() {

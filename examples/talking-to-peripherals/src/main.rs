@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use chrono::prelude::*;
-use clap::Parser;
 use core::panic;
 use std::net::TcpStream;
 use std::thread;
 use std::time::Duration;
+
+use chrono::prelude::*;
+use clap::Parser;
 use styx_core::peripheral_clients::i2c::{I2CClient, I2CDevice};
 
 #[derive(Debug, Parser)]

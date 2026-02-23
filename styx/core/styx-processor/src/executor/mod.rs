@@ -22,22 +22,20 @@ mod single_step;
 #[cfg(test)]
 mod test;
 
+use std::time::Instant;
+
 pub use conditional::ConditionalExecutor;
 pub use default::DefaultExecutor;
 pub use execution_constraint::{ExecutionConstraint, ExecutionConstraintConcrete, Forever};
 pub use executor_impl::ExecutorImpl;
-pub use single_step::SingleStepExecutor;
-
 use log::{debug, trace};
-use std::time::Instant;
+pub use single_step::SingleStepExecutor;
 use styx_cpu_type::TargetExitReason;
 use styx_errors::UnknownError;
 
-use crate::{
-    core::ProcessorCore,
-    plugins::collection::Plugins,
-    processor::{EmulationReport, InstructionReport},
-};
+use crate::core::ProcessorCore;
+use crate::plugins::collection::Plugins;
+use crate::processor::{EmulationReport, InstructionReport};
 
 /// The main control point for Styx emulation.
 ///

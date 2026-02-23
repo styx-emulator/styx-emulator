@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use super::generator_helper::EmptyGeneratorHelper;
-use super::ArchSpecBuilder;
-use super::HexagonPcodeBackend;
+use super::{ArchSpecBuilder, HexagonPcodeBackend};
 
 pub mod backend;
 // Anything related to packet semantics

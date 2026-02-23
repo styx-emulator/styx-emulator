@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
-use rand::Rng;
 use std::net::TcpStream;
-use styx_core::{peripheral_clients::uart::UartClient, prelude::*};
+
+use rand::Rng;
+use styx_core::peripheral_clients::uart::UartClient;
+use styx_core::prelude::*;
 
 /// create a `Vec<u8>` with random bytes of some size
 fn generate_random_vec(length: usize) -> Vec<u8> {

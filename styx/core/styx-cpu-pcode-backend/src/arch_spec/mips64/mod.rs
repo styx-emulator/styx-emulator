@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
-use styx_cpu_type::{arch::backends::ArchVariant, ArchEndian};
-use styx_errors::{anyhow::anyhow, UnknownError};
+use styx_cpu_type::arch::backends::ArchVariant;
+use styx_cpu_type::ArchEndian;
+use styx_errors::anyhow::anyhow;
+use styx_errors::UnknownError;
 use styx_pcode_translator::sla::{Mips64be, Mips64le};
 
-use crate::{
-    arch_spec::{mips_common::mips_common, ArchSpec},
-    PcodeBackend,
-};
+use crate::arch_spec::mips_common::mips_common;
+use crate::arch_spec::ArchSpec;
+use crate::PcodeBackend;
 
 pub fn build_mips64le() -> super::ArchSpecBuilder<Mips64le, PcodeBackend> {
     let mut spec = super::ArchSpecBuilder::default();

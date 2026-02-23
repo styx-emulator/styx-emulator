@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::register_manager::RegisterCallbackCpu;
-use crate::{
-    memory::sized_value::SizedValue,
-    register_manager::{RegisterCallback, RegisterHandleError},
-};
 use styx_cpu_type::arch::backends::ArchRegister;
 use styx_processor::cpu::CpuBackend;
+
+use crate::memory::sized_value::SizedValue;
+use crate::register_manager::{RegisterCallback, RegisterCallbackCpu, RegisterHandleError};
 
 #[derive(Debug, Default)]
 pub struct FloatingPointExtensionHandler {

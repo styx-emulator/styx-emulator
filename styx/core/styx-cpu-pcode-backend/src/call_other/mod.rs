@@ -1,20 +1,25 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use super::PCodeStateChange;
-use crate::{
-    arch_spec::HexagonPcodeBackend, memory::space_manager::HasSpaceManager,
-    pcode_gen::HasPcodeGenerator, PcodeBackend,
-};
+use std::collections::HashMap;
+use std::fmt::Debug;
+use std::marker::PhantomData;
+use std::str::FromStr;
+
 use handlers::EmptyCallback;
 use log::{trace, warn};
-use std::{collections::HashMap, fmt::Debug, marker::PhantomData, str::FromStr};
 use styx_errors::UnknownError;
-use styx_pcode::{
-    pcode::VarnodeData,
-    sla::{SlaUserOps, UserOps},
-};
-use styx_processor::{cpu::CpuBackend, event_controller::EventController, memory::Mmu};
+use styx_pcode::pcode::VarnodeData;
+use styx_pcode::sla::{SlaUserOps, UserOps};
+use styx_processor::cpu::CpuBackend;
+use styx_processor::event_controller::EventController;
+use styx_processor::memory::Mmu;
 use tap::TapFallible;
 use thiserror::Error;
+
+use super::PCodeStateChange;
+use crate::arch_spec::HexagonPcodeBackend;
+use crate::memory::space_manager::HasSpaceManager;
+use crate::pcode_gen::HasPcodeGenerator;
+use crate::PcodeBackend;
 
 pub mod handlers;
 

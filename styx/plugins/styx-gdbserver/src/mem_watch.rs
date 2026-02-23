@@ -2,11 +2,11 @@
 //! Utilities used to support based watch points
 
 use std::collections::HashMap;
-use styx_core::{
-    errors::{anyhow::anyhow, UnknownError},
-    hooks::HookToken,
-    sync::sync::{Arc, Mutex},
-};
+
+use styx_core::errors::anyhow::anyhow;
+use styx_core::errors::UnknownError;
+use styx_core::hooks::HookToken;
+use styx_core::sync::sync::{Arc, Mutex};
 use tracing::{trace, warn};
 
 type MemHookAddress = u64;
@@ -171,8 +171,9 @@ impl Access {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::collections::HashSet;
+
+    use super::*;
 
     #[test]
     fn test_xxx() {

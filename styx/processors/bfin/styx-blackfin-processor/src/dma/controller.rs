@@ -1,20 +1,18 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
-use super::container::DmaContainer;
-use super::id::DmaId;
-use super::mmr_offsets;
-use super::DmaPeripheralMapping;
-
-use crate::core_event_controller::SicHandle;
 use arbitrary_int::u4;
 use derivative::Derivative;
 use futures::stream::BoxStream;
 use futures::FutureExt;
+use styx_blackfin_sys::bf512 as sys;
 use styx_core::prelude::*;
 use tokio_stream::{StreamExt, StreamMap};
 use tracing::warn;
 
-use styx_blackfin_sys::bf512 as sys;
+use super::container::DmaContainer;
+use super::id::DmaId;
+use super::{mmr_offsets, DmaPeripheralMapping};
+use crate::core_event_controller::SicHandle;
 
 /// Main [Peripheral] for DMA.
 ///

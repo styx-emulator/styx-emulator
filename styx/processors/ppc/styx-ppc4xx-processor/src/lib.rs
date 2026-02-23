@@ -13,12 +13,9 @@ mod uart;
 use anyhow::Context;
 use core_event_controller::CoreEventController;
 use ethernet::EthernetController;
-use styx_core::core::builder::BuildProcessorImplArgs;
-use styx_core::core::builder::ProcessorImpl;
-use styx_core::cpu::arch::ppc32::Ppc32Register;
-use styx_core::cpu::arch::ppc32::Ppc32Variants;
-use styx_core::cpu::BackendNotSupported;
-use styx_core::cpu::PcodeBackend;
+use styx_core::core::builder::{BuildProcessorImplArgs, ProcessorImpl};
+use styx_core::cpu::arch::ppc32::{Ppc32Register, Ppc32Variants};
+use styx_core::cpu::{BackendNotSupported, PcodeBackend};
 use styx_core::prelude::*;
 use styx_peripherals::uart::{UartController, UartInterface};
 use timers::Timers;
@@ -99,14 +96,12 @@ impl ProcessorImpl for PowerPC405Builder {
 
 #[cfg(test)]
 mod tests {
-    use styx_core::{
-        cpu::arch::ppc32::{Ppc32Register, SpecialPpc32Register, SprRegister},
-        executor::Forever,
-        hooks::StyxHook,
-        memory::helpers::WriteExt,
-        prelude::{ProcessorBuilder, *},
-        util::logging::init_logging,
-    };
+    use styx_core::cpu::arch::ppc32::{Ppc32Register, SpecialPpc32Register, SprRegister};
+    use styx_core::executor::Forever;
+    use styx_core::hooks::StyxHook;
+    use styx_core::memory::helpers::WriteExt;
+    use styx_core::prelude::{ProcessorBuilder, *};
+    use styx_core::util::logging::init_logging;
     use tracing::debug;
 
     use crate::PowerPC405Builder;

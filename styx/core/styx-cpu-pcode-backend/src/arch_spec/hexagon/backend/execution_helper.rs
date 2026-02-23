@@ -4,28 +4,24 @@ use styx_cpu_type::arch::hexagon::HexagonRegister;
 use styx_errors::anyhow::Context;
 use styx_pcode::pcode::{Opcode, Pcode, SpaceName, VarnodeData};
 use styx_pcode_translator::ContextOption;
-use styx_processor::{cpu::CpuBackendExt, memory::Mmu};
+use styx_processor::cpu::CpuBackendExt;
+use styx_processor::memory::Mmu;
 
+use super::decode_info::{DuplexInsClass, PktLoopParseBits};
 use super::{
-    decode_info::{DuplexInsClass, PktLoopParseBits},
-    HexagonFetchDecodeError, OutputRegisterType,
+    HexagonExecutionHelper, HexagonFetchDecodeError, HexagonPcodeBackend, OutputRegisterType,
+    PktState,
 };
-use crate::{
-    arch_spec::hexagon::{
-        backend::{
-            decode_info::{GeneralHexagonInstruction, HardwareLoopStatus},
-            PacketLocation,
-        },
-        dotnew,
-        pkt_semantics::DEST_REG_OFFSET,
-    },
-    execute_pcode::PcodeHelpers,
-    memory::sized_value::SizedValue,
-    pcode_gen::GeneratePcodeError,
-    register_manager::RegisterManager,
+use crate::arch_spec::hexagon::backend::decode_info::{
+    GeneralHexagonInstruction, HardwareLoopStatus,
 };
-
-use super::{HexagonExecutionHelper, HexagonPcodeBackend, PktState};
+use crate::arch_spec::hexagon::backend::PacketLocation;
+use crate::arch_spec::hexagon::dotnew;
+use crate::arch_spec::hexagon::pkt_semantics::DEST_REG_OFFSET;
+use crate::execute_pcode::PcodeHelpers;
+use crate::memory::sized_value::SizedValue;
+use crate::pcode_gen::GeneratePcodeError;
+use crate::register_manager::RegisterManager;
 
 #[derive(Debug, Clone)]
 pub struct DefaultHexagonExecutionHelper {

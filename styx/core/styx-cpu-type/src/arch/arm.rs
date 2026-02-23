@@ -12,7 +12,6 @@ pub use registers::{
     arm_coproc_registers, ArmRegister, CoProc, CoProcessor, CoProcessorValue, SpecialArmRegister,
     SpecialArmRegisterValues,
 };
-
 // for enum dispatch
 use variants::*;
 

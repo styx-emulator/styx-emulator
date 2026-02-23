@@ -7,32 +7,30 @@ pub mod cortex_m4;
 mod helpers;
 mod register;
 
-use super::{
-    generator_helper::CONTEXT_OPTION_LEN,
-    pc_manager::{apply_difference, PcOverflow},
-    ArchPcManager, ArchSpecBuilder, GeneratorHelp,
-};
-use crate::{
-    arch_spec::ArchSpec, call_other::handlers::TraceCallOther, pcode_gen::GeneratePcodeError,
-    PcodeBackend, DEFAULT_REG_ALLOCATION,
-};
+use std::str::FromStr;
+
 use call_other::*;
 use helpers::StackPointerManager;
 use log::debug;
 use register::*;
 use smallvec::{smallvec, SmallVec};
-use std::str::FromStr;
-use styx_cpu_type::{
-    arch::{
-        arm::{ArmMetaVariants, ArmRegister},
-        backends::ArchVariant,
-    },
-    ArchEndian,
-};
-use styx_pcode::{pcode::VarnodeData, sla::SlaUserOps};
-use styx_pcode_translator::{sla::Arm7LeUserOps, ContextOption};
+use styx_cpu_type::arch::arm::{ArmMetaVariants, ArmRegister};
+use styx_cpu_type::arch::backends::ArchVariant;
+use styx_cpu_type::ArchEndian;
+use styx_pcode::pcode::VarnodeData;
+use styx_pcode::sla::SlaUserOps;
+use styx_pcode_translator::sla::Arm7LeUserOps;
+use styx_pcode_translator::ContextOption;
 use styx_processor::cpu::CpuBackendExt;
 use styx_sync::sync::Arc;
+
+use super::generator_helper::CONTEXT_OPTION_LEN;
+use super::pc_manager::{apply_difference, PcOverflow};
+use super::{ArchPcManager, ArchSpecBuilder, GeneratorHelp};
+use crate::arch_spec::ArchSpec;
+use crate::call_other::handlers::TraceCallOther;
+use crate::pcode_gen::GeneratePcodeError;
+use crate::{PcodeBackend, DEFAULT_REG_ALLOCATION};
 
 pub fn arm_arch_spec(
     arch: &ArchVariant,

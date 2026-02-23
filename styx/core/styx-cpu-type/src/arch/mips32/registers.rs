@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! Generic top level container for Mips32 registers
-use std::{collections::HashMap, num::NonZeroUsize};
+use std::collections::HashMap;
+use std::num::NonZeroUsize;
+
 use strum::IntoEnumIterator;
 
 use crate::arch::{CpuRegister, RegisterValue};

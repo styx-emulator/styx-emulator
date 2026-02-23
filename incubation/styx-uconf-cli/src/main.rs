@@ -3,10 +3,9 @@
 use std::path::PathBuf;
 
 use clap::{Args, Parser, Subcommand};
-use styx_emulator::{
-    errors::UnknownError,
-    prelude::{logging::init_logging, Forever},
-};
+use styx_emulator::errors::UnknownError;
+use styx_emulator::prelude::logging::init_logging;
+use styx_emulator::prelude::Forever;
 use styx_uconf::components::Context;
 
 #[derive(Parser)]

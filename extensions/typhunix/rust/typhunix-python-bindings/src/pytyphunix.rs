@@ -2,17 +2,15 @@
 //! Python bindings for typhunix using pyo3
 
 use pyo3::prelude::*;
-
-use tonic::Request;
-
-use typhunix_config::AppConfig;
-
+use styx_emulator::grpc::typhunix_interop::symbolic::data_type::MetaType;
+use styx_emulator::grpc::typhunix_interop::symbolic::symbol::SymbolType;
 use styx_emulator::grpc::typhunix_interop::symbolic::{
-    data_type::MetaType, symbol::SymbolType, DataType, Program, ProgramFilter, ProgramIdentifier,
-    Symbol,
+    DataType, Program, ProgramFilter, ProgramIdentifier, Symbol,
 };
-
-use typhunix_proto::{grpc_sync_client::*, vec_to_json_strings};
+use tonic::Request;
+use typhunix_config::AppConfig;
+use typhunix_proto::grpc_sync_client::*;
+use typhunix_proto::vec_to_json_strings;
 
 #[pymodule]
 fn pytyphunix(m: &Bound<'_, PyModule>) -> PyResult<()> {

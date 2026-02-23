@@ -29,10 +29,11 @@
 //! - `fibonacci-code-hooks-no-hit`tests multiple code hooks that don't get triggered
 //! - `fibonacci-memory-hooks-hit`/`fibonacci-memory-hooks-no-hit` same but for memory hooks
 //!
-use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
-use keystone_engine::Keystone;
 use std::hint::black_box;
 use std::time::Duration;
+
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
+use keystone_engine::Keystone;
 use styx_core::cpu::arch::arm::{ArmRegister, ArmVariants};
 use styx_core::cpu::{ArchEndian, TargetExitReason};
 use styx_core::errors::UnknownError;

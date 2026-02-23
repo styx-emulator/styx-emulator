@@ -3,6 +3,7 @@
 //! Wrapper for [WorkspaceSvcClient]
 
 use std::error::Error;
+
 use styx_core::grpc::args::TraceAppSessionArgs;
 use styx_core::grpc::db::DbId;
 use styx_core::grpc::workspace::workspace_svc_client::WorkspaceSvcClient;

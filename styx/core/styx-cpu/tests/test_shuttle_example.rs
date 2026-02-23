@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: BSD-2-Clause
 #![cfg(all(shuttle, test))]
 
-use styx_sync::shuttle;
 use styx_sync::sync::atomic::AtomicUsize;
 use styx_sync::sync::atomic::Ordering::SeqCst;
 use styx_sync::sync::{Arc, Mutex};
-use styx_sync::thread;
+use styx_sync::{shuttle, thread};
 
 #[test]
 fn test_shuttle_concurrent_logic() {

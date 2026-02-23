@@ -3,10 +3,11 @@
 
 use std::fmt::Display;
 
+use styx_errors::styx_grpc::ApplicationError;
+
 use crate::args::EmulationArgs;
 use crate::utils::{EmuMetadata, Token};
 use crate::Validator;
-use styx_errors::styx_grpc::ApplicationError;
 
 tonic::include_proto!("emulation_registry");
 

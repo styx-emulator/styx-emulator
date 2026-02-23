@@ -1,19 +1,16 @@
 // SPDX-License-Identifier: BSD-2-Clause
+use log::debug;
 use styx_cpu_type::arch::blackfin::BlackfinRegister;
 use styx_pcode::pcode::VarnodeData;
+use styx_processor::cpu::{CpuBackend, CpuBackendExt};
+use styx_processor::event_controller::EventController;
+use styx_processor::memory::helpers::ReadExt;
+use styx_processor::memory::Mmu;
 
-use log::debug;
-use styx_processor::{
-    cpu::{CpuBackend, CpuBackendExt},
-    event_controller::EventController,
-    memory::{helpers::ReadExt, Mmu},
-};
-
-use crate::{
-    call_other::{CallOtherCallback, CallOtherCpu, CallOtherHandleError},
-    memory::{sized_value::SizedValue, space_manager::SpaceManager},
-    PCodeStateChange,
-};
+use crate::call_other::{CallOtherCallback, CallOtherCpu, CallOtherHandleError};
+use crate::memory::sized_value::SizedValue;
+use crate::memory::space_manager::SpaceManager;
+use crate::PCodeStateChange;
 
 /// `RAISE` instruction. Latches asynchronous interrupt.
 #[derive(Debug)]

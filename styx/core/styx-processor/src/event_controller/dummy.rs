@@ -2,14 +2,11 @@
 use log::debug;
 use styx_errors::UnknownError;
 
-use crate::{
-    cpu::CpuBackend,
-    memory::{MemoryBackend, Mmu},
-};
-
 use super::{
     ActivateIRQnError, EventControllerImpl, ExceptionNumber, InterruptExecuted, Peripherals,
 };
+use crate::cpu::CpuBackend;
+use crate::memory::{MemoryBackend, Mmu};
 
 #[derive(Default)]
 /// A placeholder event controller, does nothing.

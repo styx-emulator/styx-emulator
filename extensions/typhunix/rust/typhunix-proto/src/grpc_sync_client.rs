@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: BSD-2-Clause
 #![allow(clippy::result_large_err)]
-use crate::grpc_async_client::{get_data_types, get_programs, get_symbols, GrpcStatus};
-use styx_emulator::grpc::typhunix_interop::{
-    symbolic::{DataType, Program, ProgramFilter, Symbol},
-    typhunix_client::TyphunixClient,
-};
+use styx_emulator::grpc::typhunix_interop::symbolic::{DataType, Program, ProgramFilter, Symbol};
+use styx_emulator::grpc::typhunix_interop::typhunix_client::TyphunixClient;
 use tokio::runtime::{Builder, Runtime};
 use tonic::transport::Channel;
 use tonic::IntoRequest;
+
+use crate::grpc_async_client::{get_data_types, get_programs, get_symbols, GrpcStatus};
 
 type StdError = Box<dyn std::error::Error + Send + Sync + 'static>;
 type Result<T, E = StdError> = ::std::result::Result<T, E>;

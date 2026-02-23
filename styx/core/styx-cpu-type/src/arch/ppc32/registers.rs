@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! Generic top level container for PPC32 registers
-use std::{collections::HashMap, num::NonZeroUsize};
-use strum::IntoEnumIterator;
+use std::collections::HashMap;
+use std::num::NonZeroUsize;
 
 use derive_more::Display;
 use num_derive::{FromPrimitive, ToPrimitive};
+use strum::IntoEnumIterator;
 
 use crate::arch::{CpuRegister, RegisterValue, RegisterValueCompatible};
 use crate::macros::*;
@@ -211,8 +212,9 @@ impl std::fmt::Display for SprRegister {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::str::FromStr;
+
+    use super::*;
 
     #[test]
     fn test_regs_from_str() {

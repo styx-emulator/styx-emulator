@@ -30,16 +30,12 @@
 //! | 15  | CLES |   0   | Big Endian |
 //! ```
 
-use styx_core::core::builder::BuildProcessorImplArgs;
+use styx_core::core::builder::{BuildProcessorImplArgs, ProcessorImpl};
 use styx_core::cpu::arch::ppc32::variants::Mpc8xxVariants;
-
+use styx_core::cpu::PcodeBackend;
 use styx_core::errors::anyhow::anyhow;
-use styx_core::{
-    core::builder::ProcessorImpl,
-    cpu::PcodeBackend,
-    memory::{DummyTlb, MemoryRegion},
-    prelude::*,
-};
+use styx_core::memory::{DummyTlb, MemoryRegion};
+use styx_core::prelude::*;
 use styx_mpc866m::Mpc866mController;
 
 use self::fast_ethernet::FastEthernetController;

@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::named_field_ex::{ArgType, NamedFieldEx};
 use pbuf::PROST_OPTION_STR;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens};
 use syn::parse::Parser;
 use syn::punctuated::Punctuated;
 use syn::{parse_quote, Attribute, DeriveInput, Path, Token};
+
+use crate::named_field_ex::{ArgType, NamedFieldEx};
 
 pub mod debug;
 use debug::PrintDebug;

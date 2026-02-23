@@ -28,12 +28,10 @@ fn main() -> anyhow::Result<()> {
 
 #[cfg_attr(feature = "disable-hexagon-tests", allow(dead_code))] // we do not build when running clippy
 mod docker_build {
-    use std::{
-        env, fs,
-        io::Write,
-        path::Path,
-        process::{Child, Command, Output, Stdio},
-    };
+    use std::io::Write;
+    use std::path::Path;
+    use std::process::{Child, Command, Output, Stdio};
+    use std::{env, fs};
 
     use anyhow::Context;
     use heck::AsShoutySnakeCase;

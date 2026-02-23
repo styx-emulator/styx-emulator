@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use log::debug;
 use std::time::Duration;
+
+use log::debug;
 use styx_errors::anyhow::{anyhow, Context};
 use styx_errors::UnknownError;
 use styx_grpc::io::uart::bytes_message::Data::{RxData, TxData};

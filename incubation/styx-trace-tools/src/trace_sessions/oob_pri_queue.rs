@@ -7,10 +7,9 @@
 //! on each interation of the loop and will service the [OOBRequest] based on
 //! its priority.
 
-use std::{
-    cmp::Ordering,
-    collections::{BinaryHeap, HashMap},
-};
+use std::cmp::Ordering;
+use std::collections::{BinaryHeap, HashMap};
+
 use styx_core::grpc::utils::EmulationState;
 use styx_core::sync::sync::{Arc, RwLock};
 use tracing::info;

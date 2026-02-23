@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! Wrapper for [EmulationRegistryServiceClient]
 
-use styx_core::grpc::{
-    emulation_registry::{
-        emulation_registry_service_client::EmulationRegistryServiceClient,
-        StartTraceExecutionRequest, StartTraceExecutionResponse,
-    },
-    utils::{Empty, EmuMetadata, ResponseStatus, Token},
+use styx_core::grpc::emulation_registry::emulation_registry_service_client::EmulationRegistryServiceClient;
+use styx_core::grpc::emulation_registry::{
+    StartTraceExecutionRequest, StartTraceExecutionResponse,
 };
+use styx_core::grpc::utils::{Empty, EmuMetadata, ResponseStatus, Token};
 use styx_core::util::traits::HasUrl;
 use tonic::{Request, Status};
 use tracing::debug;

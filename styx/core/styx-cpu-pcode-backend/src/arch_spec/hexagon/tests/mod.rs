@@ -1,20 +1,18 @@
 // SPDX-License-Identifier: BSD-2-Clause
-pub use crate::arch_spec::arch::hexagon::HexagonRegister;
 pub use keystone_engine::Keystone;
 pub use log::trace;
 pub use regex::Regex;
-pub use styx_cpu_type::{arch::hexagon::HexagonVariants, Arch, ArchEndian, TargetExitReason};
+pub use styx_cpu_type::arch::hexagon::HexagonVariants;
+pub use styx_cpu_type::{Arch, ArchEndian, TargetExitReason};
 pub use styx_pcode_translator::sla::hexagon_reg_to_str;
-pub use styx_processor::{
-    cpu::CpuBackend,
-    event_controller::EventController,
-    memory::{helpers::WriteExt, Mmu},
-};
-
-pub(crate) use crate::RegisterManager;
-pub use styx_processor::cpu::CpuBackendExt;
+pub use styx_processor::cpu::{CpuBackend, CpuBackendExt};
+pub use styx_processor::event_controller::EventController;
+pub use styx_processor::memory::helpers::WriteExt;
+pub use styx_processor::memory::Mmu;
 
 use super::backend::HexagonPcodeBackend;
+pub use crate::arch_spec::arch::hexagon::HexagonRegister;
+pub(crate) use crate::RegisterManager;
 
 mod banking;
 mod branching;

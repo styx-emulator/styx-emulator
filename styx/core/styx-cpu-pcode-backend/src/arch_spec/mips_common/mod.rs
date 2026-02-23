@@ -1,13 +1,10 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::{PcodeBackend, DEFAULT_REG_ALLOCATION};
-
 use smallvec::SmallVec;
 use styx_pcode::pcode::VarnodeData;
 
-use super::{
-    pc_manager::{apply_difference, PcOverflow},
-    ArchPcManager, GeneratorHelper,
-};
+use super::pc_manager::{apply_difference, PcOverflow};
+use super::{ArchPcManager, GeneratorHelper};
+use crate::{PcodeBackend, DEFAULT_REG_ALLOCATION};
 
 pub(crate) fn mips_common<Sla>(spec: &mut super::ArchSpecBuilder<Sla, PcodeBackend>) {
     spec.set_pc_manager(StandardMipsPcManager::default().into());

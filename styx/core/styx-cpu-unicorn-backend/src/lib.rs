@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
-use std::{
-    collections::BTreeMap, ffi::c_void, marker::PhantomPinned, mem::size_of, num::NonZeroUsize,
-    pin::Pin,
-};
+use std::collections::BTreeMap;
+use std::ffi::c_void;
+use std::marker::PhantomPinned;
+use std::mem::size_of;
+use std::num::NonZeroUsize;
+use std::pin::Pin;
 
 use arbitrary_int::{u20, u40, u80};
 use beau_collector::BeauCollector;
@@ -11,31 +13,24 @@ use derivative::Derivative;
 use hooks::{StyxHookDescriptor, StyxHookMap};
 use log::{debug, trace, warn};
 use ref_cast::RefCast;
-use tap::{Pipe, TryConv};
-
-use unicorn_engine::{ffi, unicorn_const, HookType, MemRegion, Permission, Unicorn};
-
-use styx_cpu_type::{
-    arch::{
-        arm::{SpecialArmRegister, SpecialArmRegisterValues},
-        backends::{ArchRegister, ArchVariant, SpecialArchRegister},
-        Arch, ArchEndian, ArchitectureDef, RegisterValue,
-    },
-    TargetExitReason,
+use styx_cpu_type::arch::arm::{SpecialArmRegister, SpecialArmRegisterValues};
+use styx_cpu_type::arch::backends::{ArchRegister, ArchVariant, SpecialArchRegister};
+use styx_cpu_type::arch::{Arch, ArchEndian, ArchitectureDef, RegisterValue};
+use styx_cpu_type::TargetExitReason;
+use styx_errors::anyhow::{anyhow, Context};
+use styx_errors::UnknownError;
+use styx_processor::core::ExceptionBehavior;
+use styx_processor::cpu::{CpuBackend, ExecutionReport, ReadRegisterError, WriteRegisterError};
+use styx_processor::event_controller::EventController;
+use styx_processor::hooks::{
+    AddHookError, AddressRange, DeleteHookError, HookToken, Hookable, StyxHook,
 };
-use styx_errors::{
-    anyhow::{anyhow, Context},
-    UnknownError,
-};
-use styx_processor::{
-    core::ExceptionBehavior,
-    cpu::{CpuBackend, ExecutionReport, ReadRegisterError, WriteRegisterError},
-    event_controller::EventController,
-    hooks::{AddHookError, AddressRange, DeleteHookError, HookToken, Hookable, StyxHook},
-    memory::{memory_region::MemoryRegion, HasRegions, MemoryPermissions, MemoryRegionSize, Mmu},
-};
+use styx_processor::memory::memory_region::MemoryRegion;
+use styx_processor::memory::{HasRegions, MemoryPermissions, MemoryRegionSize, Mmu};
 use styx_sync::cell::UnsafeCell;
 use styx_util::unsafe_lib::{any_as_u8_slice, any_as_u8_slice_mut};
+use tap::{Pipe, TryConv};
+use unicorn_engine::{ffi, unicorn_const, HookType, MemRegion, Permission, Unicorn};
 
 // local compatibility layers with styx + unicorn
 mod arch_compat;
@@ -924,14 +919,10 @@ mod tests {
 
     use keystone_engine::Keystone;
     use styx_cpu_type::arch::arm::{ArmRegister, ArmVariants};
-    use styx_processor::{
-        cpu::CpuBackendExt,
-        hooks::{CoreHandle, MemFaultData, Resolution},
-        memory::{
-            helpers::{ReadExt, WriteExt},
-            DummyTlb, MemoryBackend, MemoryPermissions,
-        },
-    };
+    use styx_processor::cpu::CpuBackendExt;
+    use styx_processor::hooks::{CoreHandle, MemFaultData, Resolution};
+    use styx_processor::memory::helpers::{ReadExt, WriteExt};
+    use styx_processor::memory::{DummyTlb, MemoryBackend, MemoryPermissions};
 
     use super::*;
 

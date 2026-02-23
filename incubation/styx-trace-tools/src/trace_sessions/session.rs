@@ -2,39 +2,34 @@
 
 //! Session for TraceApp
 
-use super::oob_pri_queue::OOBRequestQueue;
-use crate::{
-    emu_observer::EmulationObserver,
-    event::{AggregateEvent, StreamEndReason},
-    send_state_change, service_err,
-};
+use std::fmt::Display;
+use std::sync::atomic::AtomicBool;
+use std::time::{Duration, Instant};
+
 use futures_core::Stream;
-use std::{
-    fmt::Display,
-    sync::atomic::AtomicBool,
-    time::{Duration, Instant},
+use styx_core::grpc::args::trace_app_session_args::TraceMode;
+use styx_core::grpc::args::{RawEventLimits, SymbolSearchOptions};
+use styx_core::grpc::traceapp::{
+    InitializeTraceRequest, InstLimitReached, SessionInfo, SessionStats,
+    StartTraceAppSessionResponse,
 };
-use styx_core::grpc::{
-    args::{trace_app_session_args::TraceMode, RawEventLimits, SymbolSearchOptions},
-    traceapp::{
-        InitializeTraceRequest, InstLimitReached, SessionInfo, SessionStats,
-        StartTraceAppSessionResponse,
-    },
-    typhunix_interop::symbolic::ProgramIdentifier,
-    utils::EmuMetadata,
-    workspace::TraceSessionState,
-};
-use styx_core::sync::sync::{
-    atomic::Ordering::Relaxed,
-    {Arc, Mutex},
-};
+use styx_core::grpc::typhunix_interop::symbolic::ProgramIdentifier;
+use styx_core::grpc::utils::EmuMetadata;
+use styx_core::grpc::workspace::TraceSessionState;
+use styx_core::sync::sync::atomic::Ordering::Relaxed;
+use styx_core::sync::sync::{Arc, Mutex};
 use styx_core::util::dtutil::UtcDateTime;
 use tokio::sync::mpsc::Sender;
 use tokio_stream::StreamExt;
 use tonic::Status;
 use tracing::{debug, error, info, warn};
 
-use super::{oob_pri_queue, session_mgr::TTL_SECONDS};
+use super::oob_pri_queue;
+use super::oob_pri_queue::OOBRequestQueue;
+use super::session_mgr::TTL_SECONDS;
+use crate::emu_observer::EmulationObserver;
+use crate::event::{AggregateEvent, StreamEndReason};
+use crate::{send_state_change, service_err};
 
 /// A session gets created for new requests.
 pub struct Session {

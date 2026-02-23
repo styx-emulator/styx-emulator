@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use super::memory::sized_value::SizedValue;
 use std::fmt::Debug;
+
+use super::memory::sized_value::SizedValue;
 
 pub trait PcodeType: Into<SizedValue> + From<SizedValue> + Debug + Clone + Copy {
     type RustType;

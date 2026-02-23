@@ -2,15 +2,15 @@
 use std::sync::atomic::{AtomicU32, Ordering};
 
 use styx_cpu_pcode_backend::PcodeBackend;
-use styx_cpu_type::TargetExitReason;
-use styx_cpu_type::{arch::ppc32::Ppc32Variants, Arch, ArchEndian};
+use styx_cpu_type::arch::ppc32::Ppc32Variants;
+use styx_cpu_type::{Arch, ArchEndian, TargetExitReason};
 use styx_errors::UnknownError;
 use styx_processor::cpu::{CpuBackend, ExecutionReport};
+use styx_processor::event_controller::EventController;
 use styx_processor::hooks::{CoreHandle, Hookable, StyxHook};
 use styx_processor::memory::helpers::WriteExt;
 use styx_processor::memory::memory_region::MemoryRegion;
-use styx_processor::memory::MemoryPermissions;
-use styx_processor::{event_controller::EventController, memory::Mmu};
+use styx_processor::memory::{MemoryPermissions, Mmu};
 use styx_util::logging::init_logging;
 
 /// Test the triggering of basic blocks in the pcode backend.

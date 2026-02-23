@@ -12,11 +12,13 @@
 //!     processor.
 //!
 //! See `src/styx-loader/example-input/parameterized.yaml` for an example file.
-use crate::loaders::elf::ElfLoaderConfig;
-use crate::{Loader, LoaderHints, MemoryLoaderDesc, RegisterMap};
+use std::borrow::Cow;
+use std::collections::HashMap;
+use std::fs;
+use std::path::Path;
+
 use log::{info, warn};
 use serde::Deserialize;
-use std::{borrow::Cow, collections::HashMap, fs, path::Path};
 use styx_cpu_type::arch::backends::ArchRegister;
 use styx_cpu_type::arch::Arch;
 use styx_errors::anyhow::Context;
@@ -25,6 +27,8 @@ use styx_memory::{MemoryPermissions, MemoryRegion};
 use super::elf::load_elf;
 use super::ihex::IhexLoader;
 use super::raw::load_raw_with_base;
+use crate::loaders::elf::ElfLoaderConfig;
+use crate::{Loader, LoaderHints, MemoryLoaderDesc, RegisterMap};
 
 /// This record structure specifies the parameters for a load of an ELF.
 #[derive(Deserialize, PartialEq, Debug, Clone)]

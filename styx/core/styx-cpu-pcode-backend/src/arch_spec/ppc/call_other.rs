@@ -2,12 +2,12 @@
 use log::debug;
 use styx_errors::UnknownError;
 use styx_pcode::pcode;
-use styx_processor::{cpu::CpuBackend, event_controller::EventController, memory::Mmu};
+use styx_processor::cpu::CpuBackend;
+use styx_processor::event_controller::EventController;
+use styx_processor::memory::Mmu;
 
-use crate::{
-    call_other::{CallOtherCallback, CallOtherCpu, CallOtherHandleError},
-    PCodeStateChange,
-};
+use crate::call_other::{CallOtherCallback, CallOtherCpu, CallOtherHandleError};
+use crate::PCodeStateChange;
 
 const SVC_IRQN: i32 = 8;
 const RFI_WORKAROUND_ADDRESS: u64 = 0x99999998;

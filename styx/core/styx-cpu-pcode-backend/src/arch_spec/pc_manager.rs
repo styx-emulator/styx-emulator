@@ -1,27 +1,23 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::{PcodeBackend, DEFAULT_REG_ALLOCATION};
+use std::fmt::Debug;
+
 use enum_dispatch::enum_dispatch;
 use smallvec::SmallVec;
-use std::fmt::Debug;
 use styx_pcode::pcode::VarnodeData;
 
 #[cfg(feature = "arch_aarch64")]
 use super::aarch64;
-
 #[cfg(feature = "arch_arm")]
 use super::arm;
-
 #[cfg(feature = "arch_bfin")]
 use super::blackfin;
-
-#[cfg(feature = "arch_superh")]
-use super::superh;
-
-#[cfg(feature = "arch_ppc")]
-use super::ppc;
-
 #[cfg(any(feature = "arch_mips32", feature = "arch_mips64"))]
 use super::mips_common;
+#[cfg(feature = "arch_ppc")]
+use super::ppc;
+#[cfg(feature = "arch_superh")]
+use super::superh;
+use crate::{PcodeBackend, DEFAULT_REG_ALLOCATION};
 
 /// Concrete enum for program counter managers.
 ///

@@ -36,6 +36,12 @@ doc = ::embed_doc_image::embed_image!("k21partbreakdown", "assets/k21partbreakdo
 //! This library contains a [`Kinetis21Builder`] struct that takes a
 //! [`K21Variant`] and a path to the firmware to load on the core.
 use bit_banding::BitBands;
+// this import is only used when building documentation. When the
+// rust issue https://github.com/rust-lang/rust/issues/32104 is resolved
+// then we can drop this crate
+#[allow(unused_imports)]
+#[cfg(feature = "docimages")]
+use embed_doc_image::embed_doc_image;
 use styx_core::core::builder::{BuildProcessorImplArgs, ProcessorImpl};
 use styx_core::cpu::arch::arm::{ArmRegister, ArmVariants};
 use styx_core::cpu::PcodeBackend;
@@ -46,21 +52,13 @@ use styx_core::memory::{DummyTlb, MemoryBackend};
 use styx_core::prelude::*;
 use styx_mk21f12_sys as mk21f12_sys;
 use styx_nvic::Nvic;
+use styx_peripherals::uart::UartController;
 use thiserror::Error;
-
-// this import is only used when building documentation. When the
-// rust issue https://github.com/rust-lang/rust/issues/32104 is resolved
-// then we can drop this crate
-#[allow(unused_imports)]
-#[cfg(feature = "docimages")]
-use embed_doc_image::embed_doc_image;
 
 use self::ftm::FtmController;
 use self::mcg::Mcg;
 use self::systick::SysTickTimer;
 use self::uart::get_uarts;
-
-use styx_peripherals::uart::UartController;
 
 mod bit_banding;
 mod ftm;
@@ -432,9 +430,11 @@ impl Kinetis21Builder {
 #[cfg(test)]
 #[allow(dead_code)] // TODO
 mod tests {
-    use std::{borrow::Cow, path::Path};
+    use std::borrow::Cow;
+    use std::path::Path;
 
-    use styx_core::{executor::SingleStepExecutor, prelude::*};
+    use styx_core::executor::SingleStepExecutor;
+    use styx_core::prelude::*;
     use tracing::info;
 
     use super::*;

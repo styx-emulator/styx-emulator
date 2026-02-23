@@ -2,10 +2,8 @@
 use std::collections::HashMap;
 
 use itertools::Itertools;
-use styx_core::{
-    errors::UnknownError,
-    prelude::{anyhow, Context},
-};
+use styx_core::errors::UnknownError;
+use styx_core::prelude::{anyhow, Context};
 use tonic::transport::Uri;
 
 use crate::config::{ProcessorId, RemoteDevice};

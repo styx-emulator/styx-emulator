@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
 use std::time::Duration;
+
 use styx_dbmigration::{Migrator, MigratorTrait};
 use styx_dbmodel::api::prelude::*;
 use tokio::time::sleep;

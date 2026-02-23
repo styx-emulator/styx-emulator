@@ -9,25 +9,15 @@
 //! ```rust
 //! use styx_core::prelude::*;
 //! ```
-pub use macrolib;
-pub use styx_arch_utils as arch_utils;
 pub use styx_cpu::arch;
-pub use styx_errors as errors;
-pub use styx_grpc as grpc;
-pub use styx_loader as loader;
-pub use styx_macros as macros;
-pub use styx_peripheral_clients as peripheral_clients;
-pub use styx_processor::core;
-pub use styx_processor::event_controller;
-pub use styx_processor::executor;
-pub use styx_processor::hooks;
-pub use styx_processor::memory;
-pub use styx_processor::plugins;
-pub use styx_processor::processor;
-pub use styx_processor::runtime;
-pub use styx_sync as sync;
-pub use styx_tracebus as tracebus;
-pub use styx_util as util;
+pub use styx_processor::{
+    core, event_controller, executor, hooks, memory, plugins, processor, runtime,
+};
+pub use {
+    macrolib, styx_arch_utils as arch_utils, styx_errors as errors, styx_grpc as grpc,
+    styx_loader as loader, styx_macros as macros, styx_peripheral_clients as peripheral_clients,
+    styx_sync as sync, styx_tracebus as tracebus, styx_util as util,
+};
 
 pub mod cpu {
     pub use styx_cpu::*;
@@ -35,18 +25,24 @@ pub mod cpu {
 }
 
 pub mod prelude {
+    pub use styx_processor::cpu::{
+        CpuBackend, CpuBackendExt, DummyBackend, ReadRegisterError, WriteRegisterError,
+    };
+    pub use styx_processor::hooks::{AddressRange, CoreHandle, Hookable, MemFaultData, StyxHook};
+    pub use styx_processor::memory::helpers::{ReadExt, WriteExt};
+    pub use styx_processor::memory::memory_region::MemoryRegion;
+
     pub use super::core::{ProcessorBundle, ProcessorCore};
-    pub use super::cpu::{
-        arch::backends::*,
-        arch::{u1, u20, u4, u40, u80, TryNewIntError},
-        Arch, ArchEndian, Backend, BackendNotSupported, TargetExitReason,
-    };
-    pub use super::errors::anyhow::anyhow;
-    pub use super::errors::anyhow::Context;
-    pub use super::errors::{
-        anyhow, styx_cpu::*, styx_grpc::ApplicationError, styx_loader::StyxLoaderError,
-        styx_memory::*, styx_processor::ProcessorBuilderError, StyxMachineError, UnknownError,
-    };
+    pub use super::cpu::arch::backends::*;
+    pub use super::cpu::arch::{u1, u20, u4, u40, u80, TryNewIntError};
+    pub use super::cpu::{Arch, ArchEndian, Backend, BackendNotSupported, TargetExitReason};
+    pub use super::errors::anyhow::{anyhow, Context};
+    pub use super::errors::styx_cpu::*;
+    pub use super::errors::styx_grpc::ApplicationError;
+    pub use super::errors::styx_loader::StyxLoaderError;
+    pub use super::errors::styx_memory::*;
+    pub use super::errors::styx_processor::ProcessorBuilderError;
+    pub use super::errors::{anyhow, StyxMachineError, UnknownError};
     pub use super::event_controller::{
         EventController, EventControllerImpl, ExceptionNumber, Peripheral,
     };
@@ -66,10 +62,4 @@ pub mod prelude {
     pub use super::sync::*;
     pub use super::tracebus::*;
     pub use super::util::*;
-    pub use styx_processor::cpu::{
-        CpuBackend, CpuBackendExt, DummyBackend, ReadRegisterError, WriteRegisterError,
-    };
-    pub use styx_processor::hooks::{AddressRange, CoreHandle, Hookable, MemFaultData, StyxHook};
-    pub use styx_processor::memory::helpers::{ReadExt, WriteExt};
-    pub use styx_processor::memory::memory_region::MemoryRegion;
 }

@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use std::any::Any;
 use std::net::TcpStream;
-use std::thread;
-use std::{env, time::Duration};
+use std::time::Duration;
+use std::{env, thread};
+
 use styx_emulator::core::executor::Delta;
 use styx_emulator::core::util::logging::init_logging;
 use styx_emulator::cpu::arch::arm::ArmRegister;

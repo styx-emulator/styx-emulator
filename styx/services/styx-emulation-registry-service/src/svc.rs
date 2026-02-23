@@ -2,35 +2,30 @@
 //! Provides an importable daemon service to control
 //! emulator's and their tracing
 
+use std::collections::HashMap;
+use std::fmt::Display;
+
 use async_trait::async_trait;
 use emulation_service::emulation_args::{
     CliEmulationArgs, ServiceMetadata, SingleEmulationServiceExecutor,
 };
-use std::collections::HashMap;
-use std::fmt::Display;
 use styx_core::errors::styx_grpc::ApplicationError;
-use styx_core::grpc::{
-    args::HasEmulationArgs,
-    emulation::{
-        single_emulation_service_client::SingleEmulationServiceClient, StartSingleEmulationRequest,
-    },
-    emulation_registry::{
-        emulation_registry_service_server::*, IdentityMappingResponse, StartTraceExecutionRequest,
-        StartTraceExecutionResponse,
-    },
-    utils::{
-        Empty, EmuMetadata, EmuMetadataList, EmulationState, HashableToken, ProcessorInfo,
-        ResponseStatus, Token,
-    },
-    ToArgVec, Validator,
+use styx_core::grpc::args::HasEmulationArgs;
+use styx_core::grpc::emulation::single_emulation_service_client::SingleEmulationServiceClient;
+use styx_core::grpc::emulation::StartSingleEmulationRequest;
+use styx_core::grpc::emulation_registry::emulation_registry_service_server::*;
+use styx_core::grpc::emulation_registry::{
+    IdentityMappingResponse, StartTraceExecutionRequest, StartTraceExecutionResponse,
 };
-use styx_core::sync::sync::{
-    atomic::{AtomicU64, Ordering},
-    Arc, Mutex,
+use styx_core::grpc::utils::{
+    Empty, EmuMetadata, EmuMetadataList, EmulationState, HashableToken, ProcessorInfo,
+    ResponseStatus, Token,
 };
+use styx_core::grpc::{ToArgVec, Validator};
+use styx_core::sync::sync::atomic::{AtomicU64, Ordering};
+use styx_core::sync::sync::{Arc, Mutex};
 use styx_core::util::traits::HasUrl;
-use tonic::Status;
-use tonic::{Request, Response};
+use tonic::{Request, Response, Status};
 use tracing::{debug, info, warn};
 
 #[derive(Debug)]

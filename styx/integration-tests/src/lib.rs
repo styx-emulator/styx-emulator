@@ -2,16 +2,14 @@
 // mod runner;
 
 use std::ffi::OsStr;
-use std::path::Path;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 pub mod gdb_core_integration_test_suite;
 pub mod gdb_harness;
 mod runner;
 pub mod uart_integration;
 
-pub use runner::run_test;
-pub use runner::ProcessorIntegrationTest;
+pub use runner::{run_test, ProcessorIntegrationTest};
 
 /// Return true if the path exists, false otherwise
 #[inline]

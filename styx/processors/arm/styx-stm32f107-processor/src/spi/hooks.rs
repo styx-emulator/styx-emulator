@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use styx_core::prelude::{log::debug, *};
+use styx_core::prelude::log::debug;
+use styx_core::prelude::*;
 use styx_spi::SPIController;
 
-use crate::spi::SPIPortInner;
-
 use super::addr_to_spi_port;
+use crate::spi::SPIPortInner;
 
 pub(crate) fn spi_dr_w_hook(
     proc: CoreHandle,

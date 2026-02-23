@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::path_to_string;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote, ToTokens};
 use syn::punctuated::Punctuated;
 use syn::Token;
 
-use crate::parse_single_path;
+use crate::{parse_single_path, path_to_string};
 
 #[allow(dead_code)]
 pub struct NamedFieldEx {

@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: BSD-2-Clause
+use std::fs;
+use std::path::Path;
+
 use anyhow::{bail, Context};
 use convert_case::{Case, Casing};
-use std::{fs, path::Path};
 use styx_sync::lazy_static;
 
 lazy_static! {

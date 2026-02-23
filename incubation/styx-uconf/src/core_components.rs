@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! Component registrations for items in styx-core.
 
-use styx_core::{core::builder::DummyProcessorBuilder, prelude::*};
+use styx_core::core::builder::DummyProcessorBuilder;
+use styx_core::prelude::*;
 
 use crate::register_component;
 

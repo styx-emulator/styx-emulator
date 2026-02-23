@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! Emulates Uart controller for K21
-use std::{collections::VecDeque, mem::size_of};
+use std::collections::VecDeque;
+use std::mem::size_of;
+
 use styx_core::prelude::*;
-use styx_cyclone_v_hps_sys::{generic::FromBytes, uart0};
+use styx_cyclone_v_hps_sys::generic::FromBytes;
+use styx_cyclone_v_hps_sys::uart0;
 
 pub enum UartPortNumber {
     One,

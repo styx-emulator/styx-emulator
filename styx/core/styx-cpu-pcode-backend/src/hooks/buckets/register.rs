@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BSD-2-Clause
+use std::fmt::Debug;
+
 use styx_cpu_type::arch::backends::ArchRegister;
 use styx_processor::hooks::HookToken;
-
-use std::fmt::Debug;
 
 pub struct RegisterHookContainer<H> {
     register: ArchRegister,

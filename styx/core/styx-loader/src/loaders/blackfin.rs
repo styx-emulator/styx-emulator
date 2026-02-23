@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use std::{
-    borrow::Cow,
-    fmt::Debug,
-    io::{Cursor, Read, Seek},
-};
+use std::borrow::Cow;
+use std::fmt::Debug;
+use std::io::{Cursor, Read, Seek};
 
-use crate::{Loader, LoaderHints, MemoryLoaderDesc};
 use binrw::{BinRead, BinResult, Endian};
 use log::{debug, warn};
 use styx_cpu_type::arch::blackfin::BlackfinRegister;
-use styx_errors::{anyhow::Context, styx_loader::StyxLoaderError};
+use styx_errors::anyhow::Context;
+use styx_errors::styx_loader::StyxLoaderError;
 use styx_memory::{MemoryPermissions, MemoryRegion};
+
+use crate::{Loader, LoaderHints, MemoryLoaderDesc};
 
 const BLACKFIN_LDR_MAGIC: i8 = -83;
 

@@ -1,11 +1,15 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::{memory::sized_value::SizedValue, PCodeStateChange};
+use std::fmt::Debug;
+
+use log::trace;
+use styx_pcode::pcode::VarnodeData;
+use styx_processor::cpu::CpuBackend;
+use styx_processor::event_controller::EventController;
+use styx_processor::memory::Mmu;
 
 use super::{CallOtherCallback, CallOtherCpu, CallOtherHandleError};
-use log::trace;
-use std::fmt::Debug;
-use styx_pcode::pcode::VarnodeData;
-use styx_processor::{cpu::CpuBackend, event_controller::EventController, memory::Mmu};
+use crate::memory::sized_value::SizedValue;
+use crate::PCodeStateChange;
 
 #[derive(Debug)]
 pub struct TraceCallOther {

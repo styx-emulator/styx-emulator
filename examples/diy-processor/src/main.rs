@@ -12,6 +12,7 @@
 //! [Gpio](styx_emulator::processors::arm::stm32f107::example_gpio::Gpio)
 //! example in the [styx_machines](crate) crate.
 use std::env;
+
 use styx_emulator::arch::arm::ArmRegister;
 use styx_emulator::plugins::tracing_plugins::ProcessorTracingPlugin;
 use styx_emulator::prelude::*;

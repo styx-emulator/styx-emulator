@@ -1,20 +1,16 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use std::{
-    borrow::Cow,
-    collections::{hash_map::Entry, HashMap},
-};
+use std::borrow::Cow;
+use std::collections::hash_map::Entry;
+use std::collections::HashMap;
 
-use styx_core::{
-    core::builder::ProcessorImpl,
-    errors::UnknownError,
-    prelude::{log::trace, ExecutorImpl, UninitPlugin},
-};
+use styx_core::core::builder::ProcessorImpl;
+use styx_core::errors::UnknownError;
+use styx_core::prelude::log::trace;
+use styx_core::prelude::{ExecutorImpl, UninitPlugin};
 use thiserror::Error;
 
-use crate::{
-    components::{Component, ComponentType},
-    ComponentConfig, ComponentReference,
-};
+use crate::components::{Component, ComponentType};
+use crate::{ComponentConfig, ComponentReference};
 
 pub type ComponentGenerator<T> = fn(Option<&ComponentConfig>) -> Result<T, UnknownError>;
 

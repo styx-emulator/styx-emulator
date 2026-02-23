@@ -3,7 +3,6 @@
 use styx_core::arch::ppc32::Ppc32Variants;
 use styx_core::cpu::arch::ppc32::gdb_targets::Ppc4xxTargetDescription;
 use styx_core::prelude::*;
-
 use styx_core::util::resolve_test_bin;
 use styx_integration_tests::gdb_core_test_suite;
 

@@ -7,6 +7,7 @@
 #![allow(dead_code)] // for this example, linters will complain due to the cfg's
 
 use std::env;
+
 #[cfg(not(feature = "trace"))]
 use styx_emulator::core::util::logging::init_logging;
 use styx_emulator::loader::RawLoader;

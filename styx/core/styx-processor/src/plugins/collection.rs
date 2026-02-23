@@ -4,9 +4,9 @@
 use log::debug;
 use styx_errors::UnknownError;
 
-use crate::{core::ProcessorCore, processor::BuildingProcessor};
-
 use super::{Plugin, UninitPlugin};
+use crate::core::ProcessorCore;
+use crate::processor::BuildingProcessor;
 
 /// Collection of plugins in the processor.
 pub struct PluginsContainer<T> {

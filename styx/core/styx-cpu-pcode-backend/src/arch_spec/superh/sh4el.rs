@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
-use crate::{arch_spec::ArchSpecBuilder, PcodeBackend};
 use styx_pcode_translator::sla;
+
+use crate::arch_spec::ArchSpecBuilder;
+use crate::PcodeBackend;
 
 #[allow(dead_code)] // right now we dont use little endian SH4
 pub fn build() -> ArchSpecBuilder<sla::SuperH4Le, PcodeBackend> {

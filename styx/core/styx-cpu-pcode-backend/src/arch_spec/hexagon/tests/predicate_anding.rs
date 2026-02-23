@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::arch_spec::hexagon::tests::*;
 use log::info;
 use test_case::test_case;
+
+use crate::arch_spec::hexagon::tests::*;
 
 // This is a particularly nasty (and good) test for the sequencer.
 #[test_case(6, 5, 7, 2; "r0 gt r1, r2 gt r3, branch taken")]

@@ -3,10 +3,8 @@
 
 use arbitrary_int::u40;
 use styx_cpu_pcode_backend::PcodeBackend;
-use styx_cpu_type::{
-    arch::blackfin::{BlackfinRegister, BlackfinVariants},
-    Arch, ArchEndian,
-};
+use styx_cpu_type::arch::blackfin::{BlackfinRegister, BlackfinVariants};
+use styx_cpu_type::{Arch, ArchEndian};
 use styx_processor::cpu::CpuBackendExt;
 
 /// Test writing to A0/A1 and reading from ANx/ANw.

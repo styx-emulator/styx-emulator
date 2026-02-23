@@ -7,14 +7,11 @@ mod system_interrupts;
 use event::*;
 use exception::*;
 use styx_blackfin_sys::bf512 as sys;
+use styx_core::cpu::arch::blackfin::BlackfinRegister;
+use styx_core::event_controller::{ActivateIRQnError, InterruptExecuted, Peripherals};
 use styx_core::memory::MemoryBackend;
 use styx_core::prelude::*;
-use styx_core::{
-    cpu::arch::blackfin::BlackfinRegister,
-    event_controller::{ActivateIRQnError, InterruptExecuted, Peripherals},
-};
-pub use system_interrupts::PeripheralId;
-pub use system_interrupts::*;
+pub use system_interrupts::{PeripheralId, *};
 use tracing::{debug, trace, warn};
 
 const RETI_ADDRESS: u64 = 0xFFFF_FFF0;

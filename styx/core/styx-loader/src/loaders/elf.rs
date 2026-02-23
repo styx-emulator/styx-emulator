@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! Loads an ELF compatible object into something usable by `styx`
 
-use crate::{Loader, LoaderHints, MemoryLoaderDesc, StyxLoaderError};
-use goblin::elf::Elf;
 use std::borrow::Cow;
+
+use goblin::elf::Elf;
 use styx_cpu_type::arch::{Arch, ArchEndian};
 use styx_errors::anyhow::Context;
 use styx_memory::{MemoryPermissions, MemoryRegion};
+
+use crate::{Loader, LoaderHints, MemoryLoaderDesc, StyxLoaderError};
 
 struct ElfMachine(u16);
 

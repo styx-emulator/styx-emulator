@@ -4,26 +4,23 @@ mod dummy;
 mod peripheral;
 mod peripherals;
 
-use std::{any::type_name, borrow::Cow, fmt::Display};
+use std::any::type_name;
+use std::borrow::Cow;
+use std::fmt::Display;
 
 use as_any::AsAny;
 pub use dummy::DummyEventController;
+use log::trace;
 pub use peripheral::{DummyPeripheral, Peripheral};
 pub use peripherals::Peripherals;
-
-use log::trace;
 use static_assertions::assert_obj_safe;
-use styx_errors::{
-    anyhow::{anyhow, Context},
-    UnknownError,
-};
+use styx_errors::anyhow::{anyhow, Context};
+use styx_errors::UnknownError;
 use thiserror::Error;
 
-use crate::{
-    cpu::CpuBackend,
-    executor::Delta,
-    memory::{MemoryBackend, Mmu},
-};
+use crate::cpu::CpuBackend;
+use crate::executor::Delta;
+use crate::memory::{MemoryBackend, Mmu};
 
 pub type ExceptionNumber = i32;
 

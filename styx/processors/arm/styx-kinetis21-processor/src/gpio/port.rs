@@ -2,13 +2,14 @@
 //! The [`GPIOPort`] is our abstraction of an individual GPIO port in a target device. This is
 //! where the logic for implementing a GPIO port lives. This structure owns and manages the
 //! [`Register`] and [`Pin`] structures.
-use super::{
-    constants::{GPIOPortMap, GpioRegister, GPIO_PORT_NPINS, GPIO_REGISTERS},
-    pin::Pin,
-};
-use std::{collections::BTreeMap, ops::RangeInclusive};
+use std::collections::BTreeMap;
+use std::ops::RangeInclusive;
+
 use styx_core::prelude::*;
 use tracing::{trace, warn};
+
+use super::constants::{GPIOPortMap, GpioRegister, GPIO_PORT_NPINS, GPIO_REGISTERS};
+use super::pin::Pin;
 
 /// Helper function for tracing GPIO register writes.
 fn trace_reg_write(gpio_name: &str, reg_name: &str, regval: u32) {

@@ -6,11 +6,10 @@
 #![allow(dead_code)]
 #![allow(clippy::identity_op)] // makes all the definitions uniform
 use bilge::prelude::*;
-use styx_core::sync::lazy_static;
-use thiserror::Error;
-
 #[allow(unused_imports)]
-pub use immr_defs::*; // re-export these
+pub use immr_defs::*;
+use styx_core::sync::lazy_static;
+use thiserror::Error; // re-export these
 
 #[derive(Debug, Error)]
 pub enum ImmrSearchError {

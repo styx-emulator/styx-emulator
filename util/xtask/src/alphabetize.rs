@@ -7,13 +7,13 @@
 //!   - bug where multiline attributes were not considered to exclusions
 //!   - runs on styx project dir
 
-use {
-    codesort::*,
-    lazy_regex::*,
-    std::{fs, io, path::PathBuf},
-    styx_util::styx_root_pathbuf,
-    termimad::crossterm::style::Stylize,
-};
+use std::path::PathBuf;
+use std::{fs, io};
+
+use codesort::*;
+use lazy_regex::*;
+use styx_util::styx_root_pathbuf;
+use termimad::crossterm::style::Stylize;
 
 /// Directories we don't want to touch
 static EXCLUDED_DIRS: &[&str] = &[".git", "target", "build"];

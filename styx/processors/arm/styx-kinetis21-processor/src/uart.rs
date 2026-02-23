@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! Emulates Uart controller for K21
 //!
-use hooks::{UartC2Hook, UartDHook, UartS1Hook};
 use std::collections::VecDeque;
 use std::mem::offset_of;
+
+use hooks::{UartC2Hook, UartDHook, UartS1Hook};
 use styx_core::errors::UnknownError;
 use styx_core::memory::Mmu;
 use styx_core::prelude::{CpuBackend, ExceptionNumber};
-
 use tokio::sync::broadcast;
 use tracing::{debug, trace, warn};
+
 // base UART type
 use super::mk21f12_sys::UART_Type;
 
@@ -19,17 +20,16 @@ mod hooks;
 mod inner;
 
 use inner::UartHalLayer;
+use styx_peripherals::uart::{IntoUartImpl, UartImpl, UartInterface};
+
 // interrupt numbers
 use super::mk21f12_sys::{
     IRQn_UART0_ERR_IRQn, IRQn_UART0_RX_TX_IRQn, IRQn_UART1_ERR_IRQn, IRQn_UART1_RX_TX_IRQn,
     IRQn_UART2_ERR_IRQn, IRQn_UART2_RX_TX_IRQn, IRQn_UART3_ERR_IRQn, IRQn_UART3_RX_TX_IRQn,
     IRQn_UART4_ERR_IRQn, IRQn_UART4_RX_TX_IRQn, IRQn_UART5_ERR_IRQn, IRQn_UART5_RX_TX_IRQn,
 };
-
 // UART port base addresses
 use super::mk21f12_sys::{UART0_BASE, UART1_BASE, UART2_BASE, UART3_BASE, UART4_BASE, UART5_BASE};
-
-use styx_peripherals::uart::{IntoUartImpl, UartImpl, UartInterface};
 
 pub fn get_uarts() -> Vec<UartInterface> {
     vec![

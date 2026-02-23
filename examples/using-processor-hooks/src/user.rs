@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! User-interactive program to interact with the STM32F405 example emulation
-use clap::Parser;
 use std::fmt::Write as BufWrite;
 use std::io::Write;
 use std::net::TcpStream;
 use std::time::Duration;
 use std::{io, thread};
+
+use clap::Parser;
 use styx_emulator::peripheral_clients::uart::UartClient;
 
 #[derive(Debug, Parser)]

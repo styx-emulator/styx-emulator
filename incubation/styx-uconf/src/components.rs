@@ -4,15 +4,14 @@
 //!
 
 use std::fmt::Display;
-use styx_core::{core::builder::ProcessorImpl, prelude::*};
-
-use crate::ComponentGenerator;
 
 pub use inventory::submit as inventory_submit;
 pub use serde_yaml::from_value;
-pub use styx_core::prelude::log;
-pub use styx_core::prelude::Context;
-pub use styx_core::prelude::UnknownError;
+use styx_core::core::builder::ProcessorImpl;
+use styx_core::prelude::*;
+pub use styx_core::prelude::{log, Context, UnknownError};
+
+use crate::ComponentGenerator;
 
 /// Register a component with no configuration for use in the Styx Unified Configuration.
 ///
@@ -118,10 +117,8 @@ pub mod component_types {
     //! Component types for use by [`register_component`] and [`register_component_config`]
     #![allow(non_camel_case_types)]
 
-    use styx_core::{
-        core::builder::ProcessorImpl,
-        prelude::{ExecutorImpl, UninitPlugin},
-    };
+    use styx_core::core::builder::ProcessorImpl;
+    use styx_core::prelude::{ExecutorImpl, UninitPlugin};
 
     pub type processor = Box<dyn ProcessorImpl>;
     pub type executor = Box<dyn ExecutorImpl>;

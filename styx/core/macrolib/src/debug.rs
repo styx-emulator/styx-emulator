@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::{parse_single_path, path_to_string};
 use quote::{quote, ToTokens};
-use styx_sync::{
-    lazy_static,
-    sync::atomic::{AtomicBool, Ordering},
-};
+use styx_sync::lazy_static;
+use styx_sync::sync::atomic::{AtomicBool, Ordering};
+
+use crate::{parse_single_path, path_to_string};
 
 lazy_static! {
     static ref DEBUG: AtomicBool = AtomicBool::new(false);

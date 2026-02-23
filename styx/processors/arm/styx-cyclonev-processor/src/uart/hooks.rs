@@ -1,16 +1,12 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use styx_core::{
-    hooks::{MemoryReadHook, MemoryWriteHook},
-    prelude::*,
-};
+use styx_core::hooks::{MemoryReadHook, MemoryWriteHook};
+use styx_core::prelude::*;
 use styx_cyclone_v_hps_sys::uart0;
 use styx_peripherals::uart::UartController;
 use tracing::{debug, error, trace};
 
-use super::{
-    inner::{CycloneVInterruptIds, UartHalLayer, TX_RX_FIFO_BUFFERS_SIZE},
-    UartPortInner,
-};
+use super::inner::{CycloneVInterruptIds, UartHalLayer, TX_RX_FIFO_BUFFERS_SIZE};
+use super::UartPortInner;
 
 // UART-Module, Cyclone V HPS Register Address Map and Definitions"
 // UART - Register Layout Typedef

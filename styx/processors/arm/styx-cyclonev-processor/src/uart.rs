@@ -14,7 +14,6 @@ mod hooks;
 mod inner;
 
 use inner::{UartHalLayer, UartPortNumber};
-
 use styx_peripherals::uart::{IntoUartImpl, UartImpl, UartInterface};
 //
 // XXX: Some features that are missing:
@@ -230,9 +229,10 @@ impl UartPortInner {
 
 #[cfg(test)]
 mod tests {
-    use super::inner::UART_REG_BLOCK_SIZE;
     use styx_cyclone_v_hps_sys::generic::FromBytes;
     use styx_cyclone_v_hps_sys::uart0;
+
+    use super::inner::UART_REG_BLOCK_SIZE;
 
     #[test]
     fn does_it_work() {

@@ -24,8 +24,7 @@
 #![allow(dead_code, unused_variables)]
 use derive_more::Display;
 use styx_core::cpu::arch::ppc32::variants::Mpc8xxVariants;
-use styx_core::errors::StyxMachineError;
-use styx_core::errors::UnknownError;
+use styx_core::errors::{StyxMachineError, UnknownError};
 use styx_core::event_controller::{ActivateIRQnError, InterruptExecuted, Peripherals};
 use styx_core::prelude::*;
 

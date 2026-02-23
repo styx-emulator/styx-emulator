@@ -1,16 +1,13 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use std::{
-    collections::VecDeque,
-    fmt::Debug,
-    sync::{mpsc, Arc, Mutex},
-};
+use std::collections::VecDeque;
+use std::fmt::Debug;
+use std::sync::{mpsc, Arc, Mutex};
 
 use log::trace;
 use styx_errors::UnknownError;
 
-use crate::core::ProcessorCore;
-
 use super::{Plugin, UninitPlugin};
+use crate::core::ProcessorCore;
 
 pub struct TaskHandle<T> {
     recv: mpsc::Receiver<T>,

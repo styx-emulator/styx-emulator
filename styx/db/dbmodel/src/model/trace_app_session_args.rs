@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use super::prelude::*;
 use sea_orm::entity::prelude::*;
 use sea_orm::ActiveValue::{NotSet, Set};
+
+use super::prelude::*;
 
 type Message = TraceAppSessionArgs;
 
@@ -124,10 +125,11 @@ impl From<Message> for ActiveModel {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use test_case::test_case;
     #[allow(unused_imports)]
     use tracing::{debug, error, info, trace};
+
+    use super::*;
     pub type TestResult = Result<(), Box<dyn std::error::Error + 'static>>;
 
     #[test]

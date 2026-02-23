@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! Emulation of the DMA controller for STM32F405
 #![allow(dead_code)] // todo: dma not fully implemented yet
-use std::{
-    collections::{HashMap, VecDeque},
-    mem::size_of,
-};
+use std::collections::{HashMap, VecDeque};
+use std::mem::size_of;
+
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 use styx_core::prelude::*;
-
-use styx_stm32f405_sys::{dma1, dma2, generic::FromBytes, Dma1};
+use styx_stm32f405_sys::generic::FromBytes;
+use styx_stm32f405_sys::{dma1, dma2, Dma1};
 
 /// Apply a macro to the register structure, also passing additional arguments. This helps with
 /// increasing code reuse and improving code readability.

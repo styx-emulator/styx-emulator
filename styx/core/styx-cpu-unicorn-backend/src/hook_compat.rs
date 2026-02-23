@@ -11,21 +11,20 @@
 //! time the backend is executed to ensure the pointers are valid if the user moves them.
 //!
 //! Errors in hooks are stored in the unicorn backend and emulation is stopped.
-use log::trace;
 use std::ops::RangeBounds;
-use styx_errors::{anyhow::anyhow, UnknownError};
-use styx_processor::{
-    core::{Exception, HandleExceptionAction},
-    event_controller::EventController,
-    hooks::{CoreHandle, MemFaultData, Resolution, StyxHook},
-    memory::{
-        helpers::{ReadExt, WriteExt},
-        HasRegions, MemoryRegionSize, Mmu,
-    },
-};
+
+use log::trace;
+use styx_errors::anyhow::anyhow;
+use styx_errors::UnknownError;
+use styx_processor::core::{Exception, HandleExceptionAction};
+use styx_processor::event_controller::EventController;
+use styx_processor::hooks::{CoreHandle, MemFaultData, Resolution, StyxHook};
+use styx_processor::memory::helpers::{ReadExt, WriteExt};
+use styx_processor::memory::{HasRegions, MemoryRegionSize, Mmu};
 use unicorn_engine::unicorn_const;
 
-use crate::{hooks::StyxHookDescriptor, UnicornBackend};
+use crate::hooks::StyxHookDescriptor;
+use crate::UnicornBackend;
 
 /// Extracts hook and [CoreHandle] references from ptr_state and hook pointers and gives them to a
 /// hook specific logic callback `F`. The hook logic callback is in charge of calling the [StyxHook]

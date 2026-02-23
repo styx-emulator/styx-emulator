@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! `GDB` support macros and utilities for `mips64` targets
-use super::Mips64Register;
-use crate::arch::backends::{ArchRegister, BasicArchRegister};
-use crate::arch::CpuRegister;
 use std::collections::BTreeMap;
 use std::marker::PhantomData;
+
 use styx_macros::gdb_target_description;
 use styx_sync::lazy_static;
 use styx_util::gdb_xml::MIPS64_CPU;
+
+use super::Mips64Register;
+use crate::arch::backends::{ArchRegister, BasicArchRegister};
+use crate::arch::CpuRegister;
 
 lazy_static! {
     /// # lazy-static

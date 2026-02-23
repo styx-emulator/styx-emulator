@@ -2,7 +2,8 @@
 //! end to end tests for stm32f107
 use styx_core::cpu::arch::arm::gdb_targets::ArmMProfileDescription;
 use styx_core::prelude::*;
-use styx_core::util::{logging::init_logging, resolve_test_bin};
+use styx_core::util::logging::init_logging;
+use styx_core::util::resolve_test_bin;
 use styx_integration_tests::gdb_core_test_suite;
 
 const BLINK_FLASH_PATH: &str = "arm/stm32f107/bin/blink_flash/blink_flash.bin";

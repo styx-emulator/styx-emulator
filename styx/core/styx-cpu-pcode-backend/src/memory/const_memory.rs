@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use super::space::IsSpaceMemory;
 use styx_cpu_type::ArchEndian;
 use styx_processor::memory::MmuOpError;
+
+use super::space::IsSpaceMemory;
 
 /// [IsSpaceMemory] for the Constant address space.
 ///

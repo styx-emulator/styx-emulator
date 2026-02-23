@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! (TODO) Implements the UTOPIA Hardware Block as defined by
 //! the MPC8XX Family Reference Manual
-use super::Mpc8xxVariants;
 use styx_core::prelude::Peripheral;
 use tracing::trace;
+
+use super::Mpc8xxVariants;
 
 #[derive(Debug, Default)]
 pub struct UtopiaBlock;

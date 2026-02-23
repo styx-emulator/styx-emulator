@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::arch_spec::hexagon::tests::*;
 use log::trace;
+
+use crate::arch_spec::hexagon::tests::*;
 
 #[test]
 pub fn array_manipulation() {

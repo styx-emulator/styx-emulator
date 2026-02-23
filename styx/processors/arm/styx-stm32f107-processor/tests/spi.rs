@@ -1,17 +1,16 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use std::{
-    net::TcpStream,
-    sync::{atomic::AtomicBool, Arc},
-    time::Duration,
-};
+use std::net::TcpStream;
+use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
+use std::time::Duration;
 
-use styx_core::{
-    loader::ElfLoader,
-    peripheral_clients::spi::SPISimpleClient,
-    prelude::{ProcessorBuilder, *},
-    util::{self, logging::init_logging},
-};
-use styx_devices::{adc::ADS7866, eeprom::AT25HP512};
+use styx_core::loader::ElfLoader;
+use styx_core::peripheral_clients::spi::SPISimpleClient;
+use styx_core::prelude::{ProcessorBuilder, *};
+use styx_core::util::logging::init_logging;
+use styx_core::util::{self};
+use styx_devices::adc::ADS7866;
+use styx_devices::eeprom::AT25HP512;
 use styx_stm32f107_processor::Stm32f107Builder;
 
 /// Test firmware reads from virtualized ADC and writes to virtualized EEPROM over SPI.

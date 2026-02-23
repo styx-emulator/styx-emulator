@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::{CPUMode, Nvic, BUSFAULT_IRQN, MEMMANAGE_IRQN, SVCALL_IRQN, USAGEFAULT_IRQN};
+use styx_core::cpu::arch::arm::ArmRegister;
+use styx_core::errors::UnknownError;
 use styx_core::prelude::*;
-use styx_core::{cpu::arch::arm::ArmRegister, errors::UnknownError};
 use tracing::{debug, trace, warn};
+
+use crate::{CPUMode, Nvic, BUSFAULT_IRQN, MEMMANAGE_IRQN, SVCALL_IRQN, USAGEFAULT_IRQN};
 
 const NMI_PENDING: u32 = 1 << 31;
 const PENDSV_PENDING: u32 = 1 << 28;

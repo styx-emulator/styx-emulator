@@ -7,11 +7,11 @@
 use styx_cpu_pcode_backend::PcodeBackend;
 use styx_cpu_type::{Arch, ArchEndian};
 use styx_errors::UnknownError;
-use styx_processor::{
-    cpu::CpuBackend,
-    event_controller::EventController,
-    memory::{helpers::WriteExt, memory_region::MemoryRegion, MemoryPermissions, Mmu},
-};
+use styx_processor::cpu::CpuBackend;
+use styx_processor::event_controller::EventController;
+use styx_processor::memory::helpers::WriteExt;
+use styx_processor::memory::memory_region::MemoryRegion;
+use styx_processor::memory::{MemoryPermissions, Mmu};
 use styx_util::logging::init_logging;
 
 #[cfg(feature = "arch_ppc")]

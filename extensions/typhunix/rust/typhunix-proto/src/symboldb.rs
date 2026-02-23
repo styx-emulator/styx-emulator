@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! Symbols Database
 
-use async_trait::async_trait;
 use std::collections::HashMap;
+
+use async_trait::async_trait;
 use styx_emulator::grpc::typhunix_interop::symbolic::{
     DataType, Program, ProgramIdentifier, Symbol,
 };
@@ -460,11 +461,12 @@ pub fn count_staged_for_client(p: Program, data: &ArcMapSubscribers) -> (usize, 
 #[cfg(test)]
 mod tests {
 
+    use styx_emulator::grpc::typhunix_interop::symbolic::ProgramIdentifier;
+    use test_case::test_case;
+
     use super::*;
     use crate::test_utils;
     use crate::test_utils::*;
-    use styx_emulator::grpc::typhunix_interop::symbolic::ProgramIdentifier;
-    use test_case::test_case;
 
     #[test_case(Program::default() ; "empty program is no good")]
     #[test_case(Program {

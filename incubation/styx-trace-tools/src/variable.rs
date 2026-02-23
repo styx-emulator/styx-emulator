@@ -1,21 +1,25 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! Abstractions representingf a program variable (struct, int, char, ...)
 
-use crate::{compact_repr, event::AggregateEvent};
+use std::mem::size_of;
+
 use log::warn;
 use serde_json::json;
-use std::mem::size_of;
-use styx_core::grpc::{
-    symbolic::{data_type::MetaType, symbol::SymbolType, DataType, Function, Symbol},
-    traceapp::{
-        ArrayRepr, BasicRepr, CStructMemberRepr, CStructRepr, CVarRepr, Interrupt, MemoryChange,
-    },
-    typhunix_interop::{AddrUtils, FuncUtils, SymbolUtils},
+use styx_core::grpc::symbolic::data_type::MetaType;
+use styx_core::grpc::symbolic::symbol::SymbolType;
+use styx_core::grpc::symbolic::{DataType, Function, Symbol};
+use styx_core::grpc::traceapp::{
+    ArrayRepr, BasicRepr, CStructMemberRepr, CStructRepr, CVarRepr, Interrupt, MemoryChange,
 };
-use styx_core::sync::sync::atomic::{AtomicU64, Ordering::SeqCst};
+use styx_core::grpc::typhunix_interop::{AddrUtils, FuncUtils, SymbolUtils};
+use styx_core::sync::sync::atomic::AtomicU64;
+use styx_core::sync::sync::atomic::Ordering::SeqCst;
 use styx_core::tracebus::{MemReadEvent, MemWriteEvent};
 use tracing::trace;
 use typhunix_proto::cache::SymbolCache;
+
+use crate::compact_repr;
+use crate::event::AggregateEvent;
 
 /// The maximum number of memory overflow errors to store. We will stop storing,
 /// but keep counting in [Variable]

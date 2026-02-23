@@ -1,22 +1,18 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! # Styx-Processors
 
-use styx_core::{
-    core::{
-        builder::{BuildProcessorImplArgs, ProcessorImpl},
-        ProcessorBundle,
-    },
-    cpu::{Arch, ArchEndian, PcodeBackend},
-    loader::LoaderHints,
-    memory::{DummyTlb, PhysicalMemoryVariant},
-    prelude::*,
-};
+use styx_core::core::builder::{BuildProcessorImplArgs, ProcessorImpl};
+use styx_core::core::ProcessorBundle;
+use styx_core::cpu::{Arch, ArchEndian, PcodeBackend};
+use styx_core::loader::LoaderHints;
+use styx_core::memory::{DummyTlb, PhysicalMemoryVariant};
+use styx_core::prelude::*;
 use styx_event_controllers::DummyEventController;
 pub mod arm {
-    pub use styx_cyclonev_processor as cyclonev;
-    pub use styx_kinetis21_processor as kinetis21;
-    pub use styx_stm32f107_processor as stm32f107;
-    pub use styx_stm32f405_processor as stm32f405;
+    pub use {
+        styx_cyclonev_processor as cyclonev, styx_kinetis21_processor as kinetis21,
+        styx_stm32f107_processor as stm32f107, styx_stm32f405_processor as stm32f405,
+    };
 }
 
 pub mod aarch64 {
@@ -24,8 +20,7 @@ pub mod aarch64 {
 }
 
 pub mod ppc {
-    pub use styx_powerquicci_processor as powerquicci;
-    pub use styx_ppc4xx_processor as ppc4xx;
+    pub use {styx_powerquicci_processor as powerquicci, styx_ppc4xx_processor as ppc4xx};
 }
 
 pub mod bfin {

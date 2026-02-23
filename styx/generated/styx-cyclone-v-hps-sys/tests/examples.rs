@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use styx_cyclone_v_hps_sys::{
-    generic::{FromBytes, RegisterSpec},
-    uart0,
-};
+use styx_cyclone_v_hps_sys::generic::{FromBytes, RegisterSpec};
+use styx_cyclone_v_hps_sys::uart0;
 
 #[test]
 #[cfg_attr(not(feature = "uart0"), ignore)]

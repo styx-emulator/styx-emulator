@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use std::{collections::BTreeMap, marker::PhantomData};
+use std::collections::BTreeMap;
+use std::marker::PhantomData;
 
-use crate::arch::{
-    backends::{ArchRegister, BasicArchRegister},
-    CpuRegister,
-};
-
-use super::Aarch64Register;
 use styx_macros::gdb_target_description;
 use styx_sync::lazy_static;
 use styx_util::gdb_xml::AARCH64_CORE;
+
+use super::Aarch64Register;
+use crate::arch::backends::{ArchRegister, BasicArchRegister};
+use crate::arch::CpuRegister;
 
 lazy_static! {
     /// # lazy-static

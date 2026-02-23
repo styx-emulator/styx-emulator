@@ -1,14 +1,16 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! `GDB` support macros and utilities for `ppc32` targets
+use std::collections::BTreeMap;
+use std::marker::PhantomData;
+
+use styx_macros::gdb_target_description;
+use styx_sync::lazy_static;
+use styx_util::gdb_xml::{MSP430, MSP430X};
+
 use super::Msp430Register;
 use crate::arch::backends::{ArchRegister, BasicArchRegister};
 use crate::arch::msp430::Msp430XRegister;
 use crate::arch::CpuRegister;
-use std::collections::BTreeMap;
-use std::marker::PhantomData;
-use styx_macros::gdb_target_description;
-use styx_sync::lazy_static;
-use styx_util::gdb_xml::{MSP430, MSP430X};
 
 lazy_static! {
     /// # lazy-static

@@ -1,14 +1,17 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! ptrace - command-line trace execution for styx emulators
 
+use std::error::Error;
+use std::time::Duration;
+
 use clap::{Args, Parser, Subcommand};
 use emulation_service::emulation_args::{
     yaml_from_file, CliEmulationArgs, ServiceMetadata, SingleEmulationServiceExecutor,
 };
-use futures_util::{pin_mut, stream::StreamExt};
+use futures_util::pin_mut;
+use futures_util::stream::StreamExt;
 use signal_hook::consts::signal::*;
 use signal_hook_tokio::Signals;
-use std::{error::Error, time::Duration};
 use styx_emulator::core::sync::lazy_static;
 use styx_emulator::core::util::traits::*;
 use styx_emulator::errors::styx_grpc::ApplicationError;
@@ -16,31 +19,23 @@ use styx_emulator::grpc::args::{
     EmulationArgs, HasTarget, ProgramIdentifierArgs, RawEventLimits, RawEventLimitsValueParser,
     SymbolSearchOptions, TraceAppSessionArgs, TracePluginArgs,
 };
+use styx_emulator::grpc::emulation::single_emulation_service_client::SingleEmulationServiceClient;
+use styx_emulator::grpc::emulation::StartSingleEmulationRequest;
+use styx_emulator::grpc::traceapp::InitializeTraceRequest;
 use styx_emulator::grpc::typhunix_interop::symbolic::ProgramIdentifier;
 use styx_emulator::grpc::typhunix_interop::ProgramRef;
 use styx_emulator::grpc::utils::Empty;
-use styx_emulator::grpc::{
-    emulation::{
-        single_emulation_service_client::SingleEmulationServiceClient, StartSingleEmulationRequest,
-    },
-    traceapp::InitializeTraceRequest,
-};
-use styx_emulator::sync::{
-    atomic::{AtomicBool, Ordering::AcqRel, Ordering::Acquire, Ordering::Release},
-    Arc, Mutex,
-};
-use styx_trace_tools::{
-    analyzers::{AnalysisType, EventRepeater, HasAnalysisOptions, OutputFormat},
-    emu_observer::*,
-    post_analysis::post_analysis,
-    util::{ghidra_program_id_from_env, output_dst, OutDst},
-    ConditionVar,
-};
-use tokio::{
-    sync::mpsc::{self},
-    task::JoinSet,
-    time::{sleep, timeout},
-};
+use styx_emulator::sync::atomic::AtomicBool;
+use styx_emulator::sync::atomic::Ordering::{AcqRel, Acquire, Release};
+use styx_emulator::sync::{Arc, Mutex};
+use styx_trace_tools::analyzers::{AnalysisType, EventRepeater, HasAnalysisOptions, OutputFormat};
+use styx_trace_tools::emu_observer::*;
+use styx_trace_tools::post_analysis::post_analysis;
+use styx_trace_tools::util::{ghidra_program_id_from_env, output_dst, OutDst};
+use styx_trace_tools::ConditionVar;
+use tokio::sync::mpsc::{self};
+use tokio::task::JoinSet;
+use tokio::time::{sleep, timeout};
 use tokio_util::sync::CancellationToken;
 use tonic::Request;
 use traceapp_service::cli_util::match_one_session;

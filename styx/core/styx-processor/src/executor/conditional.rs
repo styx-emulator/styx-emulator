@@ -3,11 +3,11 @@
 use styx_cpu_type::TargetExitReason;
 use styx_errors::UnknownError;
 
-use crate::{
-    core::ProcessorCore, cpu::ExecutionReport, executor::Delta, plugins::collection::Plugins,
-};
-
 use super::ExecutorImpl;
+use crate::core::ProcessorCore;
+use crate::cpu::ExecutionReport;
+use crate::executor::Delta;
+use crate::plugins::collection::Plugins;
 
 /// Executor that stops when a custom function returns true.
 ///

@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use std::sync::Arc;
 
-use styx_emulator::{
-    errors::UnknownError,
-    peripheral_clients::uart::UartClient,
-    prelude::{logging::init_logging, resolve_test_bin, Forever},
-};
+use styx_emulator::errors::UnknownError;
+use styx_emulator::peripheral_clients::uart::UartClient;
+use styx_emulator::prelude::logging::init_logging;
+use styx_emulator::prelude::{resolve_test_bin, Forever};
 use styx_uconf::{
     realize_unified, realize_unified_config, ProcessorComponentsStore, UnifiedConfig,
 };

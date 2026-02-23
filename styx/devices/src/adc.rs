@@ -2,7 +2,9 @@
 //! implementation of the ADS7866 ADC
 //! datasheet: <https://www.ti.com/lit/ds/symlink/ads7868.pdf?ts=1718813567795&ref_url=https%253A%252F%252Fwww.mouser.com%252F>
 //!
-use std::{borrow::Cow, time::SystemTime};
+use std::borrow::Cow;
+use std::time::SystemTime;
+
 use styx_core::peripheral_clients::spi::SPIDevice;
 
 pub struct ADS7866 {

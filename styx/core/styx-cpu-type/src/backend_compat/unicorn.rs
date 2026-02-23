@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! Impls on the styx types to convert to the unicorn backend types
+use unicorn_engine::{uc_error, unicorn_const};
+
 use crate::arch::StyxCpuArchError;
 use crate::TargetExitReason;
-use unicorn_engine::{uc_error, unicorn_const};
 
 //
 // [`TargetExitReason`]
@@ -79,8 +80,9 @@ impl From<crate::arch::ArchEndian> for unicorn_const::Mode {
 
 impl From<crate::arch::arm::ArmMetaVariants> for unicorn_engine::ArmCpuModel {
     fn from(value: crate::arch::arm::ArmMetaVariants) -> Self {
-        use crate::arch::arm::ArmMetaVariants as STYX_ARM;
         use unicorn_engine::ArmCpuModel as UC_ARM;
+
+        use crate::arch::arm::ArmMetaVariants as STYX_ARM;
 
         match value {
             STYX_ARM::Arm1026(_) => UC_ARM::UC_CPU_ARM_1026,
@@ -122,8 +124,9 @@ impl From<crate::arch::arm::ArmMetaVariants> for unicorn_engine::ArmCpuModel {
 
 impl From<crate::arch::ppc32::Ppc32MetaVariants> for unicorn_engine::PpcCpuModel {
     fn from(value: crate::arch::ppc32::Ppc32MetaVariants) -> Self {
-        use crate::arch::ppc32::Ppc32MetaVariants as STYX_PPC;
         use unicorn_engine::PpcCpuModel as UC_PPC;
+
+        use crate::arch::ppc32::Ppc32MetaVariants as STYX_PPC;
 
         match value {
             // all PowerQUICC I models map to the MPC8343E, since
@@ -161,8 +164,9 @@ impl From<crate::arch::ppc32::Ppc32MetaVariants> for unicorn_engine::PpcCpuModel
 
 impl From<crate::arch::ppc32::Ppc32Register> for unicorn_engine::RegisterPPC {
     fn from(value: crate::arch::ppc32::Ppc32Register) -> Self {
-        use crate::arch::ppc32::Ppc32Register as STYX_PPC;
         use unicorn_engine::RegisterPPC as UC_PPC;
+
+        use crate::arch::ppc32::Ppc32Register as STYX_PPC;
 
         match value {
             STYX_PPC::Pc => UC_PPC::PC,
@@ -254,8 +258,9 @@ impl From<crate::arch::ppc32::SpecialPpc32Register> for unicorn_engine::Register
 
 impl From<crate::arch::arm::SpecialArmRegister> for unicorn_engine::RegisterARM {
     fn from(value: crate::arch::arm::SpecialArmRegister) -> Self {
-        use crate::arch::arm::SpecialArmRegister as STYX_ARM;
         use unicorn_engine::RegisterARM as UC_ARM;
+
+        use crate::arch::arm::SpecialArmRegister as STYX_ARM;
 
         match value {
             STYX_ARM::CoProcessor(_) => UC_ARM::CP_REG,
@@ -265,8 +270,9 @@ impl From<crate::arch::arm::SpecialArmRegister> for unicorn_engine::RegisterARM 
 
 impl From<crate::arch::arm::ArmRegister> for unicorn_engine::RegisterARM {
     fn from(value: crate::arch::arm::ArmRegister) -> Self {
-        use crate::arch::arm::ArmRegister as STYX_ARM;
         use unicorn_engine::RegisterARM as UC_ARM;
+
+        use crate::arch::arm::ArmRegister as STYX_ARM;
 
         match value {
             STYX_ARM::Apsr => UC_ARM::APSR,

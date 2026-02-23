@@ -7,7 +7,6 @@ mod registers;
 pub mod variants;
 
 pub use registers::{Mips64Register, SpecialMips64Register};
-
 use tap::Conv;
 // for enum dispatch
 use variants::*;

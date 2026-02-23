@@ -79,18 +79,16 @@
 //! - Interrupt Pending Register (IPR)
 //! - Interrupt Vector Register (IVR)
 //!
-use styx_core::{
-    hooks::{HookUserData, MemoryWriteHook},
-    memory::{helpers::WriteExt, Mmu},
-    prelude::{CoreHandle, CpuBackend},
-    sync::sync::{Arc, Weak},
-};
-
-use super::{Event, UnknownError};
-
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
+use styx_core::hooks::{HookUserData, MemoryWriteHook};
+use styx_core::memory::helpers::WriteExt;
+use styx_core::memory::Mmu;
+use styx_core::prelude::{CoreHandle, CpuBackend};
+use styx_core::sync::sync::{Arc, Weak};
 use tracing::debug;
+
+use super::{Event, UnknownError};
 
 // Base address for the external interrupt controller mmrs
 const INTC_BASE: u64 = 0x70800000;

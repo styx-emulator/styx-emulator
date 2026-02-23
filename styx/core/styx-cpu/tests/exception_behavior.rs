@@ -1,24 +1,19 @@
 // SPDX-License-Identifier: BSD-2-Clause
 #![cfg(feature = "unicorn-backend")]
 
+use styx_cpu::arch::arm::{ArmRegister, ArmVariants};
 use styx_cpu::{
-    arch::arm::{ArmRegister, ArmVariants},
     Arch, ArchEndian, Backend, BackendNotSupported, PcodeBackend, TargetExitReason, UnicornBackend,
 };
 use styx_errors::UnknownError;
-use styx_processor::{
-    core::{
-        builder::{BuildProcessorImplArgs, ProcessorImpl},
-        ExceptionBehavior, ProcessorBundle,
-    },
-    cpu::{CpuBackend, CpuBackendExt},
-    hooks::{CoreHandle, MemFaultData, StyxHook},
-    memory::{
-        helpers::WriteExt, memory_region::MemoryRegion, DummyTlb, MemoryBackend, MemoryPermissions,
-    },
-    processor::{Processor, ProcessorBuilder},
-};
-
+use styx_processor::core::builder::{BuildProcessorImplArgs, ProcessorImpl};
+use styx_processor::core::{ExceptionBehavior, ProcessorBundle};
+use styx_processor::cpu::{CpuBackend, CpuBackendExt};
+use styx_processor::hooks::{CoreHandle, MemFaultData, StyxHook};
+use styx_processor::memory::helpers::WriteExt;
+use styx_processor::memory::memory_region::MemoryRegion;
+use styx_processor::memory::{DummyTlb, MemoryBackend, MemoryPermissions};
+use styx_processor::processor::{Processor, ProcessorBuilder};
 use test_case::test_case;
 
 struct CustomBuilder;

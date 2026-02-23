@@ -1,22 +1,22 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::{DbUrl, DbUtil, POSGRES_PORT};
-use sea_orm::DatabaseConnection;
+use std::collections::HashMap;
 use std::net::IpAddr;
-use std::{collections::HashMap, path::Path};
+use std::path::Path;
+
+use sea_orm::DatabaseConnection;
 use styx_dbmigration::*;
-use testcontainers_modules::testcontainers::TestcontainersError;
-use testcontainers_modules::{
-    postgres::Postgres,
-    testcontainers::{
-        core::{AccessMode, Mount, WaitFor},
-        runners::AsyncRunner,
-        ContainerAsync, ContainerRequest, GenericImage, ImageExt,
-    },
+use testcontainers_modules::postgres::Postgres;
+use testcontainers_modules::testcontainers::core::{AccessMode, Mount, WaitFor};
+use testcontainers_modules::testcontainers::runners::AsyncRunner;
+use testcontainers_modules::testcontainers::{
+    ContainerAsync, ContainerRequest, GenericImage, ImageExt, TestcontainersError,
 };
 use thiserror::Error;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
 use tokio::join;
+
+use crate::{DbUrl, DbUtil, POSGRES_PORT};
 
 #[derive(Error, Debug)]
 pub enum TestNodeError {

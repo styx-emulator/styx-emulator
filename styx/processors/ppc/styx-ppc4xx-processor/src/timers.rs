@@ -32,8 +32,9 @@
 //!
 //! The PIT is documented in *Section 6.2* and in [ProgrammableInterruptTimer].
 //!
-use bitfield_struct::bitfield;
 use std::sync::{Arc, Mutex};
+
+use bitfield_struct::bitfield;
 use styx_core::cpu::arch::ppc32::Ppc32Register;
 use styx_core::errors::UnknownError;
 use styx_core::prelude::*;

@@ -4,11 +4,9 @@
 //! Provides some hooks that are useful when things are not working as expected
 //! and you need help figuring out where in the emulation stack things are borked.
 //!
-use styx_core::{
-    hooks::{MemFaultData, ProtectionFaultHook, Resolution, UnmappedFaultHook},
-    memory::MemoryPermissions,
-    prelude::*,
-};
+use styx_core::hooks::{MemFaultData, ProtectionFaultHook, Resolution, UnmappedFaultHook};
+use styx_core::memory::MemoryPermissions;
+use styx_core::prelude::*;
 use styx_sync::sync::Arc;
 use tracing::error;
 

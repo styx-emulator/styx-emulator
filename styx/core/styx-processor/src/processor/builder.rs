@@ -1,31 +1,31 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! `ProcessorBuilder` logic and utilities
-use std::{borrow::Cow, sync::Arc};
+use std::borrow::Cow;
+use std::sync::Arc;
 
 use log::{debug, info};
 use styx_cpu_type::Backend;
-use styx_errors::{anyhow::Context, UnknownError};
+use styx_errors::anyhow::Context;
+use styx_errors::UnknownError;
 use styx_loader::{Loader, LoaderHints, RawLoader};
-use tokio::{net::TcpListener, runtime::Handle};
-use tonic::{service::RoutesBuilder, transport::Server};
-
-use crate::{
-    core::{
-        builder::{
-            BuildProcessorImplArgs, ProcessorBundle, ProcessorImpl, UnimplementedProcessorImpl,
-        },
-        ExceptionBehavior, ProcMeta, ProcessorCore,
-    },
-    cpu::CpuBackendExt,
-    event_controller::EventController,
-    executor::{DefaultExecutor, Executor, ExecutorImpl},
-    hooks::StyxHook,
-    memory::Mmu,
-    plugins::{collection::PluginsContainer, UninitPlugin},
-    runtime::ProcessorRuntime,
-};
+use tokio::net::TcpListener;
+use tokio::runtime::Handle;
+use tonic::service::RoutesBuilder;
+use tonic::transport::Server;
 
 use super::{Processor, SyncProcessor};
+use crate::core::builder::{
+    BuildProcessorImplArgs, ProcessorBundle, ProcessorImpl, UnimplementedProcessorImpl,
+};
+use crate::core::{ExceptionBehavior, ProcMeta, ProcessorCore};
+use crate::cpu::CpuBackendExt;
+use crate::event_controller::EventController;
+use crate::executor::{DefaultExecutor, Executor, ExecutorImpl};
+use crate::hooks::StyxHook;
+use crate::memory::Mmu;
+use crate::plugins::collection::PluginsContainer;
+use crate::plugins::UninitPlugin;
+use crate::runtime::ProcessorRuntime;
 
 /// A private wrapper type to mark the source of a `TargetProgram`
 #[derive(Debug)]

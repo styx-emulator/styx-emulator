@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::{pcode_gen::GeneratePcodeError, PcodeBackend};
+use std::fmt::Debug;
+
 use enum_dispatch::enum_dispatch;
 use smallvec::{smallvec, SmallVec};
-use std::fmt::Debug;
 use styx_pcode_translator::ContextOption;
 
 #[cfg(feature = "arch_aarch64")]
 use super::aarch64;
-
 #[cfg(feature = "arch_arm")]
 use super::arm;
-
 #[cfg(feature = "arch_superh")]
 use super::superh;
+use crate::pcode_gen::GeneratePcodeError;
+use crate::PcodeBackend;
 
 pub const CONTEXT_OPTION_LEN: usize = 4;
 

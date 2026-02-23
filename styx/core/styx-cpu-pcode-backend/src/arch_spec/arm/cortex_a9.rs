@@ -2,27 +2,23 @@
 
 use std::str::FromStr;
 
+use styx_cpu_type::arch::arm::{arm_coproc_registers, SpecialArmRegister};
+use styx_cpu_type::arch::backends::{ArchRegister, SpecialArchRegister};
+use styx_pcode::sla::SlaUserOps;
+use styx_pcode_translator::sla::{Arm7Be, Arm7Le, Arm7LeUserOps};
+use styx_processor::cpu::CpuBackend;
+
 use super::call_other::{
     CoprocMovefromControl, CoprocMovefromPeripheralSystem, CoprocMovetoControl,
     CoprocessorMovefromRt,
 };
+use crate::arch_spec::arm::{armv7_common, armv7a_common};
+use crate::arch_spec::ArchSpecBuilder;
 use crate::memory::sized_value::SizedValue;
-use crate::register_manager::{RegisterCallbackCpu, RegisterHandleError};
-use crate::{
-    arch_spec::{
-        arm::{armv7_common, armv7a_common},
-        ArchSpecBuilder,
-    },
-    register_manager::{RegisterCallback, RegisterHandler},
-    PcodeBackend,
+use crate::register_manager::{
+    RegisterCallback, RegisterCallbackCpu, RegisterHandleError, RegisterHandler,
 };
-use styx_cpu_type::arch::{
-    arm::{arm_coproc_registers, SpecialArmRegister},
-    backends::{ArchRegister, SpecialArchRegister},
-};
-use styx_pcode::sla::SlaUserOps;
-use styx_pcode_translator::sla::{Arm7Be, Arm7Le, Arm7LeUserOps};
-use styx_processor::cpu::CpuBackend;
+use crate::PcodeBackend;
 
 #[derive(Debug, Default)]
 struct CoProcRegisterHandler {

@@ -1,22 +1,20 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! dt-stats - command-line tool for recovering statistics about collections of device trees.
+use std::collections::HashMap;
+use std::ffi::OsString;
+use std::fs::{self};
+use std::io::stdout;
+use std::ops::Deref;
+use std::path::PathBuf;
+use std::process::{exit, Command, Stdio};
+
 use clap::{self, Parser};
-use fdt::{standard_nodes::Compatible, Fdt};
+use fdt::standard_nodes::Compatible;
+use fdt::Fdt;
 use globwalk::GlobWalkerBuilder;
 use rayon::prelude::*;
-use serde::{
-    ser::{SerializeMap, SerializeSeq},
-    Serialize,
-};
-use std::{
-    collections::HashMap,
-    ffi::OsString,
-    fs::{self},
-    io::stdout,
-    ops::Deref,
-    path::PathBuf,
-    process::{exit, Command, Stdio},
-};
+use serde::ser::{SerializeMap, SerializeSeq};
+use serde::Serialize;
 
 fn main() {
     let mut opts = Cli::parse();

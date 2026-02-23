@@ -1,11 +1,15 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
-use crate::model::program::PartialWsProgram;
-use crate::model::{emulation_args, raw_event_limits, trace_app_session_args, workspace};
-use crate::model::{prelude::*, trace_session};
-use sea_orm::*;
 use std::collections::HashMap;
+
+use sea_orm::*;
 use tokio::join;
+
+use crate::model::prelude::*;
+use crate::model::program::PartialWsProgram;
+use crate::model::{
+    emulation_args, raw_event_limits, trace_app_session_args, trace_session, workspace,
+};
 
 pub struct DbQuery;
 

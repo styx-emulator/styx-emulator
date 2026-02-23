@@ -1,19 +1,16 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use super::helpers::StackPointerManager;
-use crate::{
-    call_other::{CallOtherCallback, CallOtherCpu, CallOtherHandleError},
-    memory::sized_value::SizedValue,
-    PCodeStateChange,
-};
 use log::{trace, warn};
 use styx_cpu_type::arch::arm::{arm_coproc_registers, ArmRegister, CoProcessorValue};
 use styx_pcode::pcode::VarnodeData;
-use styx_processor::{
-    cpu::{CpuBackend, CpuBackendExt},
-    event_controller::EventController,
-    memory::Mmu,
-};
+use styx_processor::cpu::{CpuBackend, CpuBackendExt};
+use styx_processor::event_controller::EventController;
+use styx_processor::memory::Mmu;
 use styx_sync::sync::Arc;
+
+use super::helpers::StackPointerManager;
+use crate::call_other::{CallOtherCallback, CallOtherCpu, CallOtherHandleError};
+use crate::memory::sized_value::SizedValue;
+use crate::PCodeStateChange;
 
 /// Interrupt number for SVCall.
 const SVC_IRQN: i32 = -5;

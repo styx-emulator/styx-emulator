@@ -2,11 +2,8 @@
 //! Generic top level container for ARM64 registers.
 use std::num::NonZeroUsize;
 
-use crate::{
-    arch::{CpuRegister, RegisterValue},
-    macros::create_basic_register_enums,
-    macros::create_special_register_enums,
-};
+use crate::arch::{CpuRegister, RegisterValue};
+use crate::macros::{create_basic_register_enums, create_special_register_enums};
 
 create_basic_register_enums!(
     Aarch64,

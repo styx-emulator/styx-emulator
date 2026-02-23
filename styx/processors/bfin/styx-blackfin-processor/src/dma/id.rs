@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use enum_map::Enum;
-use num_enum::IntoPrimitive;
-use num_enum::TryFromPrimitive;
+use num_enum::{IntoPrimitive, TryFromPrimitive};
 
-use super::mmr_offsets;
-use super::sys;
+use super::{mmr_offsets, sys};
 use crate::core_event_controller::PeripheralId;
 
 /// Identifier for each DMA channel. Implements helper methods for getting static info on DMA
@@ -89,9 +87,10 @@ impl DmaId {
 
 #[cfg(test)]
 mod tests {
+    use test_case::test_case;
+
     use super::sys;
     use crate::dma::id::DmaId;
-    use test_case::test_case;
 
     #[test_case(DmaId::Three, sys::DMA3_CURR_Y_COUNT)]
     #[test_case(DmaId::Four, sys::DMA4_NEXT_DESC_PTR)]

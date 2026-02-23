@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use super::prelude::*;
 use sea_orm::entity::prelude::*;
+
+use super::prelude::*;
 
 type MessageEnum = TraceSessionState;
 

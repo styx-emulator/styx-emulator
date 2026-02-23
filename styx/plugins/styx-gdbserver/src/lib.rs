@@ -61,5 +61,4 @@ pub use builder::*;
 pub use event_loop::GdbPluginParams;
 pub use options::{GDBOptions, StepIRQs};
 pub use plugin::GdbExecutor;
-
 use styx_core::cpu::arch::GdbArchIdSupportTrait;

@@ -2,11 +2,9 @@
 use half::f16;
 use styx_processor::cpu::CpuBackend;
 
-use crate::{
-    call_other::{CallOtherCallback, CallOtherCpu},
-    memory::sized_value::SizedValue,
-    PCodeStateChange,
-};
+use crate::call_other::{CallOtherCallback, CallOtherCpu};
+use crate::memory::sized_value::SizedValue;
+use crate::PCodeStateChange;
 
 #[derive(Debug, Default)]
 /// Floating-point minimum number (vector):

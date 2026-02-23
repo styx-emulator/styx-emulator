@@ -17,8 +17,9 @@
 //!   - `cargo flamegraph --package styx-emulator --bench snapshot -- --bench --profile-time 5
 //!     "restore only"
 
-use criterion::{criterion_group, criterion_main, Criterion};
 use std::time::Duration;
+
+use criterion::{criterion_group, criterion_main, Criterion};
 use styx_core::loader::RawLoader;
 use styx_core::prelude::{IPCPort, Processor};
 use styx_core::processor::ProcessorBuilder;

@@ -20,11 +20,8 @@
 //!     "with register hooks"`
 
 use criterion::{criterion_group, criterion_main, Criterion};
-
-use styx_core::{
-    arch::ppc32::Ppc32Variants,
-    cpu::{PcodeBackend, PcodeBackendConfiguration},
-};
+use styx_core::arch::ppc32::Ppc32Variants;
+use styx_core::cpu::{PcodeBackend, PcodeBackendConfiguration};
 use styx_emulator::prelude::*;
 
 struct Proc {

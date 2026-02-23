@@ -3,11 +3,11 @@
 
 use std::net::SocketAddr;
 use std::time::Duration;
+
 use styx_emulator::grpc::typhunix_interop::symbolic_impl::clean;
-use styx_emulator::grpc::typhunix_interop::{
-    json_util, typhunix_client::TyphunixClient, typhunix_server::TyphunixServer, ConnectMessage,
-    PingRequest,
-};
+use styx_emulator::grpc::typhunix_interop::typhunix_client::TyphunixClient;
+use styx_emulator::grpc::typhunix_interop::typhunix_server::TyphunixServer;
+use styx_emulator::grpc::typhunix_interop::{json_util, ConnectMessage, PingRequest};
 use styx_emulator::sync::{Arc, Mutex};
 use thiserror::Error;
 use tokio::task::JoinSet;

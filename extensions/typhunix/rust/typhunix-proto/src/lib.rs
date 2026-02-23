@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! Typhunix protocol and library
 
+use std::fs::File;
+use std::io::Write;
+use std::num::ParseIntError;
+
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
-use std::{fs::File, io::Write, num::ParseIntError};
 use styx_emulator::grpc::typhunix_interop::symbolic::{
     DataType, Function, FunctionParameter, Program, Symbol,
 };
@@ -199,12 +202,14 @@ pub trait AddrIn: Send + Sync + 'static {
 
 #[cfg(test)]
 mod tests {
-    use styx_emulator::grpc::typhunix_interop::symbolic::{symbol::SymbolType, ProgramIdentifier};
+    use std::collections::HashSet;
+
+    use styx_emulator::grpc::typhunix_interop::symbolic::symbol::SymbolType;
+    use styx_emulator::grpc::typhunix_interop::symbolic::ProgramIdentifier;
     use styx_emulator::grpc::typhunix_interop::Validator as _;
+    use test_utils::random_program_identifier;
 
     use super::*;
-    use std::collections::HashSet;
-    use test_utils::random_program_identifier;
 
     #[test]
     fn test_data_type_wrapper() {

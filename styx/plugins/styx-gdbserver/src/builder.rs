@@ -1,20 +1,17 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use std::{fmt::Debug, net::SocketAddr};
+use std::fmt::Debug;
+use std::net::SocketAddr;
 
-use super::{GdbExecutor, GdbPluginParams};
-
+use styx_core::arch::arm::ArmMetaVariants;
+use styx_core::arch::ppc32::gdb_targets::Ppc4xxTargetDescription;
+use styx_core::arch::ppc32::Ppc32MetaVariants;
+use styx_core::arch::{GdbTargetDescription, *};
+use styx_core::cpu::arch::GdbArchIdSupportTrait;
+use styx_core::errors::UnknownError;
+use styx_core::prelude::{anyhow, ArchVariant, Context, ExecutorImpl};
 use tap::Conv;
 
-use styx_core::{
-    arch::{
-        arm::ArmMetaVariants,
-        ppc32::{gdb_targets::Ppc4xxTargetDescription, Ppc32MetaVariants},
-        GdbTargetDescription, *,
-    },
-    cpu::arch::GdbArchIdSupportTrait,
-    errors::UnknownError,
-    prelude::{anyhow, ArchVariant, Context, ExecutorImpl},
-};
+use super::{GdbExecutor, GdbPluginParams};
 
 #[derive(serde::Deserialize)]
 pub struct GdbConfig {

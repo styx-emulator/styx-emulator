@@ -58,9 +58,9 @@
     target_feature = "avx2",
     target_feature = "bmi1"
 ))]
-use crate::tlb::cache::TlbCache32;
-
 use std::arch::x86_64;
+
+use crate::tlb::cache::TlbCache32;
 
 #[repr(C, align(16))]
 /// A 4 element Tlb cache with round robin replacement

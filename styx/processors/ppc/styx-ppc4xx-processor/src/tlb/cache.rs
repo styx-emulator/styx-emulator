@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use std::{cmp::Ordering, ops::Range};
+use std::cmp::Ordering;
+use std::ops::Range;
 
 /// Functions for a Tlb cache with 32 bit addresses
 pub trait TlbCache32 {

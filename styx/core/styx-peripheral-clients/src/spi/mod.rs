@@ -9,7 +9,8 @@ use styx_sync::sync::atomic::AtomicBool;
 use styx_sync::sync::Arc;
 use tokio::net::ToSocketAddrs;
 use tokio_stream::StreamExt;
-use tonic::{codegen::StdError, transport::Channel};
+use tonic::codegen::StdError;
+use tonic::transport::Channel;
 
 /// defines the required methods for a SPI device
 pub trait SPIDevice {

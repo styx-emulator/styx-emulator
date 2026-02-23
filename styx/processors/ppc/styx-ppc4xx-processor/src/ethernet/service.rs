@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use std::pin::Pin;
-use styx_core::grpc::io::ethernet::Empty;
-use styx_core::prelude::*;
 
-use styx_core::grpc::io::ethernet::{
-    ethernet_port_server::EthernetPort, EthernetPacket, SubscribeRequest,
-};
+use styx_core::grpc::io::ethernet::ethernet_port_server::EthernetPort;
+use styx_core::grpc::io::ethernet::{Empty, EthernetPacket, SubscribeRequest};
+use styx_core::prelude::*;
 use tokio::sync::broadcast;
 use tokio_stream::Stream;
 use tonic::async_trait;

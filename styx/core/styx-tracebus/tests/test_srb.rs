@@ -2,6 +2,7 @@
 //! Integration test, verifies `STRACE_PROVIDER=srb` yields consumable events
 
 use std::time::Duration;
+
 use styx_tracebus::{
     strace, strace_teardown, BaseTraceEvent, IPCTracer, TraceProvider, TracerReader,
     TracerReaderOptions, STRACE,

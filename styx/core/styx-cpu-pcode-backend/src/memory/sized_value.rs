@@ -2,12 +2,10 @@
 use std::fmt::{self, Debug, Display, UpperHex};
 
 use arbitrary_int::Number;
-use styx_cpu_type::{
-    arch::{arm::SpecialArmRegisterValues, RegisterValue},
-    ArchEndian,
-};
-
 use half::f16;
+use styx_cpu_type::arch::arm::SpecialArmRegisterValues;
+use styx_cpu_type::arch::RegisterValue;
+use styx_cpu_type::ArchEndian;
 use thiserror::Error;
 
 /// Arbitrary sized integer, optimized for u128 arithmetic.

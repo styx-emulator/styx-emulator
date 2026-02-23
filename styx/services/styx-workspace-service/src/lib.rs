@@ -6,7 +6,8 @@
 use styx_core::grpc::workspace::workspace_svc_server::WorkspaceSvcServer;
 use styx_dbmigration::{Migrator, MigratorTrait};
 use styx_dbmodel::api::prelude::*;
-use tonic::{transport::Server, Code, Status};
+use tonic::transport::Server;
+use tonic::{Code, Status};
 use tracing::debug;
 
 pub const SERVICE_READY_MSG: &str = "running";

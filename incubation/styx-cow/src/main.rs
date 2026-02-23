@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BSD-2-Clause
+use std::time::Instant;
+
 #[cfg(target_os = "linux")]
 use styx_cow::Cow;
-
-use std::time::Instant;
 
 const SIZE: usize = 1024 * 1024;
 

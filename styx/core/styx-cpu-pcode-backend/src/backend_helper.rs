@@ -3,21 +3,19 @@ use std::collections::HashMap;
 
 use log::trace;
 use styx_cpu_type::TargetExitReason;
-use styx_errors::{anyhow::Context, UnknownError};
+use styx_errors::anyhow::Context;
+use styx_errors::UnknownError;
 use styx_pcode::pcode::SpaceName;
-use styx_processor::{
-    cpu::{CpuBackend, ExecutionReport},
-    event_controller::EventController,
-    memory::{MemoryOperation, MemoryType, Mmu},
-};
+use styx_processor::cpu::{CpuBackend, ExecutionReport};
+use styx_processor::event_controller::EventController;
+use styx_processor::memory::{MemoryOperation, MemoryType, Mmu};
 
-use crate::{
-    hooks::{HasHookManager, HookManager},
-    memory::{
-        blob_store::BlobStore, hash_store::HashStore, space::Space, space_manager::SpaceManager,
-    },
-    GhidraPcodeGenerator, MachineState, MmuSpace, REGISTER_SPACE_SIZE,
-};
+use crate::hooks::{HasHookManager, HookManager};
+use crate::memory::blob_store::BlobStore;
+use crate::memory::hash_store::HashStore;
+use crate::memory::space::Space;
+use crate::memory::space_manager::SpaceManager;
+use crate::{GhidraPcodeGenerator, MachineState, MmuSpace, REGISTER_SPACE_SIZE};
 
 /// This sets up the space manager and is where we define the backing store
 /// for each of the spaces added to the machine, based on their space name.

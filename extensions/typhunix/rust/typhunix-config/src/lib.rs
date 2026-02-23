@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! App configuration
 
+use std::path::PathBuf;
+
 use confique::Config;
 use serde_derive::Serialize;
-use std::path::PathBuf;
 
 #[derive(Config, Serialize)]
 pub struct AppConfig {

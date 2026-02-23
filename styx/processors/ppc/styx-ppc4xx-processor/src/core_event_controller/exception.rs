@@ -2,7 +2,8 @@
 
 use bitfield_struct::bitfield;
 use enum_map::EnumMap;
-use styx_core::{cpu::arch::ppc32::Ppc32Register, prelude::CpuBackend};
+use styx_core::cpu::arch::ppc32::Ppc32Register;
+use styx_core::prelude::CpuBackend;
 use tracing::{debug, trace};
 
 use super::{Event, Register};

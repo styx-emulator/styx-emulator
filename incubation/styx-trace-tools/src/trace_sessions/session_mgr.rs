@@ -5,24 +5,24 @@
 
 //! SessionManager for TraceApp
 
-use super::{oob_pri_queue::InboundOobRequests, session::Session};
-use crate::service_err;
-use std::{
-    collections::{HashMap, HashSet},
-    sync::RwLock,
-    time::Duration,
-};
-use styx_core::grpc::{
-    args::{trace_app_session_args::TraceMode, TraceAppSessionArgs},
-    traceapp::SessionInfo,
-    utils::{EmuMetadata, EmulationState, Token},
-    workspace::{TraceSession, TraceSessionState},
-};
+use std::collections::{HashMap, HashSet};
+use std::sync::RwLock;
+use std::time::Duration;
+
+use styx_core::grpc::args::trace_app_session_args::TraceMode;
+use styx_core::grpc::args::TraceAppSessionArgs;
+use styx_core::grpc::traceapp::SessionInfo;
+use styx_core::grpc::utils::{EmuMetadata, EmulationState, Token};
+use styx_core::grpc::workspace::{TraceSession, TraceSessionState};
 use styx_core::sync::sync::{Arc, Mutex};
 use styx_core::util::traits::HasUrl;
 use tokio::time::sleep;
 use tracing::{debug, error, info, warn};
 use workspace_service::cli_util as ws_svc_cli;
+
+use super::oob_pri_queue::InboundOobRequests;
+use super::session::Session;
+use crate::service_err;
 
 /// Session reaper check interval
 pub const NAPTIME_SECONDS: u64 = 1;

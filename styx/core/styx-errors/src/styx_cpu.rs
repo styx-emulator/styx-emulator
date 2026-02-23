@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::styx_hooks::StyxHookError;
-use crate::styx_memory::StyxMemoryError;
-use styx_cpu_type::arch::{backends::ArchRegister, Arch, RegisterValue};
+use styx_cpu_type::arch::backends::ArchRegister;
+use styx_cpu_type::arch::{Arch, RegisterValue};
 use styx_cpu_type::TargetExitReason;
 use thiserror::Error;
+
+use crate::styx_hooks::StyxHookError;
+use crate::styx_memory::StyxMemoryError;
 
 #[derive(Error, Debug)]
 pub enum StyxCpuSnapshotError {

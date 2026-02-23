@@ -2,25 +2,22 @@
 use log::{debug, trace};
 use smallvec::SmallVec;
 use styx_cpu_type::TargetExitReason;
-use styx_errors::{anyhow::Context, UnknownError};
+use styx_errors::anyhow::Context;
+use styx_errors::UnknownError;
 use styx_pcode::pcode::Pcode;
 use styx_pcode_translator::ContextOption;
-use styx_processor::{
-    core::{FetchException, HandleExceptionAction},
-    cpu::CpuBackend,
-    event_controller::{EventController, ExceptionNumber},
-    hooks::{MemFaultData, Resolution},
-    memory::{MemoryOperationError, MemoryPermissions, Mmu, MmuOpError},
-};
+use styx_processor::core::{FetchException, HandleExceptionAction};
+use styx_processor::cpu::CpuBackend;
+use styx_processor::event_controller::{EventController, ExceptionNumber};
+use styx_processor::hooks::{MemFaultData, Resolution};
+use styx_processor::memory::{MemoryOperationError, MemoryPermissions, Mmu, MmuOpError};
 use tap::TryConv;
 use thiserror::Error;
 
-use crate::{
-    arch_spec::{GeneratorHelp, CONTEXT_OPTION_LEN},
-    hooks::{HasHookManager, HookManager},
-    pcode_gen::{self, HasPcodeGenerator},
-    ArchPcManager, GeneratePcodeError, HasConfig, PcodeBackend,
-};
+use crate::arch_spec::{GeneratorHelp, CONTEXT_OPTION_LEN};
+use crate::hooks::{HasHookManager, HookManager};
+use crate::pcode_gen::{self, HasPcodeGenerator};
+use crate::{ArchPcManager, GeneratePcodeError, HasConfig, PcodeBackend};
 
 #[derive(Error, Debug)]
 pub(crate) enum GetPcodeError {

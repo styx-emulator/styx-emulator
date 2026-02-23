@@ -2,22 +2,16 @@
 use std::collections::HashMap;
 
 use log::{debug, trace};
-use styx_cpu_type::arch::{
-    backends::{ArchRegister, BasicArchRegister},
-    hexagon::HexagonRegister,
-};
+use styx_cpu_type::arch::backends::{ArchRegister, BasicArchRegister};
+use styx_cpu_type::arch::hexagon::HexagonRegister;
 use styx_errors::anyhow::anyhow;
 use styx_processor::cpu::{CpuBackend, CpuBackendExt};
 use styx_sync::lazy_static;
 
-use crate::register_manager::RegisterCallbackCpu;
-use crate::{
-    arch_spec::ArchSpecBuilder,
-    memory::sized_value::SizedValue,
-    register_manager::{RegisterCallback, RegisterHandleError},
-};
-
 use super::backend::HexagonPcodeBackend;
+use crate::arch_spec::ArchSpecBuilder;
+use crate::memory::sized_value::SizedValue;
+use crate::register_manager::{RegisterCallback, RegisterCallbackCpu, RegisterHandleError};
 
 // NOTE: these are only used for testing,
 // and in a RegisterHandler which is never used during

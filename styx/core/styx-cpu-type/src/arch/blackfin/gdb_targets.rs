@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! `GDB` support macros and utilities for `Arm` targets
-use super::BlackfinRegister;
-use crate::arch::{
-    backends::{ArchRegister, BasicArchRegister},
-    CpuRegister,
-};
 use std::collections::BTreeMap;
 use std::marker::PhantomData;
+
 use styx_macros::gdb_target_description;
 use styx_sync::lazy_static;
 use styx_util::gdb_xml::BLACKFIN;
+
+use super::BlackfinRegister;
+use crate::arch::backends::{ArchRegister, BasicArchRegister};
+use crate::arch::CpuRegister;
 
 // register order found in `binutils-gdb/gdb/bfin-tdep.h` `enum gdb_regnum`
 lazy_static! {

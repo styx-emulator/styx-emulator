@@ -72,7 +72,8 @@ impl<T: SimpleStore<1>> IsSpaceMemory for T {
 
 #[cfg(test)]
 mod tests {
-    use crate::memory::{hash_store::HashStore, space::IsSpaceMemory};
+    use crate::memory::hash_store::HashStore;
+    use crate::memory::space::IsSpaceMemory;
 
     #[test]
     fn test_hash_one() {

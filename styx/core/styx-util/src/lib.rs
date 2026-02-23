@@ -8,12 +8,13 @@ pub mod traits;
 pub mod unsafe_lib;
 
 // To avoid circular dependencies, don't use other styx crates
-use convert_case::{Boundary, Case, Casing};
-pub use late_init::LateInit;
 use std::env;
 use std::ffi::OsStr;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+
+use convert_case::{Boundary, Case, Casing};
+pub use late_init::LateInit;
 use thiserror::Error;
 
 /// Gets the least significant bit of `n`

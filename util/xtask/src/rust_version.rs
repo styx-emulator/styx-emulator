@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: BSD-2-Clause
+use std::fs::{self, File};
+use std::io::{BufWriter, Write};
+
 use anyhow::{bail, Context};
 use serde_json::Value as JsonValue;
-use std::{
-    fs::{self, File},
-    io::{BufWriter, Write},
-};
 use styx_sync::lazy_static;
 use toml_edit::{DocumentMut, Formatted, Value as TomlValue};
 

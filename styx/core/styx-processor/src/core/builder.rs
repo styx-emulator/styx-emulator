@@ -4,13 +4,12 @@ use styx_errors::UnknownError;
 use styx_loader::LoaderHints;
 use tokio::runtime::Handle;
 
-use crate::{
-    core::ExceptionBehavior,
-    cpu::{CpuBackend, DummyBackend},
-    event_controller::{DummyEventController, EventControllerImpl, Peripheral},
-    memory::{physical::MemoryBackend, DummyTlb, TlbImpl},
-    processor::BuildingProcessor,
-};
+use crate::core::ExceptionBehavior;
+use crate::cpu::{CpuBackend, DummyBackend};
+use crate::event_controller::{DummyEventController, EventControllerImpl, Peripheral};
+use crate::memory::physical::MemoryBackend;
+use crate::memory::{DummyTlb, TlbImpl};
+use crate::processor::BuildingProcessor;
 
 /// Contains the uninitialized parts needed to create a
 /// [Processor](crate::processor::Processor).

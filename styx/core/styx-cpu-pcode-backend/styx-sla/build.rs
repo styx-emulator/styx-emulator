@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: BSD-2-Clause
+use std::env;
+use std::fs::File;
+use std::io::{BufWriter, Write};
+use std::path::{Path, PathBuf};
+
 use heck::ToUpperCamelCase;
-use std::{
-    env,
-    fs::File,
-    io::{BufWriter, Write},
-    path::{Path, PathBuf},
-};
 use styx_pcode_sleigh_backend::Sleigh;
 
 #[derive(Clone, Copy)]

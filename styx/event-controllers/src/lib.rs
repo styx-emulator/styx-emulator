@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
 pub mod arm {
-    pub use styx_gic;
-    pub use styx_nvic;
+    pub use {styx_gic, styx_nvic};
 }
 
 pub mod ppc {

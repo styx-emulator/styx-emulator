@@ -8,18 +8,15 @@ mod dma;
 mod sport;
 mod timers;
 
-use dma::DmaController;
-use dma::{DmaPeripheralMapping, DmaSources};
+use core_event_controller::CoreEventController;
+use dma::{DmaController, DmaPeripheralMapping, DmaSources};
 use sport::sport_sin_sample;
 use styx_core::core::builder::{BuildProcessorImplArgs, ProcessorImpl};
-use styx_core::cpu::arch::blackfin::BlackfinMetaVariants;
-use styx_core::cpu::arch::blackfin::BlackfinVariants;
+use styx_core::cpu::arch::blackfin::{BlackfinMetaVariants, BlackfinVariants};
 use styx_core::cpu::PcodeBackend;
 use styx_core::memory::memory_region::MemoryRegion;
 use styx_core::memory::{DummyTlb, MemoryBackend, MemoryPermissions};
 use styx_core::prelude::*;
-
-use core_event_controller::CoreEventController;
 use timers::Timers;
 
 // we do *not* support the BF535 variant, it's "special"
@@ -567,10 +564,9 @@ impl BlackfinBuilder {
 mod tests {
     use std::borrow::Cow;
 
+    use styx_core::cpu::arch::blackfin::BlackfinVariants;
     use styx_core::executor::DefaultExecutor;
     use styx_core::prelude::*;
-
-    use styx_core::cpu::arch::blackfin::BlackfinVariants;
 
     use super::*;
 

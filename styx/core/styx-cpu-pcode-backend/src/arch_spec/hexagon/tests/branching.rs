@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::arch_spec::hexagon::tests::*;
 use test_case::test_case;
+
+use crate::arch_spec::hexagon::tests::*;
 
 #[test]
 fn test_cond_branching() {

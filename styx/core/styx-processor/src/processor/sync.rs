@@ -2,33 +2,26 @@
 //! A [`Processor`] that is [`Sync`] + [`Clone`].
 //!
 //! Check out [`SyncProcessor`] for detailed docs.
-use std::{
-    ops::DerefMut,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc, Condvar, Mutex,
-    },
-};
+use std::ops::DerefMut;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Condvar, Mutex};
 
 use log::{debug, trace};
 use replace_with::{replace_with_or_abort, replace_with_or_abort_and_return};
 use static_assertions::assert_impl_all;
-use styx_cpu_type::arch::{backends::ArchRegister, RegisterValue};
+use styx_cpu_type::arch::backends::ArchRegister;
+use styx_cpu_type::arch::RegisterValue;
 use styx_errors::UnknownError;
 
 use super::{Processor, ProcessorBuilder};
-use crate::{
-    core::ProcessorCore,
-    cpu::{ReadRegisterError, WriteRegisterError},
-    executor::ExecutionConstraint,
-    hooks::{AddHookError, DeleteHookError, HookToken, StyxHook},
-    memory::{
-        helpers::{ReadExt, Readable, Writable},
-        MmuOpError,
-    },
-    plugins::task_queue::*,
-    processor::EmulationReport,
-};
+use crate::core::ProcessorCore;
+use crate::cpu::{ReadRegisterError, WriteRegisterError};
+use crate::executor::ExecutionConstraint;
+use crate::hooks::{AddHookError, DeleteHookError, HookToken, StyxHook};
+use crate::memory::helpers::{ReadExt, Readable, Writable};
+use crate::memory::MmuOpError;
+use crate::plugins::task_queue::*;
+use crate::processor::EmulationReport;
 
 #[derive(Debug)]
 enum InternalProcessorState {
@@ -359,19 +352,15 @@ impl Writable for CodeMemoryOp<'_> {
 
 #[cfg(test)]
 mod tests {
-    use std::{thread::sleep, time::Duration};
-
-    use crate::{
-        core::{
-            builder::{BuildProcessorImplArgs, ProcessorImpl},
-            ProcessorBundle,
-        },
-        cpu::{CpuBackend, ExecutionReport},
-        executor::Forever,
-        hooks::Hookable,
-    };
+    use std::thread::sleep;
+    use std::time::Duration;
 
     use super::*;
+    use crate::core::builder::{BuildProcessorImplArgs, ProcessorImpl};
+    use crate::core::ProcessorBundle;
+    use crate::cpu::{CpuBackend, ExecutionReport};
+    use crate::executor::Forever;
+    use crate::hooks::Hookable;
 
     #[derive(Debug)]
     struct TestCpu(u64);

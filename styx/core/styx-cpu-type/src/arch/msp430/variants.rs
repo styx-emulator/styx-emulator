@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! Maps the various mips64 architecture variants
+use derive_more::Display;
+
 use super::gdb_targets::{Msp430CpuTargetDescription, Msp430XCpuTargetDescription};
 use crate::arch::msp430::Msp430XRegister;
-use crate::arch::Msp430Register;
-use crate::arch::{Arch, ArchitectureDef, ArchitectureVariant, CpuRegisterBank};
-use derive_more::Display;
+use crate::arch::{Arch, ArchitectureDef, ArchitectureVariant, CpuRegisterBank, Msp430Register};
 
 const GENERAL_REGISTERS: &[Msp430Register] = &[
     Msp430Register::Pc,

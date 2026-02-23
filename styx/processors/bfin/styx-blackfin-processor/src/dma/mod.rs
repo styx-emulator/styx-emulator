@@ -40,7 +40,6 @@ mod mmr_offsets;
 mod peripheral_mapping;
 mod state;
 
-use styx_blackfin_sys::bf512 as sys;
-
 pub(crate) use controller::{DmaController, DmaSources, DmaStream};
 pub(crate) use peripheral_mapping::DmaPeripheralMapping;
+use styx_blackfin_sys::bf512 as sys;

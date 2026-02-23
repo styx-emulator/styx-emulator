@@ -6,9 +6,9 @@ use styx_core::prelude::*;
 use tap::Conv;
 use tracing::{trace, warn};
 
+use super::id::DmaId;
+use super::{config, DmaPeripheralMapping};
 use crate::core_event_controller::SicHandle;
-
-use super::{config, id::DmaId, DmaPeripheralMapping};
 
 /// Runtime state of a single DMA channel.
 ///

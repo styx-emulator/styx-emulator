@@ -1,12 +1,10 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! utilities for generating test data
 
-use styx_emulator::grpc::typhunix_interop::{
-    symbolic::{symbol::SymbolType, Program, ProgramIdentifier, Symbol},
-    ProgramRef,
-};
-
 use rand::Rng;
+use styx_emulator::grpc::typhunix_interop::symbolic::symbol::SymbolType;
+use styx_emulator::grpc::typhunix_interop::symbolic::{Program, ProgramIdentifier, Symbol};
+use styx_emulator::grpc::typhunix_interop::ProgramRef;
 
 pub fn new_program(program_id: &str, name: &str) -> Program {
     Program {

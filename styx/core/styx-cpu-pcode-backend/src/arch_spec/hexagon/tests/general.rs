@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::arch_spec::hexagon::tests::*;
 use styx_cpu_type::arch::backends::ArchRegister;
 use tap::Conv;
+
+use crate::arch_spec::hexagon::tests::*;
 
 #[test]
 fn test_single_instruction() {

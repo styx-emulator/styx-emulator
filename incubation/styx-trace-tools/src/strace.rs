@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! strace - a command-line tool for reading and generating trace events
 
+use std::fs::File;
+use std::io::{Read, Write};
+use std::path::Path;
+use std::time::{Duration, Instant};
+
 use clap::{value_parser, Arg, ArgAction, Command};
 use serde::{Deserialize, Serialize};
-use std::{
-    fs::File,
-    io::{Read, Write},
-    path::Path,
-    time::{Duration, Instant},
-};
 use styx_core::tracebus::*;
 use styx_trace_tools::util::io::{writable, OutputFormat, ReturnType};
 

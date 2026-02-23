@@ -1,18 +1,15 @@
 // SPDX-License-Identifier: BSD-2-Clause
 mod timer;
 
-use std::{
-    sync::atomic::{AtomicBool, Ordering},
-    time::Duration,
-};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::Duration;
 
 use derivative::Derivative;
+use styx_blackfin_sys::bf512 as sys;
 use styx_core::prelude::*;
 use timer::*;
 use tokio::time;
 use tracing::{debug, warn};
-
-use styx_blackfin_sys::bf512 as sys;
 
 use crate::core_event_controller::SicHandle;
 

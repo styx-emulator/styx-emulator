@@ -5,14 +5,14 @@ pub use dummy::DummyTlb;
 
 mod closure;
 pub use closure::FnTlb;
-
 use styx_errors::UnknownError;
 use thiserror::Error;
 
+use crate::cpu::CpuBackend;
+use crate::event_controller::ExceptionNumber;
 use crate::memory::mmu::MemoryType;
 use crate::memory::physical::MemoryBackend;
 use crate::memory::MemoryOperation;
-use crate::{cpu::CpuBackend, event_controller::ExceptionNumber};
 
 #[derive(Error, Debug)]
 pub enum TlbTranslateError {

@@ -1,17 +1,14 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! Implements the System Interface Unit as defined by
 //! the MPC8XX Family Reference Manual.
-use super::communications_processor::CommunicationsProcessorModule;
-use super::immr;
-use super::Mpc8xxVariants;
-
 use styx_core::errors::UnknownError;
-use styx_core::hooks::CoreHandle;
-use styx_core::hooks::HookToken;
-use styx_core::prelude::CpuBackend;
-use styx_core::prelude::Peripheral;
+use styx_core::hooks::{CoreHandle, HookToken};
+use styx_core::prelude::{CpuBackend, Peripheral};
 use styx_core::sync::sync::Arc;
 use tracing::{debug, error, trace, warn};
+
+use super::communications_processor::CommunicationsProcessorModule;
+use super::{immr, Mpc8xxVariants};
 
 mod mtspr_manager;
 

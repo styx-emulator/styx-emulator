@@ -2,12 +2,12 @@
 
 //! UtcDataTime wrapping Date and Time utilities from [chrono::DateTime]
 
-use chrono::prelude::{DateTime, Local, Utc};
-use chrono::SecondsFormat;
-use chrono::{FixedOffset, TimeZone};
 use std::cmp::Ordering;
 use std::fmt::Display;
 use std::time::SystemTime;
+
+use chrono::prelude::{DateTime, Local, Utc};
+use chrono::{FixedOffset, SecondsFormat, TimeZone};
 
 #[derive(Clone, Debug)]
 /// Convenience wrapper around chrono's  [DateTime]

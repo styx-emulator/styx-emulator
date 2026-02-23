@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use std::pin::Pin;
 
-use cxx::{memory::UniquePtrTarget, UniquePtr};
+use cxx::memory::UniquePtrTarget;
+use cxx::UniquePtr;
 
 /// Generic object providing helper functions for an owned C++/libsla/Sleigh object.
 pub struct SleighObj<T: UniquePtrTarget> {

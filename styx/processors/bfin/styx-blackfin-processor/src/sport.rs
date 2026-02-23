@@ -8,7 +8,8 @@
 //! that difference devices could attach peripherals as needed. Instead, the current sport channels
 //! are hard coded sin waves.
 
-use std::{f64::consts::PI, time::Duration};
+use std::f64::consts::PI;
+use std::time::Duration;
 
 use futures::{Stream, StreamExt};
 use tokio::time::Instant;

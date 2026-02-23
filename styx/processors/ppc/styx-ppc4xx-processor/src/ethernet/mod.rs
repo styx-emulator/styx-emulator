@@ -25,17 +25,17 @@
 //!
 mod service;
 
+use std::collections::VecDeque;
+
+use derivative::Derivative;
 use service::EthernetControllerService;
 use styx_core::errors::UnknownError;
 use styx_core::grpc::io::ethernet::ethernet_port_server::EthernetPortServer;
 use styx_core::grpc::io::ethernet::EthernetPacket;
 use styx_core::prelude::*;
+use tokio::sync::broadcast;
 
 use crate::core_event_controller::Event;
-use derivative::Derivative;
-
-use std::collections::VecDeque;
-use tokio::sync::broadcast;
 
 mod hooks;
 

@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! Emulates the Clock Manager for the Cyclone V HPS.
 use std::mem::size_of;
+
 use styx_core::prelude::*;
-use styx_cyclone_v_hps_sys::{clkmgr, generic::FromBytes, Clkmgr};
+use styx_cyclone_v_hps_sys::generic::FromBytes;
+use styx_cyclone_v_hps_sys::{clkmgr, Clkmgr};
 
 const CLKMGR_REG_BLOCK_SIZE: usize = size_of::<clkmgr::RegisterBlock>();
 

@@ -1,16 +1,14 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
 //! Service that provides interop for tonic gRPC entitiies and styx enumerations
-use styx_core::cpu::{
-    arch::{arm::ArmVariants, blackfin::BlackfinVariants, ppc32::Ppc32Variants},
-    ArchEndian, {Arch, Backend},
-};
-use styx_core::grpc::{
-    args::{SupportedConfig, Target},
-    emulation_registry::{
-        ArchIdentity, ArchIdentityCompatability, BackendIdentity, Config, EndianIdentity,
-        IdentityMappingResponse, LoaderIdentity, VariantIdentity,
-    },
+use styx_core::cpu::arch::arm::ArmVariants;
+use styx_core::cpu::arch::blackfin::BlackfinVariants;
+use styx_core::cpu::arch::ppc32::Ppc32Variants;
+use styx_core::cpu::{Arch, ArchEndian, Backend};
+use styx_core::grpc::args::{SupportedConfig, Target};
+use styx_core::grpc::emulation_registry::{
+    ArchIdentity, ArchIdentityCompatability, BackendIdentity, Config, EndianIdentity,
+    IdentityMappingResponse, LoaderIdentity, VariantIdentity,
 };
 
 /// Create an id/name message from the enumeration
@@ -233,10 +231,11 @@ pub fn endians() -> Vec<EndianIdentity> {
 }
 
 pub mod supported_config {
+    use std::collections::{HashMap, HashSet};
+
     use styx_core::grpc::args::from_target_enum_value;
 
     use super::*;
-    use std::collections::{HashMap, HashSet};
     macro_rules! conf {
         ($id: expr_2021, $name: expr_2021, $arch: expr_2021, $variant: expr_2021, $endian: expr_2021,$loader: expr_2021, $backend: expr_2021) => {
             SupportedConfig {
@@ -385,11 +384,12 @@ pub mod supported_config {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use styx_core::grpc::args::Target;
     use styx_core::util::logging::init_logging;
     use supported_config::*;
     use tracing::debug;
+
+    use super::*;
 
     #[test]
     fn test_match_targets() {

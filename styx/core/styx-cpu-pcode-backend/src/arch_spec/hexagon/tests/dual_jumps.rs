@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::arch_spec::hexagon::tests::*;
 use test_case::test_case;
+
+use crate::arch_spec::hexagon::tests::*;
 
 // TODO: can we add a dual jump that requires sequencing?
 

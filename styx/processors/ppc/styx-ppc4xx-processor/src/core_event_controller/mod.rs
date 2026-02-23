@@ -9,10 +9,11 @@ use std::sync::Arc;
 pub use event::*;
 use exception::*;
 use external_event_controller::ExternalEventController;
-use styx_core::event_controller::{ActivateIRQnError, Exception, OptionalFeatureError};
+use styx_core::cpu::arch::ppc32::Ppc32Register;
+use styx_core::event_controller::{
+    ActivateIRQnError, Exception, InterruptExecuted, OptionalFeatureError,
+};
 use styx_core::prelude::*;
-use styx_core::{cpu::arch::ppc32::Ppc32Register, event_controller::InterruptExecuted};
-
 use tokio::runtime::Handle;
 
 #[derive(Debug, Clone)]

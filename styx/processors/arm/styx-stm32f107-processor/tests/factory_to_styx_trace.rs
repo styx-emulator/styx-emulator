@@ -3,8 +3,9 @@
 #![cfg(feature = "unicorn-backend")]
 mod behavior_harnesses;
 
-use behavior_harnesses::blink_flash_tester::run_blink_flash;
 use std::time::Duration;
+
+use behavior_harnesses::blink_flash_tester::run_blink_flash;
 use styx_core::grpc::args::{AppDefault, Target, TracePluginArgs};
 use styx_core::prelude::*;
 use styx_core::tracebus::TraceEventType;

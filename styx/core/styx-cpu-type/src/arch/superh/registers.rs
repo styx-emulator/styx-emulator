@@ -135,8 +135,9 @@ create_special_register_enums!(SuperH);
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::str::FromStr;
+
+    use super::*;
 
     #[test]
     fn test_regs_from_str() {

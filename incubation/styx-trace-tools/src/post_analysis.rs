@@ -1,13 +1,16 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! post_analysis - analyze artifacts from a styx trace session
 
-use crate::compact_repr;
-use crate::data_recorder::get_variables;
-use crate::util::{output_dst, OutDst};
-use std::{fs::File, io::Read};
+use std::fs::File;
+use std::io::Read;
+
 use styx_core::grpc::typhunix_interop::AddrUtils;
 use styx_core::sync::sync::atomic::Ordering::SeqCst;
 use tracing::{debug, warn};
+
+use crate::compact_repr;
+use crate::data_recorder::get_variables;
+use crate::util::{output_dst, OutDst};
 
 pub async fn post_analysis(dir: &str) -> Result<(), std::io::Error> {
     debug!("ptrace: post analysis, dir={}", dir);

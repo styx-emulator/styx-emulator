@@ -231,8 +231,9 @@ pub mod ffi {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use cxx::let_cxx_string;
+
+    use super::*;
 
     #[test]
     #[cfg_attr(miri, ignore)]

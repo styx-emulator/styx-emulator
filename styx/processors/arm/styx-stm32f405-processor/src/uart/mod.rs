@@ -2,10 +2,8 @@
 //! Emulates Uart controller for the STM32F405.
 use inner::{Port, UartPortInner};
 use paste::paste;
-use styx_core::{
-    hooks::{MemoryReadHook, MemoryWriteHook},
-    prelude::*,
-};
+use styx_core::hooks::{MemoryReadHook, MemoryWriteHook};
+use styx_core::prelude::*;
 use styx_peripherals::uart::{UartController, UartInterface};
 use styx_stm32f405_sys::{
     uart4, uart5, usart1, usart2, usart3, usart6, Uart4, Uart5, Usart1, Usart2, Usart3, Usart6,

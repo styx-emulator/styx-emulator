@@ -3,12 +3,9 @@
 use smallvec::SmallVec;
 use styx_pcode::pcode::VarnodeData;
 
+use super::pc_manager::{apply_difference, PcOverflow};
+use super::{ArchPcManager, GeneratorHelper};
 use crate::{PcodeBackend, DEFAULT_REG_ALLOCATION};
-
-use super::{
-    pc_manager::{apply_difference, PcOverflow},
-    ArchPcManager, GeneratorHelper,
-};
 
 pub mod call_other;
 pub mod ppc4xx;

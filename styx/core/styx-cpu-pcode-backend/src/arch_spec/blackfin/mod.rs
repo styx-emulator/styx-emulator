@@ -10,12 +10,9 @@ use styx_cpu_type::arch::blackfin::BlackfinRegister;
 use styx_pcode::pcode::VarnodeData;
 use styx_pcode_translator::sla::{self, BlackfinUserOps};
 
+use super::pc_manager::{apply_difference, PcOverflow};
+use super::{ArchPcManager, ArchSpecBuilder, GeneratorHelper};
 use crate::{PcodeBackend, DEFAULT_REG_ALLOCATION};
-
-use super::{
-    pc_manager::{apply_difference, PcOverflow},
-    ArchPcManager, ArchSpecBuilder, GeneratorHelper,
-};
 
 /// Program Counter manager for Blackfin processors.
 #[derive(Debug, Default, Clone)]

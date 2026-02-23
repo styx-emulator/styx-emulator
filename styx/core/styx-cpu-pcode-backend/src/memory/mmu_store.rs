@@ -1,17 +1,12 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use styx_cpu_type::ArchEndian;
 use styx_pcode::pcode::SpaceInfo;
-use styx_processor::{
-    cpu::CpuBackend,
-    memory::{
-        helpers::{ReadExt, WriteExt},
-        Mmu, MmuOpError,
-    },
-};
-
-use crate::memory::sized_value::SizedValue;
+use styx_processor::cpu::CpuBackend;
+use styx_processor::memory::helpers::{ReadExt, WriteExt};
+use styx_processor::memory::{Mmu, MmuOpError};
 
 use super::space::SpaceError;
+use crate::memory::sized_value::SizedValue;
 
 /// Single address space with backing data store.
 #[derive(Debug)]

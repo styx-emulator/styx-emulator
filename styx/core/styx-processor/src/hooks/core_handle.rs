@@ -1,17 +1,14 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::{
-    cpu::{CpuBackend, ExecutionReport, ReadRegisterError, WriteRegisterError},
-    event_controller::{ActivateIRQnError, EventController, ExceptionNumber},
-    hooks::{AddHookError, DeleteHookError, HookToken, StyxHook},
-    memory::{MemoryOperationError, Mmu},
-};
-
 use delegate::delegate;
-use styx_cpu_type::{
-    arch::{backends::ArchRegister, ArchitectureDef, RegisterValue},
-    ArchEndian,
-};
+use styx_cpu_type::arch::backends::ArchRegister;
+use styx_cpu_type::arch::{ArchitectureDef, RegisterValue};
+use styx_cpu_type::ArchEndian;
 use styx_errors::UnknownError;
+
+use crate::cpu::{CpuBackend, ExecutionReport, ReadRegisterError, WriteRegisterError};
+use crate::event_controller::{ActivateIRQnError, EventController, ExceptionNumber};
+use crate::hooks::{AddHookError, DeleteHookError, HookToken, StyxHook};
+use crate::memory::{MemoryOperationError, Mmu};
 
 /// Ergonomic reference to the processor trinity for hook users.
 pub struct CoreHandle<'a> {

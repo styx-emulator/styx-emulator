@@ -2,6 +2,7 @@
 //! Generic top level container for Hexagon registers
 use std::collections::HashMap;
 use std::num::NonZeroUsize;
+
 use strum::IntoEnumIterator;
 
 use crate::arch::{CpuRegister, RegisterValue};
@@ -427,8 +428,9 @@ create_special_register_enums!(Hexagon);
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use derive_more::FromStr;
+
+    use super::*;
 
     #[test]
     fn test_regs_from_str() {

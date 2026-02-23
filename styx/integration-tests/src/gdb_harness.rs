@@ -2,6 +2,8 @@
 //! Testing harness for the gdb plugin and `gdb-multiarch`
 //!
 use std::collections::HashMap;
+use std::fmt::Write;
+use std::num::ParseIntError;
 use std::process::Stdio;
 use std::thread::JoinHandle;
 
@@ -9,11 +11,8 @@ use gdbmi::breakpoint::Breakpoint;
 use gdbmi::raw::ResultResponse;
 use gdbmi::status::{Status, StopReason, Stopped};
 use gdbmi::{Gdb, TimeoutError};
-use std::fmt::Write;
-use std::num::ParseIntError;
 use styx_core::prelude::*;
 use styx_plugins::gdb::{build_gdb, GDBOptions, GdbExecutor, GdbPluginParams};
-
 use thiserror::Error;
 use tokio::process::{Child, Command};
 use tokio::runtime::Runtime;

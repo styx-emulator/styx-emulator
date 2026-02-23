@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use super::{
-    blob_store::BlobStore, const_memory::ConstMemory, hash_store::HashStore,
-    sized_value::SizedValue,
-};
 use enum_dispatch::enum_dispatch;
 use styx_pcode::pcode::{SpaceId, SpaceInfo};
 use styx_processor::memory::MmuOpError;
 use thiserror::Error;
 
+use super::blob_store::BlobStore;
+use super::const_memory::ConstMemory;
+use super::hash_store::HashStore;
+use super::sized_value::SizedValue;
 use crate::ArchEndian;
 
 /// Space memory access specific errors, superset of [MmuOpError].
@@ -110,9 +110,10 @@ mod tests {
     use styx_cpu_type::ArchEndian;
     use styx_pcode::pcode::SpaceId;
 
-    use crate::memory::{blob_store::BlobStore, sized_value::SizedValue, space::SpaceInfo};
-
     use super::Space;
+    use crate::memory::blob_store::BlobStore;
+    use crate::memory::sized_value::SizedValue;
+    use crate::memory::space::SpaceInfo;
 
     #[test]
     fn test_const_space() {

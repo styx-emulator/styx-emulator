@@ -4,13 +4,12 @@
 // scripted creation, when the implementation finishes this
 // will be removed.
 use std::mem::offset_of;
-use styx_core::hooks::MemoryReadHook;
-use styx_core::hooks::MemoryWriteHook;
+
+use styx_core::hooks::{MemoryReadHook, MemoryWriteHook};
 use styx_core::prelude::*;
+use styx_mk21f12_sys::UART_Type;
 use styx_peripherals::uart::UartController;
 use tracing::{debug, error};
-
-use styx_mk21f12_sys::UART_Type;
 
 use super::inner::*;
 use super::UartPortInner;

@@ -28,27 +28,23 @@ mod buckets;
 use buckets::address::AddrHookBucket;
 use buckets::any::HookBucket;
 use buckets::register::RegisterHookBucket;
-use styx_cpu_type::arch::backends::ArchRegister;
-use styx_cpu_type::arch::RegisterValue;
-
-use crate::{PcodeBackend, PcodeBackendConfiguration};
 use derivative::Derivative;
 use log::trace;
+use styx_cpu_type::arch::backends::ArchRegister;
+use styx_cpu_type::arch::RegisterValue;
 use styx_errors::anyhow::{anyhow, Context};
 use styx_errors::{ErrorBuffer, UnknownError};
-use styx_processor::event_controller::ExceptionNumber;
+use styx_processor::cpu::CpuBackend;
+use styx_processor::event_controller::{EventController, ExceptionNumber};
 use styx_processor::hooks::{
-    BlockHook, DeleteHookError, HookToken, InterruptHook, InvalidInstructionHook, MemFaultData,
-    MemoryReadHook, MemoryWriteHook, ProtectionFaultHook, RegisterReadHook, RegisterWriteHook,
-    Resolution, UnmappedFaultHook,
+    AddHookError, BlockHook, CodeHook, CoreHandle, DeleteHookError, HookToken, Hookable,
+    InterruptHook, InvalidInstructionHook, MemFaultData, MemoryReadHook, MemoryWriteHook,
+    ProtectionFaultHook, RegisterReadHook, RegisterWriteHook, Resolution, StyxHook,
+    UnmappedFaultHook,
 };
-use styx_processor::memory::MemoryPermissions;
-use styx_processor::{
-    cpu::CpuBackend,
-    event_controller::EventController,
-    hooks::{AddHookError, CodeHook, CoreHandle, Hookable, StyxHook},
-    memory::Mmu,
-};
+use styx_processor::memory::{MemoryPermissions, Mmu};
+
+use crate::{PcodeBackend, PcodeBackendConfiguration};
 
 /// Main manager for hooks in pcode emulation machine.
 #[derive(Derivative)]
@@ -646,15 +642,11 @@ impl HookManager {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    };
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::Arc;
 
-    use styx_processor::{
-        core::ProcessorCore,
-        cpu::{CpuBackend, ExecutionReport},
-    };
+    use styx_processor::core::ProcessorCore;
+    use styx_processor::cpu::{CpuBackend, ExecutionReport};
 
     use super::*;
 

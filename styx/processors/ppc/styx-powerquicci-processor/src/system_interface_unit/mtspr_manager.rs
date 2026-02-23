@@ -3,12 +3,10 @@
 use derive_more::Display;
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
+use styx_core::cpu::arch::ppc32::Ppc32Register;
 use styx_core::errors::UnknownError;
-use styx_core::{
-    cpu::arch::ppc32::Ppc32Register,
-    hooks::CoreHandle,
-    prelude::{CpuBackend, CpuBackendExt},
-};
+use styx_core::hooks::CoreHandle;
+use styx_core::prelude::{CpuBackend, CpuBackendExt};
 use tracing::{error, info, trace, warn};
 
 use crate::system_interface_unit::SystemInterfaceUnit;

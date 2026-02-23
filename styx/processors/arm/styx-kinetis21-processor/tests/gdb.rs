@@ -3,8 +3,9 @@
 use styx_core::arch::arm::ArmVariants;
 use styx_core::cpu::arch::arm::gdb_targets::Armv7emDescription;
 use styx_core::loader::RawLoader;
+use styx_core::prelude::*;
 use styx_core::processor::ProcessorBuilder;
-use styx_core::{prelude::*, util};
+use styx_core::util;
 use styx_integration_tests::gdb_core_test_suite;
 use styx_kinetis21_processor::Kinetis21Builder;
 

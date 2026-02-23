@@ -4,21 +4,22 @@
 //! [`EmuGdbEventLoop`] implements
 //! [the blocking event loop trait](https://docs.rs/gdbstub/0.6.6/gdbstub/stub/run_blocking/trait.BlockingEventLoop.html)
 //! from gdbstub. It's created and used by the [GdbExecutor](crate::plugin::GdbExecutor).
-use crate::target_impl::TargetImpl;
+use std::convert::Infallible;
+use std::marker::PhantomData;
+use std::net::TcpListener;
+use std::os::unix::net::UnixListener;
+
 use gdbstub::common::Signal;
-use gdbstub::conn::Connection;
-use gdbstub::conn::ConnectionExt;
-use gdbstub::stub::run_blocking;
-use gdbstub::stub::SingleThreadStopReason;
+use gdbstub::conn::{Connection, ConnectionExt};
+use gdbstub::stub::{run_blocking, SingleThreadStopReason};
 use gdbstub::target::ext::breakpoints::WatchKind;
 use gdbstub::target::Target;
 use num_traits::FromPrimitive;
-use std::convert::Infallible;
-use std::marker::PhantomData;
-use std::{net::TcpListener, os::unix::net::UnixListener};
 use styx_core::cpu::TargetExitReason;
 use styx_core::sync::sync::{Arc, Mutex};
 use tracing::debug;
+
+use crate::target_impl::TargetImpl;
 
 /// The variants enumerated here are the specific event that caused target
 /// emulation to stop, for reasons related to debugging

@@ -17,16 +17,16 @@ mod hooks;
 use std::str::from_utf8;
 
 mod common {
+    pub(super) use clap::{Parser, Subcommand};
+    pub(super) use gdbstub::outputln;
+    pub(super) use gdbstub::target::ext::monitor_cmd::ConsoleOutput;
+    pub(super) use styx_core::arch::{GdbArchIdSupportTrait, GdbRegistersHelper};
+    pub(super) use styx_core::core::ProcessorCore;
+    pub(super) use styx_core::errors::anyhow::anyhow;
+    pub(super) use styx_core::errors::UnknownError;
+
     pub(super) use super::SubcommandRunnable;
     pub(super) use crate::target_impl::TargetImpl;
-    pub(super) use clap::{Parser, Subcommand};
-    pub(super) use gdbstub::{outputln, target::ext::monitor_cmd::ConsoleOutput};
-    pub(super) use styx_core::{
-        arch::{GdbArchIdSupportTrait, GdbRegistersHelper},
-        core::ProcessorCore,
-        errors::anyhow::anyhow,
-        errors::UnknownError,
-    };
 }
 use common::*;
 use gdbstub::target;

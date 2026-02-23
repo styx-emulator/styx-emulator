@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use styx_processor::hooks::{AddressRange, HookToken};
-
 use std::fmt::Debug;
 use std::ops::RangeBounds;
+
+use styx_processor::hooks::{AddressRange, HookToken};
 
 pub struct AddrHookContainer<H> {
     range: AddressRange,

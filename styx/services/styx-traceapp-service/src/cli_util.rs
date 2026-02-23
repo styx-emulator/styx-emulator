@@ -7,13 +7,12 @@ use styx_core::grpc::traceapp::{
     VariableSnapshotRequest,
 };
 use styx_core::grpc::utils::Empty;
+use styx_trace_tools::event::StreamEndReason;
 use tokio::sync::mpsc;
 use tokio::time::{timeout, Instant};
 use tokio_util::sync::CancellationToken;
 use tonic::transport::Channel;
 use tracing::{error, info, warn};
-
-use styx_trace_tools::event::StreamEndReason;
 
 pub async fn match_one_session(url: &str, session_id: &str) -> Result<SessionInfo, String> {
     let sessions = starts_with(url, session_id)

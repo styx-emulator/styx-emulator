@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use std::thread::spawn;
+
 use styx_emulator::core::util::logging::init_logging;
 use styx_emulator::peripheral_clients::uart::UartClient;
 use styx_emulator::plugins::styx_trace::StyxTracePlugin;

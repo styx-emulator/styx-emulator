@@ -3,35 +3,28 @@
 //! Implementation of `GRPC` workspace service [WorkspaceSvc]
 
 use std::collections::HashMap;
+
 use styx_core::errors::styx_grpc::ApplicationError;
+use styx_core::grpc::args::TraceAppSessionArgs;
+use styx_core::grpc::symbolic::{Program, ProgramFilter};
+use styx_core::grpc::typhunix_interop::ProgramRef;
+use styx_core::grpc::utils::{service_response, ServiceResponse};
+use styx_core::grpc::workspace::workspace_svc_server::{WorkspaceSvc, WorkspaceSvcServer};
 use styx_core::grpc::workspace::{
-    DeleteWsProgramResponse, GetWorkspaceRequest, GetWorkspaceResponse, GetWsProgamsResponse,
-    GetWsProgramsRequest, Workspace,
-};
-use styx_core::grpc::{
-    args::TraceAppSessionArgs,
-    symbolic::{Program, ProgramFilter},
-    typhunix_interop::ProgramRef,
-    workspace::{
-        workspace_svc_server::{WorkspaceSvc, WorkspaceSvcServer},
-        DbId, GetJoinedTraceSessionsRequest, JoinedTraceSession, TraceSession, TraceSessionRequest,
-        TraceSessionResponse, UpsertWsProgramRequest, UpsertWsProgramResponse,
-    },
-};
-use styx_core::grpc::{
-    utils::{service_response, ServiceResponse},
-    workspace::{TraceAppSessRequest, TraceAppSessResponse},
+    DbId, DeleteWsProgramResponse, GetJoinedTraceSessionsRequest, GetWorkspaceRequest,
+    GetWorkspaceResponse, GetWsProgamsResponse, GetWsProgramsRequest, JoinedTraceSession,
+    TraceAppSessRequest, TraceAppSessResponse, TraceSession, TraceSessionRequest,
+    TraceSessionResponse, UpsertWsProgramRequest, UpsertWsProgramResponse, Workspace,
 };
 use styx_dbmigration::{Migrator, MigratorTrait};
+use styx_dbmodel::api::prelude::*;
+use styx_dbmodel::default_connection;
 use styx_dbmodel::model::prelude::WorkspaceEntity;
-use styx_dbmodel::{api::prelude::*, default_connection};
-use tokio::{
-    join,
-    sync::mpsc::{self, Sender},
-};
+use tokio::join;
+use tokio::sync::mpsc::{self, Sender};
 use tokio_stream::wrappers::ReceiverStream;
-use tonic::{transport::Server, Code};
-use tonic::{Request, Response, Status};
+use tonic::transport::Server;
+use tonic::{Code, Request, Response, Status};
 use tracing::debug;
 
 #[derive(Default)]

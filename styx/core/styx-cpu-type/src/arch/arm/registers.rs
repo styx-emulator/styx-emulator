@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! Generic top level container for ARM registers.
-use derive_more::Display;
 use std::num::NonZeroUsize;
 
-use crate::arch::{backends::ArchRegister, CpuRegister, RegisterValue, RegisterValueCompatible};
+use derive_more::Display;
+
+use crate::arch::backends::ArchRegister;
+use crate::arch::{CpuRegister, RegisterValue, RegisterValueCompatible};
 use crate::macros::*;
 
 #[repr(u32)]
@@ -380,10 +382,12 @@ create_special_register_enums!(Arm, CoProcessor);
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use arbitrary_int::{u40, u80};
     use std::str::FromStr;
+
+    use arbitrary_int::{u40, u80};
     use test_case::test_case;
+
+    use super::*;
 
     #[test]
     fn test_regs_from_str() {

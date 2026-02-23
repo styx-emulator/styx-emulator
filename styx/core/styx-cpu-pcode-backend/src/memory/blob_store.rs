@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use super::space::IsSpaceMemory;
 use std::fmt::Debug;
+
 use styx_processor::memory::{MemoryOperationError, MmuOpError, UnmappedMemoryError};
+
+use super::space::IsSpaceMemory;
 
 /// Simple [IsSpaceMemory] implementation that uses a single block of contiguous memory.
 ///

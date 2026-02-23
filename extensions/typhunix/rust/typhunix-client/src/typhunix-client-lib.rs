@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! Client-side utilities for typhunix grpc services
-use futures::join;
 use std::error::Error;
-use styx_emulator::grpc::typhunix_interop::{
-    json_util,
-    symbolic::{DataType, Program, ProgramFilter, ProgramIdentifier, Symbol},
-    typhunix_client::TyphunixClient,
-    ConnectMessage,
+
+use futures::join;
+use styx_emulator::grpc::typhunix_interop::symbolic::{
+    DataType, Program, ProgramFilter, ProgramIdentifier, Symbol,
 };
+use styx_emulator::grpc::typhunix_interop::typhunix_client::TyphunixClient;
+use styx_emulator::grpc::typhunix_interop::{json_util, ConnectMessage};
 use tonic::Request;
 use tracing::debug;
 use typhunix_proto::grpc_async_client::{data_types_vec, programs_vec, symbols_vec};

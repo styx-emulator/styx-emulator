@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::arch_spec::hexagon::tests::*;
 use smallvec::{smallvec, SmallVec};
 use test_case::test_case;
+
+use crate::arch_spec::hexagon::tests::*;
 
 #[test_case(
     r#"

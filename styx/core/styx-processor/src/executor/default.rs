@@ -2,9 +2,9 @@
 //! Sane default executor for Styx processors
 use styx_errors::UnknownError;
 
-use crate::{core::ProcessorCore, cpu::ExecutionReport};
-
 use super::ExecutorImpl;
+use crate::core::ProcessorCore;
+use crate::cpu::ExecutionReport;
 
 #[derive(Default, Debug)]
 /// A sane default.

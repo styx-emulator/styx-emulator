@@ -1,15 +1,11 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::{Loader, LoaderRequires, SleighTranslateError};
-use rustc_hash::FxHashMap;
 use std::collections::HashMap;
 use std::hash::Hash;
-use styx_cpu_type::{
-    arch::{
-        backends::{ArchRegister, ArchVariant},
-        ArchitectureDef,
-    },
-    ArchEndian,
-};
+
+use rustc_hash::FxHashMap;
+use styx_cpu_type::arch::backends::{ArchRegister, ArchVariant};
+use styx_cpu_type::arch::ArchitectureDef;
+use styx_cpu_type::ArchEndian;
 use styx_pcode::pcode::{Pcode, SpaceInfo, SpaceName, VarnodeData};
 use styx_pcode::sla::SlaSpec;
 use styx_pcode_sleigh_backend::{NewSleighError, Sleigh, UserOpInfo};
@@ -17,6 +13,8 @@ use styx_sla::SlaRegisters;
 use tap::TapOptional;
 use thiserror::Error;
 use tracing::{debug, trace};
+
+use crate::{Loader, LoaderRequires, SleighTranslateError};
 
 #[derive(Error, Debug)]
 #[error(transparent)]
@@ -242,7 +240,8 @@ impl ContextOption {
 
 #[cfg(test)]
 mod tests {
-    use styx_cpu_type::arch::arm::{variants::ArmCortexA7, ArmMetaVariants};
+    use styx_cpu_type::arch::arm::variants::ArmCortexA7;
+    use styx_cpu_type::arch::arm::ArmMetaVariants;
     use styx_pcode_sleigh_backend::VectorLoader;
 
     use super::*;
@@ -279,10 +278,9 @@ mod tests {
 #[cfg(feature = "arch_arm")]
 mod arm_tests {
     use keystone_engine::Keystone;
-    use styx_cpu_type::arch::{
-        arm::{variants::ArmCortexA7, ArmMetaVariants},
-        backends::ArchVariant,
-    };
+    use styx_cpu_type::arch::arm::variants::ArmCortexA7;
+    use styx_cpu_type::arch::arm::ArmMetaVariants;
+    use styx_cpu_type::arch::backends::ArchVariant;
     use styx_pcode_sleigh_backend::{SleighTranslateError, VectorLoader};
 
     use super::PcodeTranslator;
@@ -342,16 +340,15 @@ mod arm_tests {
 #[cfg(test)]
 #[cfg(feature = "arch_ppc")]
 mod powerpc_tests {
+    use expect_test::{expect, expect_file};
+    use styx_cpu_type::arch::backends::ArchRegister;
+    use styx_cpu_type::arch::ppc32::{Ppc32MetaVariants, Ppc32Variants};
+    use styx_pcode::pcode::VarnodeData;
+    use tap::Conv;
+
     use super::*;
     use crate::sla::Ppc324xxBe;
     use crate::VectorLoader;
-    use expect_test::{expect, expect_file};
-    use styx_cpu_type::arch::{
-        backends::ArchRegister,
-        ppc32::{Ppc32MetaVariants, Ppc32Variants},
-    };
-    use styx_pcode::pcode::VarnodeData;
-    use tap::Conv;
 
     /// Asserts that the styx -> sla register translation does not change. This also includes spr registers.
     #[test]

@@ -4,6 +4,7 @@
 //! TODO: this examples runs but does not echo back correctly.
 //! The addresses for hooks may also be incorrect.
 use std::env;
+
 use styx_emulator::core::util::logging::init_logging;
 use styx_emulator::loader::RawLoader;
 use styx_emulator::prelude::*;

@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::{
-    ipc_impl::open_srb, BaseTraceEvent, TraceError, TraceEventType, Traceable, TraceableItem,
-};
+use std::time::Duration;
+
 use ipmpsc::Receiver;
 use log::debug;
-use std::time::Duration;
 use tokio_util::sync::CancellationToken;
+
+use crate::ipc_impl::open_srb;
+use crate::{BaseTraceEvent, TraceError, TraceEventType, Traceable, TraceableItem};
 
 #[derive(Debug, Default)]
 pub enum ListenState {

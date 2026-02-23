@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use std::time::Duration;
-use styx_core::sync::{cell::RefCell, sync::atomic::AtomicBool};
+
+use styx_core::sync::cell::RefCell;
+use styx_core::sync::sync::atomic::AtomicBool;
 use tokio::time;
 
 /// All types wanting to consume a clock need to implement this

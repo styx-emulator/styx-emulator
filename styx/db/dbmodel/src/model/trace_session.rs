@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use super::prelude::*;
 use sea_orm::entity::prelude::*;
 use sea_orm::ActiveValue::{NotSet, Set};
 use styx_core::grpc::utils::EmuMetadata;
+
+use super::prelude::*;
 
 type Message = TraceSession;
 
@@ -109,9 +110,10 @@ impl From<Message> for ActiveModel {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     #[allow(unused_imports)]
     use tracing::{debug, error, info, trace};
+
+    use super::*;
     pub type TestResult = Result<(), Box<dyn std::error::Error + 'static>>;
 
     #[test]

@@ -4,9 +4,9 @@
 //! Takes .bin files (actually .elf in disguise) stored in firmware path
 //! Code is then ran on a RawProcessor Arm 1026 Processor
 
-use std::env;
-use std::fs;
 use std::path::Path;
+use std::{env, fs};
+
 use styx_emulator::cpu::arch::arm::{ArmRegister, ArmVariants};
 use styx_emulator::hooks::CoreHandle;
 use styx_emulator::prelude::*;
@@ -113,8 +113,9 @@ fn main() -> Result<(), UnknownError> {
 
 #[cfg(test)]
 mod test_machine {
-    use super::*;
     use keystone_engine::{Arch as KeystoneArch, Keystone, Mode};
+
+    use super::*;
 
     struct TestMachine {
         proc: Processor,

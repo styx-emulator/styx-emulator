@@ -1,19 +1,20 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::{
-    context_internal::ContextInternal,
-    dom::DocumentStorage,
-    load_image::{Loader, LoaderRequires, LoaderWrapper, RustLoadImageProxy},
-    pcode_emit::{FromFfiVarnode, PCodeEmitRef},
-    sleigh_obj::{DeriveParent, SleighObj},
-};
-use cxx::{CxxVector, UniquePtr};
+use std::collections::HashMap;
+use std::path::Path;
 use std::pin::Pin;
-use std::{collections::HashMap, path::Path};
+
+use cxx::{CxxVector, UniquePtr};
 use styx_cpu_type::ArchEndian;
 use styx_pcode::pcode::{Pcode, SpaceInfo, SpaceName, VarnodeData};
 use styx_sleigh_bindings::{ffi, RustPCodeEmit};
 use thiserror::Error;
 use vector_map::VecMap;
+
+use crate::context_internal::ContextInternal;
+use crate::dom::DocumentStorage;
+use crate::load_image::{Loader, LoaderRequires, LoaderWrapper, RustLoadImageProxy};
+use crate::pcode_emit::{FromFfiVarnode, PCodeEmitRef};
+use crate::sleigh_obj::{DeriveParent, SleighObj};
 
 pub struct Sleigh<L> {
     pub obj: SleighObj<ffi::Sleigh>,

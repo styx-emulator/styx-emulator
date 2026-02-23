@@ -6,10 +6,11 @@
 //! SPI3 : 0x4000 3C00 - 0x4000 3FFF
 //! SPI1 : 0x4001 3000 - 0x4001 33FF
 //!
+use std::collections::VecDeque;
+
 use bilge::prelude::*;
 use derivative::Derivative;
 use getset::Getters;
-use std::collections::VecDeque;
 use styx_core::grpc::io;
 use styx_core::grpc::io::spi::{MasterChipSelectPacket, MasterPacket};
 use styx_core::prelude::*;

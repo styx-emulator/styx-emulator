@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use styx_core::prelude::*;
-
 use tracing::{trace, warn};
 
 use super::{AssignmentBank, CoreEventController, Event, RoutingBank};

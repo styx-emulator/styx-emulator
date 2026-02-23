@@ -2,9 +2,10 @@
 //! Provides an importable daemon service to control
 //! emulator's and their tracing
 
+use std::error::Error;
+
 use clap::Parser;
 use emulation_registry_service::svc::{EmulationInstanceRegistry, TraceRegistry};
-use std::error::Error;
 use styx_core::sync::sync::Arc;
 use tracing::info;
 

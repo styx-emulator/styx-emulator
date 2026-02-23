@@ -5,10 +5,12 @@
 //! that can be iterated and referenced by id by styx.
 //! In addition, the components are easily registered just by adding a crate with components you want to use.
 //!
-use std::collections::{hash_map::Entry, HashMap};
+use std::collections::hash_map::Entry;
+use std::collections::HashMap;
 
 use inventory::Collect;
-use styx_core::{errors::UnknownError, prelude::log};
+use styx_core::errors::UnknownError;
+use styx_core::prelude::log;
 use thiserror::Error;
 
 /// Derserializable configs for Components.

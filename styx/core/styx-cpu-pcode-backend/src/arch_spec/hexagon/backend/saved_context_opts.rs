@@ -3,9 +3,8 @@ use log::trace;
 use smallvec::{smallvec, SmallVec};
 use styx_pcode_translator::ContextOption;
 
-use crate::arch_spec::generator_helper::CONTEXT_OPTION_LEN;
-
 use super::{HexagonFetchDecodeError, PacketLocation, PktState};
+use crate::arch_spec::generator_helper::CONTEXT_OPTION_LEN;
 
 const SAVED_OPTION_LEN: usize = 20;
 

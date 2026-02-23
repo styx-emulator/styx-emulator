@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use super::{Opcode, SpaceName, VarnodeData};
-use smallvec::SmallVec;
 use std::fmt::{Debug, Display};
+
+use smallvec::SmallVec;
+
+use super::{Opcode, SpaceName, VarnodeData};
 
 /// A single p-code operation.
 #[derive(PartialEq, Eq)]

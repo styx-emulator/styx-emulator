@@ -180,14 +180,15 @@ macro_rules! send_state_change {
 
 #[cfg(test)]
 mod tests {
-    use crate::ConditionVar;
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::thread;
     use std::thread::JoinHandle;
     use std::time::Duration;
+
     use test_case::test_case;
 
     use super::Arc;
+    use crate::ConditionVar;
 
     /// Spawns a thread that waits for all threads to be ready, then notifies the condition variable.
     ///

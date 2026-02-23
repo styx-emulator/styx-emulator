@@ -4,9 +4,10 @@ use log::info;
 use styx_cpu_type::TargetExitReason;
 use styx_errors::UnknownError;
 
-use crate::{
-    core::ProcessorCore, cpu::ExecutionReport, executor::Delta, plugins::collection::Plugins,
-};
+use crate::core::ProcessorCore;
+use crate::cpu::ExecutionReport;
+use crate::executor::Delta;
+use crate::plugins::collection::Plugins;
 
 /// The common interface that all executor implementations need to support.
 ///

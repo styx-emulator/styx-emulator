@@ -18,17 +18,15 @@ pub use sync::*;
 
 mod emulation_report;
 pub use emulation_report::*;
-
 use static_assertions::assert_impl_all;
 use styx_errors::UnknownError;
 
-use crate::{
-    core::{ProcMeta, ProcessorCore},
-    executor::{ExecutionConstraint, Executor},
-    hooks::{AddHookError, DeleteHookError, HookToken, Hookable, StyxHook},
-    plugins::{collection::PluginsContainer, Plugin},
-    runtime::ProcessorRuntime,
-};
+use crate::core::{ProcMeta, ProcessorCore};
+use crate::executor::{ExecutionConstraint, Executor};
+use crate::hooks::{AddHookError, DeleteHookError, HookToken, Hookable, StyxHook};
+use crate::plugins::collection::PluginsContainer;
+use crate::plugins::Plugin;
+use crate::runtime::ProcessorRuntime;
 
 // Processor impls Send
 assert_impl_all!(Processor: Send);

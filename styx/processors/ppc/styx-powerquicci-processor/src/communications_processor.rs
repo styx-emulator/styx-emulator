@@ -300,7 +300,6 @@ doc = ::embed_doc_image::embed_image!("pram_reloc", "assets/pram_reloc.png"),))]
 //!
 //! Note: all `IDMA` emulation options are configurable via `RCCR` (Section 18.6.1)
 //!
-use super::Mpc8xxVariants;
 use derive_more::Display;
 use enum_dispatch::enum_dispatch;
 use styx_core::errors::StyxMachineError;
@@ -310,9 +309,9 @@ use thiserror::Error;
 use tracing::trace;
 
 use super::peripherals::clocks::{PllClock, SystemControlClock};
+use super::Mpc8xxVariants;
 mod cpm_inner;
 pub use cpm_inner::*;
-
 #[allow(unused_imports)]
 #[cfg(feature = "docimages")]
 use embed_doc_image::embed_doc_image;

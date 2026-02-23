@@ -1,26 +1,21 @@
 // SPDX-License-Identifier: BSD-2-Clause
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
+
 use log::info;
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc, Mutex,
-};
 use styx_cpu_pcode_backend::PcodeBackend;
-use styx_cpu_type::{
-    arch::ppc32::{Ppc32Register, Ppc32Variants},
-    Arch, ArchEndian,
-};
+use styx_cpu_type::arch::ppc32::{Ppc32Register, Ppc32Variants};
+use styx_cpu_type::{Arch, ArchEndian};
 use styx_errors::UnknownError;
-use styx_processor::{
-    cpu::{CpuBackend, CpuBackendExt},
-    event_controller::{EventController, ExceptionNumber},
-    hooks::{CoreHandle, Hookable, StyxHook},
-    memory::{
-        helpers::{ReadExt, WriteExt},
-        memory_region::MemoryRegion,
-        physical::PhysicalMemoryVariant,
-        FnTlb, MemoryBackend, MemoryOperation, MemoryPermissions, MemoryType, Mmu, TlbProcessor,
-        TlbTranslateError, TlbTranslateResult,
-    },
+use styx_processor::cpu::{CpuBackend, CpuBackendExt};
+use styx_processor::event_controller::{EventController, ExceptionNumber};
+use styx_processor::hooks::{CoreHandle, Hookable, StyxHook};
+use styx_processor::memory::helpers::{ReadExt, WriteExt};
+use styx_processor::memory::memory_region::MemoryRegion;
+use styx_processor::memory::physical::PhysicalMemoryVariant;
+use styx_processor::memory::{
+    FnTlb, MemoryBackend, MemoryOperation, MemoryPermissions, MemoryType, Mmu, TlbProcessor,
+    TlbTranslateError, TlbTranslateResult,
 };
 use styx_util::logging::init_logging;
 

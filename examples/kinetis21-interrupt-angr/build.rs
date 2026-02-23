@@ -3,6 +3,7 @@ use std::error::Error;
 use std::io::ErrorKind;
 use std::path::PathBuf;
 use std::process::Command;
+
 use styx_core::util::resolve_path;
 
 fn main() {

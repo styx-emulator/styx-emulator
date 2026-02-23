@@ -1,21 +1,20 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
-use crate::{
-    arch_spec::ArchSpecBuilder,
-    call_other::handlers::{EmptyCallback, TraceCallOther},
-    memory::sized_value::SizedValue,
-    pcode_gen::RegisterTranslator,
-    register_manager::{
-        MappedRegister, RegisterCallback, RegisterCallbackCpu, RegisterHandleError,
-    },
-    PcodeBackend,
-};
 use styx_cpu_type::arch::backends::ArchRegister;
 use styx_cpu_type::arch::ppc32::{Ppc32Register, SpecialPpc32Register, SprRegister};
 use styx_errors::anyhow::{anyhow, Context};
 use styx_pcode_translator::sla;
 use styx_pcode_translator::sla::Ppc324xxBeUserOps as UserOps;
 use styx_processor::cpu::{CpuBackend, CpuBackendExt};
+
+use crate::arch_spec::ArchSpecBuilder;
+use crate::call_other::handlers::{EmptyCallback, TraceCallOther};
+use crate::memory::sized_value::SizedValue;
+use crate::pcode_gen::RegisterTranslator;
+use crate::register_manager::{
+    MappedRegister, RegisterCallback, RegisterCallbackCpu, RegisterHandleError,
+};
+use crate::PcodeBackend;
 
 pub fn build() -> ArchSpecBuilder<sla::Ppc324xxBe, PcodeBackend> {
     let mut spec = ArchSpecBuilder::default();
@@ -156,11 +155,11 @@ impl<T: CpuBackend> RegisterCallback<T> for CrRegister {
 
 #[cfg(test)]
 mod tests {
-    use styx_cpu_type::{arch::ppc32::Ppc32Variants, Arch};
-
-    use crate::PcodeBackend;
+    use styx_cpu_type::arch::ppc32::Ppc32Variants;
+    use styx_cpu_type::Arch;
 
     use super::*;
+    use crate::PcodeBackend;
 
     #[test]
     fn test_name() {

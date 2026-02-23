@@ -63,6 +63,7 @@ pub enum CompileError {
 #[cfg(test)]
 mod tests {
     use std::env::temp_dir;
+
     use styx_util::bytes_to_tmp_file;
 
     use super::*;

@@ -1,16 +1,12 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use styx_core::{
-    arch::aarch64::Aarch64Variants,
-    core::{
-        builder::{BuildProcessorImplArgs, ProcessorImpl},
-        ProcessorBundle,
-    },
-    cpu::{Backend, PcodeBackend},
-    event_controller::DummyEventController,
-    loader::LoaderHints,
-    memory::DummyTlb,
-    prelude::{CpuBackend, *},
-};
+use styx_core::arch::aarch64::Aarch64Variants;
+use styx_core::core::builder::{BuildProcessorImplArgs, ProcessorImpl};
+use styx_core::core::ProcessorBundle;
+use styx_core::cpu::{Backend, PcodeBackend};
+use styx_core::event_controller::DummyEventController;
+use styx_core::loader::LoaderHints;
+use styx_core::memory::DummyTlb;
+use styx_core::prelude::{CpuBackend, *};
 
 /// A processor with no peripherals or event controller, purely instruction emulation.
 #[derive(Default)]
@@ -52,15 +48,13 @@ impl ProcessorImpl for Aarch64Processor {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
-    use styx_core::{
-        errors::UnknownError,
-        hooks::{CoreHandle, StyxHook},
-        prelude::{Forever, ProcessorBuilder},
-        util::resolve_test_bin,
-    };
+    use styx_core::errors::UnknownError;
+    use styx_core::hooks::{CoreHandle, StyxHook};
+    use styx_core::prelude::{Forever, ProcessorBuilder};
+    use styx_core::util::resolve_test_bin;
     use test_case::test_case;
+
+    use super::*;
 
     #[test_case("adds.bin")]
     #[test_case("addv.bin")]

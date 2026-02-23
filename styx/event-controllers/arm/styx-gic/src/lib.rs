@@ -111,11 +111,9 @@
 use binary_heap_plus::{BinaryHeap, MinComparator};
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
-use styx_core::{
-    arch::arm::ArmRegister,
-    event_controller::{ActivateIRQnError, InterruptExecuted},
-    prelude::*,
-};
+use styx_core::arch::arm::ArmRegister;
+use styx_core::event_controller::{ActivateIRQnError, InterruptExecuted};
+use styx_core::prelude::*;
 use thiserror::Error;
 use tracing::{debug, error, trace};
 

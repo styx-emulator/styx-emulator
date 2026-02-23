@@ -56,20 +56,17 @@ mod pc_manager;
 pub use generator_helper::{GeneratorHelp, GeneratorHelper, CONTEXT_OPTION_LEN};
 pub use hexagon::backend::HexagonPcodeBackend;
 pub(crate) use pc_manager::{ArchPcManager, PcManager};
+use styx_cpu_type::arch::backends::ArchVariant;
+use styx_cpu_type::arch::{self};
+use styx_cpu_type::ArchEndian;
 use styx_pcode::sla::{SlaSpec, SlaUserOps};
 use styx_pcode_translator::sla::SlaRegisters;
 use styx_processor::cpu::CpuBackend;
 
-use crate::{
-    call_other::{CallOtherManager, UninitCallOtherManager},
-    pcode_gen::{GhidraPcodeGenerator, MmuLoader},
-    register_manager::RegisterManager,
-    PcodeBackend,
-};
-use styx_cpu_type::{
-    arch::{self, backends::ArchVariant},
-    ArchEndian,
-};
+use crate::call_other::{CallOtherManager, UninitCallOtherManager};
+use crate::pcode_gen::{GhidraPcodeGenerator, MmuLoader};
+use crate::register_manager::RegisterManager;
+use crate::PcodeBackend;
 
 /// "Being built" Arch Spec for architecture builders to modify. After constructing and modifying
 /// with arch spec, [build_arch_spec()] will convert to an [ArchSpec].

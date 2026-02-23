@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! Maps the various Ppc32 architecture variants
 
+use derive_more::Display;
+
 use super::gdb_targets::{Mpc8xxTargetDescription, Ppc4xxTargetDescription};
 use super::SprRegister;
 use crate::arch::ppc32::{Ppc32Register, SpecialPpc32Register};
 use crate::arch::{Arch, ArchitectureDef, ArchitectureVariant, CpuRegisterBank};
-use derive_more::Display;
 
 /// Pc, Rn, Cr, Lr, Xer, Ctr, and Msr
 const GENERAL_REGISTERS: &[Ppc32Register] = &[

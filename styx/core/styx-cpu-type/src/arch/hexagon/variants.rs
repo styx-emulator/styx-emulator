@@ -1,15 +1,13 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! Maps the various hexagon architecture variants
-use super::{
-    gdb_targets::{
-        HexagonCpuTargetDescription, HEXAGON_CORE_CPU_REGISTER_MAP,
-        HEXAGON_CORE_HVX_CPU_REGISTER_MAP,
-    },
-    HexagonRegister,
-};
-use crate::arch::{Arch, ArchitectureDef, ArchitectureVariant, CpuRegister, CpuRegisterBank};
 use derive_more::Display;
 use styx_sync::lazy_static;
+
+use super::gdb_targets::{
+    HexagonCpuTargetDescription, HEXAGON_CORE_CPU_REGISTER_MAP, HEXAGON_CORE_HVX_CPU_REGISTER_MAP,
+};
+use super::HexagonRegister;
+use crate::arch::{Arch, ArchitectureDef, ArchitectureVariant, CpuRegister, CpuRegisterBank};
 
 lazy_static! {
     pub static ref HEXAGON_DEST_PREDICATES: [CpuRegister; 4] = [

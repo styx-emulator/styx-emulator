@@ -6,11 +6,11 @@ mod enum_mirror;
 
 use proc_macro::TokenStream;
 use quote::{format_ident, quote, ToTokens};
+use syn::parse::{Parse, ParseStream, Parser};
+use syn::punctuated::Punctuated;
 use syn::{
-    parse::{Parse, ParseStream, Parser},
-    parse_macro_input, parse_quote,
-    punctuated::Punctuated,
-    Attribute, Data, DeriveInput, Fields, Ident, LitStr, Meta, Path, Token,
+    parse_macro_input, parse_quote, Attribute, Data, DeriveInput, Fields, Ident, LitStr, Meta,
+    Path, Token,
 };
 
 /// styx_event attribute - proceural macro for creating new events. Used in

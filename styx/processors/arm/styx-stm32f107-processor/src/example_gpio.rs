@@ -10,9 +10,8 @@
 //! STM32F107xx advanced Arm®-based 32-bit MCUs.
 //! # Resources:
 //! - [Technical Reference Manual](https://www.st.com/resource/en/reference_manual/rm0008-stm32f101xx-stm32f102xx-stm32f103xx-stm32f105xx-and-stm32f107xx-advanced-armbased-32bit-mcus-stmicroelectronics.pdf)
-use tracing::{debug, info};
-
 use styx_core::prelude::*;
+use tracing::{debug, info};
 
 pub mod gpio_constants {
     /// Address constants for GPIO ports.
@@ -261,8 +260,9 @@ pub mod gpio_constants {
 } // End gpio_constants
 
 pub mod pin {
-    use super::gpio_constants::pindefs;
     use styx_core::util::{bit_range, high_low_u32};
+
+    use super::gpio_constants::pindefs;
 
     #[derive(Default, Clone, Copy, PartialEq, Eq, Debug)]
     pub struct Pin {
@@ -545,20 +545,15 @@ pub mod pin {
 } // end mod pin
 
 pub mod port {
-    use super::super::example_gpio::{
-        gpio_constants::{
-            regdefs::{BRR, BSRR, LCKR},
-            *,
-        },
-        pin::*,
-        reg::Reg,
-    };
-    use styx_core::{
-        hooks::StyxHook,
-        prelude::*,
-        tracebus::{strace, MemWriteEvent, TraceEventType},
-    };
+    use styx_core::hooks::StyxHook;
+    use styx_core::prelude::*;
+    use styx_core::tracebus::{strace, MemWriteEvent, TraceEventType};
     use tracing::{debug, info, warn};
+
+    use super::super::example_gpio::gpio_constants::regdefs::{BRR, BSRR, LCKR};
+    use super::super::example_gpio::gpio_constants::*;
+    use super::super::example_gpio::pin::*;
+    use super::super::example_gpio::reg::Reg;
 
     pub struct Port {
         // pub ptdef: GPIOPort;

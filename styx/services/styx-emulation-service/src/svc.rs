@@ -3,14 +3,11 @@
 
 use std::thread::JoinHandle;
 use std::time::Duration;
+
 use styx_core::errors::{StyxMachineError, UnknownError};
-use styx_core::grpc::{
-    emulation::{
-        single_emulation_service_server::SingleEmulationService, StartSingleEmulationRequest,
-        StartSingleEmulationResponse,
-    },
-    utils::{Empty, EmulationState, ProcessorInfo, ResponseStatus},
-};
+use styx_core::grpc::emulation::single_emulation_service_server::SingleEmulationService;
+use styx_core::grpc::emulation::{StartSingleEmulationRequest, StartSingleEmulationResponse};
+use styx_core::grpc::utils::{Empty, EmulationState, ProcessorInfo, ResponseStatus};
 use styx_core::prelude::Forever;
 use styx_core::processor::*;
 use styx_core::sync::sync::RwLock;

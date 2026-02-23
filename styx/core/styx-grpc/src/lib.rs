@@ -104,10 +104,9 @@ pub mod typhunix_interop;
 pub mod utils;
 pub mod workspace;
 
-pub use typhunix_interop::i64_addr_deser_hex_str8;
-pub use typhunix_interop::i64_addr_ser_hex_str8;
-pub use typhunix_interop::u64_addr_deser_hex_str8;
-pub use typhunix_interop::u64_addr_ser_hex_str8;
+pub use typhunix_interop::{
+    i64_addr_deser_hex_str8, i64_addr_ser_hex_str8, u64_addr_deser_hex_str8, u64_addr_ser_hex_str8,
+};
 
 /// Try to determine the type of error from the tonic [Status] which
 /// occurred, for example, while reading a stream of rpc / grpc messages.

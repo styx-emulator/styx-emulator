@@ -8,31 +8,27 @@
 //!
 //! Known Bugs: Occasionally the space to send a uart character freezes everything.
 //!
-use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
-use ratatui::layout::{Constraint, Direction, Layout};
-use ratatui::style::{Color, Style, Stylize};
-use ratatui::widgets::Wrap;
-use ratatui::{
-    buffer::Buffer,
-    layout::Rect,
-    symbols::border,
-    text::{Line, Text},
-    widgets::{Block, Paragraph, Widget},
-    DefaultTerminal, Frame,
-};
 use std::io;
 use std::net::TcpStream;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use styx_emulator::core::executor::DefaultExecutor;
-use tracing::info;
-use tui_logger::{TuiLoggerLevelOutput, TuiLoggerWidget};
 
+use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
+use ratatui::buffer::Buffer;
+use ratatui::layout::{Constraint, Direction, Layout, Rect};
+use ratatui::style::{Color, Style, Stylize};
+use ratatui::symbols::border;
+use ratatui::text::{Line, Text};
+use ratatui::widgets::{Block, Paragraph, Widget, Wrap};
+use ratatui::{DefaultTerminal, Frame};
 use styx_emulator::arch::ppc32::Ppc32Register;
+use styx_emulator::core::executor::DefaultExecutor;
 use styx_emulator::core::util::resolve_test_bin;
 use styx_emulator::peripheral_clients::uart::UartClient;
 use styx_emulator::prelude::*;
 use styx_emulator::processors::ppc::ppc4xx::PowerPC405Builder;
+use tracing::info;
+use tui_logger::{TuiLoggerLevelOutput, TuiLoggerWidget};
 
 pub mod ppc32_prelude {
     pub use styx_emulator::arch::ppc32::Ppc32Register as Reg;

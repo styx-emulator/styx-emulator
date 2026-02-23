@@ -14,33 +14,24 @@
 //! for an explanation, see `support_breakpoints` in the source for an example.
 //! There is also discussion
 //! [`here`](https://github.com/daniel5151/inlinable-dyn-extension-traits/blob/master/writeup.md)
-use crate::{
-    event_loop::{self, RunEvent},
-    mem_watch::{Access, MemHookCache},
-    GDBOptions, StepIRQs,
-};
-use gdbstub::{
-    common::Signal,
-    target::{
-        self,
-        ext::breakpoints::{HwWatchpointOps, SwBreakpointOps, WatchKind},
-        TargetError, TargetResult,
-    },
-};
+use std::marker::PhantomData;
+use std::time::Instant;
+
+use gdbstub::common::Signal;
+use gdbstub::target::ext::breakpoints::{HwWatchpointOps, SwBreakpointOps, WatchKind};
+use gdbstub::target::{self, TargetError, TargetResult};
 use num_traits::{FromPrimitive, ToPrimitive};
-use std::{marker::PhantomData, time::Instant};
-use styx_core::{
-    cpu::{
-        arch::{CpuRegister, GdbRegistersHelper},
-        ArchEndian, TargetExitReason,
-    },
-    executor::Delta,
-    hooks::CodeHook,
-};
-use styx_core::{hooks::MemoryWriteHook, prelude::*};
+use styx_core::cpu::arch::{CpuRegister, GdbRegistersHelper};
+use styx_core::cpu::{ArchEndian, TargetExitReason};
+use styx_core::executor::Delta;
+use styx_core::hooks::{CodeHook, MemoryWriteHook};
+use styx_core::prelude::*;
 use tracing::{debug, error, info, trace, warn};
 
 use super::breakpoint_manager::BreakpointManager;
+use crate::event_loop::{self, RunEvent};
+use crate::mem_watch::{Access, MemHookCache};
+use crate::{GDBOptions, StepIRQs};
 
 /// This method is called via target emulation hooks when a code breakpoint
 /// is hit via target software.

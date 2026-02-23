@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use std::sync::Arc;
 use std::time::Duration;
-use styx_core::cpu::arch::ppc32::Ppc32Register;
 
+use styx_core::cpu::arch::ppc32::Ppc32Register;
 use styx_core::hooks::StyxHook;
 use styx_core::prelude::log::debug;
-use styx_core::prelude::ProcessorBuilder;
-use styx_core::prelude::*;
+use styx_core::prelude::{ProcessorBuilder, *};
 use styx_core::util::logging::init_logging;
 use styx_core::util::resolve_test_bin;
 use styx_ppc4xx_processor::PowerPC405Builder;

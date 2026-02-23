@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use std::sync::atomic::{AtomicBool, Ordering};
-use styx_core::{
-    arch::{
-        ppc32::{gdb_targets::Ppc4xxTargetDescription, variants::Ppc405},
-        RegisterValue,
-    },
-    core::builder::BuildProcessorImplArgs,
-    prelude::*,
-};
+
+use styx_core::arch::ppc32::gdb_targets::Ppc4xxTargetDescription;
+use styx_core::arch::ppc32::variants::Ppc405;
+use styx_core::arch::RegisterValue;
+use styx_core::core::builder::BuildProcessorImplArgs;
+use styx_core::prelude::*;
 use styx_plugins::gdb::StepIRQs;
 
 /// Dummy Event Controller impl that stores if `next()` was called.

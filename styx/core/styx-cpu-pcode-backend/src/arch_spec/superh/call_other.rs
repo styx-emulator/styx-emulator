@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use styx_pcode::pcode::VarnodeData;
-
 use log::debug;
-use styx_processor::{cpu::CpuBackend, event_controller::EventController, memory::Mmu};
+use styx_pcode::pcode::VarnodeData;
+use styx_processor::cpu::CpuBackend;
+use styx_processor::event_controller::EventController;
+use styx_processor::memory::Mmu;
 
-use crate::{
-    call_other::{CallOtherCallback, CallOtherCpu, CallOtherHandleError},
-    PCodeStateChange,
-};
+use crate::call_other::{CallOtherCallback, CallOtherCpu, CallOtherHandleError};
+use crate::PCodeStateChange;
 
 /// `Sleep_Standby` instruction
 ///

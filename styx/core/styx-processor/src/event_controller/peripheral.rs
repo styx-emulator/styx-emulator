@@ -4,9 +4,10 @@ use log::debug;
 use static_assertions::assert_obj_safe;
 use styx_errors::UnknownError;
 
-use crate::{cpu::CpuBackend, memory::Mmu, processor::BuildingProcessor};
-
 use super::{Delta, EventControllerImpl, ExceptionNumber};
+use crate::cpu::CpuBackend;
+use crate::memory::Mmu;
+use crate::processor::BuildingProcessor;
 
 assert_obj_safe!(Peripheral);
 

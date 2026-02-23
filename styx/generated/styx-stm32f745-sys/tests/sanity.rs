@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use styx_stm32f745_sys::{
-    generic::{FromBytes, RegisterSpec},
-    uart4,
-};
+use styx_stm32f745_sys::generic::{FromBytes, RegisterSpec};
+use styx_stm32f745_sys::uart4;
 
 const UART_SIZE: usize = std::mem::size_of::<uart4::RegisterBlock>();
 #[test]

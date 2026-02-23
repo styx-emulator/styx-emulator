@@ -2,22 +2,17 @@
 //! Stub Emulation for STM32F107
 
 use derivative::Derivative;
-use styx_core::{
-    core::builder::{BuildProcessorImplArgs, ProcessorImpl},
-    cpu::{
-        arch::arm::{ArmRegister, ArmVariants},
-        PcodeBackend,
-    },
-    memory::{DummyTlb, HasRegions},
-    prelude::*,
-};
+use styx_core::core::builder::{BuildProcessorImplArgs, ProcessorImpl};
+use styx_core::cpu::arch::arm::{ArmRegister, ArmVariants};
+use styx_core::cpu::PcodeBackend;
+use styx_core::memory::{DummyTlb, HasRegions};
+use styx_core::prelude::*;
 use styx_nvic::Nvic;
 use styx_spi::{SPIController, SpiPort};
-use thiserror::Error;
-use tracing::{debug, info};
-
 #[allow(unused_imports)] // stm32f107 sys
 use styx_stm32f107_sys as stm32f107_sys;
+use thiserror::Error;
+use tracing::{debug, info};
 
 pub mod example_gpio;
 mod i2c;

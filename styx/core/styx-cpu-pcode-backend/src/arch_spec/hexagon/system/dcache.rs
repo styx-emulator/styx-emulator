@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use derive_more::FromStr;
 use log::debug;
-use styx_pcode::{pcode::VarnodeData, sla::SlaUserOps};
+use styx_pcode::pcode::VarnodeData;
+use styx_pcode::sla::SlaUserOps;
 use styx_pcode_translator::sla::HexagonUserOps;
-use styx_processor::{cpu::CpuBackend, event_controller::EventController, memory::Mmu};
+use styx_processor::cpu::CpuBackend;
+use styx_processor::event_controller::EventController;
+use styx_processor::memory::Mmu;
 
-use crate::{
-    arch_spec::{ArchSpecBuilder, HexagonPcodeBackend},
-    call_other::{CallOtherCallback, CallOtherCpu, CallOtherHandleError},
-    PCodeStateChange,
-};
+use crate::arch_spec::{ArchSpecBuilder, HexagonPcodeBackend};
+use crate::call_other::{CallOtherCallback, CallOtherCpu, CallOtherHandleError};
+use crate::PCodeStateChange;
 
 // Data cache
 

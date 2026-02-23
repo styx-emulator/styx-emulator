@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::styx_cpu::StyxCpuBackendError;
-use crate::StyxMemoryError;
-use crate::UnknownError;
-use goblin::error::Error as GoblinError;
 use std::io;
+
+use goblin::error::Error as GoblinError;
+
+use crate::styx_cpu::StyxCpuBackendError;
+use crate::{StyxMemoryError, UnknownError};
 
 #[derive(Debug, thiserror::Error)]
 pub enum StyxLoaderError {

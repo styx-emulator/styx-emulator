@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use styx_errors::UnknownError;
 
-use crate::{core::ProcessorCore, cpu::ExecutionReport};
-
 use super::ExecutorImpl;
+use crate::core::ProcessorCore;
+use crate::cpu::ExecutionReport;
 
 /// Executor that handles events after every instruction.
 ///

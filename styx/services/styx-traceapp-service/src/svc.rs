@@ -1,37 +1,32 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! `gRPC` service for for trace execution analysis
 
+use std::error::Error;
+use std::time::Duration;
+
 use emulation_registry_service::wrapper::EmulationRegistryServiceWrapper;
-use std::{error::Error, time::Duration};
 use styx_core::errors::styx_grpc::{env_or_error, ApplicationError};
-use styx_core::grpc::{
-    args::{trace_app_session_args::TraceMode, EmulationArgs, TraceAppSessionArgs},
-    emulation_registry::StartTraceExecutionRequest,
-    traceapp::{
-        trace_app_session_service_server::*, AppSession, InitializeTraceRequest, ListResponse,
-        SessionInfo, StartTraceAppSessionResponse, VariableSnapshot, VariableSnapshotRequest,
-        VariableSnapshots,
-    },
-    typhunix_interop::symbolic::ProgramIdentifier,
-    utils::{Empty, EmuMetadata, EmulationState, ResponseStatus, Token},
-    workspace::{TraceSession, TraceSessionState},
+use styx_core::grpc::args::trace_app_session_args::TraceMode;
+use styx_core::grpc::args::{EmulationArgs, TraceAppSessionArgs};
+use styx_core::grpc::emulation_registry::StartTraceExecutionRequest;
+use styx_core::grpc::traceapp::trace_app_session_service_server::*;
+use styx_core::grpc::traceapp::{
+    AppSession, InitializeTraceRequest, ListResponse, SessionInfo, StartTraceAppSessionResponse,
+    VariableSnapshot, VariableSnapshotRequest, VariableSnapshots,
 };
+use styx_core::grpc::typhunix_interop::symbolic::ProgramIdentifier;
+use styx_core::grpc::utils::{Empty, EmuMetadata, EmulationState, ResponseStatus, Token};
+use styx_core::grpc::workspace::{TraceSession, TraceSessionState};
 use styx_core::sync::sync::Arc;
 use styx_dbmodel::api::prelude::*;
-use styx_trace_tools::{
-    send_state_change, service_err,
-    svcutil::re_write_request,
-    trace_sessions::{
-        oob_pri_queue::{OOBRequest, OOBRequestQueue},
-        session::Session,
-        session_mgr::{SessionManager, TraceSessionSync},
-    },
-};
+use styx_trace_tools::svcutil::re_write_request;
+use styx_trace_tools::trace_sessions::oob_pri_queue::{OOBRequest, OOBRequestQueue};
+use styx_trace_tools::trace_sessions::session::Session;
+use styx_trace_tools::trace_sessions::session_mgr::{SessionManager, TraceSessionSync};
+use styx_trace_tools::{send_state_change, service_err};
 use thiserror::Error;
-use tokio::{
-    sync::mpsc::{self, Sender},
-    time::Instant,
-};
+use tokio::sync::mpsc::{self, Sender};
+use tokio::time::Instant;
 use tokio_stream::wrappers::ReceiverStream;
 use tonic::{Response, Status};
 use tracing::{debug, error, info, trace, warn};

@@ -8,7 +8,6 @@ pub mod gdb_targets;
 mod registers;
 pub mod variants;
 pub use registers::{SpecialSuperHRegister, SuperHRegister};
-
 // for enum dispatch
 use variants::*;
 

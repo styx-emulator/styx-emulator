@@ -4,10 +4,8 @@ use num_traits::PrimInt;
 use styx_errors::styx_memory::{StyxMemoryError, StyxMemorySnaphotError};
 pub use styx_memory_type::{MemoryOperation, MemoryPermissions};
 use styx_sync::cell::UnsafeCell;
-use styx_sync::sync::{
-    atomic::{AtomicU64, Ordering},
-    Arc, RwLock,
-};
+use styx_sync::sync::atomic::{AtomicU64, Ordering};
+use styx_sync::sync::{Arc, RwLock};
 use zstd::{decode_all, encode_all};
 
 /// Container struct representing multiple [`MemoryRegion`]'s.
@@ -1544,9 +1542,10 @@ pub type MemoryCallback = fn() -> Result<(), CallbackError>;
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use styx_memory_type::MemoryPermissions as Perms;
     use test_case::test_case;
+
+    use super::*;
 
     #[test_case(0x0, 0x1; "base too small")]
     #[test_case(0x1000, 0x0; "size is zero")]

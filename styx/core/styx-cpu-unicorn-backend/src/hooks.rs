@@ -8,10 +8,12 @@
 //!
 //! Adding a hook to a CPU backend returns a HookToken
 //! Removing a hook takes a HookToken as input
-use derivative::Derivative;
 use std::collections::HashMap;
 use std::fmt::Debug;
-use styx_errors::{anyhow::anyhow, UnknownError};
+
+use derivative::Derivative;
+use styx_errors::anyhow::anyhow;
+use styx_errors::UnknownError;
 use styx_processor::hooks::{DeleteHookError, HookToken, StyxHook};
 
 use crate::CorePointers;

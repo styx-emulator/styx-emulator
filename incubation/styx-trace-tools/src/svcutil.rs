@@ -3,9 +3,9 @@
 //! Service utils that span multiple services
 
 use styx_core::errors::styx_grpc::ApplicationError;
-use styx_core::grpc::{
-    args::ProgramIdentifierArgs, traceapp::InitializeTraceRequest, typhunix_interop::ConnectMessage,
-};
+use styx_core::grpc::args::ProgramIdentifierArgs;
+use styx_core::grpc::traceapp::InitializeTraceRequest;
+use styx_core::grpc::typhunix_interop::ConnectMessage;
 use styx_dbmodel::model::prelude::*;
 use tracing::error;
 use workspace_service::cli_util as ws_svc_cli;

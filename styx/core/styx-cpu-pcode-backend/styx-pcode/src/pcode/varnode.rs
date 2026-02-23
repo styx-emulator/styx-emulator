@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use std::fmt::{Debug, Display};
+
 use styx_cpu_type::ArchEndian;
 use styx_sync::sync::Arc;
 

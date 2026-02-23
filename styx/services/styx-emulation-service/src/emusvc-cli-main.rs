@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use clap::{Args, Parser, Subcommand};
 use std::error::Error;
 use std::fmt::Debug;
-use styx_core::grpc::{
-    emulation::{
-        single_emulation_service_client::SingleEmulationServiceClient, StartSingleEmulationRequest,
-    },
-    utils::Empty,
-};
-use styx_core::util::{logging::init_logging, traits::HasUrl};
+
+use clap::{Args, Parser, Subcommand};
+use styx_core::grpc::emulation::single_emulation_service_client::SingleEmulationServiceClient;
+use styx_core::grpc::emulation::StartSingleEmulationRequest;
+use styx_core::grpc::utils::Empty;
+use styx_core::util::logging::init_logging;
+use styx_core::util::traits::HasUrl;
 use tonic::Request;
 
 #[derive(Debug, Subcommand)]

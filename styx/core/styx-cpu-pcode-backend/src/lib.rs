@@ -10,46 +10,40 @@ mod pcode_gen;
 mod register_manager;
 mod types;
 
-use crate::get_pcode::{fetch_pcode, is_branching_instruction};
-use backend_helper::BackendHelper;
-use register_manager::RegisterCallbackCpu;
-use smallvec::smallvec;
+use std::collections::BTreeMap;
 
-use self::{
-    hooks::HookManager,
-    memory::{sized_value::SizedValue, space_manager::SpaceManager},
-    pcode_gen::GhidraPcodeGenerator,
-    register_manager::RegisterManager,
-};
 pub use arch_spec::HexagonPcodeBackend;
 use arch_spec::{build_arch_spec, ArchPcManager, GeneratorHelp, GeneratorHelper, PcManager};
+use backend_helper::BackendHelper;
 use call_other::CallOtherManager;
 use derivative::Derivative;
 use log::trace;
-use memory::{mmu_store::MmuSpace, space_manager::VarnodeError};
+use memory::mmu_store::MmuSpace;
+use memory::space_manager::VarnodeError;
 use pcode_gen::GeneratePcodeError;
-use std::collections::BTreeMap;
-use styx_cpu_type::{
-    arch::{
-        arm::SpecialArmRegister,
-        backends::{ArchRegister, ArchVariant, SpecialArchRegister},
-        ArchitectureDef, RegisterValue,
-    },
-    Arch, ArchEndian, TargetExitReason,
-};
-use styx_errors::{
-    anyhow::{anyhow, Context},
-    styx_cpu::StyxCpuBackendError,
-    UnknownError,
-};
+use register_manager::RegisterCallbackCpu;
+use smallvec::smallvec;
+use styx_cpu_type::arch::arm::SpecialArmRegister;
+use styx_cpu_type::arch::backends::{ArchRegister, ArchVariant, SpecialArchRegister};
+use styx_cpu_type::arch::{ArchitectureDef, RegisterValue};
+use styx_cpu_type::{Arch, ArchEndian, TargetExitReason};
+use styx_errors::anyhow::{anyhow, Context};
+use styx_errors::styx_cpu::StyxCpuBackendError;
+use styx_errors::UnknownError;
 use styx_pcode::pcode::{Pcode, VarnodeData};
-use styx_processor::{
-    core::{builder::BuildProcessorImplArgs, ExceptionBehavior},
-    cpu::{CpuBackend, ExecutionReport, ReadRegisterError, WriteRegisterError},
-    event_controller::{EventController, ExceptionNumber},
-    memory::Mmu,
-};
+use styx_processor::core::builder::BuildProcessorImplArgs;
+use styx_processor::core::ExceptionBehavior;
+use styx_processor::cpu::{CpuBackend, ExecutionReport, ReadRegisterError, WriteRegisterError};
+use styx_processor::event_controller::{EventController, ExceptionNumber};
+use styx_processor::memory::Mmu;
 use types::*;
+
+use self::hooks::HookManager;
+use self::memory::sized_value::SizedValue;
+use self::memory::space_manager::SpaceManager;
+use self::pcode_gen::GhidraPcodeGenerator;
+use self::register_manager::RegisterManager;
+use crate::get_pcode::{fetch_pcode, is_branching_instruction};
 
 /// vibe based default, should probably be more precisely set at some point in the future
 ///
@@ -552,14 +546,12 @@ impl CpuBackend for PcodeBackend {
 #[cfg(feature = "arch_ppc")]
 mod tests {
     use styx_cpu_type::arch::ppc32::{Ppc32Register, Ppc32Variants};
+    use styx_processor::cpu::CpuBackendExt;
+    use styx_processor::hooks::{CoreHandle, Hookable, StyxHook};
+    use styx_processor::memory::helpers::WriteExt;
     use tap::Conv;
 
     use super::*;
-    use styx_processor::{
-        cpu::CpuBackendExt,
-        hooks::{CoreHandle, Hookable, StyxHook},
-        memory::helpers::WriteExt,
-    };
 
     /// test a simple register write and read
     #[test]
@@ -820,20 +812,14 @@ mod tests {
 #[cfg(feature = "arch_arm")]
 mod arm_tests {
     use keystone_engine::Keystone;
-    use styx_cpu_type::{
-        arch::arm::{ArmRegister, ArmVariants},
-        Arch, ArchEndian, TargetExitReason,
-    };
-    use styx_processor::{
-        cpu::{CpuBackend, CpuBackendExt, ExecutionReport},
-        event_controller::EventController,
-        hooks::{CoreHandle, Hookable, MemFaultData, Resolution, StyxHook},
-        memory::{
-            helpers::{ReadExt, WriteExt},
-            memory_region::MemoryRegion,
-            DummyTlb, MemoryBackend, MemoryPermissions, Mmu,
-        },
-    };
+    use styx_cpu_type::arch::arm::{ArmRegister, ArmVariants};
+    use styx_cpu_type::{Arch, ArchEndian, TargetExitReason};
+    use styx_processor::cpu::{CpuBackend, CpuBackendExt, ExecutionReport};
+    use styx_processor::event_controller::EventController;
+    use styx_processor::hooks::{CoreHandle, Hookable, MemFaultData, Resolution, StyxHook};
+    use styx_processor::memory::helpers::{ReadExt, WriteExt};
+    use styx_processor::memory::memory_region::MemoryRegion;
+    use styx_processor::memory::{DummyTlb, MemoryBackend, MemoryPermissions, Mmu};
     use styx_sync::sync::{Arc, Mutex};
 
     use crate::PcodeBackend;
@@ -1385,7 +1371,8 @@ mod arm_tests {
 #[cfg(feature = "arch_bfin")]
 mod blackfin_tests {
     use styx_cpu_type::arch::blackfin::{BlackfinRegister, BlackfinVariants};
-    use styx_processor::{cpu::CpuBackendExt, memory::helpers::WriteExt};
+    use styx_processor::cpu::CpuBackendExt;
+    use styx_processor::memory::helpers::WriteExt;
 
     use super::*;
 
@@ -1423,7 +1410,8 @@ mod blackfin_tests {
 mod mips32_tests {
     use keystone_engine::Keystone;
     use styx_cpu_type::arch::mips32::{Mips32MetaVariants, Mips32Register, Mips32Variants};
-    use styx_processor::{cpu::CpuBackendExt, memory::helpers::WriteExt};
+    use styx_processor::cpu::CpuBackendExt;
+    use styx_processor::memory::helpers::WriteExt;
     use tap::Conv;
 
     use super::*;

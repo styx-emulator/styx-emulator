@@ -95,11 +95,12 @@ impl From<CoProcessor> for UcArmCoprocessorRegisterAction {
 #[cfg(test)]
 #[allow(clippy::items_after_test_module)]
 mod unicorn_arm_coproc_access_tests {
-    use super::*;
-    use crate::UnicornBackend;
     use styx_cpu_type::arch::arm::{arm_coproc_registers, ArmVariants};
     use styx_cpu_type::arch::{Arch, ArchEndian};
     use styx_processor::cpu::CpuBackendExt;
+
+    use super::*;
+    use crate::UnicornBackend;
 
     #[test]
     #[cfg_attr(miri, ignore)]

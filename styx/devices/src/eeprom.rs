@@ -13,10 +13,9 @@
 //!
 use std::borrow::Cow;
 
-use styx_core::{
-    peripheral_clients::spi::SPIDevice,
-    prelude::{log::trace, *},
-};
+use styx_core::peripheral_clients::spi::SPIDevice;
+use styx_core::prelude::log::trace;
+use styx_core::prelude::*;
 use thiserror::Error;
 use tracing::{error, warn};
 

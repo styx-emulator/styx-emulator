@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! Caches for symbol lookups
-use crate::grpc_async_client::{
-    data_types_vec, programs_id_vec, programs_vec, symbols_vec, GrpcStatus,
-};
 use std::collections::HashMap;
+
 use styx_emulator::grpc::typhunix_interop::symbolic::{
     DataType, Function, Program, ProgramFilter, ProgramIdentifier, Symbol,
 };
@@ -12,6 +10,10 @@ use styx_emulator::sync::{Arc, Mutex};
 use tokio::join;
 use tonic::Code;
 use tracing::warn;
+
+use crate::grpc_async_client::{
+    data_types_vec, programs_id_vec, programs_vec, symbols_vec, GrpcStatus,
+};
 
 pub trait FunctionCache: Send + Sync + 'static {
     // Funcations
@@ -346,10 +348,10 @@ pub async fn symbol_cache_from_server(
 
 #[cfg(test)]
 mod tests {
+    use serde_json::json;
     use styx_emulator::grpc::typhunix_interop::HasFunctions;
 
     use super::*;
-    use serde_json::json;
 
     #[test]
     fn test_function_contains() {

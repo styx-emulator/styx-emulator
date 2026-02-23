@@ -2,15 +2,15 @@
 //! Encapsulates `args/args.proto` messages, services, and supporting abstractions
 
 tonic::include_proto!("workspace");
+pub use prost_wkt_types::Timestamp;
+use styx_util::dtutil::UtcDateTime;
+use thiserror::Error;
+
 pub use super::args::*;
 pub use super::db::*;
 pub use super::emulation_registry::*;
 pub use super::symbolic::*;
 pub use super::utils::*;
-
-pub use prost_wkt_types::Timestamp;
-use styx_util::dtutil::UtcDateTime;
-use thiserror::Error;
 
 impl TraceAppSessRequest {
     pub fn trace_app_sessions(&self) -> &Vec<TraceAppSessionArgs> {
@@ -53,8 +53,9 @@ impl Workspace {
 }
 #[cfg(test)]
 mod tests {
-    use super::*;
     use log::debug;
+
+    use super::*;
 
     #[test]
     fn test_timestamp() -> Result<(), Box<dyn std::error::Error + 'static>> {

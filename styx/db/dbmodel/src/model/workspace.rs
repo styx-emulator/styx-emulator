@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use super::prelude::*;
 use sea_orm::entity::prelude::*;
+
+use super::prelude::*;
 
 type Message = Workspace;
 
@@ -39,10 +40,11 @@ impl From<Message> for Model {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use styx_core::util::logging::init_logging;
     #[allow(unused_imports)]
     use tracing::{debug, error, info, trace};
+
+    use super::*;
     pub type TestResult = Result<(), Box<dyn std::error::Error + 'static>>;
 
     #[test]

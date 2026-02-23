@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! `gRPC` service for for trace execution analysis
 
-use clap::Parser;
 use std::collections::HashMap;
+
+use clap::Parser;
 use styx_core::grpc::traceapp::trace_app_session_service_server::*;
 use styx_core::sync::sync::{Arc, Mutex};
 use styx_trace_tools::trace_sessions::session_mgr::SessionManager;

@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use super::{BlackfinRegister, SpecialBlackfinRegister};
-use crate::{
-    arch::{ArchitectureDef, ArchitectureVariant, CpuRegisterBank, GdbTargetDescriptionImpl},
-    Arch,
-};
 use derive_more::Display;
 use strum::IntoEnumIterator;
+
+use super::{BlackfinRegister, SpecialBlackfinRegister};
+use crate::arch::{
+    ArchitectureDef, ArchitectureVariant, CpuRegisterBank, GdbTargetDescriptionImpl,
+};
+use crate::Arch;
 
 /// [CpuRegisterBank] that includes all Blackfin registers.
 struct BlackfinStandardRegisters;

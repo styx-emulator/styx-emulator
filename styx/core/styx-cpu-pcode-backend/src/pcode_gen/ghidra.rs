@@ -1,35 +1,28 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::{
-    arch_spec::{GeneratorHelper, CONTEXT_OPTION_LEN},
-    get_pcode::GetPcodeError,
-    pcode_gen::GeneratePcodeError,
-    register_manager::RegisterHandleError,
-};
+use std::collections::HashMap;
 
 use derivative::Derivative;
 use log::{debug, trace, warn};
 use smallvec::SmallVec;
-use styx_cpu_type::{
-    arch::backends::{ArchRegister, ArchVariant},
-    ArchEndian,
-};
+use styx_cpu_type::arch::backends::{ArchRegister, ArchVariant};
+use styx_cpu_type::ArchEndian;
 use styx_errors::anyhow::anyhow;
-use styx_pcode::{
-    pcode::{Pcode, SpaceInfo, SpaceName, VarnodeData},
-    sla::SlaSpec,
-};
+use styx_pcode::pcode::{Pcode, SpaceInfo, SpaceName, VarnodeData};
+use styx_pcode::sla::SlaSpec;
+use styx_pcode_translator::sla::SlaRegisters;
 use styx_pcode_translator::{
-    sla::SlaRegisters, ContextOption, Loader, LoaderRequires, PcodeTranslator, PcodeTranslatorError,
+    ContextOption, Loader, LoaderRequires, PcodeTranslator, PcodeTranslatorError,
 };
-use styx_processor::{
-    cpu::CpuBackend,
-    event_controller::EventController,
-    memory::{helpers::ReadExt, MemoryOperationError, Mmu, MmuOpError, UnmappedMemoryError},
-};
-
-use std::collections::HashMap;
+use styx_processor::cpu::CpuBackend;
+use styx_processor::event_controller::EventController;
+use styx_processor::memory::helpers::ReadExt;
+use styx_processor::memory::{MemoryOperationError, Mmu, MmuOpError, UnmappedMemoryError};
 
 use super::HasPcodeGenerator;
+use crate::arch_spec::{GeneratorHelper, CONTEXT_OPTION_LEN};
+use crate::get_pcode::GetPcodeError;
+use crate::pcode_gen::GeneratePcodeError;
+use crate::register_manager::RegisterHandleError;
 
 /// Pcode generator implemented by ghidra's libsla.
 #[derive(Derivative)]
@@ -277,18 +270,15 @@ impl<T: CpuBackend> Loader for MmuLoader<T> {
 mod tests {
     use std::sync::Arc;
 
-    use styx_cpu_type::{arch::ppc32::Ppc32Variants, Arch};
-    use styx_processor::{
-        event_controller::DummyEventController,
-        memory::{
-            memory_region::MemoryRegion, physical::PhysicalMemoryVariant, MemoryBackend,
-            MemoryPermissions,
-        },
-    };
-
-    use crate::PcodeBackend;
+    use styx_cpu_type::arch::ppc32::Ppc32Variants;
+    use styx_cpu_type::Arch;
+    use styx_processor::event_controller::DummyEventController;
+    use styx_processor::memory::memory_region::MemoryRegion;
+    use styx_processor::memory::physical::PhysicalMemoryVariant;
+    use styx_processor::memory::{MemoryBackend, MemoryPermissions};
 
     use super::*;
+    use crate::PcodeBackend;
 
     /// Load 16 bytes from memory with plenty of room to spare.
     #[test]

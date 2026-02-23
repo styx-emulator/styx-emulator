@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use styx_stm32f405_sys::{
-    generic::{FromBytes, RegisterSpec},
-    uart4,
-};
+use styx_stm32f405_sys::generic::{FromBytes, RegisterSpec};
+use styx_stm32f405_sys::uart4;
 
 #[test]
 #[cfg_attr(not(feature = "uart4"), ignore)]

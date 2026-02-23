@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! [ProcessorFactory]: Create a [Processor] based on input parameters
 
-use crate::svc::ProcessorProcess;
-use crate::svc_executor::ServiceExecutor;
-use styx_core::cpu::{arch::blackfin::BlackfinVariants, arch::ppc32::Ppc32Variants, ArchEndian};
+use styx_core::cpu::arch::blackfin::BlackfinVariants;
+use styx_core::cpu::arch::ppc32::Ppc32Variants;
+use styx_core::cpu::ArchEndian;
 use styx_core::errors::{StyxMachineError, UnknownError};
 use styx_core::executor::ExecutorImpl;
 use styx_core::grpc::args::{HasEmulationArgs, Target};
@@ -16,6 +16,9 @@ use styx_processors::arm::kinetis21::Kinetis21Builder;
 use styx_processors::arm::stm32f107::Stm32f107Builder;
 use styx_processors::bfin::blackfin::BlackfinBuilder;
 use styx_processors::ppc::powerquicci::Mpc8xxBuilder;
+
+use crate::svc::ProcessorProcess;
+use crate::svc_executor::ServiceExecutor;
 
 /// Fallback peripheral IPC port to use when not set with the `Processor` builder.
 ///

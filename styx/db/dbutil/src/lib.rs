@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use sea_orm::{ConnectOptions, ConnectionTrait, DatabaseConnection, Statement};
-use sea_orm::{Database, DbBackend, DbErr};
 use std::time::Duration;
+
+use sea_orm::{
+    ConnectOptions, ConnectionTrait, Database, DatabaseConnection, DbBackend, DbErr, Statement,
+};
 use styx_dbmigration::*;
 use testcontainers_modules::testcontainers::TestcontainersError;
 use thiserror::Error;
@@ -182,9 +184,10 @@ impl DbUrl {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use rand::{distributions::Alphanumeric, Rng};
     use std::path::Path;
+
+    use rand::distributions::Alphanumeric;
+    use rand::Rng;
     use styx_core::grpc::args::{
         EmuRunLimits, EmulationArgs, ProgramIdentifierArgs, RawEventLimits, RawLoaderArgs,
         RawTraceArgs, SymbolSearchOptions, Target, TracePluginArgs,
@@ -193,6 +196,8 @@ mod tests {
     use styx_core::util::dtutil::UtcDateTime;
     use styx_dbmodel::api::prelude::*;
     use styx_dbmodel::model::prelude::*;
+
+    use super::*;
     pub type TestResult = Result<(), Box<dyn std::error::Error + 'static>>;
     use styx_core::grpc::emulation_registry::{
         ArchIdentity, BackendIdentity, EndianIdentity, LoaderIdentity, VariantIdentity,

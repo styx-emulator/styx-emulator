@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: BSD-2-Clause
-#[allow(unused_imports)]
-use log::{debug, info};
 use std::env::var;
 use std::error::Error;
+
+#[allow(unused_imports)]
+use log::{debug, info};
 use styx_core::grpc::workspace::Workspace;
 use workspace_service::cli_util as ws_svc_cli;
 

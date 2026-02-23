@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use iset::IntervalMap;
-#[cfg(test)]
-use mockall::mock;
 use std::any::Any;
 use std::borrow::Cow;
 use std::collections::HashMap;
+
+use iset::IntervalMap;
+#[cfg(test)]
+use mockall::mock;
 use styx_cpu_type::arch::backends::ArchRegister;
 use styx_cpu_type::{Arch, ArchEndian};
 pub(crate) use styx_errors::styx_loader::StyxLoaderError;

@@ -3,22 +3,17 @@ use derive_more::FromStr;
 use log::trace;
 use styx_cpu_type::arch::hexagon::HexagonRegister;
 use styx_errors::anyhow::Context;
-use styx_pcode::{
-    pcode::{SpaceName, VarnodeData},
-    sla::SlaUserOps,
-};
+use styx_pcode::pcode::{SpaceName, VarnodeData};
+use styx_pcode::sla::SlaUserOps;
 use styx_pcode_translator::sla::HexagonUserOps;
-use styx_processor::{
-    cpu::{CpuBackend, CpuBackendExt},
-    event_controller::EventController,
-    memory::Mmu,
-};
+use styx_processor::cpu::{CpuBackend, CpuBackendExt};
+use styx_processor::event_controller::EventController;
+use styx_processor::memory::Mmu;
 
-use crate::{
-    arch_spec::{hexagon::system::regs::Ssr, ArchSpecBuilder, HexagonPcodeBackend},
-    call_other::{CallOtherCallback, CallOtherCpu, CallOtherHandleError},
-    PCodeStateChange,
-};
+use crate::arch_spec::hexagon::system::regs::Ssr;
+use crate::arch_spec::{ArchSpecBuilder, HexagonPcodeBackend};
+use crate::call_other::{CallOtherCallback, CallOtherCpu, CallOtherHandleError};
+use crate::PCodeStateChange;
 
 #[derive(Debug)]
 pub struct InterruptGenericStub {

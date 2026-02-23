@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! Null trace provider - a [TraceProvider] that does does not store events
 
-use crate::{mkpath, TraceError, TraceProvider, Traceable};
 use serde::{Deserialize, Serialize};
+
+use crate::{mkpath, TraceError, TraceProvider, Traceable};
 
 #[derive(Debug)]
 pub struct NullTracer {

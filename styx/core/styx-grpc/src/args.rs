@@ -7,12 +7,13 @@ pub const DEFAULT_IPC_PORT: u16 = 16000;
 
 tonic::include_proto!("args");
 
-use self::trace_app_session_args::TraceMode;
-pub use super::emulation_registry::SupportedConfig;
-use crate::{ToArgVec, Validator};
 use clap::{Parser, ValueEnum};
 use regex::{RegexSet, RegexSetBuilder};
 use styx_errors::styx_grpc::ApplicationError;
+
+use self::trace_app_session_args::TraceMode;
+pub use super::emulation_registry::SupportedConfig;
+use crate::{ToArgVec, Validator};
 
 impl Validator for EmulationArgs {
     fn is_valid(&self) -> bool {

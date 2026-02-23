@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! Encapsulates `traceapp.proto` messages, services, and supporting abstractions
 
+use styx_errors::styx_grpc::ApplicationError;
+
 use self::utils::EmuMetadata;
 pub use super::utils;
 use crate::args::{self, EmulationArgs, TraceAppSessionArgs};
-use styx_errors::styx_grpc::ApplicationError;
 tonic::include_proto!("traceapp");
 
 impl std::fmt::Display for EndOfEvents {

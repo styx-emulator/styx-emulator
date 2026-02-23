@@ -68,17 +68,17 @@
 //!     // continue building rest of processor
 //! }
 //! ```
+use std::any::TypeId;
+use std::pin::Pin;
+
+use as_any::{AsAny, Downcast};
+use async_trait::async_trait;
+use derivative::Derivative;
 use styx_core::errors::UnknownError;
 use styx_core::grpc::io::uart::uart_port_server::{UartPort, UartPortServer};
 use styx_core::grpc::io::uart::{self, RxData, TxData};
 use styx_core::prelude::*;
 use styx_core::sync::sync::Arc;
-
-use as_any::{AsAny, Downcast};
-use async_trait::async_trait;
-use derivative::Derivative;
-use std::any::TypeId;
-use std::pin::Pin;
 use thiserror::Error;
 use tokio::sync::broadcast;
 use tokio_stream::{Stream, StreamExt};

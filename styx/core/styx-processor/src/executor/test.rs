@@ -3,14 +3,15 @@ use std::sync::{Arc, Mutex};
 
 use styx_errors::UnknownError;
 
-use crate::{
-    core::ProcessorCore,
-    cpu::{CpuBackend, DummyBackend},
-    event_controller::{EventController, EventControllerImpl, Peripheral},
-    executor::{ConditionalExecutor, DefaultExecutor, Executor, ExecutorImpl, SingleStepExecutor},
-    memory::{physical::MemoryBackend, Mmu},
-    plugins::{Plugin, Plugins},
+use crate::core::ProcessorCore;
+use crate::cpu::{CpuBackend, DummyBackend};
+use crate::event_controller::{EventController, EventControllerImpl, Peripheral};
+use crate::executor::{
+    ConditionalExecutor, DefaultExecutor, Executor, ExecutorImpl, SingleStepExecutor,
 };
+use crate::memory::physical::MemoryBackend;
+use crate::memory::Mmu;
+use crate::plugins::{Plugin, Plugins};
 
 type SyncTicker = Arc<Mutex<Ticker>>;
 

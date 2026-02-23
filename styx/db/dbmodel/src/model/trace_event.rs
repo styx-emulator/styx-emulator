@@ -34,11 +34,12 @@ impl ActiveModelBehavior for ActiveModel {}
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use sea_orm::TryIntoModel;
     use styx_core::tracebus::{MemReadEvent, TRACE_EVENT_SIZE};
     #[allow(unused_imports)]
     use tracing::{debug, error, info, trace};
+
+    use super::*;
     pub type TestResult = Result<(), Box<dyn std::error::Error + 'static>>;
 
     #[test]

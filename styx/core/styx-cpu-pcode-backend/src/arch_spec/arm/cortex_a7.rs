@@ -2,15 +2,12 @@
 
 use std::str::FromStr;
 
-use crate::{
-    arch_spec::{
-        arm::{armv7_common, armv7a_common},
-        ArchSpecBuilder,
-    },
-    PcodeBackend,
-};
 use styx_pcode::sla::SlaUserOps;
 use styx_pcode_translator::sla::{Arm7Be, Arm7Le};
+
+use crate::arch_spec::arm::{armv7_common, armv7a_common};
+use crate::arch_spec::ArchSpecBuilder;
+use crate::PcodeBackend;
 
 pub fn build_le() -> ArchSpecBuilder<Arm7Le, PcodeBackend> {
     build()

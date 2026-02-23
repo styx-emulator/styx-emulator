@@ -1,46 +1,42 @@
 // SPDX-License-Identifier: BSD-2-Clause
+use std::any::Any;
+use std::marker::PhantomData;
+use std::path::PathBuf;
+use std::time::{Duration, Instant};
+use std::{fs, thread};
+
 use derivative::Derivative;
+use libafl::corpus::{CachedOnDiskCorpus, OnDiskCorpus};
+use libafl::events::SimpleEventManager;
+use libafl::executors::{ExitKind, InProcessExecutor};
+use libafl::feedbacks::{CrashFeedback, MaxMapFeedback, TimeFeedback};
+use libafl::generators::RandBytesGenerator;
+use libafl::inputs::{BytesInput, HasMutatorBytes};
 #[cfg(feature = "tui")]
 use libafl::monitors::tui::TuiMonitor;
+use libafl::mutators::{havoc_mutations, StdScheduledMutator};
+use libafl::observers::{CanTrack, HitcountsMapObserver, StdMapObserver, TimeObserver};
 #[cfg(not(feature = "tui"))]
 use libafl::prelude::SimpleMonitor;
-use libafl::{
-    corpus::{CachedOnDiskCorpus, OnDiskCorpus},
-    events::SimpleEventManager,
-    executors::{ExitKind, InProcessExecutor},
-    feedback_or,
-    feedbacks::{CrashFeedback, MaxMapFeedback, TimeFeedback},
-    generators::RandBytesGenerator,
-    inputs::{BytesInput, HasMutatorBytes},
-    mutators::{havoc_mutations, StdScheduledMutator},
-    observers::{CanTrack, HitcountsMapObserver, StdMapObserver, TimeObserver},
-    prelude::{AflMapFeedback, TimeoutFeedback},
-    schedulers::QueueScheduler,
-    stages::StdMutationalStage,
-    state::StdState,
-    Fuzzer, StdFuzzer,
-};
-
-use libafl_bolts::{current_nanos, rands::StdRand, tuples::tuple_list};
+use libafl::prelude::{AflMapFeedback, TimeoutFeedback};
+use libafl::schedulers::QueueScheduler;
+use libafl::stages::StdMutationalStage;
+use libafl::state::StdState;
+use libafl::{feedback_or, Fuzzer, StdFuzzer};
+use libafl_bolts::current_nanos;
+use libafl_bolts::rands::StdRand;
+use libafl_bolts::tuples::tuple_list;
 use rustc_hash::FxHashMap;
-use std::{any::Any, thread, time::Instant};
-use std::{fs, marker::PhantomData};
-use std::{path::PathBuf, time::Duration};
+use styx_core::cpu::ExecutionReport;
+use styx_core::executor::ExecutorImpl;
 use styx_core::plugins::Plugins;
-use styx_core::{
-    cpu::ExecutionReport,
-    tracebus::{
-        BaseTraceEvent, IPCTracer, TraceProvider, TracerReader, TracerReaderOptions, STRACE,
-    },
+use styx_core::prelude::*;
+use styx_core::tracebus::{
+    BaseTraceEvent, IPCTracer, TraceProvider, TracerReader, TracerReaderOptions, STRACE,
 };
-use styx_core::{executor::ExecutorImpl, prelude::*};
-use styx_sync::{
-    cell::UnsafeCell,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc,
-    },
-};
+use styx_sync::cell::UnsafeCell;
+use styx_sync::sync::atomic::{AtomicBool, Ordering};
+use styx_sync::sync::Arc;
 use thiserror::Error;
 use tracing::{debug, warn};
 

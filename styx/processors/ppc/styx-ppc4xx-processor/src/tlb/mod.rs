@@ -64,20 +64,18 @@ use cache::TlbCache32;
 )))]
 use cache::{SortedTlbCache, UnsortedRoundRobinTlbCache};
 use record::TlbRecord;
-use styx_core::errors::UnknownError;
-
-use styx_core::memory::{
-    MemoryOperation, TlbImpl, TlbProcessor, TlbTranslateError, TlbTranslateResult,
-};
-use styx_core::prelude::log::warn;
-use styx_core::prelude::*;
-
 #[cfg(all(
     target_arch = "x86_64",
     target_feature = "avx2",
     target_feature = "bmi1"
 ))]
 use simd_cache::{FastTlbCache4, FastTlbCache64, FastTlbCache8};
+use styx_core::errors::UnknownError;
+use styx_core::memory::{
+    MemoryOperation, TlbImpl, TlbProcessor, TlbTranslateError, TlbTranslateResult,
+};
+use styx_core::prelude::log::warn;
+use styx_core::prelude::*;
 
 const UNIFIED_TLB_CAPACITY: usize = 64;
 const INSTRUCTION_TLB_CAPACITY: usize = 4;

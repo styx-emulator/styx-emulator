@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
-use crate::{Loader, LoaderHints, MemoryLoaderDesc};
 use std::borrow::Cow;
+
 use styx_errors::anyhow::Context;
-use styx_memory::MemoryPermissions;
-use styx_memory::MemoryRegion;
+use styx_memory::{MemoryPermissions, MemoryRegion};
+
+use crate::{Loader, LoaderHints, MemoryLoaderDesc};
 
 /// Loader for raw `.bin`'s or files
 ///

@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! logging / tracing utilities
 
-use tracing_subscriber::fmt;
 use tracing_subscriber::prelude::*;
-use tracing_subscriber::registry;
-use tracing_subscriber::EnvFilter;
+use tracing_subscriber::{fmt, registry, EnvFilter};
 
 /// Initialize logging. Usefill for stand-alone executables that need basic logging.
 /// The function is tolerant if logging has already been initialized.

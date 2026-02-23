@@ -2,10 +2,8 @@
 use styx_core::errors::UnknownError;
 use tokio::runtime::Handle;
 
-use crate::{
-    components::{Component, ComponentStore, DuplicateId},
-    processor::Processors,
-};
+use crate::components::{Component, ComponentStore, DuplicateId};
+use crate::processor::Processors;
 
 /// Uart peripheral service.
 mod uart;

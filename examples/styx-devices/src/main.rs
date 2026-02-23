@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use clap::Parser;
-
 use std::net::TcpStream;
 use std::thread;
 use std::time::Duration;
 
-use styx_emulator::devices::{adc::ADS7866, dac::RHRDAC121, eeprom::AT25HP512};
+use clap::Parser;
+use styx_emulator::devices::adc::ADS7866;
+use styx_emulator::devices::dac::RHRDAC121;
+use styx_emulator::devices::eeprom::AT25HP512;
 use styx_emulator::peripheral_clients::spi::SPISimpleClient;
 
 #[derive(Debug, Parser)]

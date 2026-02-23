@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::arch::{
-    Arch, ArchitectureDef, ArchitectureVariant, CpuRegisterBank, GdbTargetDescriptionImpl,
-};
 use derive_more::Display;
 
 use super::gdb_targets::{Aarch64CoreDescription, AARCH64_CORE_REGISTER_MAP};
 use super::Aarch64Register;
+use crate::arch::{
+    Arch, ArchitectureDef, ArchitectureVariant, CpuRegisterBank, GdbTargetDescriptionImpl,
+};
 
 /// A "sane-default" set of default ARM registers.
 #[derive(Default)]

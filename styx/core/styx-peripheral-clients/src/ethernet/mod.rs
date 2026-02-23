@@ -1,14 +1,12 @@
 // SPDX-License-Identifier: BSD-2-Clause
+use std::fs;
 use std::io::Write;
 
 use styx_grpc::io::ethernet::ethernet_port_client::EthernetPortClient;
-use styx_grpc::io::ethernet::EthernetPacket;
-use styx_grpc::io::ethernet::SubscribeRequest;
+use styx_grpc::io::ethernet::{EthernetPacket, SubscribeRequest};
 use tokio::net::ToSocketAddrs;
 use tokio_stream::StreamExt;
 use tonic::codegen::StdError;
-
-use std::fs;
 
 const PCAP_FILE_HEADER: [u8; 24] = [
     0xd4, 0xc3, 0xb2, 0xa1, 0x02, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,

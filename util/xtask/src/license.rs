@@ -11,12 +11,12 @@
 //! - empty files are currently allowed
 //! - limited to certain source file types
 //!
-use globwalk::DirEntry;
-use globwalk::GlobWalkerBuilder;
-use rayon::prelude::*;
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+
+use globwalk::{DirEntry, GlobWalkerBuilder};
+use rayon::prelude::*;
 use styx_sync::lazy_static;
 use styx_sync::sync::{Arc, Mutex};
 use styx_util::styx_root_pathbuf;
@@ -437,7 +437,9 @@ pub fn update_licenses(
 #[cfg(test)]
 mod tests {
 
-    use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
+    use tracing_subscriber::layer::SubscriberExt;
+    use tracing_subscriber::util::SubscriberInitExt;
+    use tracing_subscriber::{fmt, EnvFilter};
 
     use super::*;
 

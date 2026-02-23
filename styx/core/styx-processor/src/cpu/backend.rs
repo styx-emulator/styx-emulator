@@ -3,14 +3,15 @@ use std::fmt::Debug;
 
 use smallvec::SmallVec;
 use static_assertions::assert_obj_safe;
-use styx_cpu_type::{
-    arch::{backends::ArchRegister, ArchitectureDef, RegisterValue},
-    ArchEndian, TargetExitReason,
-};
+use styx_cpu_type::arch::backends::ArchRegister;
+use styx_cpu_type::arch::{ArchitectureDef, RegisterValue};
+use styx_cpu_type::{ArchEndian, TargetExitReason};
 use styx_errors::UnknownError;
 use thiserror::Error;
 
-use crate::{event_controller::EventController, hooks::Hookable, memory::Mmu};
+use crate::event_controller::EventController;
+use crate::hooks::Hookable;
+use crate::memory::Mmu;
 
 #[derive(Debug, Error)]
 pub enum ReadRegisterError {

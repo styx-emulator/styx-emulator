@@ -41,14 +41,17 @@
 //! Timeout/Tlow error          | TIMEOUT  |
 //! SMBus Alert                 | SMBALERT |
 //!
-use bilge::prelude::*;
-use derivative::Derivative;
-use getset::Getters;
 use std::collections::HashSet;
 use std::pin::Pin;
 use std::sync::Arc;
+
+use bilge::prelude::*;
+use derivative::Derivative;
+use getset::Getters;
+use styx_core::errors::anyhow::anyhow;
+use styx_core::grpc::io;
+use styx_core::grpc::io::i2c::i2c_port_server::I2cPortServer;
 use styx_core::prelude::*;
-use styx_core::{errors::anyhow::anyhow, grpc::io, grpc::io::i2c::i2c_port_server::I2cPortServer};
 use thiserror::Error;
 use tokio::sync::{broadcast, mpsc};
 use tokio_stream::Stream;

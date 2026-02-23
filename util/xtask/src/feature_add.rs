@@ -1,14 +1,16 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! Infrastructure to add the specified features to cargo files.
-use crate::commands::FeatureAddModes;
-use globwalk::{FileType, GlobWalkerBuilder};
 use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
+
+use globwalk::{FileType, GlobWalkerBuilder};
 use styx_sync::sync::{Arc, Mutex};
 use styx_util::resolve_path;
 use toml_edit::{value, Array, DocumentMut, Item, Table, Value};
 use tracing::{debug, info};
+
+use crate::commands::FeatureAddModes;
 
 const CARGO_FILE: &str = "Cargo.toml";
 
@@ -180,12 +182,14 @@ impl FeatureAdd {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::io::{Read, Seek};
     use std::path::Path;
+
     use temp_dir::TempDir;
     use tempfile::NamedTempFile;
     use test_case::test_case;
+
+    use super::*;
 
     const CARGO_FILE_CONTENTS: &str = r#"
 [package]

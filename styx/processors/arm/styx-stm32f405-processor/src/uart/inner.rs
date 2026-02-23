@@ -1,18 +1,19 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! Emulation of UART/USART controller for STM32F405
+use std::collections::VecDeque;
+use std::mem::size_of;
+
 use derivative::Derivative;
 use num_derive::ToPrimitive;
-use std::{collections::VecDeque, mem::size_of};
 use styx_core::prelude::*;
 use styx_peripherals::uart::{IntoUartImpl, UartImpl};
+use styx_stm32f405_sys::generic::FromBytes;
 use styx_stm32f405_sys::interrupt::Interrupt;
+use styx_stm32f405_sys::{
+    uart4, uart5, usart1, usart2, usart3, usart6, Uart4, Uart5, Usart1, Usart2, Usart3, Usart6,
+};
 use tokio::sync::broadcast;
 use tracing::{debug, trace, warn};
-
-use styx_stm32f405_sys::{
-    generic::FromBytes, uart4, uart5, usart1, usart2, usart3, usart6, Uart4, Uart5, Usart1, Usart2,
-    Usart3, Usart6,
-};
 
 // # Safety
 // These two unsafe blocks are performing hardware initialization,

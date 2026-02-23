@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: BSD-2-Clause
+use derive_more::Display;
+use paste::paste;
+
 use super::gdb_targets::*;
 use super::SuperHRegister;
 use crate::arch::{
     Arch, ArchitectureDef, ArchitectureVariant, CpuRegisterBank, GdbTargetDescriptionImpl,
 };
-use derive_more::Display;
-use paste::paste;
 
 // Converts a register map to a CpuRegisterBank'd type
 // not usable generically across architectures

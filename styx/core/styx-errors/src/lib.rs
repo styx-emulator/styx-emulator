@@ -86,13 +86,12 @@ pub mod styx_loader;
 pub mod styx_memory;
 pub mod styx_processor;
 
+pub use anyhow;
 use styx_cpu::{StyxCpuBackendError, StyxCpuBuilderError};
 use styx_cpu_type::arch::backends::ArchVariant;
 use styx_loader::StyxLoaderError;
 use styx_memory::StyxMemoryError;
 use styx_processor::ProcessorBuilderError;
-
-pub use anyhow;
 pub type UnknownError = anyhow::Error;
 
 pub use error_buffer::ErrorBuffer;

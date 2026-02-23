@@ -9,9 +9,7 @@ pub mod gdb_targets;
 mod registers;
 pub mod variants;
 
-pub use registers::Aarch64Register;
-pub use registers::SpecialAarch64Register;
-
+pub use registers::{Aarch64Register, SpecialAarch64Register};
 // for enum dispatch
 use variants::*;
 

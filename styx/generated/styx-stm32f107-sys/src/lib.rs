@@ -7379,12 +7379,12 @@ pub union union_ITM_Type__bindgen_ty_1 {
     #[doc = "< Offset:       ITM Stimulus Port 32-bit"]
     pub u32_: u32,
 }
-pub use self::enum_ErrorStatus as ErrorStatus;
-pub use self::enum_FlagStatus as FlagStatus;
-pub use self::enum_FlagStatus as ITStatus;
-pub use self::enum_FunctionalState as FunctionalState;
 #[doc = " @brief STM32F10x Interrupt Number Definition, according to the selected device\n        in @ref Library_configuration_section"]
 pub use self::enum_IRQn as IRQn_Type;
+pub use self::{
+    enum_ErrorStatus as ErrorStatus, enum_FlagStatus as FlagStatus, enum_FlagStatus as ITStatus,
+    enum_FunctionalState as FunctionalState,
+};
 unsafe extern "C" {
     #[doc = "< variable to receive characters"]
     pub static mut ITM_RxBuffer: ::std::os::raw::c_int;

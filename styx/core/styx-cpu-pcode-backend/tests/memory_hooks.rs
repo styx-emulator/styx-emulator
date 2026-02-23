@@ -1,16 +1,13 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use styx_cpu_pcode_backend::PcodeBackend;
-use styx_cpu_type::{arch::ppc32::Ppc32Variants, Arch, ArchEndian, TargetExitReason};
-use styx_processor::{
-    cpu::{CpuBackend, ExecutionReport},
-    event_controller::EventController,
-    hooks::{CoreHandle, Hookable, StyxHook},
-    memory::{
-        helpers::{ReadExt, WriteExt},
-        memory_region::MemoryRegion,
-        MemoryPermissions, Mmu,
-    },
-};
+use styx_cpu_type::arch::ppc32::Ppc32Variants;
+use styx_cpu_type::{Arch, ArchEndian, TargetExitReason};
+use styx_processor::cpu::{CpuBackend, ExecutionReport};
+use styx_processor::event_controller::EventController;
+use styx_processor::hooks::{CoreHandle, Hookable, StyxHook};
+use styx_processor::memory::helpers::{ReadExt, WriteExt};
+use styx_processor::memory::memory_region::MemoryRegion;
+use styx_processor::memory::{MemoryPermissions, Mmu};
 
 /// Tests behavior of the memory read hook on a big endian arch in the pcode backend.
 ///

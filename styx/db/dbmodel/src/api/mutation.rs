@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
-use crate::link_optional_child;
-use crate::model::prelude::*;
-use sea_orm::*;
 use std::time::SystemTime;
+
+use sea_orm::*;
 use styx_core::grpc::db::DbId;
 use styx_core::grpc::utils::EmuMetadata;
 use tracing::debug;
+
+use crate::link_optional_child;
+use crate::model::prelude::*;
 
 pub struct DbApi;
 

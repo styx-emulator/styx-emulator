@@ -13,21 +13,16 @@
 use std::sync::Arc;
 
 use styx_cpu_pcode_backend::HexagonPcodeBackend;
-use styx_cpu_type::{
-    arch::hexagon::{HexagonRegister, HexagonVariants},
-    Arch, ArchEndian, TargetExitReason,
-};
+use styx_cpu_type::arch::hexagon::{HexagonRegister, HexagonVariants};
+use styx_cpu_type::{Arch, ArchEndian, TargetExitReason};
 use styx_hexagon_testdata::{binutils_tests, TestData};
 use styx_loader::{Loader, MemoryLoaderDesc};
-use styx_processor::{
-    cpu::{CpuBackend, CpuBackendExt},
-    event_controller::EventController,
-    hooks::{CoreHandle, Hookable, StyxHook},
-    memory::{
-        helpers::WriteExt, memory_region::MemoryRegion, DummyTlb, MemoryBackend, MemoryPermissions,
-        Mmu,
-    },
-};
+use styx_processor::cpu::{CpuBackend, CpuBackendExt};
+use styx_processor::event_controller::EventController;
+use styx_processor::hooks::{CoreHandle, Hookable, StyxHook};
+use styx_processor::memory::helpers::WriteExt;
+use styx_processor::memory::memory_region::MemoryRegion;
+use styx_processor::memory::{DummyTlb, MemoryBackend, MemoryPermissions, Mmu};
 use test_case::test_case;
 
 // List all tests and remove their extension (to paste into here).

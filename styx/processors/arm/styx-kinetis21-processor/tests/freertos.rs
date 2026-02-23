@@ -2,7 +2,8 @@
 #![cfg(feature = "unicorn-backend")]
 use std::net::TcpStream;
 
-use styx_core::{peripheral_clients::uart::UartClient, prelude::*};
+use styx_core::peripheral_clients::uart::UartClient;
+use styx_core::prelude::*;
 use styx_kinetis21_processor::Kinetis21Builder;
 
 const FREERTOS_HELLO_PATH: &str = "arm/kinetis_21/bin/freertos_hello/freertos_hello_debug.bin";

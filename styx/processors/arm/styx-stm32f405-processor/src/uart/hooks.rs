@@ -6,9 +6,7 @@
 use std::ops::DerefMut;
 
 use styx_core::prelude::*;
-use tracing::debug;
-use tracing::error;
-use tracing::trace;
+use tracing::{debug, error, trace};
 
 use super::inner::UartPortInner;
 
@@ -533,12 +531,14 @@ pub(crate) fn usart_port_cr1_r_hook(
 /// Unit tests for the STM32F405 USART implementation
 #[cfg(test)]
 mod tests {
-    use crate::uart::get_uarts;
-    use crate::uart::inner::UartPortInner;
     use std::ops::DerefMut;
+
     use styx_core::core::builder::DummyProcessorBuilder;
     use styx_core::prelude::ProcessorBuilder;
     use styx_peripherals::uart::UartController;
+
+    use crate::uart::get_uarts;
+    use crate::uart::inner::UartPortInner;
 
     #[test]
     #[cfg_attr(miri, ignore)]

@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! json utilities for typhunix GRPC messages
 
-use futures_lite::io::AsyncWriteExt;
-use log::warn;
-use serde::Serialize;
 use std::error::Error;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
+
+use futures_lite::io::AsyncWriteExt;
+use log::warn;
+use serde::Serialize;
 
 use super::ConnectMessage;
 use crate::symbolic::{DataType, Symbol};

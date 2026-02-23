@@ -22,45 +22,38 @@
 //! The _higher-order_ events, items such as are defined in [traceapp](crate) and
 //! wrapped in [`Event`](crate::event::AggregateEvent) variants.
 
-use crate::data_recorder::DataRecorder;
-use crate::event::AggregateEvent;
-use crate::service_err;
-use crate::variable::Variable;
+use std::collections::HashMap;
+use std::fs::File;
+use std::io::{Read, Seek, SeekFrom, Write};
+use std::ops::Range;
+use std::sync::atomic::AtomicU64;
+use std::sync::atomic::Ordering::SeqCst;
+use std::sync::{Arc, Mutex, RwLock};
+use std::time::Duration;
+use std::{io, vec};
+
 use async_stream::stream;
 use futures_core::stream::Stream;
 use regex::{RegexSet, RegexSetBuilder};
-use std::collections::HashMap;
-use std::fs::File;
-use std::io;
-use std::io::Write;
-use std::io::{Seek, SeekFrom};
-use std::ops::Range;
-use std::{
-    io::Read,
-    sync::{
-        atomic::{AtomicU64, Ordering::SeqCst},
-        Arc, Mutex, RwLock,
-    },
-    time::Duration,
-    vec,
-};
-
 use styx_core::grpc::args::{RawEventLimits, SymbolSearchOptions};
 use styx_core::grpc::traceapp::{
     BasicBlock, EndOfEvents, FunctionGate, InstructionExec, Interrupt, Timeout,
 };
 use styx_core::grpc::typhunix_interop::symbolic::{Function, ProgramIdentifier};
 use styx_core::grpc::typhunix_interop::{AddrUtils, Signature};
-use tracing::warn;
-
 use styx_core::tracebus::{
     next_event, BaseTraceEvent, BinaryTraceEventType, BlockTraceEvent, IPCTracer, InsnExecEvent,
     InterruptEvent, InterruptType, MemReadEvent, MemWriteEvent, Traceable, TraceableItem,
     TracerReader, TracerReaderOptions, TRACE_EVENT_SIZE,
 };
 use tonic::{Code, Status};
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 use typhunix_proto::cache::{symbol_cache_from_server, FunctionCache, SymbolCache};
+
+use crate::data_recorder::DataRecorder;
+use crate::event::AggregateEvent;
+use crate::service_err;
+use crate::variable::Variable;
 
 const TIMEOUT_MAX: u64 = 5;
 
@@ -695,8 +688,7 @@ impl EmulationObserver {
 
 /// wait for/return a single /tmp/strace*.srb file
 pub async fn wait_for_trace() -> Result<String, String> {
-    use glob::glob_with;
-    use glob::MatchOptions;
+    use glob::{glob_with, MatchOptions};
 
     let options = MatchOptions {
         case_sensitive: false,
@@ -741,9 +733,8 @@ pub fn exit_function(insn_num: u64, pc: u64, func: &Function) -> FunctionGate {
 
 #[cfg(test)]
 mod tests {
-    use crate::compact_repr;
-
     use super::*;
+    use crate::compact_repr;
     #[test]
     fn test_compact_repr() {
         // compact

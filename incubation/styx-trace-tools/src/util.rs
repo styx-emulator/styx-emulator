@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! Common utils used across trace execution analysis tools
 
-use std::{fs::OpenOptions, io::Write, path::Path};
+use std::fs::OpenOptions;
+use std::io::Write;
+use std::path::Path;
+
 use styx_core::grpc::typhunix_interop::symbolic::ProgramIdentifier;
 use tracing::debug;
 

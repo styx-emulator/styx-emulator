@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: BSD-2-Clause
+use enum_map::EnumMap;
 use styx_core::prelude::*;
 
-use super::{id::DmaId, state::DmaState, DmaPeripheralMapping};
-use enum_map::EnumMap;
-
+use super::id::DmaId;
+use super::state::DmaState;
+use super::DmaPeripheralMapping;
 use crate::core_event_controller::SicHandle;
 
 /// Holds all dma channels and provides helper methods to organize channels.

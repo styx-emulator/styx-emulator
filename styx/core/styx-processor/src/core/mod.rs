@@ -8,17 +8,18 @@
 //! controller taking the other two as mutable references.
 //!
 use delegate::delegate;
-use styx_cpu_type::{
-    arch::{backends::ArchRegister, ArchitectureDef, RegisterValue},
-    ArchEndian,
-};
+use styx_cpu_type::arch::backends::ArchRegister;
+use styx_cpu_type::arch::{ArchitectureDef, RegisterValue};
+use styx_cpu_type::ArchEndian;
 use styx_errors::UnknownError;
 
-use crate::{
-    cpu::{CpuBackend, DummyBackend, ExecutionReport, ReadRegisterError, WriteRegisterError},
-    event_controller::{ActivateIRQnError, DummyEventController, EventController, ExceptionNumber},
-    memory::{MemoryOperationError, Mmu},
+use crate::cpu::{
+    CpuBackend, DummyBackend, ExecutionReport, ReadRegisterError, WriteRegisterError,
 };
+use crate::event_controller::{
+    ActivateIRQnError, DummyEventController, EventController, ExceptionNumber,
+};
+use crate::memory::{MemoryOperationError, Mmu};
 
 pub mod builder;
 pub use builder::{ProcessorBundle, ProcessorImpl};

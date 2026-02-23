@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use as_any::{AsAny, Downcast};
-use derivative::Derivative;
 use std::any::TypeId;
 use std::pin::Pin;
+
+use as_any::{AsAny, Downcast};
+use derivative::Derivative;
 use styx_core::grpc::io;
 use styx_core::grpc::io::spi::{
     Empty, MasterChipSelectPacket, MasterPacket, PortRequest, SlaveChipSelectPacket, SlavePacket,

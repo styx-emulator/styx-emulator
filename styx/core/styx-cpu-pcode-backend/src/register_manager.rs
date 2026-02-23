@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use super::memory::sized_value::SizedValue;
-use crate::arch_spec::HexagonPcodeBackend;
-use crate::memory::space_manager::{HasSpaceManager, SpaceManager};
-use crate::pcode_gen::{GhidraPcodeGenerator, HasPcodeGenerator, RegisterTranslator};
-use crate::PcodeBackend;
-use log::trace;
 use std::collections::HashMap;
 use std::fmt::Debug;
+
+use log::trace;
 use styx_cpu_type::arch::backends::ArchRegister;
 use styx_errors::anyhow::Context;
 use styx_errors::UnknownError;
 use styx_processor::cpu::{CpuBackend, WriteRegisterError};
 use thiserror::Error;
+
+use super::memory::sized_value::SizedValue;
+use crate::arch_spec::HexagonPcodeBackend;
+use crate::memory::space_manager::{HasSpaceManager, SpaceManager};
+use crate::pcode_gen::{GhidraPcodeGenerator, HasPcodeGenerator, RegisterTranslator};
+use crate::PcodeBackend;
 
 #[derive(Error, Debug)]
 #[error("failed to handle register")]
@@ -392,15 +394,13 @@ impl<T: CpuBackend> RegisterCallback<T> for MappedRegister {
 
 #[cfg(all(test, feature = "arch_arm"))]
 mod tests {
-    use super::*;
-
     use core::result::Result;
 
-    use styx_cpu_type::{
-        arch::arm::{ArmRegister, ArmVariants},
-        Arch, ArchEndian,
-    };
+    use styx_cpu_type::arch::arm::{ArmRegister, ArmVariants};
+    use styx_cpu_type::{Arch, ArchEndian};
     use styx_pcode::pcode::{SpaceName, VarnodeData};
+
+    use super::*;
 
     /// RegisterTranslator for testing that returns varnodes with sepcified custom size.
     struct RegisterTranslatorCustomSize(VarnodeData);
