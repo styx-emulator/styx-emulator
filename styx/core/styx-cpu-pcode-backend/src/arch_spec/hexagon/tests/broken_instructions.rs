@@ -690,6 +690,8 @@ pub enum OOOperation {
     LogicalShiftLeft,
     ArithmeticShiftRight,
     LogicalShiftRight,
+    MulSignExtend,
+    MulZeroExtend,
 }
 
 /// Post-operation
@@ -1015,19 +1017,34 @@ fn order_of_operations_helper(
 #[test_case(
 	r#"
        0:	0a c3 40 e5	e540c30a { 	r11:10 = mpyu(r0,r3) }
-	"#, OOPostOperation::None; "M2_dpmpyuu_s0"
+	"#, OOOperation::MulZeroExtend, OOPostOperation::None; "M2_dpmpyuu_s0"
 )]
 #[test_case(
 	r#"
        0:	0a c3 40 e7	e740c30a { 	r11:10 += mpyu(r0,r3) }
-	"#, OOPostOperation::Add; "M2_dpmpyuu_acc_s0"
+	"#, OOOperation::MulZeroExtend, OOPostOperation::Add; "M2_dpmpyuu_acc_s0"
 )]
 #[test_case(
 	r#"
        0:	0a c3 60 e7	e760c30a { 	r11:10 -= mpyu(r0,r3) }
-	"#, OOPostOperation::Sub; "M2_dpmpyuu_nac_s0"
+	"#, OOOperation::MulZeroExtend, OOPostOperation::Sub; "M2_dpmpyuu_nac_s0"
 )]
-fn mpyuu_sext(objdump: &str, post_op: OOPostOperation) {
+#[test_case(
+	r#"
+       0:	0a c3 00 e5	e500c30a { 	r11:10 = mpy(r0,r3) }
+	"#, OOOperation::MulSignExtend, OOPostOperation::None; "M2_dpmpyss_s0"
+)]
+#[test_case(
+	r#"
+       0:	0a c3 00 e7	e700c30a { 	r11:10 += mpy(r0,r3) }
+	"#, OOOperation::MulSignExtend, OOPostOperation::Add; "M2_dpmpyss_acc_s0"
+)]
+#[test_case(
+	r#"
+       0:	0a c3 20 e7	e720c30a { 	r11:10 -= mpy(r0,r3) }
+	"#, OOOperation::MulSignExtend, OOPostOperation::Sub; "M2_dpmpyss_nac_s0"
+)]
+fn mpyuuss_sext(objdump: &str, op: OOOperation, post_op: OOPostOperation) {
     let (mut cpu, mut mmu, mut ev) = setup_objdump(objdump);
     let initial_values = [
         0x1u64,
@@ -1056,7 +1073,13 @@ fn mpyuu_sext(objdump: &str, post_op: OOPostOperation) {
                 let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
                 assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
-                let mul = (*r0_val as u64).wrapping_mul(*r3_val as u64);
+                let mul = match op {
+                    OOOperation::MulSignExtend => {
+                        ((*r0_val as i32 as i64).wrapping_mul(*r3_val as i32 as i64)) as u64
+                    }
+                    OOOperation::MulZeroExtend => (*r0_val as u64).wrapping_mul(*r3_val as u64),
+                    _ => unreachable!(),
+                };
                 let out = match post_op {
                     OOPostOperation::Add => mul.wrapping_add(*initial_value),
                     OOPostOperation::Sub => initial_value.wrapping_sub(mul),
@@ -1075,3 +1098,49 @@ fn mpyuu_sext(objdump: &str, post_op: OOPostOperation) {
         }
     }
 }
+
+/*
+Not implemented yet:
+
+#[test_case(
+    r#"
+       0:	4a ce 8c e8	e88cce4a { 	r11:10 = cmpyrw(r13:12,r15:14) }
+    "#, OOOperation::MulSignExtend, OOPostOperation::None; "M7_dcmpyrw"
+)]
+#[test_case(
+    r#"
+       0:	4a ce 8c ea	ea8cce4a { 	r11:10 += cmpyrw(r13:12,r15:14) }
+    "#, OOOperation::MulSignExtend, OOPostOperation::Add; "M7_dcmpyrw_acc"
+)]
+#[test_case(
+    r#"
+       0:	4a ce cc e8	e8ccce4a { 	r11:10 = cmpyrw(r13:12,r15:14*) }
+    "#, OOOperation::MulSignExtend, OOPostOperation::None; "M7_dcmpyrwc"
+)]
+#[test_case(
+    r#"
+       0:	4a ce cc ea	eaccce4a { 	r11:10 += cmpyrw(r13:12,r15:14*) }
+    "#, OOOperation::MulSignExtend, OOPostOperation::Add; "M7_dcmpyrwc_acc"
+)]
+#[test_case(
+    r#"
+       0:	4a ce 6c e8	e86cce4a { 	r11:10 = cmpyiw(r13:12,r15:14) }
+    "#, OOOperation::MulSignExtend, OOPostOperation::None; "M7_dcmpyiw"
+)]
+#[test_case(
+    r#"
+       0:	4a ce 6c ea	ea6cce4a { 	r11:10 += cmpyiw(r13:12,r15:14) }
+    "#, OOOperation::MulSignExtend, OOPostOperation::Add; "M7_dcmpyiw_acc"
+)]
+#[test_case(
+    r#"
+       0:	4a ce ec e8	e8ecce4a { 	r11:10 = cmpyiw(r13:12,r15:14*) }
+    "#, OOOperation::MulSignExtend, OOPostOperation::None; "M7_dcmpyiwc"
+)]
+#[test_case(
+    r#"
+       0:	ca ce 4c ea	ea4cceca { 	r11:10 += cmpyiw(r13:12,r15:14*) }
+    "#, OOOperation::MulSignExtend, OOPostOperation::Add; "M7_dcmpyiwc_acc"
+)]
+pub fn complex_multiply(objdump: &str, op: OOOperation, post_op: OOPostOperation) {}
+*/
