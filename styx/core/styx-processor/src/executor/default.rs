@@ -2,47 +2,47 @@
 //! Sane default executor for Styx processors
 use styx_errors::UnknownError;
 
-use crate::{
-    core::ProcessorCore,
-    cpu::ExecutionReport,
-    processor::{core_configs::ConfigRequestedStrideLength, BuildingProcessor},
-};
+use crate::processor::{core_configs::ConfigRequestedStrideLength, BuildingProcessor};
 
-use super::ExecutorImpl;
+use super::StrideExecutor;
 
 /// A sane default.
 ///
-/// Executes 1000 instructions per stride, handling events at the end of each stride.
+/// Notably implements [StrideExecutor].
 ///
-/// Notably implements [ExecutorImpl].
-///
-/// Stride length defaults to 0 here but gets initialized to the
-/// [`ConfigRequestedStrideLength`].
+/// Users of Styx should use the [`DefaultExecutor::default()`] implementation
+/// and define stride length with [`ConfigRequestedStrideLength`].
+/// Tests inside `styx-processor` should use [`DefaultExecutor::with_stride_length()`].
 #[derive(Default, Debug)]
 pub struct DefaultExecutor {
-    pub(crate) stride_length: u64,
+    stride_length: Option<u64>,
 }
 
-impl ExecutorImpl for DefaultExecutor {
+impl StrideExecutor for DefaultExecutor {
     fn get_stride_length(&self) -> u64 {
-        self.stride_length
-    }
-
-    fn emulate(
-        &mut self,
-        proc: &mut ProcessorCore,
-        insns: u64,
-    ) -> Result<ExecutionReport, UnknownError> {
-        proc.cpu
-            .execute(&mut proc.mmu, &mut proc.event_controller, insns)
+        // we use expect here because init not being called is a core bug.
+        self.stride_length.expect(
+            "DefaultExecutor stride length not set. This indicates that `init` was not called.",
+        )
     }
 
     /// Called before emulating, initializes stride length here.
     fn init(&mut self, proc: &mut BuildingProcessor) -> Result<(), UnknownError> {
-        self.stride_length = proc
-            .config
-            .get_or_default::<ConfigRequestedStrideLength>()
-            .preferred_stride_length;
+        self.stride_length = Some(
+            proc.config
+                .get_or_default::<ConfigRequestedStrideLength>()
+                .preferred_stride_length,
+        );
         Ok(())
+    }
+}
+
+impl DefaultExecutor {
+    /// styx-processor only initialization for when `init` is not called.
+    #[allow(dead_code)]
+    pub(crate) fn with_stride_length(stride: u64) -> Self {
+        Self {
+            stride_length: Some(stride),
+        }
     }
 }

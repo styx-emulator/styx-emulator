@@ -272,12 +272,11 @@ pub trait CpuBackend: Debug + Hookable + Send {
     fn set_pc(&mut self, value: u64) -> Result<(), UnknownError>;
 
     /// Classifies instruction at `addr` into a generic class
-    #[allow(unused_variables)]
     fn classify_instruction(
         &mut self,
-        addr: u64,
-        mmu: &mut Mmu,
-        event_controller: &mut EventController,
+        _addr: u64,
+        _mmu: &mut Mmu,
+        _event_controller: &mut EventController,
     ) -> Option<InstructionInfo> {
         None
     }
