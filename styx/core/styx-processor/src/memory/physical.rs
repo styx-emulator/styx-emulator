@@ -2,14 +2,13 @@
 
 use serde::Deserialize;
 use styx_errors::anyhow::anyhow;
+use styx_errors::UnknownError;
 use thiserror::Error;
 
-use super::{
-    atomic_word::CompareExchangeResult, region::RegionStore, MemoryArchitecture, MemoryPermissions,
-};
+use super::atomic_word::CompareExchangeResult;
+use super::region::RegionStore;
+use super::{MemoryArchitecture, MemoryPermissions};
 use crate::memory::memory_region::MemoryRegion;
-
-use styx_errors::UnknownError;
 
 #[derive(Error, Debug)]
 pub enum MemoryOperationError {

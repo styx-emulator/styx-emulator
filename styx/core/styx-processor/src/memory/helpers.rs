@@ -31,12 +31,10 @@
 //! assert_eq!(&[0x37u8, 0x13u8, 0x00u8, 0x00u8], byte_vec.as_slice());
 //! ```
 
-use num::{
-    cast::AsPrimitive,
-    traits::{FromBytes, ToBytes},
-};
-
 use std::default::Default;
+
+use num::cast::AsPrimitive;
+use num::traits::{FromBytes, ToBytes};
 
 /// Read bytes starting from `addr` into a `bytes` slice.
 ///
