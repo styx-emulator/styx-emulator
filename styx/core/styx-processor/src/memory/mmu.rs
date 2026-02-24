@@ -146,9 +146,7 @@ impl Mmu {
     /// Returns the range made up of the min and max addresses supported
     /// by the physical memory backend.
     pub fn valid_memory_range(&self) -> MemoryArchitecture<Range<u64>> {
-        self.memory
-            .min_address()
-            .with(self.memory.max_address(), |a, b| a..b)
+        self.memory.valid_memory_range()
     }
 
     /// Translates a virtual address to a physical address.

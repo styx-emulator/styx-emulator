@@ -1,73 +1,49 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
+use std::sync::Arc;
+
 use styx_cpu_type::TargetExitReason;
 use styx_errors::UnknownError;
 
-use crate::{
-    core::ProcessorCore, cpu::ExecutionReport, executor::Delta, plugins::collection::Plugins,
-    processor::core_configs::ConfigRequestedStrideLength,
-};
+use crate::{executor::Delta, processor::core_configs::ConfigRequestedStrideLength};
 
-use super::ExecutorImpl;
+use super::{HaltFn, StrideExecutor};
 
 /// Executor that stops when a custom function returns true.
 ///
 /// Otherwise behavior is identical to the [`super::DefaultExecutor`].
 ///
-/// Notably implements [ExecutorImpl].
-pub struct ConditionalExecutor {
-    should_stop: Box<dyn FnMut() -> bool + Send>,
+/// Notably implements [`StrideExecutor`].
+pub struct ConditionalExecutor<StopFunction: Fn() -> bool + 'static + Send + Sync> {
+    should_stop: Arc<StopFunction>,
     stride_length: u64,
 }
 
-impl ConditionalExecutor {
-    /// Construct [ConditionalExecutor] with custom stop function.
+impl<StopFunction: Fn() -> bool + 'static + Send + Sync> ConditionalExecutor<StopFunction> {
+    /// Construct [`ConditionalExecutor`] with custom stop function.
     ///
     /// `should_stop` function is called every stride to determine if the
     /// processor should continue executing.
-    pub fn new(should_stop: impl FnMut() -> bool + 'static + Send) -> Self {
+    pub fn new(should_stop: StopFunction) -> Self {
         Self {
-            should_stop: Box::new(should_stop),
+            should_stop: Arc::new(should_stop),
             stride_length: 1000,
         }
     }
 }
 
-impl ExecutorImpl for ConditionalExecutor {
+impl<StopFunction: Fn() -> bool + 'static + Send + Sync> StrideExecutor
+    for ConditionalExecutor<StopFunction>
+{
     fn get_stride_length(&self) -> u64 {
         self.stride_length
     }
 
-    fn emulate(
-        &mut self,
-        proc: &mut ProcessorCore,
-        insns: u64,
-    ) -> Result<ExecutionReport, UnknownError> {
-        proc.cpu
-            .execute(&mut proc.mmu, &mut proc.event_controller, insns)
-    }
-
-    fn post_stride_processing(
-        &mut self,
-        proc: &mut ProcessorCore,
-        plugins: &mut Plugins,
-        delta: &Delta,
-    ) -> Result<(), UnknownError> {
-        let event_controller = &mut proc.event_controller;
-        let cpu = &mut proc.cpu;
-        let mmu = &mut proc.mmu;
-
-        event_controller.next(cpu.as_mut(), mmu)?;
-
-        event_controller.tick(cpu.as_mut(), mmu, delta)?;
-
-        plugins.tick(proc)?;
-
-        Ok(())
-    }
-
-    fn halt_emulation(&mut self, reason: &TargetExitReason, _delta: &Delta) -> bool {
-        reason.fatal() || (self.should_stop)()
+    fn halt_emulation(&mut self) -> Option<HaltFn> {
+        let should_stop = self.should_stop.clone();
+        Some(Box::new(
+            move |reason: &TargetExitReason, _delta: &Delta| reason.fatal() || should_stop(),
+        ))
     }
 
     fn init(
