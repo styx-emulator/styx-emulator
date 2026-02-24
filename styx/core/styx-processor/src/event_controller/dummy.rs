@@ -8,12 +8,11 @@ use crate::{
     processor::Config,
 };
 
-use super::{
-    ActivateIRQnError, EventControllerImpl, ExceptionNumber, InterruptExecuted, Peripherals,
-};
+use super::{ActivateIRQnError, EventControllerImpl, ExceptionNumber, InterruptExecuted};
+use crate::executor::Delta;
 
 #[derive(Default)]
-/// A placeholder event controller, does nothing.
+/// A placeholder secondary (per-vCPU) event controller, does nothing.
 pub struct DummyEventController {}
 
 impl EventControllerImpl for DummyEventController {
@@ -21,17 +20,16 @@ impl EventControllerImpl for DummyEventController {
         &mut self,
         _cpu: &mut dyn CpuBackend,
         _mmu: &mut Mmu,
-        _peripherals: &mut Peripherals,
     ) -> Result<InterruptExecuted, UnknownError> {
-        debug!("dummy event controller next");
-
+        debug!("dummy secondary event controller next");
         Ok(InterruptExecuted::NotExecuted)
     }
 
     fn latch(&mut self, event: ExceptionNumber) -> Result<(), ActivateIRQnError> {
-        debug!("dummy event controller latched with {event:?}");
+        debug!("dummy secondary event controller latched with {event:?}");
         Ok(())
     }
+
     fn execute(
         &mut self,
         _irq: ExceptionNumber,
@@ -41,9 +39,13 @@ impl EventControllerImpl for DummyEventController {
         unimplemented!()
     }
 
-    /// todo add cpu, mmu refs
-    fn tick(&mut self, _cpu: &mut dyn CpuBackend, _mmu: &mut Mmu) -> Result<(), UnknownError> {
-        debug!("dummy event controller tick");
+    fn tick(
+        &mut self,
+        _cpu: &mut dyn CpuBackend,
+        _mmu: &mut Mmu,
+        _delta: &Delta,
+    ) -> Result<(), UnknownError> {
+        debug!("dummy secondary event controller tick");
         Ok(())
     }
 

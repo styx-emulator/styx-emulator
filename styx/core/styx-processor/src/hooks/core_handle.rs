@@ -1,17 +1,15 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::{
-    cpu::{CpuBackend, ExecutionReport, ReadRegisterError, WriteRegisterError},
-    event_controller::{ActivateIRQnError, EventController, ExceptionNumber},
-    hooks::{AddHookError, DeleteHookError, HookToken, StyxHook},
-    memory::{MemoryOperationError, Mmu},
-};
-
 use delegate::delegate;
-use styx_cpu_type::{
-    arch::{backends::ArchRegister, ArchitectureDef, RegisterValue},
-    ArchEndian,
-};
+use styx_cpu_type::arch::backends::ArchRegister;
+use styx_cpu_type::arch::{ArchitectureDef, RegisterValue};
+use styx_cpu_type::ArchEndian;
 use styx_errors::UnknownError;
+
+use crate::core::VcpuId;
+use crate::cpu::{CpuBackend, ExecutionReport, ReadRegisterError, WriteRegisterError};
+use crate::event_controller::{ActivateIRQnError, EventController, ExceptionNumber};
+use crate::hooks::{AddHookError, DeleteHookError, HookToken, StyxHook};
+use crate::memory::{MemoryOperationError, Mmu};
 
 /// Ergonomic reference to the processor trinity for hook users.
 pub struct CoreHandle<'a> {
@@ -21,6 +19,14 @@ pub struct CoreHandle<'a> {
 }
 
 impl<'a> CoreHandle<'a> {
+    /// Returns the index of the vCPU this handle belongs to.
+    ///
+    /// The vCPU id indexes into the processor vCPU slice.
+    pub fn vcpu_id(&self) -> VcpuId {
+        // seems a little weird to store on the event controller.
+        self.event_controller.vcpu_index
+    }
+
     /// Create a new [`CoreHandle`]. Useful for [`CpuBackend`] implementors construct and send to
     /// hooks.
     pub fn new(

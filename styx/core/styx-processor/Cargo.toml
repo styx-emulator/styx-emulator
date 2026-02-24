@@ -8,6 +8,10 @@ version.workspace = true
 [lints]
 workspace = true
 
+[features]
+# Currently just `executor::test_harness`.
+test-utils = []
+
 [dependencies]
 styx-errors = { path = "../styx-errors" }
 styx-util = { path = "../styx-util" }

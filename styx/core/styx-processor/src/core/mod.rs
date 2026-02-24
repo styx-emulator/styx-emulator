@@ -2,86 +2,109 @@
 //! Container for the "core trinity" components and custom builder for the core trinity.
 //!
 //! The core trinity refers to the cpu, mmu, and event controller in aggregate. They are owned by
-//! the [ProcessorCore]. These are separated from the [Processor](super::processor::Processor)
+//! the [`VcpuCore`]. These are separated from the [`Processor`](super::processor::Processor)
 //! because they are used closely during execution. Most calls to the cpu will pass mutable
 //! references to the mmu, and event controller. The same is true to most calls to the mmu and event
 //! controller taking the other two as mutable references.
 //!
-use delegate::delegate;
-use styx_cpu_type::{
-    arch::{backends::ArchRegister, ArchitectureDef, RegisterValue},
-    ArchEndian,
-};
-use styx_errors::UnknownError;
+use std::sync::Arc;
+use std::time::Duration;
 
-use crate::{
-    cpu::{CpuBackend, DummyBackend, ExecutionReport, ReadRegisterError, WriteRegisterError},
-    event_controller::{ActivateIRQnError, DummyEventController, EventController, ExceptionNumber},
-    memory::{MemoryOperationError, Mmu},
+use crate::cpu::{CpuBackend, DummyBackend, ExecutionReport};
+use crate::event_controller::{
+    DummyEventController, EventController, EventDistributor, SingleVcpuEventDistributor,
 };
+use crate::executor::time::{ProcessorTime, VcpuTime};
+use crate::memory::physical::MemoryBackend;
+use crate::memory::Mmu;
 
 pub mod builder;
-pub use builder::{ProcessorBundle, ProcessorImpl};
+pub use builder::{ProcessorImpl, VcpuBundle};
 
 mod exceptions;
 pub use exceptions::*;
+use log::trace;
+use styx_errors::UnknownError;
 
 /// Placeholder struct for holding processor metadata.
 pub struct ProcMeta {}
 
-/// Core components of an executable processor.
+/// Processor-level shared state.
+///
+/// Holds shared memory, the processor-wide event distributor, and the
+/// processor level time.
+///
+/// Per-vCPU state lives in [`VcpuCore`].
 pub struct ProcessorCore {
-    pub cpu: Box<dyn CpuBackend>,
-    pub mmu: Mmu,
-    pub event_controller: EventController,
+    pub memory: Arc<MemoryBackend>,
+    pub event_controller: EventDistributor,
+    pub time: ProcessorTime,
 }
 
 impl ProcessorCore {
-    // delegate the common ops to the [`ProcessorCore`]
-    delegate! {
-        to self.cpu {
-            pub fn pc(&mut self) -> Result<u64, UnknownError>;
-            pub fn set_pc(&mut self, value: u64) -> Result<(), UnknownError>;
-            pub fn stop(&mut self);
-            pub fn architecture(&self) -> &dyn ArchitectureDef;
-            pub fn endian(&self) -> ArchEndian;
-            pub fn read_register_raw(&mut self, reg: ArchRegister) -> Result<RegisterValue, ReadRegisterError>;
-            pub fn write_register_raw(
-                &mut self,
-                reg: ArchRegister,
-                value: RegisterValue,
-            ) -> Result<(), WriteRegisterError>;
-            pub fn execute(
-                &mut self,
-                mmu: &mut Mmu,
-                event_controller: &mut EventController,
-                count: u64,
-            ) -> Result<ExecutionReport, UnknownError>;
-        }
-
-        to self.mmu {
-            pub fn write_data(&mut self, addr: u64, bytes: &[u8]) -> Result<(), MemoryOperationError>;
-            pub fn read_data(&mut self, addr: u64, bytes: &mut [u8]) -> Result<(), MemoryOperationError>;
-            pub fn write_code(&mut self, addr: u64, bytes: &[u8]) -> Result<(), MemoryOperationError>;
-            pub fn read_code(&mut self, addr: u64, bytes: &mut [u8]) -> Result<(), MemoryOperationError>;
-            pub fn sudo_write_data(&mut self, addr: u64, bytes: &[u8]) -> Result<(), MemoryOperationError>;
-            pub fn sudo_read_data(&mut self, addr: u64, bytes: &mut [u8]) -> Result<(), MemoryOperationError>;
-            pub fn sudo_write_code(&mut self, addr: u64, bytes: &[u8]) -> Result<(), MemoryOperationError>;
-            pub fn sudo_read_code(&mut self, addr: u64, bytes: &mut [u8]) -> Result<(), MemoryOperationError>;
-        }
-
-        to self.event_controller {
-            #[call(latch)]
-            pub fn latch_event(&mut self, event: ExceptionNumber) -> Result<(), ActivateIRQnError>;
+    /// Create a dummy [`ProcessorCore`] with default memory and a
+    /// [`SingleVcpuEventDistributor`] event distributor.
+    pub fn dummy() -> Self {
+        Self {
+            memory: Arc::new(MemoryBackend::default()),
+            event_controller: EventDistributor::new(
+                Box::new(SingleVcpuEventDistributor::default()),
+            ),
+            time: ProcessorTime::default(),
         }
     }
+}
 
-    /// Create a dummy [`ProcessorCore`]
+pub type VcpuId = u16;
+
+/// Per-vCPU runtime state.
+///
+/// Each vCPU has its own [`CpuBackend`], [`Mmu`] (own TLB, shared [`MemoryBackend`]),
+/// [`EventController`], and [`VcpuTime`].
+pub struct VcpuCore {
+    pub cpu: Box<dyn CpuBackend>,
+    pub mmu: Mmu,
+    pub event_controller: EventController,
+    pub time: VcpuTime,
+}
+
+impl VcpuCore {
+    /// Create a dummy [`VcpuCore`] with a no-op CPU, default MMU, and no-op secondary event
+    /// controller.
     pub fn dummy() -> Self {
         Self {
             cpu: Box::new(DummyBackend),
             mmu: Mmu::default(),
-            event_controller: EventController::new(Box::new(DummyEventController::default())),
+            event_controller: EventController::new(Box::new(DummyEventController::default()), 0),
+            time: VcpuTime::default(),
         }
+    }
+
+    pub fn context_save(&mut self) -> Result<(), UnknownError> {
+        self.cpu.context_save()?;
+        self.mmu.context_save()?;
+        Ok(())
+    }
+
+    pub fn context_restore(&mut self) -> Result<(), UnknownError> {
+        self.cpu.context_restore()?;
+        self.mmu.context_save()?;
+        Ok(())
+    }
+
+    /// Run a stride on a vcpu and track wall time.
+    pub fn execute_and_time(
+        &mut self,
+        stride_constraint: u64,
+    ) -> Result<(ExecutionReport, Duration), UnknownError> {
+        use std::time::Instant;
+        trace!("vcpu started executing");
+        let emulate_start = Instant::now();
+        let report =
+            self.cpu
+                .execute(&mut self.mmu, &mut self.event_controller, stride_constraint)?;
+        let emulate_time = Instant::now() - emulate_start;
+
+        Ok((report, emulate_time))
     }
 }

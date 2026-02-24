@@ -18,7 +18,7 @@ pub enum MemoryArchitecture<T> {
 }
 
 impl<T> MemoryArchitecture<T> {
-    /// Get the value assuming this is VonNeuman, otherwise `None`.
+    /// Get the value assuming this is Von Neuman (non-separate code/data regions), otherwise `None`.
     pub fn von_neuman(self) -> Option<T> {
         match self {
             MemoryArchitecture::Harvard { .. } => None,

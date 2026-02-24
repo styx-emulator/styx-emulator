@@ -1,31 +1,53 @@
 // SPDX-License-Identifier: BSD-2-Clause
+use crate::event_controller::{
+    DummyEventController, DummyPrimaryEventController, PrimaryEventControllerImpl,
+};
 use crate::loader::LoaderHints;
+use crate::memory::physical::MemoryBackend;
+use crate::memory::{DummyTlb, TlbImpl};
+use crate::processor::BuildingProcessor;
+use crate::{
+    core::ExceptionBehavior,
+    cpu::{CpuBackend, DummyBackend},
+    event_controller::{EventControllerImpl, Peripheral},
+    processor::Config,
+};
 use styx_cpu_type::Backend;
 use styx_errors::UnknownError;
 use tokio::runtime::Handle;
 
-use crate::{
-    core::ExceptionBehavior,
-    cpu::{CpuBackend, DummyBackend},
-    event_controller::{DummyEventController, EventControllerImpl, Peripheral},
-    memory::{physical::MemoryBackend, DummyTlb, TlbImpl},
-    processor::{BuildingProcessor, Config},
-};
+/// Per-vCPU uninitialized components.
+pub struct VcpuBundle {
+    /// Uninitialized [`CpuBackend`] implementation.
+    pub cpu: Box<dyn CpuBackend>,
+    /// Processor TLB.
+    pub tlb: Box<dyn TlbImpl>,
+    /// Uninitialized per-vCPU [`EventControllerImpl`] implementation.
+    pub event_controller: Box<dyn EventControllerImpl>,
+}
+
+impl Default for VcpuBundle {
+    fn default() -> Self {
+        Self {
+            cpu: Box::new(DummyBackend),
+            tlb: Box::new(DummyTlb),
+            event_controller: Box::new(DummyEventController::default()),
+        }
+    }
+}
 
 /// Contains the uninitialized parts needed to create a
 /// [Processor](crate::processor::Processor).
 ///
-/// The [Default] implementation contains dummy version of the core trinity and
-/// empty for everything else.
+/// The [Default] implementation contains a single dummy vCPU and empty lists
+/// for peripherals and loader hints.
 pub struct ProcessorBundle {
-    /// Uninitialized [CpuBackend] implementation.
-    pub cpu: Box<dyn CpuBackend>,
     /// Physical memory.
     pub memory: MemoryBackend,
-    /// Processor TLB.
-    pub tlb: Box<dyn TlbImpl>,
-    /// Uninitialized [EventControllerImpl] implementation.
-    pub event_controller: Box<dyn EventControllerImpl>,
+    /// Uninitialized processor-level [PrimaryEventControllerImpl] implementation.
+    pub primary_event_controller: Box<dyn PrimaryEventControllerImpl>,
+    /// Per-vCPU bundles; at least one entry is required.
+    pub vcpus: Vec<VCpuBundle>,
     /// List of peripherals that will be added and initialized.
     pub peripherals: Vec<Box<dyn Peripheral>>,
     pub loader_hints: LoaderHints,
@@ -34,10 +56,9 @@ pub struct ProcessorBundle {
 impl Default for ProcessorBundle {
     fn default() -> Self {
         Self {
-            cpu: Box::new(DummyBackend),
             memory: MemoryBackend::default(),
-            tlb: Box::new(DummyTlb),
-            event_controller: Box::new(DummyEventController::default()),
+            primary_event_controller: Box::new(DummyPrimaryEventController::default()),
+            vcpus: vec![VCpuBundle::default()],
             peripherals: Default::default(),
             loader_hints: Default::default(),
         }
@@ -73,9 +94,7 @@ pub trait ProcessorImpl {
 pub struct DummyProcessorBuilder;
 impl ProcessorImpl for DummyProcessorBuilder {
     fn build(&self, _args: &BuildProcessorImplArgs) -> Result<ProcessorBundle, UnknownError> {
-        Ok(ProcessorBundle {
-            ..Default::default()
-        })
+        Ok(ProcessorBundle::default())
     }
 }
 

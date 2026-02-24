@@ -24,7 +24,7 @@ pub struct ConfigBackend(pub Backend);
 
 /// Preferred number of instructions to execute per tick.
 ///
-/// [`ExecutorImpl`](crate::executor::ExecutorImpl) implementations use
+/// [`StrideExecutor`](crate::executor::StrideExecutor) implementations use
 /// this as a hint when scheduling execution strides. The actual stride
 /// may differ for example in the gdb executor where the condition of
 /// 1 or more watchpoints will change the stride length to 1.
