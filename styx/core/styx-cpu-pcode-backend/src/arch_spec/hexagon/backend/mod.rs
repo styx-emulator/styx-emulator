@@ -8,7 +8,7 @@ use execution_helper::DefaultHexagonExecutionHelper;
 use log::{error, info, trace};
 pub use saved_context_opts::SavedContextOpts;
 use smallvec::{smallvec, SmallVec};
-use std::collections::BTreeMap;
+use std::{borrow::Cow, collections::BTreeMap};
 use styx_cpu_type::{
     arch::{
         backends::{ArchRegister, ArchVariant, BasicArchRegister},
@@ -113,8 +113,16 @@ pub enum HexagonSingleInstructionAction {
     None,
 }
 
+#[derive(Clone, Debug)]
+enum HexagonFetchDecodeInfo {
+    // PC/key for if the result was already cached
+    Cached(u32),
+    // If the packet was just decoded
+    Decoded(HexagonFetchDecodeData),
+}
+
 #[derive(Clone, Debug, Default)]
-struct HexagonFetchDecodeInfo {
+struct HexagonFetchDecodeData {
     total_bytes_consumed: u64,
     ordering: SmallVec<[usize; MAX_PACKET_SIZE]>,
     load_store_slot_info: SmallVec<[Option<usize>; 4]>,
@@ -133,7 +141,7 @@ struct HexagonExecuteSingleInfo {
 #[derive(Debug, Default)]
 struct CachedFetchDecodeResult {
     pcodes: Vec<Vec<Pcode>>,
-    info: HexagonFetchDecodeInfo,
+    info: HexagonFetchDecodeData,
 }
 
 #[derive(Debug)]
@@ -173,7 +181,7 @@ pub struct HexagonPcodeBackend {
 
     // Used for performance, P-code translation is quite slow
     // Maps PC to pcodes and other info for running hexagon code
-    cache: BTreeMap<u32, CachedFetchDecodeResult>,
+    cache: Option<BTreeMap<u32, CachedFetchDecodeResult>>,
 }
 
 impl Hookable for HexagonPcodeBackend {
@@ -314,9 +322,28 @@ impl BackendHelper<HexagonExecuteSingleInfo, Vec<Pcode>> for HexagonPcodeBackend
             Err(HexagonFetchDecodeError::Other(e)) => return Err(e),
         };
 
+        // Use the correct pcodes buffer, depending on whether the result
+        // is cached or not.
+        let mut cache = self.cache.take().unwrap();
+
+        let (fetch_decode_data, pcodes) = match fetch_decode_info {
+            HexagonFetchDecodeInfo::Cached(pc) => {
+                let cached_decode = cache.get_mut(&pc).unwrap();
+                (
+                    Cow::Borrowed(&cached_decode.info),
+                    &mut cached_decode.pcodes,
+                )
+            }
+            HexagonFetchDecodeInfo::Decoded(output_fetch_decode_data) => {
+                (Cow::Owned(output_fetch_decode_data), pcodes)
+            }
+        };
+
+        let ordering = fetch_decode_data.ordering.clone();
+
         let mut i = 0;
-        while i < fetch_decode_info.ordering.len() {
-            let pcode_instrs = &pcodes[fetch_decode_info.ordering[i]];
+        while i < ordering.len() {
+            let pcode_instrs = &pcodes[ordering[i]];
             trace!("executing single instruction pcodes: {pcode_instrs:?}");
             // this should actually do the fetching for each individual packet.
             match self.execute_single_instr(
@@ -324,10 +351,10 @@ impl BackendHelper<HexagonExecuteSingleInfo, Vec<Pcode>> for HexagonPcodeBackend
                 mmu,
                 ev,
                 &mut execution_regs_written,
-                fetch_decode_info.total_bytes_consumed,
+                fetch_decode_data.total_bytes_consumed,
                 Some(i),
-                &fetch_decode_info.load_store_slot_info,
-                fetch_decode_info.duplex_start,
+                &fetch_decode_data.load_store_slot_info,
+                fetch_decode_data.duplex_start,
             )? {
                 Ok(HexagonSingleInstructionAction::DelayedInterrupt(irqn)) => {
                     delayed_irqn = Some(irqn);
@@ -339,10 +366,13 @@ impl BackendHelper<HexagonExecuteSingleInfo, Vec<Pcode>> for HexagonPcodeBackend
                 // { a; b } where if b faults, then a will get re-run. If the values/memory used in a changes,
                 // then a gets re-run with a different result. Not clear what the correct action is here.
                 Ok(HexagonSingleInstructionAction::Rerun) => {
+                    // Replace the cache
+
+                    self.cache = Some(cache);
                     return Ok(Ok(HexagonExecuteSingleInfo {
                         _total_instrs_within_packet_executed: total_instrs_executed,
-                        ordering: fetch_decode_info.ordering,
-                    }))
+                        ordering,
+                    }));
                 }
 
                 // Setting it only once when it's none allows for the first branch to be taken,
@@ -350,7 +380,10 @@ impl BackendHelper<HexagonExecuteSingleInfo, Vec<Pcode>> for HexagonPcodeBackend
                 Ok(HexagonSingleInstructionAction::PcChange(pc)) if branched_pc.is_none() => {
                     branched_pc = Some(pc)
                 }
-                Err(e) => return Ok(Err(e)),
+                Err(e) => {
+                    self.cache = Some(cache);
+                    return Ok(Err(e));
+                }
                 _ => {}
             }
             total_instrs_executed += 1;
@@ -368,7 +401,7 @@ impl BackendHelper<HexagonExecuteSingleInfo, Vec<Pcode>> for HexagonPcodeBackend
             mmu,
             ev,
             &mut execution_regs_written,
-            fetch_decode_info.total_bytes_consumed,
+            fetch_decode_data.total_bytes_consumed,
             None,
             &load_store_info_flush,
             // There are no duplexes.
@@ -378,7 +411,10 @@ impl BackendHelper<HexagonExecuteSingleInfo, Vec<Pcode>> for HexagonPcodeBackend
             Ok(HexagonSingleInstructionAction::DelayedInterrupt(irqn)) => {
                 delayed_irqn = Some(irqn);
             }
-            Err(reason) => return Ok(Err(reason)),
+            Err(reason) => {
+                self.cache = Some(cache);
+                return Ok(Err(reason));
+            }
             _ => {}
         }
 
@@ -386,7 +422,7 @@ impl BackendHelper<HexagonExecuteSingleInfo, Vec<Pcode>> for HexagonPcodeBackend
         {
             let next_pc = match branched_pc {
                 Some(pc) => pc,
-                None => execution_helper_outer.isa_pc() + fetch_decode_info.total_bytes_consumed,
+                None => execution_helper_outer.isa_pc() + fetch_decode_data.total_bytes_consumed,
             };
 
             trace!("telling execution helper to bank move forward pc to {next_pc:x}");
@@ -395,15 +431,18 @@ impl BackendHelper<HexagonExecuteSingleInfo, Vec<Pcode>> for HexagonPcodeBackend
             trace!("calling post packet execute hooks...");
             execution_helper_outer.post_packet_execute(self);
         }
+
+        self.cache = Some(cache);
         self.execution_helper = Some(execution_helper_outer);
 
         if let Some(irqn) = delayed_irqn {
+            trace!("delayed irqn hook");
             HookManager::trigger_interrupt_hook(self, mmu, ev, irqn)?;
         }
 
         Ok(Ok(HexagonExecuteSingleInfo {
             _total_instrs_within_packet_executed: total_instrs_executed,
-            ordering: fetch_decode_info.ordering,
+            ordering,
         }))
     }
 
@@ -612,7 +651,7 @@ impl HexagonPcodeBackend {
             saved_reg_context: BTreeMap::new(),
             hexagon_predicate_start,
             hexagon_predicate_end,
-            cache: BTreeMap::new(),
+            cache: Some(BTreeMap::new()),
         }
     }
     /// Indicate when we should update the context reg
@@ -786,24 +825,22 @@ impl HexagonPcodeBackend {
         let initial_pc = pc;
 
         // Flush the cache if we cross a page boundary (assuming 4K pages), for now.
-        if let Some((k, _)) = self.cache.first_key_value() {
+        if let Some((k, _)) = self.cache.as_ref().unwrap().first_key_value() {
             // The page boundary has changed
             if k & !0xfff != initial_pc & !0xfff {
                 trace!(
                     "invalidating pcode cache, cache at page {k:x} and pc at page {initial_pc:x}"
                 );
-                self.cache.clear()
+                self.cache.as_mut().unwrap().clear()
             }
         }
 
         // Fast path: check the pcode cache.
         // NOTE: bit inefficient for now, need to stop copying and maybe move to reference counting.
         // That might be a bit of a lift, so we'll do copying, which will at least be a bit faster.
-        //
-        if let Some(cached_pcodes) = self.cache.get(&pc) {
-            trace!("hexagon pcode cache: fast path got {pc:x} and pcodes {cached_pcodes:#?}");
-            full_pcodes.extend(cached_pcodes.pcodes.clone());
-            return Ok(Ok(cached_pcodes.info.clone()));
+        if self.cache.as_ref().unwrap().contains_key(&pc) {
+            trace!("hexagon pcode cache: fast path got {pc:x}");
+            return Ok(Ok(HexagonFetchDecodeInfo::Cached(pc)));
         }
 
         let mut ordering: SmallVec<[usize; 4]> = SmallVec::new();
@@ -1175,14 +1212,15 @@ impl HexagonPcodeBackend {
         }
 
         // Cache before we return
-        let info = HexagonFetchDecodeInfo {
+        let info = HexagonFetchDecodeData {
             total_bytes_consumed,
-            ordering,
+            ordering: ordering.clone(),
             load_store_slot_info,
             duplex_start,
         };
 
-        self.cache.insert(
+        // Cache before we return, and indicate that the result is cached.
+        self.cache.as_mut().unwrap().insert(
             initial_pc,
             CachedFetchDecodeResult {
                 pcodes: full_pcodes.clone(),
@@ -1190,7 +1228,7 @@ impl HexagonPcodeBackend {
             },
         );
 
-        Ok(Ok(info))
+        Ok(Ok(HexagonFetchDecodeInfo::Decoded(info)))
     }
 }
 
