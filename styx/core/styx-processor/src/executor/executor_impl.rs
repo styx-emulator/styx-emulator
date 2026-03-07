@@ -35,6 +35,9 @@ use crate::{
 ///
 /// Below is an overview of the executor loop.
 ///
+/// 0. [`ProcessorBuilder::build()`](crate::processor::ProcessorBuilder::build()) calls
+///    `ExecutorImpl::init()` to initialize its state. This is only called once on processor
+///    construction.
 /// 1. [`Processor::run()`](crate::processor::Processor::run()) is called to start emulation, this
 ///    calls `Executor::begin()` and gives control of the [`ProcessorCore`] and [`Plugins`] to the
 ///    `Executor`.
@@ -62,6 +65,11 @@ use crate::{
 /// [`ExecutorImpl`] calls all of the required events.
 ///
 pub trait ExecutorImpl: Send {
+    /// This is run once while constructing the processor before any emulation.
+    fn init(&mut self, _proc: &mut BuildingProcessor) -> Result<(), UnknownError> {
+        Ok(())
+    }
+
     /// Determine if emulation should continue, called before each stride is executed.
     #[inline]
     fn valid_emulation_conditions(&mut self, _proc: &mut ProcessorCore) -> bool {
@@ -145,9 +153,5 @@ pub trait ExecutorImpl: Send {
     #[inline]
     fn get_stride_length(&self) -> u64 {
         1000
-    }
-
-    fn init(&mut self, _proc: &mut BuildingProcessor) -> Result<(), UnknownError> {
-        Ok(())
     }
 }
