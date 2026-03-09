@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use iset::IntervalMap;
-#[cfg(test)]
-use mockall::mock;
 use std::any::Any;
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -111,23 +109,6 @@ pub trait Loader: std::fmt::Debug + Send {
         hints: LoaderHints,
         config: &Config,
     ) -> Result<MemoryLoaderDesc, StyxLoaderError>;
-}
-
-#[cfg(test)]
-mock! {
-    #[derive(Debug)]
-    pub StyxLoader{}
-
-    impl Loader for StyxLoader {
-        fn name(&self) -> &'static str;
-
-        fn load_bytes<'a>(
-            &self,
-            data: Cow<'a, [u8]>,
-            hints: LoaderHints,
-            config: &Config,
-        ) -> Result<MemoryLoaderDesc, StyxLoaderError>;
-    }
 }
 
 pub type RegisterMap = HashMap<ArchRegister, u64>;
