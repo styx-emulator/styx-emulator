@@ -176,7 +176,7 @@ pub(crate) fn load_elf(
 
     // collect all the regions we need to load
     let mut regions = Vec::new();
-    for ph in elf.program_headers {
+    for (i_ph, ph) in elf.program_headers.iter().enumerate() {
         // Look only for loadable segments, see `man 5 elf` for more
         //
         // Note that `PT_LOAD` segments are described by
@@ -199,13 +199,7 @@ pub(crate) fn load_elf(
 
             // get the data for the source tests
             let src_mem_range = (ph.p_offset as usize)..((ph.p_offset + src_size) as usize);
-            trace!("range is {:x?}", src_mem_range);
-
-            // don't add segments that are of size zero
-            if src_size == 0 {
-                trace!("skipping segment of size zero");
-                continue;
-            }
+            trace!("PT_load segment {i_ph} range is {src_mem_range:x?}");
 
             let mut src_data = data
                 .get(src_mem_range)

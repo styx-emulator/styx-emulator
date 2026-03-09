@@ -77994,7 +77994,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
 }
 
 :S2_brevp S2_brevp_Rdd32 S2_brevp_Rss32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b5 = 0 & b6 = 1 & b7 = 1 & b21 = 0 & b22 = 1 & b23 = 1 & b24 = 0 & b25 = 0 & b26 = 0 & b27 = 0 & b28 = 0 & b29 = 0 & b30 = 0 & b31 = 1 & S2_brevp_Rdd32 & S2_brevp_Rss32 {
-  local tmp0:4;
+  local tmp0:8;
   tmp0 = brev(S2_brevp_Rss32);
   S2_brevp_Rdd32 = zext(tmp0);
 }
@@ -78164,18 +78164,18 @@ gp: reloc is epsilon [ reloc = 0; ] {
 }
 
 :Y2_crswap0 Y2_crswap0_Rx32 Y2_crswap0_Rx32d is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b21 = 0 & b22 = 0 & b23 = 0 & b24 = 1 & b25 = 0 & b26 = 1 & b27 = 0 & b28 = 0 & b29 = 1 & b30 = 1 & b31 = 0 & Y2_crswap0_Rx32 & Y2_crswap0_Rx32d {
-  local tmp0:4;
-  tmp0 = crswap(Y2_crswap0_Rx32, SGP0);
+  Y2_crswap0_Rx32d = SGP0;
+  D_SGP0 = Y2_crswap0_Rx32;
 }
 
 :Y4_crswap1 Y4_crswap1_Rx32 Y4_crswap1_Rx32d is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b21 = 1 & b22 = 0 & b23 = 0 & b24 = 1 & b25 = 0 & b26 = 1 & b27 = 0 & b28 = 0 & b29 = 1 & b30 = 1 & b31 = 0 & Y4_crswap1_Rx32 & Y4_crswap1_Rx32d {
-  local tmp0:4;
-  tmp0 = crswap(Y4_crswap1_Rx32, SGP1);
+  Y4_crswap1_Rx32d = SGP1;
+  D_SGP1 = Y4_crswap1_Rx32;
 }
 
 :Y4_crswap10 Y4_crswap10_Rxx32 Y4_crswap10_Rxx32d is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b0 = 0 & b1 = 0 & b2 = 0 & b3 = 0 & b4 = 0 & b22 = 0 & b23 = 1 & b24 = 1 & b25 = 0 & b26 = 1 & b27 = 1 & b28 = 0 & b29 = 1 & b30 = 1 & b31 = 0 & Y4_crswap10_Rxx32 & Y4_crswap10_Rxx32d {
-  local tmp0:4;
-  tmp0 = crswap(Y4_crswap10_Rxx32, SGP1SGP0);
+  Y4_crswap10_Rxx32d = SGP1SGP0;
+  D_SGP1SGP0 = Y4_crswap10_Rxx32;
 }
 
 :Y2_tfrscrr Y2_tfrscrr_Rd32 Y2_tfrscrr_Ss128 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b23 = 1 & b24 = 0 & b25 = 1 & b26 = 1 & b27 = 1 & b28 = 0 & b29 = 1 & b30 = 1 & b31 = 0 & Y2_tfrscrr_Rd32 & Y2_tfrscrr_Ss128 {

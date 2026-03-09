@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use derive_more::FromStr;
 use log::trace;
-use styx_cpu_type::arch::hexagon::{
-    register_fields::{Ipendad, Ssr},
-    HexagonRegister,
-};
+use styx_cpu_type::arch::hexagon::{register_fields::Ssr, HexagonRegister};
 use styx_errors::anyhow::Context;
 use styx_pcode::{
     pcode::{SpaceName, VarnodeData},
@@ -28,9 +25,10 @@ pub struct InterruptGenericStub {
     from: &'static str,
 }
 
-/// Look at https://github.com/quic/qemu/blob/hex-next/target/hexagon/cpu_bits.h
+/// Look at <https://github.com/quic/qemu/blob/hex-next/target/hexagon/cpu_bits.h>
 #[repr(i32)]
-pub enum HexagonInterruptType {
+#[allow(unused)]
+pub enum InterruptType {
     None = -1,
     Reset = 0,
     Imprecise = 1,
@@ -58,56 +56,18 @@ pub enum HexagonInterruptType {
     IntE = 0x1e,
     IntF = 0x1f,
 }
-#[repr(u8)]
-#[derive(Debug, Copy, Clone)]
-pub enum HexagonInterruptCause {
-    Reset = 0x000,
-    BiuPrecise = 0x001,
-    UnsuportedHvx64B = 0x002, /* qemu-specific */
-    DoubleExcept = 0x003,
-    Trap0 = 0x008,
-    Trap1 = 0x009,
-    FetchNoXpage = 0x011,
-    FetchNoUpage = 0x012,
-    InvalidPacketOrOpcode = 0x015,
-    NoCoprocEnable = 0x016,
-    NoCoproc2Enable = 0x018,
-    PRivUSerNOGInsn = 0x01a,
-    PrivUserNoSinsn = 0x01b,
-    RegWriteConflict = 0x01d,
-    PcNotAligned = 0x01e,
-    MisalignedLoad = 0x020,
-    MisalignedStore = 0x021,
-    PrivNoRead = 0x022,
-    PrivNoWrite = 0x023,
-    PrivNoUread = 0x024,
-    PrivNoUwrite = 0x025,
-    CoprocLdst = 0x026,
-    StackLimit = 0x027,
-    VwctrlWindowMiss = 0x029,
-    ImpreciseNmi = 0x043,
-    ImpreciseMultiTlbMatch = 0x044,
-    TlbmissxCauseNormal = 0x060,
-    TlbmissxCauseNextpage = 0x061,
-    TlbmissrwCauseRead = 0x070,
-    TlbmissrwCauseWrite = 0x071,
-    DebugSinglestep = 0x80,
-    FptrapCauseBadfloat = 0x0bf,
-    Int0 = 0x0c0,
-    Int1 = 0x0c1,
-    Int2OrVic0 = 0x0c2,
-    Int3OrVic1 = 0x0c3,
-    Int4OrVic2 = 0x0c4,
-    Int5OrVic3 = 0x0c5,
-    Int6 = 0x0c6,
-    Int7 = 0x0c7,
-}
 
 /// Trap instruction, see 11.9.3 Trap.
-/// Hexagon Linux uses this for syscalls.
 ///
-/// See arch/hexagon/kernel/traps.c in Linux for reference,
-/// specifically the do_trap0 function.
+/// Also see implementation in QUIC QEMU, branch hex-next
+/// specifically target/hexagon/hexswi.c, specifically
+/// hexagon_cpu_do_interrupt. Also see fTRAP macro
+/// in target/hexagon/macros.h.
+///
+/// Also see do_raise_exception and hexagon_raise_exception_err
+/// in target/hexagon/op_helper.c.
+///
+/// FIXME: multicore (delayed interrupt may need changing)
 #[derive(Debug)]
 pub struct Trap0Handler;
 impl<T: CpuBackend> CallOtherCallback<T> for Trap0Handler {
@@ -147,12 +107,13 @@ impl<T: CpuBackend> CallOtherCallback<T> for Trap0Handler {
         );
 
         Ok(PCodeStateChange::DelayedInterrupt(
-            HexagonInterruptType::Trap0 as i32,
+            InterruptType::Trap0 as i32,
         ))
     }
 }
 
 /// Clear pending interrupts - see section 11.9.2 "Clear pending interrupts"
+/// FIXME: multicore (just double check there are no effects to handle)
 #[derive(Debug)]
 pub struct CswiHandler;
 impl<T: CpuBackend> CallOtherCallback<T> for CswiHandler {
@@ -202,6 +163,7 @@ impl<T: CpuBackend> CallOtherCallback<T> for CswiHandler {
 }
 
 /// Clear interrupt auto disbale - see section 11.9.2 "Clear interrupt auto disbale"
+/// FIXME: multicore (just double check there are no effects to handle)
 #[derive(Debug)]
 pub struct CiadHandler;
 impl<T: CpuBackend> CallOtherCallback<T> for CiadHandler {
@@ -290,6 +252,7 @@ impl<T: CpuBackend> CallOtherCallback<T> for RteHandler {
 }
 
 /// Raise NMI on threads - 11.9.2
+/// FIXME: multicore
 #[derive(Debug)]
 pub struct NmiHandler;
 impl<T: CpuBackend> CallOtherCallback<T> for NmiHandler {
@@ -318,7 +281,7 @@ impl<T: CpuBackend> CallOtherCallback<T> for NmiHandler {
 
         // FIXME: multicore
         // we only have one thread, so this suffices.
-        // 
+        //
         // In the case, we do not have to NMI on thread 0
         // and since we are running on thread 0 since Styx only
         // supports one core, we are done.
@@ -329,12 +292,8 @@ impl<T: CpuBackend> CallOtherCallback<T> for NmiHandler {
         // Some other thread should be sent an nmi,
         // but Styx doesn't support multicore yet.
         else {
-            unimplemented!("nmi({:x}) called", rs_val);
-
-            Ok(PCodeStateChange::DelayedInterrupt(
-                HexagonInterruptType::Imprecise as i32,
-            ))
-        } 
+            unimplemented!("nmi({rs_val:x}) called");
+        }
     }
 }
 

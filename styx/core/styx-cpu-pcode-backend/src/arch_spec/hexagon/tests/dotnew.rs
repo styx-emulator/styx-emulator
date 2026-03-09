@@ -1050,9 +1050,9 @@ fn test_dotnew_two_outputs_second() {
         r#"
        0:	00 40 00 00	00004000 { 	immext(#0x0)
        4:	01 54 82 9b	9b825401   	r1 = memw(r2=##0x10)
-       8:	08 f0 42 24	2442f008   	if (!cmp.eq(r1.new,#0x10)) jump:t 0x10 } 
-       c:	e3 ff df 78	78dfffe3 { 	r3 = #-0x1 } 
-      10:	23 c0 00 78	7800c023 { 	r3 = #0x1 } 
+       8:	08 f0 42 24	2442f008   	if (!cmp.eq(r1.new,#0x10)) jump:t 0x10 }
+       c:	e3 ff df 78	78dfffe3 { 	r3 = #-0x1 }
+      10:	23 c0 00 78	7800c023 { 	r3 = #0x1 }
 "#,
     );
 

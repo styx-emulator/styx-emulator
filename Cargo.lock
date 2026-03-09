@@ -6326,7 +6326,6 @@ dependencies = [
  "bitbybit",
  "serde",
  "styx-core",
- "styx-peripherals",
  "styx-workspace-hack",
 ]
 
