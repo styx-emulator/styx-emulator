@@ -121,6 +121,11 @@ lint-docs:
 
     RUSTDOCFLAGS='--deny warnings' cargo doc --no-deps --all-features --workspace --bins --lib --examples --keep-going --document-private-items
 
+# Lint docs for a single package.
+lint-doc PACKAGE:
+    #!/usr/bin/env -S bash -e
+    RUSTDOCFLAGS='--deny warnings' cargo doc --package {{PACKAGE}} --no-deps --all-features --bins --lib --examples --keep-going --document-private-items
+
 rust-docs-inner:
     #!/usr/bin/env -S bash -e
     IGNORE_CRATES=`a=({{ __IGNORE_CRATES }}); echo "${a[@]/#/--exclude }"`
