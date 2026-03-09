@@ -217,7 +217,7 @@ impl TlbImpl for HexagonTlb {
     ///
     /// And that's our PA.
     ///
-    /// TODO: figure out the 34 and 36-bit masks.
+    /// TODO: figure out the 34 and 36-bit masks
     /// TODO: permissions checks, ASID checks
     fn translate_va(
         &mut self,

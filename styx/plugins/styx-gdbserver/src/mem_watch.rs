@@ -143,7 +143,7 @@ impl Access {
             1 => u8::from_le_bytes(data[0..1].try_into().unwrap()) as MemHookValue,
             2 => u16::from_le_bytes(data[0..2].try_into().unwrap()) as MemHookValue,
             4 => u32::from_le_bytes(data[0..4].try_into().unwrap()) as MemHookValue,
-            8 => u64::from_le_bytes(data[0..4].try_into().unwrap()) as MemHookValue,
+            8 => u64::from_le_bytes(data[0..8].try_into().unwrap()) as MemHookValue,
             _ => {
                 warn!(
                     "Can't handle memory hook on {:#x} size: {}, using size 4",
