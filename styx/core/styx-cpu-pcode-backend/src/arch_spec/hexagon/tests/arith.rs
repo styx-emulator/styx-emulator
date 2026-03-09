@@ -292,3 +292,22 @@ pub fn mask_all() {
         assert_eq!(corresp_u64, d0);
     }
 }
+
+/// Some manual test cases in case the "corresponding u64" in the mask_all
+/// is computed wrong
+#[test_case(0x00, 0xff; "zero")]
+pub fn not(p0: u8, p0_expected: u8) {
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(
+        r#"
+	0:	00 c0 c0 6b	6bc0c000 { 	p0 = not(p0) }
+"#,
+    );
+
+    cpu.write_register(HexagonRegister::P0, p0).unwrap();
+
+    let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
+
+    let p0_result = cpu.read_register::<u8>(HexagonRegister::P0).unwrap();
+    assert_eq!(p0_result, p0_expected);
+}

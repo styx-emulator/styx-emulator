@@ -92,6 +92,69 @@ impl TlbImpl for HexagonTlb {
         Ok(())
     }
 
+    /// Hexagon TLB translation.
+    ///
+    /// The crux of the logic for this function is implemented in
+    /// https://github.com/quic/qemu/blob/bcain/tlb_obj/hw/hexagon/hexagon_tlb.c.
+    ///
+    /// It is worth noting that the default address translation algorithm for QUIC's QEMU fork,
+    /// located at https://github.com/quic/qemu/blob/hex-next/target/hexagon/hex_mmu.c, does not
+    /// align with the page table entries that are inserted and are present in tested Hexagon
+    /// firmware.
+    ///
+    /// Address translation in Hexagon, as such, works as follows.
+    ///
+    /// At least in testing, it appears that the page size is 4K,
+    /// which translates to having the lowest 12 bits indicate the offset. However,
+    /// when translating an address in Hexagon, the page translation algorithm looks at
+    /// the number of trailing zeroes to determine the actual page number + offset
+    /// masks.
+    ///
+    /// To make this more clear, let's look at an example.
+    ///
+    /// Some ground rules: there are three page table entries, all valid, all
+    /// with the correct permissions. The parts of the page table entry we care about are the
+    /// PPD (physical page descriptor) and the VPN (the virtual page number).
+    ///
+    /// - Entry 0: VPN is 0x89104, PPD is 0x112202
+    /// - Entry 1: VPN is 0x1d25c, PPD is 0x022308
+    /// - Entry 2: VPN is 0x1d21c, PPD is 0x03a490
+    ///
+    /// First, we receive a virtual address. For the sake of example, let's say this
+    /// is 0x1d23c210. The way we match the VA to PA is by iterating through the page table
+    /// entries, finding a mask based on the number of trailing zeroes in the PPD, and then
+    /// matching the input VA to the VPN based on this mask.
+    ///
+    /// **Iteration 0:** PPD is 0x112202. This has exactly 1 trailing zero, which means
+    /// in our mask table, this corresponds to mask 0x3fff, which is 14 bits for the offset.
+    /// Our mask for the "page number" is the inverse of this, 0xffffc000. There is a chance that
+    /// some of the bits in the actual VPN entry may get cleared by this, which is intentional.
+    ///
+    /// The idea with the VPN is we shift left by 12, yielding 0x89104000, then mask with
+    /// 0xffffc000, yielding the same. Now, we do the same mask for the VA, yielding
+    /// 0x1d23c000 (itself).  Now, comparing the two masked values, they don't match, and
+    /// we move on.
+    ///
+    /// **Iteration 1**: PPD is 0x022308. There are *three* trailing zeroes, so we choose mask
+    /// 0xffff. Now, we wish to mask the (shifted left) VPN and VA with the inverse, which is 0xffff0000.
+    /// The VA masked is 0x1d230000. The VPN shfited left is 0x1d25c000, and masked it is 0x1d250000.
+    /// We see that 0x1d230000 != 0x1d250000, so this isn't a match. Onwards.
+    ///
+    /// **Iteration 3:** PPD is 0x03a490. As before, we have *three* trailing zeroes, so our mask is
+    /// 0x3ffff and our inverse is 0xfffc0000. Now, the VPN shifted is 0x1d21c000, with the mask, it's 0x
+    /// 0x1d200000. Our VA masked is 0x1d20000 as well. It's a match!
+    ///
+    /// Now we can go ahead and translate our PA. We obtain our offset with the original mask:
+    /// 0x1d23c210 & 0x3ffff = 0x3c210.
+    ///
+    /// To get the "base" from our PPD, we must shift right by one and then shift left by 12
+    /// (0x03a490 >> 1) << 12 = 0x1d248000. Finally, we add our offset to this base:
+    /// 0x1d248000 + 0x3c210 = 0x1d284210.
+    ///
+    /// And that's our PA.
+    ///
+    /// TODO: figure out the 34 and 36-bit masks
+    /// TODO: permissions checks, ASID checks
     fn translate_va(
         &mut self,
         virt_addr: u64,
