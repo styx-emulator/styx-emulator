@@ -16,6 +16,7 @@ pub use styx_processor::cpu::CpuBackendExt;
 
 use super::backend::HexagonPcodeBackend;
 
+mod arith;
 mod banking;
 mod branching;
 mod compound;
@@ -25,6 +26,7 @@ mod duplex;
 mod general;
 mod hwloop;
 mod immediate;
+mod mem;
 mod packet;
 mod predicate_anding;
 mod programs;

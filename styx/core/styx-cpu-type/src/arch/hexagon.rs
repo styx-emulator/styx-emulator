@@ -3,6 +3,7 @@ use derive_more::Display;
 use enum_dispatch::enum_dispatch;
 
 pub mod gdb_targets;
+pub mod register_fields;
 mod registers;
 pub mod variants;
 

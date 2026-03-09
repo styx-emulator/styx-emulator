@@ -9,20 +9,23 @@ use bitbybit::bitfield;
 /// System Status Register
 /// Source: 11.9.3 "Trap" refers to SSR as "System Status Register."
 #[bitfield(u32)]
-#[derive(Debug)]
 pub struct Ssr {
+    // Looks like bit 15 is reserved
     #[bits(0..=7, rw)]
     cause: u8,
     #[bits(8..=14, rw)]
     asid: u7,
-    // Looks like bit 15 is reserved, or missing.
+    /// User mode?
     #[bit(16, rw)]
     um: bool,
     #[bit(17, rw)]
+    /// exception
     ex: bool,
+    /// interrupt enabled
     #[bit(18, rw)]
     ie: bool,
     #[bit(19, rw)]
+    /// Guest mode?
     gm: bool,
     #[bit(20, rw)]
     v0: bool,
@@ -46,13 +49,27 @@ pub struct Ssr {
     xe: bool,
 }
 
-/// System Configuration Register
-/// There's no source for this, but the abbreviation seems sufficiently obvious.
+impl Ssr {
+    /// See sys_in_monitor_mode_ssr (cpu_helper.c)
+    pub fn monitor_mode(&self) -> bool {
+        self.ex() || (!self.ex() && !self.um())
+    }
+    /// See sys_in_guest_mode_ssr (cpu_helper.c)
+    pub fn guest_mode(&self) -> bool {
+        !self.ex() && self.um() && self.gm()
+    }
+    /// See sys_in_user_mode_ssr (cpu_helper.c)
+    pub fn user_mode(&self) -> bool {
+        !self.ex() && self.um() && !self.gm()
+    }
+}
+
+/// System Configuration register
 #[bitfield(u32)]
-#[derive(Debug)]
 pub struct Syscfg {
     #[bit(0, rw)]
     mmuen: bool,
+    // icen and dcen are l1 caches
     #[bit(1, rw)]
     icen: bool,
     #[bit(2, rw)]
@@ -81,6 +98,8 @@ pub struct Syscfg {
     prio: bool,
     #[bit(15, rw)]
     dmt: bool,
+    // crt0_standalone.S: this is equivalent to the size of the l2 cache?
+    // can be at most 5?
     #[bits(16..=18, rw)]
     l2cfg: u3,
     #[bit(19, rw)]
@@ -104,7 +123,6 @@ pub struct Syscfg {
 }
 
 #[bitfield(u32)]
-#[derive(Debug)]
 pub struct Usr {
     #[bit(0, rw)]
     ovf: bool,
@@ -139,7 +157,6 @@ pub struct Usr {
 /// See 11.9.2 "Clear interrupt auto disable" and "Cancel pending interrupts"
 /// for more information.
 #[bitfield(u32)]
-#[derive(Debug)]
 pub struct Ipendad {
     #[bits(0..=15, rw)]
     ipend: u16,
@@ -147,40 +164,7 @@ pub struct Ipendad {
     iad: u16,
 }
 
-#[bitfield(u64)]
-#[derive(Debug)]
-pub struct Pte {
-    // Physical page descriptor
-    #[bits(0..=23, rw)]
-    ppd: u24,
-    #[bits(24..=27, rw)]
-    c: u4,
-    #[bit(28, rw)]
-    u: bool,
-    #[bit(29, rw)]
-    r: bool,
-    #[bit(30, rw)]
-    w: bool,
-    #[bit(31, rw)]
-    x: bool,
-    #[bits(32..=51, rw)]
-    vpn: u20,
-    #[bits(52..=58, rw)]
-    asid: u7,
-    #[bit(59, rw)]
-    atr0: bool,
-    #[bit(60, rw)]
-    atr1: bool,
-    #[bit(61, rw)]
-    pa35: bool,
-    #[bit(62, rw)]
-    g: bool,
-    #[bit(63, rw)]
-    v: bool,
-}
-
 #[bitfield(u32)]
-#[derive(Debug)]
 pub struct Isdbst {
     #[bit(0, rw)]
     ready: bool,
@@ -203,7 +187,6 @@ pub struct Isdbst {
 }
 
 #[bitfield(u32)]
-#[derive(Debug)]
 pub struct Ccr {
     #[bits(0..=1, rw)]
     l1icp: u2,

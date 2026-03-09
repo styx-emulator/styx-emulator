@@ -87,6 +87,7 @@ members = [
   "./styx/processors/arm/styx-stm32f107-processor",
   "./styx/processors/arm/styx-stm32f405-processor",
   "./styx/processors/bfin/styx-blackfin-processor",
+  "./styx/processors/hexagon/styx-hexagon-processor",
   "./styx/processors/ppc/styx-powerquicci-processor",
   "./styx/processors/ppc/styx-ppc4xx-processor",
   "./styx/workspace-hack",

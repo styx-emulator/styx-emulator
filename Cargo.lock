@@ -6025,6 +6025,7 @@ name = "styx-cpu-type"
 version = "1.2.0"
 dependencies = [
  "arbitrary-int",
+ "bitbybit",
  "derive_more 1.0.0",
  "enum-as-inner",
  "enum_dispatch",
@@ -6315,6 +6316,17 @@ dependencies = [
  "tonic",
  "tonic-build",
  "typhunix-macros",
+]
+
+[[package]]
+name = "styx-hexagon-processor"
+version = "1.2.0"
+dependencies = [
+ "arbitrary-int",
+ "bitbybit",
+ "serde",
+ "styx-core",
+ "styx-workspace-hack",
 ]
 
 [[package]]
@@ -6744,6 +6756,7 @@ dependencies = [
  "styx-core",
  "styx-cyclonev-processor",
  "styx-event-controllers",
+ "styx-hexagon-processor",
  "styx-kinetis21-processor",
  "styx-powerquicci-processor",
  "styx-ppc4xx-processor",

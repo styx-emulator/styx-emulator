@@ -1012,3 +1012,61 @@ fn test_all_dotnew_class() {
         }
     }
 }
+
+#[test]
+fn test_dotnew_misidentify_load_halfword() {
+    const R1START: u32 = 0x20000;
+
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(
+        r#"
+       0:	04 43 02 f3	f3024304 { 	r4 = add(r2,r3)
+       4:	08 40 20 5c	5c204008   	if (!p0) jump:nt 0x10
+       8:	1f e0 a1 38	38a1e01f   	if (!p0) memh(r1+#0x0) = #-0x1 }
+       c:	00 c0 00 7f	7f00c000 { 	nop }
+      10:	00 c0 00 7f	7f00c000 { 	nop }
+"#,
+    );
+
+    cpu.write_register(HexagonRegister::R1, R1START).unwrap();
+    cpu.write_register(HexagonRegister::R2, 78u32).unwrap();
+    cpu.write_register(HexagonRegister::R3, 91u32).unwrap();
+    cpu.write_register(HexagonRegister::P0, 0u8).unwrap();
+
+    let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
+
+    let pc = cpu.read_register::<u32>(HexagonRegister::Pc).unwrap();
+    let memval = mmu.read_u32_le_phys_code(R1START as u64).unwrap() as i16;
+
+    assert_eq!(pc, 0x1010);
+    assert_eq!(memval, -1);
+}
+
+#[test]
+fn test_dotnew_two_outputs_second() {
+    const MEM_START: u64 = 0x10;
+
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(
+        r#"
+       0:	00 40 00 00	00004000 { 	immext(#0x0)
+       4:	01 54 82 9b	9b825401   	r1 = memw(r2=##0x10)
+       8:	08 f0 42 24	2442f008   	if (!cmp.eq(r1.new,#0x10)) jump:t 0x10 }
+       c:	e3 ff df 78	78dfffe3 { 	r3 = #-0x1 }
+      10:	23 c0 00 78	7800c023 { 	r3 = #0x1 }
+"#,
+    );
+
+    mmu.write_u32_le_phys_data(MEM_START, 0x1839)
+        .expect("Couldn't write to MEM_START");
+    cpu.write_register(HexagonRegister::R2, 0x10u32).unwrap();
+
+    let exit = cpu.execute(&mut mmu, &mut ev, 2).unwrap();
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
+
+    let pc = cpu.read_register::<u32>(HexagonRegister::Pc).unwrap();
+    let r3 = cpu.read_register::<u32>(HexagonRegister::R3).unwrap();
+
+    // The pc is moved forward by 4 after the 0x1010 packet is executed
+    assert_eq!(pc, 0x1014);
+    assert_eq!(r3, 1);
+}

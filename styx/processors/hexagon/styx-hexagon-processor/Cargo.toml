@@ -1,0 +1,21 @@
+[package]
+name = "styx-hexagon-processor"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# Styx dependencies
+styx-core = { workspace = true }
+styx-workspace-hack = { version = "0.1", path = "../../../workspace-hack" }
+
+# Third party dependencies
+serde = { workspace = true }
+bitbybit = { workspace = true }
+arbitrary-int = { workspace = true }
+
+[features]

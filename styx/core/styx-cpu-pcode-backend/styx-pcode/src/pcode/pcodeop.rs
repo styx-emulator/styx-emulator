@@ -4,7 +4,7 @@ use smallvec::SmallVec;
 use std::fmt::{Debug, Display};
 
 /// A single p-code operation.
-#[derive(PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct Pcode {
     /// Opcode of p-code operation.
     pub opcode: Opcode,

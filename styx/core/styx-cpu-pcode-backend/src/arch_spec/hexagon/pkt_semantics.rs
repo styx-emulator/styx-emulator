@@ -37,7 +37,7 @@ impl<T: CpuBackend> CallOtherCallback<T> for NewReg {
 
         // For now, since there are no packet semantics, we should just
         // use the previously set value.
-        trace!("newreg varnode input is {input}");
+        trace!("newreg varnode input is {input} val is {reg_val:?}");
 
         backend
             .write(output.unwrap(), reg_val)

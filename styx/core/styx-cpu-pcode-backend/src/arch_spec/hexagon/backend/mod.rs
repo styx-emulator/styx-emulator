@@ -6,7 +6,7 @@ use execution_helper::DefaultHexagonExecutionHelper;
 use log::trace;
 pub use saved_context_opts::SavedContextOpts;
 use smallvec::{smallvec, SmallVec};
-use std::collections::BTreeMap;
+use std::{borrow::Cow, collections::BTreeMap};
 use styx_cpu_type::{
     arch::{
         backends::{ArchRegister, ArchVariant, BasicArchRegister},
@@ -110,16 +110,32 @@ pub enum HexagonSingleInstructionAction {
     None,
 }
 
-struct HexagonFetchDecodeInfo {
+#[derive(Clone, Debug)]
+enum HexagonFetchDecodeInfo {
+    // PC/key for if the result was already cached
+    Cached(u32),
+    // If the packet was just decoded
+    Decoded(HexagonFetchDecodeData),
+}
+
+#[derive(Clone, Debug, Default)]
+struct HexagonFetchDecodeData {
     total_bytes_consumed: u64,
     ordering: SmallVec<[usize; MAX_PACKET_SIZE]>,
 }
 
+#[derive(Default)]
 struct HexagonExecuteSingleInfo {
     // This represents the total number of instructions within a packet
     // Not used currently.
     _total_instrs_within_packet_executed: u64,
     ordering: SmallVec<[usize; MAX_PACKET_SIZE]>,
+}
+
+#[derive(Debug, Default)]
+struct CachedFetchDecodeResult {
+    pcodes: Vec<Vec<Pcode>>,
+    info: HexagonFetchDecodeData,
 }
 
 #[derive(Debug)]
@@ -156,6 +172,10 @@ pub struct HexagonPcodeBackend {
     // this is the offset from the register space start to the first predicate register
     hexagon_predicate_start: u64,
     hexagon_predicate_end: u64,
+
+    // Used for performance, P-code translation is quite slow
+    // Maps PC to pcodes and other info for running hexagon code
+    cache: Option<BTreeMap<u32, CachedFetchDecodeResult>>,
 }
 
 impl Hookable for HexagonPcodeBackend {
@@ -300,9 +320,28 @@ impl BackendHelper<HexagonExecuteSingleInfo, Vec<Pcode>> for HexagonPcodeBackend
             Err(HexagonFetchDecodeError::Other(e)) => return Err(e),
         };
 
+        // Use the correct pcodes buffer, depending on whether the result
+        // is cached or not.
+        let mut cache = self.cache.take().unwrap();
+
+        let (fetch_decode_data, pcodes) = match fetch_decode_info {
+            HexagonFetchDecodeInfo::Cached(pc) => {
+                let cached_decode = cache.get_mut(&pc).unwrap();
+                (
+                    Cow::Borrowed(&cached_decode.info),
+                    &mut cached_decode.pcodes,
+                )
+            }
+            HexagonFetchDecodeInfo::Decoded(output_fetch_decode_data) => {
+                (Cow::Owned(output_fetch_decode_data), pcodes)
+            }
+        };
+
+        let ordering = fetch_decode_data.ordering.clone();
+
         let mut i = 0;
-        while i < fetch_decode_info.ordering.len() {
-            let pcode_instrs = &pcodes[fetch_decode_info.ordering[i]];
+        while i < ordering.len() {
+            let pcode_instrs = &pcodes[ordering[i]];
             trace!("executing single instruction pcodes: {pcode_instrs:?}");
             // this should actually do the fetching for each individual packet.
             match self.execute_single_instr(
@@ -310,7 +349,7 @@ impl BackendHelper<HexagonExecuteSingleInfo, Vec<Pcode>> for HexagonPcodeBackend
                 mmu,
                 ev,
                 &mut execution_regs_written,
-                fetch_decode_info.total_bytes_consumed,
+                fetch_decode_data.total_bytes_consumed,
             )? {
                 Ok(HexagonSingleInstructionAction::DelayedInterrupt(irqn)) => {
                     delayed_irqn = Some(irqn);
@@ -328,7 +367,10 @@ impl BackendHelper<HexagonExecuteSingleInfo, Vec<Pcode>> for HexagonPcodeBackend
                 Ok(HexagonSingleInstructionAction::PcChange(pc)) if branched_pc.is_none() => {
                     branched_pc = Some(pc)
                 }
-                Err(e) => return Ok(Err(e)),
+                Err(e) => {
+                    self.cache = Some(cache);
+                    return Ok(Err(e));
+                }
                 _ => {}
             }
             total_instrs_executed += 1;
@@ -345,13 +387,16 @@ impl BackendHelper<HexagonExecuteSingleInfo, Vec<Pcode>> for HexagonPcodeBackend
             mmu,
             ev,
             &mut execution_regs_written,
-            fetch_decode_info.total_bytes_consumed,
+            fetch_decode_data.total_bytes_consumed,
         )? {
             // Only handle if there was actually an IRQ request
             Ok(HexagonSingleInstructionAction::DelayedInterrupt(irqn)) => {
                 delayed_irqn = Some(irqn);
             }
-            Err(reason) => return Ok(Err(reason)),
+            Err(reason) => {
+                self.cache = Some(cache);
+                return Ok(Err(reason));
+            }
             _ => {}
         }
 
@@ -359,7 +404,7 @@ impl BackendHelper<HexagonExecuteSingleInfo, Vec<Pcode>> for HexagonPcodeBackend
         {
             let next_pc = match branched_pc {
                 Some(pc) => pc,
-                None => execution_helper_outer.isa_pc() + fetch_decode_info.total_bytes_consumed,
+                None => execution_helper_outer.isa_pc() + fetch_decode_data.total_bytes_consumed,
             };
 
             trace!("telling execution helper to bank move forward pc to {next_pc:x}");
@@ -368,15 +413,18 @@ impl BackendHelper<HexagonExecuteSingleInfo, Vec<Pcode>> for HexagonPcodeBackend
             trace!("calling post packet execute hooks...");
             execution_helper_outer.post_packet_execute(self);
         }
+
+        self.cache = Some(cache);
         self.execution_helper = Some(execution_helper_outer);
 
+        // FIXME: multicore?
         if let Some(irqn) = delayed_irqn {
             HookManager::trigger_interrupt_hook(self, mmu, ev, irqn)?;
         }
 
         Ok(Ok(HexagonExecuteSingleInfo {
             _total_instrs_within_packet_executed: total_instrs_executed,
-            ordering: fetch_decode_info.ordering,
+            ordering,
         }))
     }
 
@@ -581,6 +629,7 @@ impl HexagonPcodeBackend {
             saved_reg_context: BTreeMap::new(),
             hexagon_predicate_start,
             hexagon_predicate_end,
+            cache: Some(BTreeMap::new()),
         }
     }
     /// Indicate when we should update the context reg
@@ -705,6 +754,28 @@ impl HexagonPcodeBackend {
     ) -> Result<Result<HexagonFetchDecodeInfo, TargetExitReason>, HexagonFetchDecodeError> {
         full_pcodes.clear();
 
+        let mut pc = self.pc().unwrap() as u32;
+        let initial_pc = pc;
+
+        // Flush the cache if we cross a page boundary (assuming 4K pages), for now.
+        if let Some((k, _)) = self.cache.as_ref().unwrap().first_key_value() {
+            // The page boundary has changed
+            if k & !0xfff != initial_pc & !0xfff {
+                trace!(
+                    "invalidating pcode cache, cache at page {k:x} and pc at page {initial_pc:x}"
+                );
+                self.cache.as_mut().unwrap().clear()
+            }
+        }
+
+        // Fast path: check the pcode cache.
+        // NOTE: bit inefficient for now, need to stop copying and maybe move to reference counting.
+        // That might be a bit of a lift, so we'll do copying, which will at least be a bit faster.
+        if self.cache.as_ref().unwrap().contains_key(&pc) {
+            trace!("hexagon pcode cache: fast path got {pc:x}");
+            return Ok(Ok(HexagonFetchDecodeInfo::Cached(pc)));
+        }
+
         let mut ordering: SmallVec<[usize; 4]> = SmallVec::new();
         let mut decode_state = PktState::PktEnded(None);
         let mut total_bytes_consumed = 0;
@@ -720,8 +791,6 @@ impl HexagonPcodeBackend {
             )))
             .expect("can't get p0 register as varnode")
             .offset;
-
-        let mut pc = self.pc().unwrap() as u32;
 
         loop {
             // This basically ensures that we break out of this loop at the end of decoding (after the end of the packet
@@ -818,15 +887,18 @@ impl HexagonPcodeBackend {
             // 10.10 for some details.
             let is_immext = {
                 match decode_state {
-                    PktState::PktStarted(insn_data)
-                    | PktState::InsidePacket(insn_data)
-                    | PktState::PktStartedFirstDuplex(insn_data) => {
+                    // Constant extenders can be anywhere in a packet (except the end).
+                    // The other states (eg. packet started first duplex) should not
+                    // be classified here since a duplex packet could be "misclassified"
+                    // as a constant extender if it were here.
+                    PktState::PktStarted(insn_data) | PktState::InsidePacket(insn_data) => {
                         insn_data[0].nonduplex_iclass() == Iclass::Immext
                     }
                     // The end packets don't matter because a constant extender
                     // always comes before an instruction, so a constant extender can't
                     // end a packet. See section 10.9.
                     PktState::PktStandalone(_)
+                    | PktState::PktStartedFirstDuplex(_)
                     | PktState::FirstDuplex(_)
                     | PktState::PktEnded(_) => false,
                 }
@@ -871,11 +943,15 @@ impl HexagonPcodeBackend {
             //
             // See section 10.10.
             if !is_immext {
+                trace!("the current instruction is an immediate extension, so we aren't adding it to the list of pcodes to execute");
                 dotnew_total_insns += 1;
                 dotnew_regs_written.push(first_general_reg);
+
+                // A packet with 5 operations (eg. op1, nop, immext, duplex1, duplex2) will skip the
+                // last instruction with the empty duplex pcode operations added here.
+                full_pcodes.push(pcodes);
             }
 
-            full_pcodes.push(pcodes);
             // End common postfetch
 
             let mut execution_helper = self.execution_helper.take().unwrap();
@@ -983,12 +1059,24 @@ impl HexagonPcodeBackend {
                 }
             }
         }
+
         self.execution_helper = Some(execution_helper);
 
-        Ok(Ok(HexagonFetchDecodeInfo {
+        let info = HexagonFetchDecodeData {
             total_bytes_consumed,
-            ordering,
-        }))
+            ordering: ordering.clone(),
+        };
+
+        // Cache before we return, and indicate that the result is cached.
+        self.cache.as_mut().unwrap().insert(
+            initial_pc,
+            CachedFetchDecodeResult {
+                pcodes: full_pcodes.clone(),
+                info: info.clone(),
+            },
+        );
+
+        Ok(Ok(HexagonFetchDecodeInfo::Decoded(info)))
     }
 }
 

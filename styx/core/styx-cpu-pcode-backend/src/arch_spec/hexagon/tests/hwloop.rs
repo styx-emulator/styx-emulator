@@ -297,3 +297,35 @@ fn test_hwloop1() {
     assert_eq!(r0, 24);
     assert_eq!(r1, 32);
 }
+
+/// This test did not address a specific breakage,
+/// but more tests don't hurt.
+#[test]
+fn test_hwloop_register() {
+    const ITERS: u32 = 3;
+    const R0_INITIAL: u32 = 3;
+    const R1_INITIAL: u32 = 29;
+
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(
+        r#"
+       0:	08 c0 04 60	6004c008 { 	loop0(0x4,r4) }
+       4:	40 80 00 e0	e0008040 { 	r0 = +mpyi(r0,#0x2)
+       8:	21 40 01 b0	b0014021   	r1 = add(r1,#0x1)
+       c:	00 c0 00 7f	7f00c000   	nop }  :endloop0
+        "#,
+    );
+
+    cpu.write_register(HexagonRegister::R4, ITERS).unwrap();
+
+    cpu.write_register(HexagonRegister::R0, R0_INITIAL).unwrap();
+    cpu.write_register(HexagonRegister::R1, R1_INITIAL).unwrap();
+
+    let exit = cpu.execute(&mut mmu, &mut ev, 4).unwrap();
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
+
+    let r0 = cpu.read_register::<u32>(HexagonRegister::R0).unwrap();
+    let r1 = cpu.read_register::<u32>(HexagonRegister::R1).unwrap();
+
+    assert_eq!(r0, 2u32.pow(ITERS) * R0_INITIAL);
+    assert_eq!(r1, R1_INITIAL + ITERS);
+}

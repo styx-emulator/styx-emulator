@@ -36,6 +36,10 @@ pub mod superh {
     pub use styx_superh2a_processor as superh2a;
 }
 
+pub mod hexagon {
+    pub use styx_hexagon_processor as hexagon;
+}
+
 mod uconf {
     styx_uconf::register_component!(register processor: id = ppc_4xx, component = crate::ppc::ppc4xx::PowerPC405Builder::new());
     // todo, broke because ArchMetaVariant

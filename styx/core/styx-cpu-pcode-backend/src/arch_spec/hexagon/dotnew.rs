@@ -29,7 +29,22 @@ struct IclassLoadStoreInstruction {
     // the load/store conditional/gp iclass's subtype, even though it's
     // not labelled
     #[bits(19..=21, r)]
-    iclass_subtype: Option<IclassConditionalGPLoadStoreType>,
+    iclass_subtype_1: Option<IclassLoadStoreType>,
+    #[bits(22..=25, r)]
+    iclass_subtype_2: Option<IclassLoadStoreOperation>,
+}
+
+#[bitenum(u3, exhaustive = false)]
+#[derive(Debug)]
+pub enum IclassLoadStoreType {
+    DotnewOrHalfwordConditionalStore = 0b101,
+}
+
+#[bitenum(u4, exhaustive = false)]
+#[derive(Debug)]
+pub enum IclassLoadStoreOperation {
+    PredicateNewHalfwordStore = 0b1001,
+    PredicateHalfwordStore = 0b1000,
 }
 
 /// ICLASS 1010
@@ -107,11 +122,16 @@ pub fn parse_dotnew(insn: GeneralHexagonInstruction) -> Option<u32> {
         // 0b0011
         Iclass::IclassLoadStore => {
             let reserved_field = IclassLoadStoreInstruction::new_with_raw_value(insn.reserved());
-            trace!("dotnew: iclass load store, reserved field is {reserved_field:x?}");
+            trace!("dotnew: iclass load store, reserved field is {reserved_field:x?} iclass subtype is {:x?} and operation {:x?}", reserved_field.iclass_subtype_1(), reserved_field.iclass_subtype_1());
 
-            match reserved_field.iclass_subtype() {
-                Ok(IclassConditionalGPLoadStoreType::Dotnew) => {
-                    Some(reserved_field.nv_reg_offset().into())
+            match reserved_field.iclass_subtype_1() {
+                Ok(IclassLoadStoreType::DotnewOrHalfwordConditionalStore) => {
+                    match reserved_field.iclass_subtype_2() {
+                        // Do not identify halfword stores as dotnews; they are a "blacklist"
+                        // of sorts, hence the fact that the halfword stores are matched but dotnews aren't.
+                        Ok(_) => None,
+                        Err(_) => Some(reserved_field.nv_reg_offset().into()),
+                    }
                 }
                 _ => None,
             }
