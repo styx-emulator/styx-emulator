@@ -73,3 +73,27 @@ fn test_two_loads() {
     assert_eq!(r2, VAL);
     assert_eq!(r4, VAL);
 }
+
+#[test]
+fn broken_duplex_add() {
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(
+        r#"
+0:	80 00 88 40	40880080 { 	r16 = add(r16,#0x8); 	r0 = memw(r16+#0x0) }
+"#,
+    );
+
+    const R16ADDR: u32 = 0x100u32;
+    const MAGIC: u32 = 0xaa887652u32;
+
+    cpu.write_register(HexagonRegister::R16, R16ADDR).unwrap();
+    mmu.write_u32_le_phys_data(R16ADDR as u64, MAGIC).unwrap();
+
+    let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
+
+    let r0 = cpu.read_register::<u32>(HexagonRegister::R0).unwrap();
+    let r16 = cpu.read_register::<u32>(HexagonRegister::R16).unwrap();
+
+    assert_eq!(r0, MAGIC);
+    assert_eq!(r16, R16ADDR + 8);
+}
