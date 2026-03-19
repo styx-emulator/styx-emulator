@@ -1052,7 +1052,7 @@ mod tests {
     };
     use styx_cpu_type::arch::arm::ArmVariants;
     use styx_pcode::pcode::{Opcode, Pcode, SpaceName, VarnodeData};
-    use styx_processor::event_controller::{DummyEventController, EventController};
+    use styx_processor::event_controller::EventController;
 
     use super::*;
 
@@ -1209,7 +1209,7 @@ mod tests {
     )]
     fn test_unary_operators(opcode: Opcode, input: SizedValue, expected_output: SizedValue) {
         let mut mmu = Mmu::default();
-        let mut evt = EventController::new(Box::new(DummyEventController::default()));
+        let mut evt = EventController::dummy();
 
         let mut cpu = PcodeBackend::new_engine(
             styx_cpu_type::Arch::Arm,
@@ -1487,7 +1487,7 @@ mod tests {
         expected_output: SizedValue,
     ) {
         let mut mmu = Mmu::default();
-        let mut evt = EventController::new(Box::new(DummyEventController::default()));
+        let mut evt = EventController::dummy();
 
         let mut cpu = PcodeBackend::new_engine(
             styx_cpu_type::Arch::Arm,
@@ -1531,7 +1531,7 @@ mod tests {
     #[test]
     fn test_extract() {
         let mut mmu = Mmu::default();
-        let mut evt = EventController::new(Box::new(DummyEventController::default()));
+        let mut evt = EventController::dummy();
 
         let mut cpu = PcodeBackend::new_engine(
             styx_cpu_type::Arch::Arm,
@@ -1580,7 +1580,7 @@ mod tests {
     #[test]
     fn test_insert() {
         let mut mmu = Mmu::default();
-        let mut evt = EventController::new(Box::new(DummyEventController::default()));
+        let mut evt = EventController::dummy();
 
         let mut cpu = PcodeBackend::new_engine(
             styx_cpu_type::Arch::Arm,
@@ -1638,7 +1638,7 @@ mod tests {
     #[test]
     fn test_control_flow_operators() {
         let mut mmu = Mmu::default();
-        let mut evt = EventController::new(Box::new(DummyEventController::default()));
+        let mut evt = EventController::dummy();
 
         let mut cpu = PcodeBackend::new_engine(
             styx_cpu_type::Arch::Arm,

@@ -278,12 +278,9 @@ mod tests {
     use std::sync::Arc;
 
     use styx_cpu_type::{arch::ppc32::Ppc32Variants, Arch};
-    use styx_processor::{
-        event_controller::DummyEventController,
-        memory::{
-            memory_region::MemoryRegion, physical::PhysicalMemoryVariant, MemoryBackend,
-            MemoryPermissions,
-        },
+    use styx_processor::memory::{
+        memory_region::MemoryRegion, physical::PhysicalMemoryVariant, MemoryBackend,
+        MemoryPermissions,
     };
 
     use crate::PcodeBackend;
@@ -295,7 +292,7 @@ mod tests {
     fn test_load_simple() {
         let mut cpu =
             PcodeBackend::new_engine(Arch::Ppc32, Ppc32Variants::Ppc405, ArchEndian::BigEndian);
-        let mut evt = EventController::new(Box::new(DummyEventController::default()));
+        let mut evt = EventController::dummy();
         let mut memory = MemoryBackend::new(PhysicalMemoryVariant::RegionStore);
         memory
             .add_memory_region(
@@ -326,7 +323,7 @@ mod tests {
     fn test_load_boundary() {
         let mut cpu =
             PcodeBackend::new_engine(Arch::Ppc32, Ppc32Variants::Ppc405, ArchEndian::BigEndian);
-        let mut evt = EventController::new(Box::new(DummyEventController::default()));
+        let mut evt = EventController::dummy();
         let mut memory = MemoryBackend::new(PhysicalMemoryVariant::RegionStore);
         memory
             .add_memory_region(
@@ -367,7 +364,7 @@ mod tests {
     fn test_load_end_of_range() {
         let mut cpu =
             PcodeBackend::new_engine(Arch::Ppc32, Ppc32Variants::Ppc405, ArchEndian::BigEndian);
-        let mut evt = EventController::new(Box::new(DummyEventController::default()));
+        let mut evt = EventController::dummy();
         let mut memory = MemoryBackend::new(PhysicalMemoryVariant::RegionStore);
         memory
             .add_memory_region(
@@ -406,7 +403,7 @@ mod tests {
     fn test_load_completely_out_of_range() {
         let mut cpu =
             PcodeBackend::new_engine(Arch::Ppc32, Ppc32Variants::Ppc405, ArchEndian::BigEndian);
-        let mut evt = EventController::new(Box::new(DummyEventController::default()));
+        let mut evt = EventController::dummy();
         let mut memory = MemoryBackend::new(PhysicalMemoryVariant::RegionStore);
         memory
             .add_memory_region(

@@ -652,7 +652,7 @@ mod tests {
     };
 
     use styx_processor::{
-        core::ProcessorCore,
+        core::VcpuCore,
         cpu::{CpuBackend, ExecutionReport},
     };
 
@@ -773,13 +773,13 @@ mod tests {
             .unwrap();
 
         // generate a dummy mmu and event_controller
-        let mut core = ProcessorCore::dummy();
+        let mut vcpu = VcpuCore::dummy();
 
         // outside of range, shouldn't trigger yet
         HookManager::trigger_code_hook(
             &mut cpu,
-            &mut core.mmu,
-            &mut core.event_controller,
+            &mut vcpu.mmu,
+            &mut vcpu.event_controller,
             0x100,
             0x100,
         )
@@ -789,8 +789,8 @@ mod tests {
         // inside of range, triggered
         HookManager::trigger_code_hook(
             &mut cpu,
-            &mut core.mmu,
-            &mut core.event_controller,
+            &mut vcpu.mmu,
+            &mut vcpu.event_controller,
             0x1050,
             0x1050,
         )
