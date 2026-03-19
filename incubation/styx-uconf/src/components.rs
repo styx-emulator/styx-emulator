@@ -35,14 +35,13 @@ macro_rules! register_component {
         fn $id(
             config: Option<&$crate::ComponentConfig>,
         ) -> Result<$crate::components::component_types::$class, $crate::components::UnknownError> {
-            //
             if config.is_some() {
                 $crate::components::log::warn!(
                     "config passed to component \"{}\" that takes no configuration",
                     stringify!($id)
                 )
             }
-            Ok(Box::new($thing))
+            Ok($crate::components::finish::$class::finish($thing))
         }
 
         $crate::components::inventory_submit! {
@@ -118,14 +117,42 @@ pub mod component_types {
     //! Component types for use by [`register_component`] and [`register_component_config`]
     #![allow(non_camel_case_types)]
 
-    use styx_core::{
-        core::builder::ProcessorImpl,
-        prelude::{ExecutorImpl, UninitPlugin},
-    };
+    use styx_core::{core::builder::ProcessorImpl, prelude::*};
 
     pub type processor = Box<dyn ProcessorImpl>;
-    pub type executor = Box<dyn ExecutorImpl>;
+    pub type executor = ExecutorKind;
     pub type plugin = Box<dyn UninitPlugin>;
+}
+
+/// Hacky module to allow for some box'd, some not box'd components.
+///
+/// Basically the `$component_name::finish()` function should take what the user
+/// is giving us and return the final component type.
+///
+/// For processor impls and plugins the final component type is boxed.
+pub mod finish {
+    pub mod processor {
+        use styx_core::core::ProcessorImpl;
+        pub fn finish(
+            p: impl ProcessorImpl + 'static,
+        ) -> crate::components::component_types::processor {
+            Box::new(p)
+        }
+    }
+    pub mod executor {
+        use styx_core::prelude::ExecutorKind;
+        pub fn finish(e: ExecutorKind) -> crate::components::component_types::executor {
+            e
+        }
+    }
+    pub mod plugin {
+        use styx_core::prelude::UninitPlugin;
+        pub fn finish(
+            p: impl UninitPlugin + 'static,
+        ) -> crate::components::component_types::plugin {
+            Box::new(p)
+        }
+    }
 }
 
 /// Compile time component for registration.
@@ -145,7 +172,7 @@ pub struct Component {
 
 pub enum ComponentType {
     Processor(ComponentGenerator<Box<dyn ProcessorImpl>>),
-    Executor(ComponentGenerator<Box<dyn ExecutorImpl>>),
+    Executor(ComponentGenerator<ExecutorKind>),
     Plugin(ComponentGenerator<Box<dyn UninitPlugin>>),
 }
 
