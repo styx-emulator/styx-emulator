@@ -7,7 +7,7 @@ use std::thread::JoinHandle;
 
 use gdbmi::breakpoint::Breakpoint;
 use gdbmi::raw::ResultResponse;
-use gdbmi::status::{Status, StopReason, Stopped};
+pub use gdbmi::status::{Status, StopReason, Stopped};
 use gdbmi::{Gdb, TimeoutError};
 use std::fmt::Write;
 use std::num::ParseIntError;
@@ -477,6 +477,63 @@ impl BlockingGdbClient {
         Ok(register_map)
     }
 
+    /// Select the GDB thread (1-indexed; thread `i+1` is vCPU `i`).
+    pub fn select_thread(&self, tid: i64) -> Result<(), GdbHarnessError> {
+        let inner = self.inner.clone();
+        let resp: ResultResponse = self
+            .runtime
+            .block_on(async { inner.raw_cmd(&format!("-thread-select {tid}")).await })?
+            .expect_result()?;
+        resp.expect_msg_is("done")?;
+        Ok(())
+    }
+
+    /// List the GDB thread ids (one per vCPU).
+    pub fn list_threads(&self) -> Result<Vec<i64>, GdbHarnessError> {
+        let inner = self.inner.clone();
+        let resp: ResultResponse = self
+            .runtime
+            .block_on(async { inner.raw_cmd("-thread-info").await })?
+            .expect_result()?;
+        resp.expect_msg_is("done")?;
+
+        let ids: Vec<i64> = resp
+            .expect_payload()?
+            .remove_expect("threads")?
+            .expect_list()?
+            .iter()
+            .map(|t| {
+                t.clone()
+                    .expect_dict()
+                    .unwrap()
+                    .remove_expect("id")
+                    .unwrap()
+                    .expect_string()
+                    .unwrap()
+                    .parse::<i64>()
+                    .unwrap()
+            })
+            .collect();
+        Ok(ids)
+    }
+
+    /// The currently selected/stopped GDB thread id.
+    pub fn current_thread(&self) -> Result<i64, GdbHarnessError> {
+        let inner = self.inner.clone();
+        let resp: ResultResponse = self
+            .runtime
+            .block_on(async { inner.raw_cmd("-thread-info").await })?
+            .expect_result()?;
+        resp.expect_msg_is("done")?;
+
+        let current = resp
+            .expect_payload()?
+            .remove_expect("current-thread-id")?
+            .expect_string()?
+            .parse::<i64>()?;
+        Ok(current)
+    }
+
     pub fn quit(&self) -> Result<(), GdbHarnessError> {
         let inner = self.inner.clone();
         let _dont_care = self
@@ -688,7 +745,7 @@ impl GdbHarness {
         let runtime = Runtime::new().unwrap();
         let endian = processor.core.cpu.endian();
         let proc_handle = std::thread::spawn(move || {
-            processor.run(Forever).unwrap();
+            processor.run_multi(Forever).unwrap();
         });
 
         // create gdb process
@@ -706,6 +763,18 @@ impl GdbHarness {
 
     pub fn list_registers(&self) -> Result<HashMap<String, u64>, GdbHarnessError> {
         self.gdb_client.get_registers()
+    }
+
+    pub fn list_threads(&self) -> Result<Vec<i64>, GdbHarnessError> {
+        self.gdb_client.list_threads()
+    }
+
+    pub fn select_thread(&self, tid: i64) -> Result<(), GdbHarnessError> {
+        self.gdb_client.select_thread(tid)
+    }
+
+    pub fn current_thread(&self) -> Result<i64, GdbHarnessError> {
+        self.gdb_client.current_thread()
     }
 
     pub fn set_register(&self, register: String, value: u64) -> Result<(), GdbHarnessError> {

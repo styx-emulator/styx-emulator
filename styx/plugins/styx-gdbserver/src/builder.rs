@@ -13,7 +13,8 @@ use styx_core::{
     },
     cpu::arch::GdbArchIdSupportTrait,
     errors::UnknownError,
-    prelude::{anyhow, ArchVariant, Context, ExecutorImpl},
+    executor::ExecutorKind,
+    prelude::{anyhow, ArchVariant, Context},
 };
 
 #[derive(serde::Deserialize)]
@@ -30,10 +31,7 @@ pub struct GdbConfig {
 ///
 /// This is useful for instantiating a GDB executor without knowledge of the architecture at compile
 /// time.
-pub fn build_gdb(
-    arch: ArchVariant,
-    params: GdbPluginParams,
-) -> Result<Box<dyn ExecutorImpl>, UnknownError> {
+pub fn build_gdb(arch: ArchVariant, params: GdbPluginParams) -> Result<ExecutorKind, UnknownError> {
     let gdb = new_gdb(arch, params).with_context(|| "could not create gdb plugin")?;
     Ok(gdb)
 }
@@ -43,7 +41,7 @@ pub fn build_gdb(
 /// This is useful for instantiating a GDB executor without knowledge of the architecture at compile
 /// time, similar to [`build_gdb()`], but this has a deserializable config that can be use in yaml
 /// configuration files.
-pub fn build_gdb_config(config: GdbConfig) -> Result<Box<dyn ExecutorImpl>, UnknownError> {
+pub fn build_gdb_config(config: GdbConfig) -> Result<ExecutorKind, UnknownError> {
     let connection = &config.connection;
     let verbose = config.verbose;
 
@@ -65,7 +63,7 @@ styx_uconf::register_component_config_fn!(register executor: id = gdb, component
 fn new_gdb(
     arch: impl Into<ArchVariant>,
     params: GdbPluginParams,
-) -> Result<Box<dyn ExecutorImpl>, UnknownError> {
+) -> Result<ExecutorKind, UnknownError> {
     let arch = arch.into();
     match arch {
         ArchVariant::Ppc32(Ppc32MetaVariants::Ppc405(_)) => {
@@ -118,14 +116,16 @@ fn new_gdb(
 fn new_gdb_single<GdbArchImpl>(
     arch_variant: ArchVariant,
     params: GdbPluginParams,
-) -> Result<Box<dyn ExecutorImpl>, UnknownError>
+) -> Result<ExecutorKind, UnknownError>
 where
     GdbArchImpl: gdbstub::arch::Arch + GdbTargetDescription + Default + Debug + 'static,
     GdbArchImpl::Registers: styx_core::cpu::arch::GdbRegistersHelper,
     GdbArchImpl::RegId: GdbArchIdSupportTrait,
 {
     check_gdb_type::<GdbArchImpl>(arch_variant)?;
-    Ok(Box::new(GdbExecutor::<GdbArchImpl>::new(params)?))
+    Ok(ExecutorKind::custom(GdbExecutor::<GdbArchImpl>::new(
+        params,
+    )?))
 }
 
 /// Verifies that the `ArchVariant`'s declared gdb target description (a la
