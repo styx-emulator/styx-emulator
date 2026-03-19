@@ -5,7 +5,7 @@
 //! # Overview
 //!
 //! The `GdbExecutor` leverages the
-//! [`gdbstub`](https://docs.rs/gdbstub/0.6.6/gdbstub/) crate to enable debugging
+//! [`gdbstub`](https://docs.rs/gdbstub/0.7.3/gdbstub/) crate to enable debugging
 //! for styx emulators.
 //!
 //! Implementation is largely driven by:
@@ -19,12 +19,12 @@
 //!
 //! ## Implementation Details
 //!
-//! As the [gdbstub docs](https://docs.rs/gdbstub/0.6.6/gdbstub/) explain, three
+//! As the [gdbstub docs](https://docs.rs/gdbstub/0.7.3/gdbstub/) explain, three
 //! items are needed for integration with `gdbstub`:
 //!
 //! **Connection**
 //! - A way to communicate with a GDB client using gdbstub's
-//!   [Connection trait](https://docs.rs/gdbstub/0.6.6/gdbstub/conn/trait.ConnectionExt.html)
+//!   [Connection trait](https://docs.rs/gdbstub/0.7.3/gdbstub/conn/trait.ConnectionExt.html)
 //! - This is mostly provided by gdbstub, but [the event_loop](event_loop) module
 //!   has a [`WaitForConnection`](event_loop::WaitForConnection) trait
 //!   that supports [`TCP`](event_loop::TcpParameters) and
@@ -37,14 +37,14 @@
 //! - This is implemented specifically for all [`styx_core::cpu`] targets and
 //!   more generally in the [`target_impl`] module. Most of this module (gdb)
 //!   is concerned with defining [`target_impl::TargetImpl`] and implementing
-//!   [`gdbstub::Target`](https://docs.rs/gdbstub/0.6.6/gdbstub/target/trait.Target.html)
+//!   [`gdbstub::Target`](https://docs.rs/gdbstub/0.7.3/gdbstub/target/trait.Target.html)
 //!   traits.
 //!
 //! **Event Loop**
 //! - The call flow and I/O between the emulated target and the gdb client.
 //! - [`EmuGdbEventLoop`](event_loop::EmuGdbEventLoop) provides a blocking event
 //!   loop by implementing
-//!   [gdbstub's BlockingEventLoop](https://docs.rs/gdbstub/0.6.6/gdbstub/stub/run_blocking/trait.BlockingEventLoop.html)
+//!   [gdbstub's BlockingEventLoop](https://docs.rs/gdbstub/0.7.3/gdbstub/stub/run_blocking/trait.BlockingEventLoop.html)
 //!   trait.
 //!
 #![allow(rustdoc::private_intra_doc_links)]
