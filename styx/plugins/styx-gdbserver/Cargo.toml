@@ -23,6 +23,7 @@ num-traits = { workspace = true }
 clap = { workspace = true }
 serde = { workspace = true }
 tap = { workspace = true }
+itertools = { workspace = true }
 styx-workspace-hack = { version = "0.1", path = "../../workspace-hack" }
 
 [dev-dependencies]
