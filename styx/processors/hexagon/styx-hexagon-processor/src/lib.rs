@@ -77,7 +77,7 @@ impl ProcessorImpl for HexagonBuilder {
             }
         };
 
-        mmu.memory_map(0, 2u64.pow(32), MemoryPermissions::all())?;
+        mmu.memory_map(0, 2u64.pow(36), MemoryPermissions::all())?;
 
         let l2vic = Box::new(L2Vic::default());
 
