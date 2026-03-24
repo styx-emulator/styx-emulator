@@ -69,6 +69,7 @@
 //! }
 //! ```
 use styx_core::errors::UnknownError;
+use styx_core::event_controller::*;
 use styx_core::grpc::io::uart::uart_port_server::{UartPort, UartPortServer};
 use styx_core::grpc::io::uart::{self, RxData, TxData};
 use styx_core::prelude::*;
@@ -130,43 +131,16 @@ pub trait UartImpl: AsAny + Send {
         Ok(())
     }
 
-    /// Top half pre-event hook for peripherals to implement and
-    /// handle accordingly.
-    fn pre_event_hook(
-        &mut self,
-        _cpu: &mut dyn CpuBackend,
-        _mmu: &mut Mmu,
-        _event_controller: &mut dyn EventControllerImpl,
-    ) -> Result<(), UnknownError> {
-        Ok(())
-    }
-
-    /// Top half post-event hook for peripherals to implement and
-    /// handle accordingly.
-    ///
-    /// not sure if we need this?
-    fn post_event_hook(
-        &mut self,
-        _cpu: &mut dyn CpuBackend,
-        _mmu: &mut Mmu,
-        _event_controller: &mut dyn EventControllerImpl,
-    ) -> Result<(), UnknownError> {
-        Ok(())
-    }
-
     /// Returns all of the IRQs that belong to this specific interface
     fn irqs(&self) -> Vec<ExceptionNumber> {
         vec![]
     }
 
     /// Called every tick for updates.
-    fn tick(
-        &mut self,
-        _cpu: &mut dyn CpuBackend,
-        _mmu: &mut Mmu,
-        _event_controller: &mut dyn EventControllerImpl,
-    ) -> Result<(), UnknownError> {
-        Ok(())
+    ///
+    /// Returns exception numbers for any interrupts to signal.
+    fn tick(&mut self, _ctx: &PeripheralTickCtx<'_>) -> Result<RaisedIrqs, UnknownError> {
+        Ok(RaisedIrqs::none())
     }
 }
 
@@ -326,19 +300,6 @@ impl Peripheral for UartController {
         "uart controller"
     }
 
-    /// routes to the correct underlying uart port
-    fn post_event_hook(
-        &mut self,
-        _cpu: &mut dyn CpuBackend,
-        _mmu: &mut Mmu,
-        _event_controller: &mut dyn EventControllerImpl,
-        _num: ExceptionNumber,
-    ) -> Result<(), UnknownError> {
-        // let port = self.irq_to_uart_port(num)?;
-        // port.inner.post_event_hook(num)
-        Ok(())
-    }
-
     /// gets all the inner IRQs that this [`UartController`] should route
     fn irqs(&self) -> Vec<ExceptionNumber> {
         self.uart_interfaces
@@ -347,20 +308,15 @@ impl Peripheral for UartController {
             .collect()
     }
 
-    fn tick(
-        &mut self,
-        cpu: &mut dyn CpuBackend,
-        mmu: &mut Mmu,
-        event_controller: &mut dyn EventControllerImpl,
-        _delta: &styx_core::executor::Delta,
-    ) -> Result<(), UnknownError> {
+    fn tick(&mut self, ctx: &PeripheralTickCtx<'_>) -> Result<RaisedIrqs, UnknownError> {
+        let mut raised = RaisedIrqs::none();
         for interface in self.uart_interfaces.iter_mut() {
-            interface.inner.tick(cpu, mmu, event_controller)?;
+            raised.extend(interface.inner.tick(ctx)?);
         }
-        Ok(())
+        Ok(raised)
     }
 
-    fn reset(&mut self, _cpu: &mut dyn CpuBackend, _mmu: &mut Mmu) -> Result<(), UnknownError> {
+    fn reset(&mut self, _mmu: &mut Mmu) -> Result<(), UnknownError> {
         Ok(())
     }
 }
