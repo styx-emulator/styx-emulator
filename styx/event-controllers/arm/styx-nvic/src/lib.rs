@@ -362,7 +362,6 @@ impl EventControllerImpl for Nvic {
         &mut self,
         cpu: &mut dyn CpuBackend,
         mmu: &mut Mmu,
-        _peripherals: &mut Peripherals,
     ) -> Result<InterruptExecuted, UnknownError> {
         let mut event_queue = self.latched_events.lock().unwrap();
         trace!("Event queue: {event_queue:?}");
@@ -493,7 +492,12 @@ impl EventControllerImpl for Nvic {
         Ok(InterruptExecuted::Executed)
     }
 
-    fn tick(&mut self, _cpu: &mut dyn CpuBackend, _mmu: &mut Mmu) -> Result<(), UnknownError> {
+    fn tick(
+        &mut self,
+        _cpu: &mut dyn CpuBackend,
+        _mmu: &mut Mmu,
+        _delta: &Delta,
+    ) -> Result<(), UnknownError> {
         Ok(())
     }
 
