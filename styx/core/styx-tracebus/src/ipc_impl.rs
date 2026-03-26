@@ -9,7 +9,6 @@ use crate::{mkpath, BinaryTraceEventType, TraceError, TraceOptions, TraceProvide
 use ipmpsc::{Receiver, Sender, SharedRingBuffer};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
-use std::mem::transmute;
 use std::path::Path;
 use std::thread::sleep;
 use std::time::Duration;
@@ -17,7 +16,7 @@ use std::time::Duration;
 /// SharedRingBuffer trace file extension
 pub const SRB_TRACE_FILE_EXT: &str = "srb";
 
-/// Data for implmentation of the [`TraceProvider`] trait
+/// Data for implementation of the [`TraceProvider`] trait
 pub struct IPCTracer {
     /// path on disk to the memory mapped file
     path: String,
@@ -108,7 +107,7 @@ impl TraceProvider for IPCTracer {
     where
         T: for<'de> Deserialize<'de> + Serialize + Traceable,
     {
-        let bytes: &BinaryTraceEventType = unsafe { transmute(item) };
+        let bytes: &BinaryTraceEventType = item.binary();
         match self.sender.send_timeout(bytes, self.options.send_timeout) {
             Err(e) => Err(TraceError::WriteFailed(format!("{e:?}"))),
             Ok(v) => Ok(v),
@@ -134,7 +133,7 @@ impl TraceProvider for IPCTracer {
     }
 }
 
-/// Helper for reading the trace events emmitted by IPCTracer
+/// Helper for reading the trace events emitted by IPCTracer
 #[derive(Debug, Clone)]
 pub struct TracerReaderOptions {
     pub filename: String,
