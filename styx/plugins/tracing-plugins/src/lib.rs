@@ -30,7 +30,7 @@
 //! - [`JsonInterruptPlugin`]
 //!
 //! # Backend Introspection
-//! - [`TokioConsolePlugin`] - connectes to tokio console
+//! - [`TokioConsolePlugin`] - connects to tokio console
 //!     - useful for debugging and monitoring the [`Processor`]'s
 //!       tokio runtime
 //! - [`OtlpStreamingPlugin`] - Streams execution spans to an OTLP backend
@@ -238,7 +238,12 @@ impl UninitPlugin for OtlpStreamingPlugin {
 styx_uconf::register_component!(register plugin: id = otlp_streaming, component = OtlpStreamingPlugin);
 
 fn pc_trace_hook(proc: CoreHandle) -> Result<(), UnknownError> {
-    trace!(target: "pc-trace","{{\"type\": \"pc\", \"value\": \"{:#x}\"}}", proc.cpu.pc()?);
+    trace!(
+        target: "pc-trace",
+        "{{\"type\": \"pc\", \"vcpu\": {}, \"value\": \"{:#x}\"}}",
+        proc.vcpu_id(),
+        proc.cpu.pc()?,
+    );
     Ok(())
 }
 
@@ -251,6 +256,7 @@ fn pc_trace_hook(proc: CoreHandle) -> Result<(), UnknownError> {
 /// ```json
 /// {
 ///     "type": "pc",
+///     "vcpu": 0,
 ///     "value": 41414141,
 /// }
 /// ```
@@ -272,7 +278,9 @@ impl UninitPlugin for JsonPcTracePlugin {
         proc: &mut BuildingProcessor,
     ) -> Result<Box<dyn Plugin>, UnknownError> {
         // add event hook
-        proc.core.cpu.add_hook(StyxHook::code(.., pc_trace_hook))?;
+        for vcpu in proc.vcpus.iter_mut() {
+            vcpu.cpu.add_hook(StyxHook::code(.., pc_trace_hook))?;
+        }
 
         // enable the logging
         TRACING_LAYERS.push(Box::new(
@@ -298,7 +306,8 @@ fn write_memory_hook(
 
     trace!(
         target: "write-memory",
-        "{{\"type\": \"mem_write\", \"pc\": \"{:x}\", \"address\": \"{:x}\", \"size\": {}, \"data\": {:?}}}",
+        "{{\"type\": \"mem_write\", \"vcpu\": {}, \"pc\": \"{:x}\", \"address\": \"{:x}\", \"size\": {}, \"data\": {:?}}}",
+        proc.vcpu_id(),
         proc.cpu.pc()?,
         address,
         size,
@@ -315,6 +324,7 @@ fn write_memory_hook(
 /// ```json
 /// {
 ///     "type": "mem_write",
+///     "vcpu": 0,
 ///     "pc": 41414141,
 ///     "address": 42424242,
 ///     "size": 4,
@@ -339,9 +349,10 @@ impl UninitPlugin for JsonMemoryWritePlugin {
         proc: &mut BuildingProcessor,
     ) -> Result<Box<dyn Plugin>, UnknownError> {
         // add event hook
-        proc.core
-            .cpu
-            .add_hook(StyxHook::memory_write(.., write_memory_hook))?;
+        for vcpu in proc.vcpus.iter_mut() {
+            vcpu.cpu
+                .add_hook(StyxHook::memory_write(.., write_memory_hook))?;
+        }
 
         // enable the logging
         TRACING_LAYERS.push(Box::new(
@@ -364,6 +375,7 @@ styx_uconf::register_component!(register plugin: id = json_memory_write, compone
 /// ```json
 /// {
 ///     "type": "mem_read",
+///     "vcpu": 0,
 ///     "pc": 41414141,
 ///     "address": 42424242,
 ///     "size": 4,
@@ -384,7 +396,8 @@ fn read_memory_hook(
 ) -> Result<(), UnknownError> {
     tracing::trace!(
         target: "memory-read",
-        "{{\"type\": \"mem_read\", \"pc\": \"{:x}\", \"address\": \"{:x}\", \"size\": {}, \"data\": {:?}}}",
+        "{{\"type\": \"mem_read\", \"vcpu\": {}, \"pc\": \"{:x}\", \"address\": \"{:x}\", \"size\": {}, \"data\": {:?}}}",
+        proc.vcpu_id(),
         proc.cpu.pc()?,
         address,
         size,
@@ -405,9 +418,10 @@ impl UninitPlugin for JsonMemoryReadPlugin {
         proc: &mut BuildingProcessor,
     ) -> Result<Box<dyn Plugin>, UnknownError> {
         // add event hook
-        proc.core
-            .cpu
-            .add_hook(StyxHook::memory_read(.., read_memory_hook))?;
+        for vcpu in proc.vcpus.iter_mut() {
+            vcpu.cpu
+                .add_hook(StyxHook::memory_read(.., read_memory_hook))?;
+        }
 
         // enable the logging
         TRACING_LAYERS.push(Box::new(
