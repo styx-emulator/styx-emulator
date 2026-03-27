@@ -2,6 +2,8 @@
 //! Testing harness for the gdb plugin and `gdb-multiarch`
 //!
 use std::collections::HashMap;
+use std::fmt::Write;
+use std::num::ParseIntError;
 use std::process::Stdio;
 use std::thread::JoinHandle;
 
@@ -9,15 +11,13 @@ use gdbmi::breakpoint::Breakpoint;
 use gdbmi::raw::ResultResponse;
 pub use gdbmi::status::{Status, StopReason, Stopped};
 use gdbmi::{Gdb, TimeoutError};
-use std::fmt::Write;
-use std::num::ParseIntError;
-use styx_core::prelude::*;
-use styx_plugins::gdb::{build_gdb, GDBOptions, GdbExecutor, GdbPluginParams};
-
 use thiserror::Error;
 use tokio::process::{Child, Command};
 use tokio::runtime::Runtime;
 use tracing::{debug, error, trace};
+
+use styx_core::prelude::*;
+use styx_plugins::gdb::{build_gdb, GDBOptions, GdbExecutor, GdbPluginParams};
 
 pub fn decode_hex(s: &str) -> Result<Vec<u8>, ParseIntError> {
     (0..s.len())
@@ -685,13 +685,11 @@ impl GdbHarness {
         let arch = arch.into();
         let params = params();
         let port = params.port_in_use.clone();
-        // create gdb plugin with port 0
-        let gdb_plugin = build_gdb(arch, params).unwrap();
+        let gdb_executor = build_gdb(arch, params).unwrap();
 
-        // get assigned port (doesn't happen until processor starts) todo
         let port = *port.lock().unwrap();
 
-        Self::from_foo(builder, gdb_plugin, port)
+        Self::from_foo(builder, gdb_executor, port)
     }
 
     pub fn from_processor_builder_options<GdbSupport>(
@@ -703,15 +701,13 @@ impl GdbHarness {
         GdbSupport::Registers: styx_core::cpu::arch::GdbRegistersHelper,
         GdbSupport::RegId: styx_core::cpu::arch::GdbArchIdSupportTrait,
     {
-        // create gdb plugin with port 0
         let gdb_plugin = GdbExecutor::<GdbSupport>::new(params())
             .unwrap()
             .with_options(options);
 
-        // get assigned port (doesn't happen until processor starts) todo
         let port = gdb_plugin.port();
 
-        Self::from_foo(builder, Box::new(gdb_plugin), port)
+        Self::from_foo(builder, ExecutorKind::custom(gdb_plugin), port)
     }
 
     pub fn from_processor_builder<GdbSupport>(builder: ProcessorBuilder) -> Self
@@ -720,30 +716,22 @@ impl GdbHarness {
         GdbSupport::Registers: styx_core::cpu::arch::GdbRegistersHelper,
         GdbSupport::RegId: styx_core::cpu::arch::GdbArchIdSupportTrait,
     {
-        // create gdb plugin with port 0
         let gdb_plugin = GdbExecutor::<GdbSupport>::new(params()).unwrap();
 
-        // get assigned port (doesn't happen until processor starts) todo
         let port = gdb_plugin.port();
 
-        Self::from_foo(builder, Box::new(gdb_plugin), port)
+        Self::from_foo(builder, ExecutorKind::custom(gdb_plugin), port)
     }
 
-    pub fn from_foo(
-        builder: ProcessorBuilder,
-        gdb_plugin: Box<dyn ExecutorImpl>,
-        port: u16,
-    ) -> Self {
+    pub fn from_foo(builder: ProcessorBuilder, gdb_plugin: ExecutorKind, port: u16) -> Self {
         let mut processor = builder
-            // .with_executor()
-            .with_executor_box(gdb_plugin)
+            .with_executor_kind(gdb_plugin)
             .with_ipc_port(0)
             .build()
             .unwrap();
 
-        // spawn the processor in a blocking thread
         let runtime = Runtime::new().unwrap();
-        let endian = processor.core.cpu.endian();
+        let endian = processor.vcpus[0].cpu.endian();
         let proc_handle = std::thread::spawn(move || {
             processor.run_multi(Forever).unwrap();
         });
