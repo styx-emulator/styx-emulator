@@ -3,7 +3,7 @@
 Fuzzable Emulation
 ##################
 
-Styx supports fuzzing with `LibAFL <https://aflplus.plus/libafl-book/>`_
+Styx supports fuzzing single vcpu targets with `LibAFL <https://aflplus.plus/libafl-book/>`_
 
 Building a Fuzzing Capable Processor in Styx
 ============================================
