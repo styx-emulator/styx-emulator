@@ -91,22 +91,8 @@ impl ClockManager {
 }
 
 impl Peripheral for ClockManager {
-    fn reset(
-        &mut self,
-        _cpu: &mut dyn CpuBackend,
-        mmu: &mut styx_core::prelude::Mmu,
-    ) -> Result<(), UnknownError> {
+    fn reset(&mut self, mmu: &mut styx_core::prelude::Mmu) -> Result<(), UnknownError> {
         self.inner_hal.reset(mmu)?;
-        Ok(())
-    }
-
-    fn post_event_hook(
-        &mut self,
-        _cpu: &mut dyn CpuBackend,
-        _mmu: &mut styx_core::prelude::Mmu,
-        _event_controller: &mut dyn styx_core::prelude::EventControllerImpl,
-        _irqn: styx_core::prelude::ExceptionNumber,
-    ) -> Result<(), UnknownError> {
         Ok(())
     }
 

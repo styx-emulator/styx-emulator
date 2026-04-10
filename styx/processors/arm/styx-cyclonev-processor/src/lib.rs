@@ -65,7 +65,7 @@ use styx_core::core::builder::{BuildProcessorImplArgs, ProcessorImpl};
 use styx_core::cpu::arch::arm::{arm_coproc_registers, ArmVariants};
 use styx_core::cpu::PcodeBackend;
 use styx_core::memory::memory_region::MemoryRegion;
-use styx_core::memory::DummyTlb;
+use styx_core::memory::MemoryBackend;
 use styx_core::prelude::*;
 use styx_gic::Gic;
 use styx_peripherals::uart::UartController;
@@ -235,13 +235,13 @@ impl ProcessorImpl for CycloneVBuilder {
         //  - 1 -> High exception vectors (Hivecs), base address 0xFFFF0000. This base
         //         address cannot be remapped.
         if self.initial_vbar == 0xFFFF_0000_u32 {
-            set_sctlr_vbit(proc.core.cpu.as_mut());
+            set_sctlr_vbit(proc.vcpus[0].cpu.as_mut());
         } else {
-            set_vbar(proc.core.cpu.as_mut(), self.initial_vbar);
+            set_vbar(proc.vcpus[0].cpu.as_mut(), self.initial_vbar);
         }
 
         // Reset the Current Program Status Register (CPSR).
-        reset_cpsr(proc.core.cpu.as_mut());
+        reset_cpsr(proc.vcpus[0].cpu.as_mut());
 
         // Configuration Base Address Register (CBAR):
         //  - Specifies the base address for Timers, Watchdogs, Interrupt Controller,
@@ -251,7 +251,7 @@ impl ProcessorImpl for CycloneVBuilder {
         //    base address of these pages is defined by the pins `PERIPHBASE[31:13]`.
         //  - This value can be retrieved by a Cortex-A9 processor using CP15.
         //  - The base address can be anywhere from 0x0000_0000 to 0xFFFF_E000.
-        set_cbar(proc.core.cpu.as_mut(), self.initial_cbar);
+        set_cbar(proc.vcpus[0].cpu.as_mut(), self.initial_cbar);
 
         Ok(())
     }
@@ -273,31 +273,19 @@ impl ProcessorImpl for CycloneVBuilder {
             _ => return Err(BackendNotSupported(args.backend).into()),
         };
 
-        let mut memory = MemoryBackend::new_region_store();
-        let tlb = DummyTlb::new();
-
-        self.setup_address_space(&mut memory)?;
-
         let gic = Gic::default();
         gic.initialize(self.initial_vbar, self.initial_cbar)?;
 
-        let peripherals: Vec<Box<dyn Peripheral>> = vec![
-            Box::new(CycloneVSDMMC::new()),
-            Box::new(ClockManager::new()),
-            Box::new(UartController::new(get_uarts())),
-        ];
-
-        let mut hints = LoaderHints::new();
-        hints.insert("arch".to_string().into_boxed_str(), Box::new(Arch::Arm));
-
-        Ok(ProcessorBundle {
-            cpu,
-            tlb,
-            memory,
-            event_controller: Box::new(gic),
-            peripherals,
-            loader_hints: hints,
-        })
+        Ok(ProcessorBundle::builder()
+            .with_memory(MemoryBackend::new_region_store())
+            .modify_memory(|m| self.setup_address_space(m))?
+            .with_event_distributor(SingleVcpuEventDistributor::default())
+            .with_vcpu(|v| v.with_cpu_box(cpu).with_event_controller(gic))
+            .add_peripheral(CycloneVSDMMC::new())
+            .add_peripheral(ClockManager::new())
+            .add_peripheral(UartController::new(get_uarts()))
+            .with_arch_hint(Arch::Arm)
+            .build()?)
     }
 }
 
@@ -407,18 +395,16 @@ mod tests {
             .unwrap();
 
         // Verify that V-bit is not set initially.
-        let sctlr_val = proc
-            .core
+        let sctlr_val = proc.vcpus[0]
             .cpu
             .read_register::<CoProcessorValue>(arm_coproc_registers::SCTLR)
             .unwrap();
         assert_eq!(sctlr_val.value & SCTLR_VBIT_MASK, 0);
 
-        set_sctlr_vbit(proc.core.cpu.as_mut());
+        set_sctlr_vbit(proc.vcpus[0].cpu.as_mut());
 
         // Ensure the V-bit was set.
-        let sctlr_val = proc
-            .core
+        let sctlr_val = proc.vcpus[0]
             .cpu
             .read_register::<CoProcessorValue>(arm_coproc_registers::SCTLR)
             .unwrap();
@@ -437,21 +423,19 @@ mod tests {
             .unwrap();
 
         // Test VBAR.
-        set_vbar(proc.core.cpu.as_mut(), TEST_VAL as u32);
+        set_vbar(proc.vcpus[0].cpu.as_mut(), TEST_VAL as u32);
 
         // First check secure mode.
-        let vbar = proc
-            .core
+        let vbar = proc.vcpus[0]
             .cpu
             .read_register::<CoProcessorValue>(arm_coproc_registers::VBAR)
             .unwrap();
         assert_eq!(vbar.value, TEST_VAL);
 
         // Test CBAR.
-        set_cbar(proc.core.cpu.as_mut(), TEST_VAL as u32);
+        set_cbar(proc.vcpus[0].cpu.as_mut(), TEST_VAL as u32);
 
-        let cbar = proc
-            .core
+        let cbar = proc.vcpus[0]
             .cpu
             .read_register::<CoProcessorValue>(arm_coproc_registers::CBAR)
             .unwrap();
@@ -476,27 +460,42 @@ mod tests {
             .build()
             .unwrap();
 
-        proc.core.mmu.write_code(0x00100000, code_bytes).unwrap();
-        proc.core.cpu.set_pc(0x00100000).unwrap();
+        proc.vcpus[0]
+            .mmu
+            .write_code(0x00100000, code_bytes)
+            .unwrap();
+        proc.vcpus[0].cpu.set_pc(0x00100000).unwrap();
 
         debug!("Reading initial value from SCTLR.");
         proc.run(1).unwrap();
-        let r7 = proc.core.cpu.read_register::<u32>(ArmRegister::R7).unwrap();
+        let r7 = proc.vcpus[0]
+            .cpu
+            .read_register::<u32>(ArmRegister::R7)
+            .unwrap();
         assert_eq!(r7, 0);
 
         debug!("Setting sctlr vbit and reading back");
         proc.run(3).unwrap();
-        let r7 = proc.core.cpu.read_register::<u32>(ArmRegister::R7).unwrap();
+        let r7 = proc.vcpus[0]
+            .cpu
+            .read_register::<u32>(ArmRegister::R7)
+            .unwrap();
         assert_eq!(r7, 0x2000);
 
         debug!("Reading cbar");
         proc.run(1).unwrap();
-        let r7 = proc.core.cpu.read_register::<u32>(ArmRegister::R7).unwrap();
+        let r7 = proc.vcpus[0]
+            .cpu
+            .read_register::<u32>(ArmRegister::R7)
+            .unwrap();
         assert_eq!(r7, 0);
 
         debug!("Reading vbar");
         proc.run(1).unwrap();
-        let r7 = proc.core.cpu.read_register::<u32>(ArmRegister::R7).unwrap();
+        let r7 = proc.vcpus[0]
+            .cpu
+            .read_register::<u32>(ArmRegister::R7)
+            .unwrap();
         assert_eq!(r7, 0x100040);
     }
 }
