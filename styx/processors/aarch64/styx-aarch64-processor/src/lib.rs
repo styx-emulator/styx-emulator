@@ -6,10 +6,7 @@ use styx_core::{
         ProcessorBundle,
     },
     cpu::{Backend, PcodeBackend},
-    event_controller::DummyEventController,
-    loader::LoaderHints,
-    memory::DummyTlb,
-    prelude::{CpuBackend, *},
+    prelude::CpuBackend,
 };
 
 /// A processor with no peripherals or event controller, purely instruction emulation.
@@ -30,23 +27,10 @@ impl ProcessorImpl for Aarch64Processor {
             _ => unimplemented!("not supported"),
         };
 
-        let mut hints = LoaderHints::new();
-        hints.insert(
-            "arch".to_string().into_boxed_str(),
-            Box::new(styx_core::cpu::Arch::Aarch64),
-        );
-
-        let memory = MemoryBackend::new_flat();
-        let tlb = DummyTlb::new();
-
-        Ok(ProcessorBundle {
-            cpu,
-            memory,
-            tlb,
-            event_controller: Box::new(DummyEventController::default()),
-            peripherals: vec![],
-            loader_hints: hints,
-        })
+        Ok(ProcessorBundle::builder()
+            .with_vcpu(|v| v.with_cpu_box(cpu))
+            .with_arch_hint(styx_core::cpu::Arch::Aarch64)
+            .build()?)
     }
 }
 
@@ -104,15 +88,15 @@ mod tests {
 
         // write code into memory and setup PC
         let test_bytes = std::fs::read(abs_path).unwrap();
-        proc.core.mmu.write_code(0x1000, &test_bytes).unwrap();
-        proc.core.set_pc(0x1000).unwrap();
+        proc.core.memory.write_code(0x1000, &test_bytes).unwrap();
+        proc.vcpus[0].cpu.set_pc(0x1000).unwrap();
 
         // add hooks for pass/fail
         let quit = |proc: CoreHandle| -> Result<(), UnknownError> {
             proc.cpu.stop();
             Ok(())
         };
-        proc.core
+        proc.vcpus[0]
             .cpu
             .add_hook(StyxHook::Code((0..0x15).into(), Box::new(quit)))
             .unwrap();
@@ -121,7 +105,7 @@ mod tests {
         proc.run(Forever).unwrap();
 
         // check address that we stopped at to see result of test
-        if proc.core.pc().unwrap() != 0 {
+        if proc.vcpus[0].cpu.pc().unwrap() != 0 {
             panic!("test failed");
         }
     }
