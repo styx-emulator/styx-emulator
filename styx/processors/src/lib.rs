@@ -7,11 +7,8 @@ use styx_core::{
         ProcessorBundle,
     },
     cpu::{Arch, ArchEndian, PcodeBackend},
-    loader::LoaderHints,
-    memory::{DummyTlb, PhysicalMemoryVariant},
     prelude::*,
 };
-use styx_event_controllers::DummyEventController;
 pub mod arm {
     pub use styx_cyclonev_processor as cyclonev;
     pub use styx_kinetis21_processor as kinetis21;
@@ -95,19 +92,9 @@ impl ProcessorImpl for RawProcessor {
             _ => return Err(BackendNotSupported(args.backend).into()),
         };
 
-        let mut hints = LoaderHints::new();
-        hints.insert("arch".to_string().into_boxed_str(), Box::new(self.arch));
-
-        let memory = MemoryBackend::new(PhysicalMemoryVariant::FlatMemory);
-        let tlb = DummyTlb::new();
-
-        Ok(ProcessorBundle {
-            cpu,
-            memory,
-            tlb,
-            event_controller: Box::new(DummyEventController::default()),
-            peripherals: vec![],
-            loader_hints: hints,
-        })
+        Ok(ProcessorBundle::builder()
+            .with_vcpu(|v| v.with_cpu_box(cpu))
+            .with_arch_hint(self.arch)
+            .build()?)
     }
 }
