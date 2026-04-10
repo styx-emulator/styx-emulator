@@ -21,6 +21,9 @@ use crate::memory::Mmu;
 pub mod builder;
 pub use builder::{ProcessorImpl, VcpuBundle};
 
+mod processor_bundle;
+pub use processor_bundle::*;
+
 mod exceptions;
 pub use exceptions::*;
 use log::trace;
