@@ -34,7 +34,7 @@ use crate::runtime::ProcessorRuntime;
 
 /// Unpacked components of a [`VcpuBundle`], held pre-`Arc` so event controllers
 /// can be initialized before memory is shared.
-type VCpuParts = (
+type VcpuParts = (
     Box<dyn CpuBackend>,
     Box<dyn TlbImpl>,
     Box<dyn EventControllerImpl>,
@@ -367,7 +367,7 @@ impl<'a> ProcessorBuilder<'a> {
         let mut memory = bundle.memory;
 
         // Destructure vCPU bundles so we can init ECs before wrapping memory in Arc.
-        let mut vcpu_data: Vec<VCpuParts> = bundle
+        let mut vcpu_data: Vec<VcpuParts> = bundle
             .vcpus
             .into_iter()
             .map(
