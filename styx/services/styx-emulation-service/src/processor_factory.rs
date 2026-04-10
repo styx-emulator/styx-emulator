@@ -5,7 +5,7 @@ use crate::svc::ProcessorProcess;
 use crate::svc_executor::ServiceExecutor;
 use styx_core::cpu::{arch::blackfin::BlackfinVariants, arch::ppc32::Ppc32Variants, ArchEndian};
 use styx_core::errors::{StyxMachineError, UnknownError};
-use styx_core::executor::ExecutorImpl;
+use styx_core::executor::ExecutorKind;
 use styx_core::grpc::args::{HasEmulationArgs, Target};
 use styx_core::loader::BlackfinLDRLoader;
 use styx_core::prelude::*;
@@ -63,7 +63,7 @@ impl ProcessorFactory {
         let trace_plugin = StyxTracePlugin::from(args.trace_plugin_args_or_default());
         let proc = Self::processor(
             &target,
-            executor,
+            ExecutorKind::stride(executor),
             trace_plugin,
             &args.firmware_path(),
             args.ipc_port(),
@@ -74,7 +74,7 @@ impl ProcessorFactory {
     /// Just create a processor, no process needed.
     pub fn create_processor_no_svc<T: HasEmulationArgs>(
         args: &T,
-        executor: impl ExecutorImpl + 'static,
+        executor: ExecutorKind,
     ) -> Result<Processor, UnknownError> {
         let trace_path = mkpath(None, SRB_TRACE_FILE_EXT);
         // TODO: Audit that the environment access only happens in single-threaded code.
@@ -100,7 +100,7 @@ impl ProcessorFactory {
     /// - Firmware has been loaded
     fn processor(
         target: &Target,
-        executor: impl ExecutorImpl + 'static,
+        executor: ExecutorKind,
         trace_plugin: StyxTracePlugin,
         firmware_path: &str,
         ipc_port: Option<u16>,
@@ -112,7 +112,7 @@ impl ProcessorFactory {
             Target::Kinetis21 => {
                 let proc = ProcessorBuilder::default()
                     .with_builder(Kinetis21Builder::default())
-                    .with_executor(executor)
+                    .with_executor_kind(executor)
                     .add_plugin(trace_plugin)
                     .with_target_program(firmware_path.to_string())
                     .with_ipc_port(ipc_port)
@@ -123,7 +123,7 @@ impl ProcessorFactory {
             Target::CycloneV => {
                 let proc = ProcessorBuilder::default()
                     .with_builder(CycloneVBuilder::default())
-                    .with_executor(executor)
+                    .with_executor_kind(executor)
                     .add_plugin(trace_plugin)
                     .with_target_program(firmware_path.to_string())
                     .with_ipc_port(ipc_port)
@@ -138,7 +138,7 @@ impl ProcessorFactory {
                         ArchEndian::BigEndian,
                     )?)
                     .add_plugin(trace_plugin)
-                    .with_executor(executor)
+                    .with_executor_kind(executor)
                     .with_target_program(firmware_path.to_string())
                     .with_ipc_port(ipc_port)
                     .build()?;
@@ -150,7 +150,7 @@ impl ProcessorFactory {
                 let proc = ProcessorBuilder::default()
                     .with_builder(Stm32f107Builder)
                     .add_plugin(trace_plugin)
-                    .with_executor(executor)
+                    .with_executor_kind(executor)
                     .with_target_program(firmware_path.to_string())
                     .with_ipc_port(ipc_port)
                     .build()?;
@@ -165,7 +165,7 @@ impl ProcessorFactory {
                     })
                     .with_loader(BlackfinLDRLoader)
                     .add_plugin(trace_plugin)
-                    .with_executor(executor)
+                    .with_executor_kind(executor)
                     .with_target_program(firmware_path.to_string())
                     .with_ipc_port(ipc_port)
                     .build()?;
