@@ -26,7 +26,7 @@ use derive_more::Display;
 use styx_core::cpu::arch::ppc32::variants::Mpc8xxVariants;
 use styx_core::errors::StyxMachineError;
 use styx_core::errors::UnknownError;
-use styx_core::event_controller::{ActivateIRQnError, InterruptExecuted, Peripherals};
+use styx_core::event_controller::{ActivateIRQnError, EventControllerImpl, InterruptExecuted};
 use styx_core::prelude::*;
 
 /// IRQs for the MPC866m event controller
@@ -174,7 +174,6 @@ impl EventControllerImpl for Mpc866mController {
         &mut self,
         cpu: &mut dyn CpuBackend,
         mmu: &mut Mmu,
-        peripherals: &mut Peripherals,
     ) -> Result<InterruptExecuted, UnknownError> {
         Ok(InterruptExecuted::NotExecuted)
     }
@@ -192,7 +191,12 @@ impl EventControllerImpl for Mpc866mController {
         todo!()
     }
 
-    fn tick(&mut self, cpu: &mut dyn CpuBackend, mmu: &mut Mmu) -> Result<(), UnknownError> {
+    fn tick(
+        &mut self,
+        cpu: &mut dyn CpuBackend,
+        mmu: &mut Mmu,
+        delta: &Delta,
+    ) -> Result<(), UnknownError> {
         todo!()
     }
 
