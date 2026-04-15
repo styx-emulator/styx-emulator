@@ -10,7 +10,7 @@ use styx_core::{
         MemoryOperation, MemoryType, TlbImpl, TlbProcessor, TlbTranslateError, TlbTranslateResult,
     },
     prelude::{
-        log::{error, info, trace},
+        log::{debug, error, info, trace},
         Context,
     },
 };
@@ -286,18 +286,18 @@ impl TlbImpl for HexagonTlb {
 
                 let ent_vpn = (u64::from(ent.vpn()) << PAGE_SIZE_BITS) & !page_mask;
 
-                trace!("ent vpn {ent_vpn:x} real vpn {va_vpn:x} va_offset {va_offset:x}",);
+                debug!("ent vpn {ent_vpn:x} real vpn {va_vpn:x} va_offset {va_offset:x} page_mask {page_mask:x}",);
                 if va_vpn == ent_vpn {
-                    let ppd_mask = u64::from(ent.ppd() >> 1)
+                    let ppd_unmask = u64::from(ent.ppd() >> 1)
                         .overflowing_shl(PAGE_SIZE_BITS as u32)
-                        .0
-                        & !page_mask;
+                        .0;
+                    let ppd_mask = ppd_unmask & !page_mask;
                     let pa = ppd_mask + va_offset;
 
                     // TODO: invalidate the cache
                     self.cache.insert(vpn_page_masked, pa & page_number_mask);
 
-                    trace!("va {virt_addr:x} ppd_mask {ppd_mask:x} pa {pa:x}");
+                    debug!("va {virt_addr:x} ppd_unmask {ppd_unmask:x} ppd_mask {ppd_mask:x} pa {pa:x}");
                     return Ok(pa);
                 }
             }

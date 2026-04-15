@@ -25,8 +25,8 @@ use styx_core::{
     },
 };
 
-const CLADE_BASE: u64 = 0xd83d0000;
-const CLADE2_BASE: u64 = 0xd81b0000;
+const CLADE_BASE: u64 = 0x57d0000;
+const CLADE2_BASE: u64 = 0x55b0000;
 
 fn clade_mmio_write_hook(
     proc: CoreHandle,
@@ -77,7 +77,7 @@ impl Peripheral for Clade {
             .cpu
             .mem_write_hook(
                 CLADE_BASE,
-                CLADE_BASE + 0x2000,
+                CLADE_BASE + 0x8000,
                 Box::new(clade_mmio_write_hook),
             )
             .with_context(|| "couldn't add MMIO hooks for clade")?;
@@ -85,7 +85,7 @@ impl Peripheral for Clade {
             .cpu
             .mem_write_hook(
                 CLADE2_BASE,
-                CLADE2_BASE + 0x2000,
+                CLADE2_BASE + 0x8000,
                 Box::new(clade_mmio_write_hook),
             )
             .with_context(|| "couldn't add MMIO hooks for clade")?;
@@ -94,7 +94,7 @@ impl Peripheral for Clade {
             .cpu
             .mem_read_hook(
                 CLADE_BASE,
-                CLADE_BASE + 0x2000,
+                CLADE_BASE + 0x8000,
                 Box::new(clade_mmio_read_hook),
             )
             .with_context(|| "couldn't add MMIO hooks for clade")?;
@@ -102,7 +102,7 @@ impl Peripheral for Clade {
             .cpu
             .mem_read_hook(
                 CLADE2_BASE,
-                CLADE2_BASE + 0x2000,
+                CLADE2_BASE + 0x8000,
                 Box::new(clade_mmio_read_hook),
             )
             .with_context(|| "couldn't add MMIO hooks for clade")?;

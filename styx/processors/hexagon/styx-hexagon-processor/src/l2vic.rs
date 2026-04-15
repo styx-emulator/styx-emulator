@@ -39,7 +39,7 @@ const L2VIC_NUM_SLOTS: u64 = 32;
 const L2VIC_CONFIG_START: u64 = 0x100;
 const L2VIC_VID_IRQ_BASE: u64 = 2;
 
-const FASTL2VIC_BASE: u64 = 0xd83e0000;
+const FASTL2VIC_BASE: u64 = 0x57e0000;
 
 /// The l2vic can handle 32 interrupts.
 /// Each of these interrupts are configured
