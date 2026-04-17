@@ -10,7 +10,7 @@
 //! The C tests return an int ro report status but have not investigated how this translates to
 //! baremetal.
 
-#[cfg(feature = "binutils-tests")]
+#[cfg(feature = "hexagon-binutils-tests")]
 pub mod binutils_tests {
     //! Unit tests taken from binutils-gdb simulator.
     #[cfg(not(feature = "disable-hexagon-tests"))] // hack for when using `--all-features`

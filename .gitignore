@@ -85,3 +85,5 @@ compile_commands.json
 auto-save-list
 tramp
 .\#*
+# helix editor configuration
+.helix/

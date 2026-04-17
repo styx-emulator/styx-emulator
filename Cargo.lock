@@ -145,6 +145,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "825297538d77367557b912770ca3083f778a196054b3ee63b22673c4a3cae0a5"
 
 [[package]]
+name = "arbitrary-int"
+version = "2.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "993a810118f8f37e9c4411c86f1c4c940a09a7ab34b7bf2d88d06f50c553fab7"
+
+[[package]]
 name = "array-init"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -387,7 +393,7 @@ version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dc707ed8ebf81de5cd6c7f48f54b4c8621760926cdf35a57000747c512e67b57"
 dependencies = [
- "arbitrary-int",
+ "arbitrary-int 1.3.0",
  "bilge-impl",
 ]
 
@@ -472,7 +478,18 @@ version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec187a89ab07e209270175faf9e07ceb2755d984954e58a2296e325ddece2762"
 dependencies = [
- "arbitrary-int",
+ "arbitrary-int 1.3.0",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.106",
+]
+
+[[package]]
+name = "bitbybit"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "71d2a3353d70ac1091a33cbf31fc7e77b19091538a7e306e3740712af19807ca"
+dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.106",
@@ -1715,12 +1732,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1aaf95b3e5c8f23aa320147307562d361db0ae0d51242340f558153b4eb2439b"
 
 [[package]]
-name = "downcast"
-version = "0.11.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1435fa1053d8b2fbbe9be7e97eca7f33d37b28409959813daefc1446a14247f1"
-
-[[package]]
 name = "dt-stats"
 version = "1.2.0"
 dependencies = [
@@ -2065,12 +2076,6 @@ checksum = "cb4cb245038516f5f85277875cdaa4f7d2c9a0fa0468de06ed190163b1581fcf"
 dependencies = [
  "percent-encoding",
 ]
-
-[[package]]
-name = "fragile"
-version = "2.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "28dd6caf6059519a65843af8fe2a3ae298b14b80179855aeb4adc2c1934ee619"
 
 [[package]]
 name = "funty"
@@ -2479,6 +2484,15 @@ name = "hex"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
+
+[[package]]
+name = "hexagonfw"
+version = "0.1.0"
+dependencies = [
+ "arbitrary-int 2.1.1",
+ "bitbybit 2.0.0",
+ "styx-emulator",
+]
 
 [[package]]
 name = "hkdf"
@@ -3484,32 +3498,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "mockall"
-version = "0.13.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "39a6bfcc6c8c7eed5ee98b9c3e33adc726054389233e201c95dab2d41a3839d2"
-dependencies = [
- "cfg-if",
- "downcast",
- "fragile",
- "mockall_derive",
- "predicates",
- "predicates-tree",
-]
-
-[[package]]
-name = "mockall_derive"
-version = "0.13.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "25ca3004c2efe9011bd4e461bd8256445052b9615405b4f7ea43fc8ca5c20898"
-dependencies = [
- "cfg-if",
- "proc-macro2",
- "quote",
- "syn 2.0.106",
-]
-
-[[package]]
 name = "multimap"
 version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4168,32 +4156,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "85eae3c4ed2f50dcfe72643da4befc30deadb458a9b590d720cde2f2b1e97da9"
 dependencies = [
  "zerocopy",
-]
-
-[[package]]
-name = "predicates"
-version = "3.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a5d19ee57562043d37e82899fade9a22ebab7be9cef5026b07fda9cdd4293573"
-dependencies = [
- "anstyle",
- "predicates-core",
-]
-
-[[package]]
-name = "predicates-core"
-version = "1.0.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "727e462b119fe9c93fd0eb1429a5f7647394014cf3c04ab2c0350eeb09095ffa"
-
-[[package]]
-name = "predicates-tree"
-version = "1.0.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "72dd2d6d381dfb73a193c7fca536518d7caee39fc8503f74e7dc0be0531b425c"
-dependencies = [
- "predicates-core",
- "termtree",
 ]
 
 [[package]]
@@ -5898,7 +5860,7 @@ dependencies = [
 name = "styx-blackfin-processor"
 version = "1.2.0"
 dependencies = [
- "arbitrary-int",
+ "arbitrary-int 1.3.0",
  "bilge",
  "derivative",
  "enum-map",
@@ -5945,7 +5907,6 @@ dependencies = [
  "styx-cpu",
  "styx-errors",
  "styx-grpc",
- "styx-loader",
  "styx-macros",
  "styx-memory",
  "styx-peripheral-clients",
@@ -5976,7 +5937,6 @@ dependencies = [
  "styx-cpu-type",
  "styx-cpu-unicorn-backend",
  "styx-errors",
- "styx-memory",
  "styx-processor",
  "styx-sync",
  "styx-util",
@@ -5988,9 +5948,9 @@ dependencies = [
 name = "styx-cpu-pcode-backend"
 version = "1.2.0"
 dependencies = [
- "arbitrary-int",
+ "arbitrary-int 1.3.0",
  "as-any",
- "bitbybit",
+ "bitbybit 1.4.0",
  "bitfield-struct",
  "derivative",
  "derive_more 1.0.0",
@@ -6006,7 +5966,6 @@ dependencies = [
  "styx-cpu-type",
  "styx-errors",
  "styx-hexagon-testdata",
- "styx-loader",
  "styx-macros",
  "styx-memory",
  "styx-pcode",
@@ -6025,8 +5984,8 @@ dependencies = [
 name = "styx-cpu-type"
 version = "1.2.0"
 dependencies = [
- "arbitrary-int",
- "bitbybit",
+ "arbitrary-int 1.3.0",
+ "bitbybit 1.4.0",
  "derive_more 1.0.0",
  "enum-as-inner",
  "enum_dispatch",
@@ -6055,7 +6014,7 @@ dependencies = [
 name = "styx-cpu-unicorn-backend"
 version = "1.2.0"
 dependencies = [
- "arbitrary-int",
+ "arbitrary-int 1.3.0",
  "beau_collector",
  "derivative",
  "keystone",
@@ -6087,7 +6046,7 @@ dependencies = [
 name = "styx-cyclonev-processor"
 version = "1.2.0"
 dependencies = [
- "arbitrary-int",
+ "arbitrary-int 1.3.0",
  "async-trait",
  "derivative",
  "embed-doc-image",
@@ -6323,8 +6282,8 @@ dependencies = [
 name = "styx-hexagon-processor"
 version = "1.2.0"
 dependencies = [
- "arbitrary-int",
- "bitbybit",
+ "arbitrary-int 1.3.0",
+ "bitbybit 1.4.0",
  "serde",
  "styx-core",
  "styx-peripherals",
@@ -6413,38 +6372,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "styx-loader"
-version = "1.2.0"
-dependencies = [
- "binrw",
- "bitflags 2.9.4",
- "goblin",
- "iset",
- "log",
- "mockall",
- "serde",
- "serde_yaml",
- "styx-cpu-type",
- "styx-errors",
- "styx-memory",
- "styx-memory-type",
- "styx-util",
- "styx-workspace-hack",
- "test-case",
- "thiserror 2.0.17",
-]
-
-[[package]]
-name = "styx-loader-mock"
-version = "1.2.0"
-dependencies = [
- "mockall",
- "styx-errors",
- "styx-loader",
- "styx-workspace-hack",
-]
-
-[[package]]
 name = "styx-macros"
 version = "1.2.0"
 dependencies = [
@@ -6455,6 +6382,10 @@ dependencies = [
  "quote",
  "styx-workspace-hack",
  "syn 2.0.106",
+ "temp-env",
+ "tempfile",
+ "test-case",
+ "toml_edit 0.25.2+spec-1.1.0",
 ]
 
 [[package]]
@@ -6706,11 +6637,14 @@ name = "styx-processor"
 version = "1.2.0"
 dependencies = [
  "as-any",
+ "binrw",
  "bitflags 2.9.4",
  "delegate",
  "derive_more 1.0.0",
  "enum_dispatch",
  "getset",
+ "goblin",
+ "iset",
  "itertools 0.14.0",
  "log",
  "nix 0.30.1",
@@ -6724,7 +6658,8 @@ dependencies = [
  "static_assertions",
  "styx-cpu-type",
  "styx-errors",
- "styx-loader",
+ "styx-macros",
+ "styx-memory",
  "styx-memory-type",
  "styx-sync",
  "styx-util",
@@ -7123,6 +7058,7 @@ dependencies = [
  "num-traits",
  "num_enum",
  "num_enum_derive",
+ "once_cell",
  "percent-encoding",
  "prettyplease",
  "proc-macro2",
@@ -7151,6 +7087,7 @@ dependencies = [
  "tokio-util",
  "toml_datetime 0.7.2",
  "toml_parser",
+ "toml_writer",
  "tracing",
  "tracing-core",
  "uuid",
@@ -7235,6 +7172,15 @@ name = "temp-dir"
 version = "0.1.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "83176759e9416cf81ee66cb6508dbfe9c96f20b8b56265a39917551c23c70964"
+
+[[package]]
+name = "temp-env"
+version = "0.3.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "96374855068f47402c3121c6eed88d29cb1de8f3ab27090e273e420bdabcf050"
+dependencies = [
+ "parking_lot",
+]
 
 [[package]]
 name = "tempfile"
@@ -7328,12 +7274,6 @@ dependencies = [
  "thiserror 1.0.69",
  "xterm-query",
 ]
-
-[[package]]
-name = "termtree"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f50febec83f5ee1df3015341d8bd429f2d1cc62bcba7ea2076759d315084683"
 
 [[package]]
 name = "test-case"
@@ -7656,12 +7596,6 @@ dependencies = [
 
 [[package]]
 name = "toml_datetime"
-version = "0.6.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "22cddaf88f4fbc13c51aebbf5f8eceb5c7c5a9da2ac40a13519eb5b0a0e8f11c"
-
-[[package]]
-name = "toml_datetime"
 version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32f1085dec27c2b6632b04c80b3bb1b4300d6495d1e129693bdda7d91e72eec1"
@@ -7670,15 +7604,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "toml_edit"
-version = "0.22.27"
+name = "toml_datetime"
+version = "1.0.0+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "41fe8c660ae4257887cf66394862d21dbca4a6ddd26f04a3560410406a2f819a"
+checksum = "32c2555c699578a4f59f0cc68e5116c8d7cabbd45e1409b989d4be085b53f13e"
 dependencies = [
- "indexmap 2.11.4",
- "toml_datetime 0.6.11",
- "toml_write",
- "winnow",
+ "serde_core",
 ]
 
 [[package]]
@@ -7694,25 +7625,32 @@ dependencies = [
 ]
 
 [[package]]
-name = "toml_parser"
-version = "1.0.3"
+name = "toml_edit"
+version = "0.25.2+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4cf893c33be71572e0e9aa6dd15e6677937abd686b066eac3f8cd3531688a627"
+checksum = "0f012baa6272861acc2f3dec2b921a34fc053fa76ffdcfb382c714a7d1547b82"
+dependencies = [
+ "indexmap 2.11.4",
+ "toml_datetime 1.0.0+spec-1.1.0",
+ "toml_parser",
+ "toml_writer",
+ "winnow",
+]
+
+[[package]]
+name = "toml_parser"
+version = "1.0.9+spec-1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "702d4415e08923e7e1ef96cd5727c0dfed80b4d2fa25db9647fe5eb6f7c5a4c4"
 dependencies = [
  "winnow",
 ]
 
 [[package]]
-name = "toml_write"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5d99f8c9a7727884afe522e9bd5edbfc91a3312b36a77b5fb8926e4c31a41801"
-
-[[package]]
 name = "toml_writer"
-version = "1.0.3"
+version = "1.0.6+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d163a63c116ce562a22cda521fcc4d79152e7aba014456fb5eb442f6d6a10109"
+checksum = "ab16f14aed21ee8bfd8ec22513f7287cd4a91aa92e44edfe2c17ddd004e92607"
 
 [[package]]
 name = "tonic"
@@ -9064,7 +9002,7 @@ dependencies = [
  "tempfile",
  "termimad 0.33.0",
  "test-case",
- "toml_edit 0.22.27",
+ "toml_edit 0.25.2+spec-1.1.0",
  "tracing",
  "tracing-subscriber",
 ]

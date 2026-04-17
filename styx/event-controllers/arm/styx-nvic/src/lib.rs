@@ -106,7 +106,7 @@ use binary_heap_plus::{BinaryHeap, MinComparator};
 use consts::*;
 use styx_core::cpu::arch::arm::ArmRegister;
 use styx_core::event_controller::*;
-use styx_core::memory::MemoryPermissions;
+use styx_core::memory::{MemoryBackend, MemoryPermissions};
 use styx_core::prelude::*;
 use styx_core::sync::sync::atomic::{AtomicBool, AtomicI32, AtomicU32, AtomicU8, Ordering};
 use styx_core::sync::sync::{Arc, Mutex, RwLock};
@@ -461,7 +461,7 @@ impl EventControllerImpl for Nvic {
         // set active
         self.activate_interrupt(irqn);
 
-        let new_pc = self.vector_address(mmu, irqn);
+        let new_pc = self.vector_address(&mmu.memory, irqn);
 
         // push ISR context -- saves all register state
         // to be restored upon ISR exit
@@ -505,7 +505,11 @@ impl EventControllerImpl for Nvic {
         self.current_irqn
     }
 
-    fn init(&mut self, cpu: &mut dyn CpuBackend, mmu: &mut Mmu) -> Result<(), UnknownError> {
+    fn init(
+        &mut self,
+        cpu: &mut dyn CpuBackend,
+        mmu: &mut MemoryBackend,
+    ) -> Result<(), UnknownError> {
         self.register_hooks(cpu, mmu)?;
         self.reset_state(cpu, mmu)?;
 
@@ -515,7 +519,11 @@ impl EventControllerImpl for Nvic {
 
 impl Nvic {
     /// call to initialize memory range owned by this peripheral
-    fn reset_state(&mut self, cpu: &mut dyn CpuBackend, mmu: &mut Mmu) -> Result<(), UnknownError> {
+    fn reset_state(
+        &mut self,
+        cpu: &mut dyn CpuBackend,
+        mmu: &MemoryBackend,
+    ) -> Result<(), UnknownError> {
         *self.cpu_mode.write().unwrap() = CPUMode::Thread;
 
         // reset mask registers
@@ -551,7 +559,7 @@ impl Nvic {
     fn register_hooks(
         &mut self,
         cpu: &mut dyn CpuBackend,
-        mmu: &mut Mmu,
+        mmu: &mut MemoryBackend,
     ) -> Result<(), UnknownError> {
         // interrupt callback magics
         // exception handlers will return to these addresses which need code hooks
@@ -612,7 +620,7 @@ impl Nvic {
     /// Called when guest code triggers a local reset.  Currently only called
     /// via the AIRCR write hook.  Calls the Nvic reset state and jumps to
     /// the reset vector.
-    fn reset(&mut self, cpu: &mut dyn CpuBackend, mmu: &mut Mmu) {
+    fn reset(&mut self, cpu: &mut dyn CpuBackend, mmu: &MemoryBackend) {
         debug!("Guest code triggered a reset.");
         self.reset_state(cpu, mmu).unwrap();
 
@@ -1016,7 +1024,7 @@ impl Nvic {
             Err(_) => {
                 // we are already executing an interrupt, figure out if preemption is possible
                 if new_priority < *priority_stack.last().unwrap() {
-                    debug!("Exception Pre-empted");
+                    debug!("Exception Preempted");
                     priority_stack.push(new_priority);
                     true
                 } else {
@@ -1034,7 +1042,7 @@ impl Nvic {
     }
 
     /// Calculates the address of the desired interrupt vector
-    fn vector_address(&self, mmu: &mut Mmu, irq: ExceptionNumber) -> u32 {
+    fn vector_address(&self, mmu: &MemoryBackend, irq: ExceptionNumber) -> u32 {
         let irqn_vec_offset = 16;
         let vto = self.vector_table_offset.load(Ordering::Acquire) as i32;
         let base = vto + (4 * irqn_vec_offset);

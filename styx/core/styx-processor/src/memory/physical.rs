@@ -143,9 +143,49 @@ pub enum PhysicalMemoryVariant {
     RegionStore,
 }
 
-/// Physical memory storage.
+/// Processor's physical memory.
 ///
-/// Memory operations on the memory backend bypass the tlb and operate on physical memory.
+/// Typically the [`MemoryBackend`] will be accessed via the [`crate::memory::Mmu`].
+/// Creation of the [`MemoryBackend`] happens in the [`crate::core::ProcessorImpl`].
+///
+/// Memory operations on the [`MemoryBackend`] do not use tlb and operate on physical memory.
+/// All documentation here relates to the processor's **physical memory** and any
+/// reference to **memory regions** and **memory permissions** are referring
+/// to the processor's physical memory configuration. Virtual Memory, Mmu, and
+/// TLB related logic is contained in the [`crate::memory::TlbImpl`].
+///
+/// The [`MemoryBackend`] has three configurations (correlating to [`PhysicalMemoryVariant`]):
+///
+/// 1. Harvard Flat Memory
+/// 2. VonNeumann Flat Memory
+/// 3. VonNeumann Region store
+///
+/// Flat memory variants do not have regions or memory permissions.
+/// Any `u64` address is valid and uses a giant allocated array to represent memory.
+/// The hosts memory manager ensures that this will not actually allocate `2^64` bytes
+/// of memory until it has been accessed.
+/// For this reason, avoid zeroing large sections of memory when using the Flat Memory.
+///
+/// Harvard configuration splits code and data memory while VonNeumann has a unified
+/// memory space.
+/// Read/write operations have `_code` and `_data` variants which will be identical
+/// in a VonNeumann configuration.
+/// [`MemoryBackend`]
+///
+/// ## Concurrency
+/// The [`MemoryBackend`] is designed for concurrent memory reads and
+/// writes. Concurrent reads and writes to memory are enabled by using host
+/// [`std::sync::atomic`] reads and writes. Because Atomic operations are
+/// immutable (only requiring `&`), we can modify memory from multiple vCPUs,
+/// threads, etc all without requiring a lock on memory, which would cause a
+/// major performance hit.
+///
+/// While the memory itself can be modified using atomics, adding and removing regions
+/// is still a mutable operation.
+/// For that resion memory region addition and removal require `&mut` and so should
+/// be added during construction and cannot be added at emulation time.
+/// Theorehically, this could change in the future by adding a thread safe storage for
+/// memory regions.
 pub enum MemoryBackend {
     Harvard {
         code: RegionStore,
@@ -178,13 +218,23 @@ impl MemoryBackend {
         }
     }
 
+    /// Equivalent to [`MemoryBackend::new(PhysicalMemoryVariant::RegionStore)`]
+    pub fn new_region_store() -> Self {
+        Self::new(PhysicalMemoryVariant::RegionStore)
+    }
+
+    /// Equivalent to [`MemoryBackend::new(PhysicalMemoryVariant::FlatMemory)`]
+    pub fn new_flat() -> Self {
+        Self::new(PhysicalMemoryVariant::FlatMemory)
+    }
+
     /// Access data memory using the [memory helper api](crate::memory::helpers).
-    pub fn data(&mut self) -> Data {
+    pub fn data(&self) -> Data {
         Data(self)
     }
 
     /// Access code memory using the [memory helper api](crate::memory::helpers).
-    pub fn code(&mut self) -> Code {
+    pub fn code(&self) -> Code {
         Code(self)
     }
 
@@ -228,11 +278,11 @@ impl MemoryBackend {
         }
     }
 
-    /// Add a new region to the address space.
+    /// Add a new physical memory region with optional [`Space`].
     ///
     /// The `space` can be specified as `Some(Space)` so add to that space if Harvard type
     /// or just add the region if VonNeuman. `None` will add the region to both [`Space::Code`]
-    /// [`Space::Data`] if Hardvard.
+    /// [`Space::Data`] if Harvard.
     pub fn add_region(
         &mut self,
         region: MemoryRegion,
@@ -250,6 +300,27 @@ impl MemoryBackend {
             },
             MemoryBackend::VonNeumann { memory } => memory.add_region(region),
         }
+    }
+
+    /// Add a new physical memory region.
+    ///
+    /// Adds a region to the physical memory, adding to both code and data space if
+    /// Harvard configuration.
+    pub fn add_memory_region(&mut self, region: MemoryRegion) -> Result<(), AddRegionError> {
+        self.add_region(region, None)
+    }
+
+    /// Create a new memory region on the backend.
+    ///
+    /// Adds a region to the physical memory, adding to both code and data space if
+    /// Harvard configuration.
+    pub fn memory_map(
+        &mut self,
+        base: u64,
+        size: u64,
+        perms: MemoryPermissions,
+    ) -> Result<(), AddRegionError> {
+        self.add_region(MemoryRegion::new(base, size, perms)?, None)
     }
 
     /// Reads a contiguous array of code bytes to the buffer `data` starting from `addr`.
@@ -415,7 +486,7 @@ impl MemoryBackend {
     }
 }
 
-pub struct Data<'a>(&'a mut MemoryBackend);
+pub struct Data<'a>(&'a MemoryBackend);
 impl super::helpers::Readable for Data<'_> {
     type Error = MemoryOperationError;
 
@@ -431,7 +502,7 @@ impl super::helpers::Writable for Data<'_> {
     }
 }
 
-pub struct Code<'a>(&'a mut MemoryBackend);
+pub struct Code<'a>(&'a MemoryBackend);
 impl super::helpers::Readable for Code<'_> {
     type Error = MemoryOperationError;
 

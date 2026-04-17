@@ -27,6 +27,7 @@ members = [
   "./incubation/styx-pcs",
   "./incubation/styx-uconf",
   "./incubation/styx-uconf-cli",
+  "./incubation/styx-hexagon-testing",
   "./data/test-binaries",
   "./data/test-binaries/arm/big_endian_generic",
   "./data/test-binaries/styx-blackfin-testdata",
@@ -45,8 +46,6 @@ members = [
   "./styx/core/styx-cpu-unicorn-backend",
   "./styx/core/styx-errors",
   "./styx/core/styx-grpc",
-  "./styx/core/styx-loader",
-  "./styx/core/styx-loader-mock",
   "./styx/core/styx-macros",
   "./styx/core/styx-memory",
   "./styx/core/styx-memory-type",
@@ -164,6 +163,7 @@ test-case = "3.3.1"
 test-log = "0.2.16"
 tempfile = "3.13.0"
 temp-dir = "0.1.16"
+temp-env = "0.3.6"
 loom = "0.7.2"
 shuttle = "0.8"
 mockall = "0.13"
@@ -254,7 +254,7 @@ binrw = "0.14.1"
 bitvec = "1.0.1"
 num_enum = "0.7.3"
 tap = "1.0.1"
-toml_edit = "0.22.22"
+toml_edit = "0.25.2"
 static_assertions = "1.1.0"
 as-any = "0.3.2"
 ref-cast = "1.0.24"

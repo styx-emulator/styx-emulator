@@ -8,7 +8,7 @@ use crate::{
     cpu::{CpuBackend, DummyBackend},
     event_controller::{EventController, EventControllerImpl, Peripheral},
     executor::{ConditionalExecutor, DefaultExecutor, Executor, ExecutorImpl, SingleStepExecutor},
-    memory::Mmu,
+    memory::{physical::MemoryBackend, Mmu},
     plugins::{Plugin, Plugins},
 };
 
@@ -123,7 +123,7 @@ impl EventControllerImpl for SyncTicker {
     fn init(
         &mut self,
         _cpu: &mut dyn crate::cpu::CpuBackend,
-        _mmu: &mut Mmu,
+        _mmu: &mut MemoryBackend,
     ) -> Result<(), styx_errors::UnknownError> {
         Ok(())
     }
@@ -235,7 +235,11 @@ pub fn normal_begin_executor(
 /// Test the event cycle of the [`DefaultExecutor`]
 #[test]
 fn test_default() {
-    let executor = DefaultExecutor;
+    // This would normally be set via config but we set manually for test
+    // to avoid mocking all of BuildingProcessor.
+    let executor = DefaultExecutor {
+        stride_length: 1000,
+    };
     test_executor_events(Box::new(executor), normal_begin_executor, 1, 1).unwrap();
 }
 

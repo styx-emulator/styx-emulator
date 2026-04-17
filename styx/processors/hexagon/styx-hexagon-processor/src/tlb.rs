@@ -20,7 +20,7 @@ use crate::exception::{ssr_set_cause, update_badva};
 // See https://github.com/quic/qemu/blob/hex-next/target/hexagon/cpu.h.
 pub const MAX_TLB_ENTRIES: usize = 1024;
 
-#[bitfield(u32, Debug)]
+#[bitfield(u32, debug)]
 pub struct TLBProbeField {
     #[bits(0..=19, rw)]
     vpn: u20,

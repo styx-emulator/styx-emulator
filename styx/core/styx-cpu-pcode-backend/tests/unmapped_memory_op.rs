@@ -15,17 +15,16 @@ fn test_unmapped_read() {
        8:	80 83 00 00 	lwz     r4,0(r3)
    ";
 
-    let mut mmu = Mmu::default_region_store();
+    // code region
+    let mut mmu =
+        Mmu::with_regions([MemoryRegion::new(0, 0x1000, MemoryPermissions::all()).unwrap()]);
+    // no region at 0x1000
+
     let mut ev = EventController::default();
     let mut cpu =
         PcodeBackend::new_engine(Arch::Ppc32, Ppc32Variants::Ppc405, ArchEndian::BigEndian);
 
     let code_bytes = styx_util::parse_objdump(objdump).unwrap();
-
-    // code region
-    mmu.add_memory_region(MemoryRegion::new(0, 0x1000, MemoryPermissions::all()).unwrap())
-        .unwrap();
-    // no region at 0x1000
 
     mmu.write_code(0x0, &code_bytes).unwrap();
 
@@ -46,17 +45,15 @@ fn test_goes_unmapped_read() {
        8:	80 83 00 00 	lwz     r4,0(r3)
    ";
 
-    let mut mmu = Mmu::default_region_store();
+    // code region
+    let mut mmu =
+        Mmu::with_regions([MemoryRegion::new(0, 0x1000, MemoryPermissions::all()).unwrap()]);
+    // no region at 0x1000
     let mut ev = EventController::default();
     let mut cpu =
         PcodeBackend::new_engine(Arch::Ppc32, Ppc32Variants::Ppc405, ArchEndian::BigEndian);
 
     let code_bytes = styx_util::parse_objdump(objdump).unwrap();
-
-    // code region
-    mmu.add_memory_region(MemoryRegion::new(0, 0x1000, MemoryPermissions::all()).unwrap())
-        .unwrap();
-    // no region at 0x1000
 
     mmu.write_code(0x0, &code_bytes).unwrap();
 
@@ -79,17 +76,15 @@ fn test_unmapped_write() {
         10:	90 83 00 00 	stw     r4,0(r3)
    ";
 
-    let mut mmu = Mmu::default_region_store();
+    // code region
+    let mut mmu =
+        Mmu::with_regions([MemoryRegion::new(0, 0x1000, MemoryPermissions::all()).unwrap()]);
+    // no region at 0x1000
     let mut ev = EventController::default();
     let mut cpu =
         PcodeBackend::new_engine(Arch::Ppc32, Ppc32Variants::Ppc405, ArchEndian::BigEndian);
 
     let code_bytes = styx_util::parse_objdump(objdump).unwrap();
-
-    // code region
-    mmu.add_memory_region(MemoryRegion::new(0, 0x1000, MemoryPermissions::all()).unwrap())
-        .unwrap();
-    // no region at 0x1000
 
     mmu.write_code(0x0, &code_bytes).unwrap();
 
@@ -112,17 +107,15 @@ fn test_goes_unmapped_write() {
         10:	90 83 00 00 	stw     r4,0(r3)
    ";
 
-    let mut mmu = Mmu::default_region_store();
+    // code region
+    let mut mmu =
+        Mmu::with_regions([MemoryRegion::new(0, 0x1000, MemoryPermissions::all()).unwrap()]);
+    // no region at 0x1000
     let mut ev = EventController::default();
     let mut cpu =
         PcodeBackend::new_engine(Arch::Ppc32, Ppc32Variants::Ppc405, ArchEndian::BigEndian);
 
     let code_bytes = styx_util::parse_objdump(objdump).unwrap();
-
-    // code region
-    mmu.add_memory_region(MemoryRegion::new(0, 0x1000, MemoryPermissions::all()).unwrap())
-        .unwrap();
-    // no region at 0x1000
 
     mmu.write_code(0x0, &code_bytes).unwrap();
 

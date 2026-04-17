@@ -11,6 +11,11 @@ use crate::memory::{
 /// TLB implementation that has no address translation.
 #[derive(Debug, Default)]
 pub struct DummyTlb;
+impl DummyTlb {
+    pub fn new() -> Box<Self> {
+        Box::new(DummyTlb)
+    }
+}
 impl TlbImpl for DummyTlb {
     fn translate_va(
         &mut self,

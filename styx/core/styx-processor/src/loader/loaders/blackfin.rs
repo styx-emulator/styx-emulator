@@ -5,7 +5,10 @@ use std::{
     io::{Cursor, Read, Seek},
 };
 
-use crate::{Loader, LoaderHints, MemoryLoaderDesc};
+use crate::{
+    loader::{Loader, LoaderHints, MemoryLoaderDesc},
+    processor::Config,
+};
 use binrw::{BinRead, BinResult, Endian};
 use log::{debug, warn};
 use styx_cpu_type::arch::blackfin::BlackfinRegister;
@@ -39,6 +42,7 @@ impl Loader for BlackfinLDRLoader {
         &self,
         data: Cow<[u8]>,
         _hints: LoaderHints,
+        _config: &Config,
     ) -> Result<MemoryLoaderDesc, StyxLoaderError> {
         // note: we don't use any hints
         load_blackfin(&data)

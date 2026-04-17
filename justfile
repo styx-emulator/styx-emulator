@@ -54,7 +54,7 @@ full-cargo-test: cargo-test cargo-doc-test cargo-test-bindings
 cargo-test *ARGS: cargo-test-deps
     #!/usr/bin/env -S bash -e
     IGNORE_CRATES=`a=({{ DB_CONTAINER_CRATES }} {{ MACRO_CRATES }}); echo "${a[@]/#/--exclude }"`
-    cargo nextest run --workspace --lib --bins --tests $IGNORE_CRATES {{ARGS}} # no benches
+    cargo nextest run --workspace --lib --bins --tests --all-features $IGNORE_CRATES {{ARGS}} # no benches
 
 cargo-test-bindings:
     #!/usr/bin/env -S bash -e
@@ -120,6 +120,11 @@ lint-docs:
     set -eou pipefail
 
     RUSTDOCFLAGS='--deny warnings' cargo doc --no-deps --all-features --workspace --bins --lib --examples --keep-going --document-private-items
+
+# Lint docs for a single package.
+lint-doc PACKAGE:
+    #!/usr/bin/env -S bash -e
+    RUSTDOCFLAGS='--deny warnings' cargo doc --package {{PACKAGE}} --no-deps --all-features --bins --lib --examples --keep-going --document-private-items
 
 rust-docs-inner:
     #!/usr/bin/env -S bash -e

@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
-use crate::{Loader, LoaderHints, MemoryLoaderDesc};
+use crate::loader::{Loader, LoaderHints, MemoryLoaderDesc};
+use crate::processor::Config;
 use std::borrow::Cow;
 use styx_errors::anyhow::Context;
+use styx_errors::styx_loader::StyxLoaderError;
 use styx_memory::MemoryPermissions;
 use styx_memory::MemoryRegion;
 
@@ -18,7 +20,7 @@ impl Loader for RawLoader {
     /// Returns the name of the [`Loader`]
     ///
     /// ```rust
-    /// use styx_loader::{Loader, RawLoader};
+    /// use styx_processor::loader::{Loader, RawLoader};
     ///
     /// assert_eq!("raw", RawLoader.name());
     /// ```
@@ -30,11 +32,12 @@ impl Loader for RawLoader {
     /// a single region starting at address 0, and `RWX` permissions.
     ///
     /// ```rust
-    /// use styx_loader::{RawLoader, Loader, MemoryLoaderDesc};
+    /// use styx_processor::loader::{Loader, MemoryLoaderDesc, RawLoader};
+    /// use styx_processor::processor::Config;
     /// use styx_memory::MemoryRegion;
     /// use std::collections::HashMap;
     ///
-    /// let mut desc = RawLoader::default().load_bytes(vec![0x0, 0x8].into(), HashMap::default()).unwrap();
+    /// let mut desc = RawLoader::default().load_bytes(vec![0x0, 0x8].into(), HashMap::default(), &Config::default()).unwrap();
     ///
     /// # let regions = desc.take_memory_regions();
     /// # let region = regions.first().unwrap();
@@ -45,7 +48,8 @@ impl Loader for RawLoader {
         &self,
         data: Cow<[u8]>,
         _hints: LoaderHints,
-    ) -> Result<MemoryLoaderDesc, crate::StyxLoaderError> {
+        _config: &Config,
+    ) -> Result<MemoryLoaderDesc, StyxLoaderError> {
         load_raw(data.into_owned())
     }
 }
@@ -56,7 +60,7 @@ pub(crate) fn load_raw_with_base(
     data: Vec<u8>,
     base: u64,
     perms: MemoryPermissions,
-) -> Result<MemoryLoaderDesc, crate::StyxLoaderError> {
+) -> Result<MemoryLoaderDesc, StyxLoaderError> {
     let region = MemoryRegion::new_with_data(
         base,
         // if this unsigned cast fails then something is very wrong
@@ -78,6 +82,6 @@ pub(crate) fn load_raw_with_base(
 
 /// Load the raw data at base address 0. This allows us to maintain the existing
 /// [`RawLoader::load_bytes`] behavior.
-fn load_raw(data: Vec<u8>) -> Result<MemoryLoaderDesc, crate::StyxLoaderError> {
+fn load_raw(data: Vec<u8>) -> Result<MemoryLoaderDesc, StyxLoaderError> {
     load_raw_with_base(data, 0, MemoryPermissions::all())
 }

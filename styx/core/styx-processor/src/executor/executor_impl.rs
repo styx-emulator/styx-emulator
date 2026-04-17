@@ -6,6 +6,7 @@ use styx_errors::UnknownError;
 
 use crate::{
     core::ProcessorCore, cpu::ExecutionReport, executor::Delta, plugins::collection::Plugins,
+    processor::BuildingProcessor,
 };
 
 /// The common interface that all executor implementations need to support.
@@ -17,9 +18,10 @@ use crate::{
 /// when to handle events, when to update the state of peripherals, and when to stop emulation.
 ///
 /// Both `halt_emulation` and `post_stride_processing` take a [`Delta`] representing the number of
-/// instructions and time elapsed during execution. It's recommended to forward this to the `tick`
-/// events in the event controller, peripherals, and plugins, but an [`ExecutorImpl`] can choose to
-/// modify this to change the speed of time.
+/// instructions and wall clock time elapsed during execution. Note that `Delta::time` is wall
+/// clock time (real-world duration), not any processor-specific or simulated time. It's
+/// recommended to forward this to the `tick` events in the event controller, peripherals, and
+/// plugins, but an [`ExecutorImpl`] can choose to modify this to change the speed of time.
 ///
 /// ## Included Executors
 ///
@@ -33,6 +35,9 @@ use crate::{
 ///
 /// Below is an overview of the executor loop.
 ///
+/// 0. [`ProcessorBuilder::build()`](crate::processor::ProcessorBuilder::build()) calls
+///    `ExecutorImpl::init()` to initialize its state. This is only called once on processor
+///    construction.
 /// 1. [`Processor::run()`](crate::processor::Processor::run()) is called to start emulation, this
 ///    calls `Executor::begin()` and gives control of the [`ProcessorCore`] and [`Plugins`] to the
 ///    `Executor`.
@@ -60,6 +65,11 @@ use crate::{
 /// [`ExecutorImpl`] calls all of the required events.
 ///
 pub trait ExecutorImpl: Send {
+    /// This is run once while constructing the processor before any emulation.
+    fn init(&mut self, _proc: &mut BuildingProcessor) -> Result<(), UnknownError> {
+        Ok(())
+    }
+
     /// Determine if emulation should continue, called before each stride is executed.
     #[inline]
     fn valid_emulation_conditions(&mut self, _proc: &mut ProcessorCore) -> bool {

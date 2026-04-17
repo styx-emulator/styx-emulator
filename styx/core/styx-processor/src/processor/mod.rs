@@ -9,6 +9,8 @@
 //! interact with the processor while it is running.
 //!
 mod builder;
+mod config;
+pub use config::*;
 use std::fmt::Debug;
 
 pub use builder::*;
@@ -114,16 +116,13 @@ impl Processor {
     /// Save the [`Processor`]'s context to be restored in the future.
     pub fn context_save(&mut self) -> Result<(), UnknownError> {
         self.core.cpu.context_save()?;
-        self.core.mmu.memory.context_save()?;
-
+        self.core.mmu.context_save()?;
         Ok(())
     }
-
     /// Restore the [`Processor`]'s context from a saved one.
     pub fn context_restore(&mut self) -> Result<(), UnknownError> {
         self.core.cpu.context_restore()?;
-        self.core.mmu.memory.context_restore()?;
-
+        self.core.mmu.context_save()?;
         Ok(())
     }
 }

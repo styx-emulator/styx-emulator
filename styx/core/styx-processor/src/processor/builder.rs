@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! `ProcessorBuilder` logic and utilities
-use std::borrow::Cow;
+use std::{borrow::Cow, sync::Arc};
 
+use crate::loader::{Loader, LoaderHints, RawLoader};
 use log::{debug, info};
 use styx_cpu_type::Backend;
 use styx_errors::{anyhow::Context, UnknownError};
-use styx_loader::{Loader, LoaderHints, RawLoader};
 use tokio::{net::TcpListener, runtime::Handle};
 use tonic::{service::RoutesBuilder, transport::Server};
 
@@ -20,7 +20,9 @@ use crate::{
     event_controller::EventController,
     executor::{DefaultExecutor, Executor, ExecutorImpl},
     hooks::StyxHook,
+    memory::Mmu,
     plugins::{collection::PluginsContainer, UninitPlugin},
+    processor::{config::Config, ProcessorConfig},
     runtime::ProcessorRuntime,
 };
 
@@ -52,7 +54,7 @@ impl<'a> TargetProgramSource<'a> {
 /// byte slice via [`ProcessorBuilder::with_input_bytes()`] or by file name with
 /// [`ProcessorBuilder::with_target_program()`]. These are loaded by the loader which is set by
 /// default to the [`RawLoader`] which loads the target program at address 0. Other loaders are
-/// available in [`styx_loader`].
+/// available in [`styx_processor::loader`](crate::loader).
 ///
 /// See the documentation for [`Self::build()`] for more information.
 ///
@@ -66,7 +68,7 @@ impl<'a> TargetProgramSource<'a> {
 /// # use std::time::Duration;
 /// // process is owned and must be mutable.
 /// let proc: Processor = ProcessorBuilder::default()
-///     .with_executor(DefaultExecutor)
+///     .with_executor(DefaultExecutor::default())
 ///     .with_backend(Backend::Pcode)
 ///     .with_builder(DummyProcessorBuilder)
 ///     .build().unwrap();
@@ -83,11 +85,12 @@ pub struct ProcessorBuilder<'a> {
     cpu_backend: Backend,
     exception_behavior: ExceptionBehavior,
     hooks: Vec<StyxHook>,
+    config: Config,
 }
 impl<'a> Default for ProcessorBuilder<'a> {
     fn default() -> Self {
         Self {
-            executor: Box::new(DefaultExecutor),
+            executor: Box::new(DefaultExecutor::default()),
             runtime: ProcessorRuntime::default(),
             plugins: PluginsContainer::default(),
             port: IPCPort::default(),
@@ -97,6 +100,7 @@ impl<'a> Default for ProcessorBuilder<'a> {
             cpu_backend: Backend::default(),
             exception_behavior: ExceptionBehavior::default(),
             hooks: Vec::new(),
+            config: Config::default(),
         }
     }
 }
@@ -227,15 +231,86 @@ impl<'a> ProcessorBuilder<'a> {
         self
     }
 
+    /// Registers a [`ProcessorConfig`] value with the builder.
+    ///
+    /// Config values are keyed by their concrete type: registering the same
+    /// type twice replaces the first value with the second. Use
+    /// [`Self::modify_config_or_default()`] instead when you need to amend an
+    /// existing value rather than replace it entirely.
+    ///
+    /// The config is made available to [`ProcessorImpl::build()`] via
+    /// [`BuildProcessorImplArgs`], [`Loader`]s, and possibly ported to other
+    /// parts of the processor where it can be retrieved with [`Config::get()`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use styx_processor::processor::{ProcessorBuilder, ProcessorConfig};
+    /// # use styx_processor::core::builder::DummyProcessorBuilder;
+    ///
+    /// struct SamplingConfig { sample_rate_hz: u32 }
+    /// impl ProcessorConfig for SamplingConfig {}
+    ///
+    /// let _proc = ProcessorBuilder::default()
+    ///     .with_builder(DummyProcessorBuilder)
+    ///     .register_config(SamplingConfig { sample_rate_hz: 1000 })
+    ///     .build()
+    ///     .unwrap();
+    /// ```
+    pub fn register_config<C: ProcessorConfig>(mut self, config: C) -> Self {
+        self.config.register_config(config);
+        self
+    }
+
+    /// Modifies an existing config value, or inserts the
+    /// [`Default`] value and then modifies it if absent.
+    ///
+    /// This is useful when multiple call sites need to contribute to
+    /// the same config (e.g. appending to a list) without overwriting
+    /// each other's additions.
+    ///
+    /// The config is made available to [`ProcessorImpl::build()`] via
+    /// [`BuildProcessorImplArgs`], [`Loader`]s, and possibly ported to other
+    /// parts of the processor where it can be retrieved with [`Config::get()`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use styx_processor::processor::{ProcessorBuilder, ProcessorConfig};
+    /// # use styx_processor::core::builder::DummyProcessorBuilder;
+    ///
+    /// #[derive(Default)]
+    /// struct AllowedAddrs(Vec<u64>);
+    /// impl ProcessorConfig for AllowedAddrs {}
+    ///
+    /// let _proc = ProcessorBuilder::default()
+    ///     .with_builder(DummyProcessorBuilder)
+    ///     .modify_config_or_default(|cfg: &mut AllowedAddrs| {
+    ///         cfg.0.push(0x1000);
+    ///     })
+    ///     .modify_config_or_default(|cfg: &mut AllowedAddrs| {
+    ///         cfg.0.push(0x2000);
+    ///     })
+    ///     .build()
+    ///     .unwrap();
+    /// ```
+    pub fn modify_config_or_default<C: ProcessorConfig + Default>(
+        mut self,
+        f: impl FnOnce(&mut C),
+    ) -> Self {
+        self.config.modify_config_or_default(f);
+        self
+    }
+
     /// Builds the processor and initializes it.
     ///
     /// Required components:
     /// - [`ProcessorImpl`] via [`Self::with_builder()`]
     /// - A `TargetProgram` stored as [`TargetProgramSource`] via
     ///   [`Self::with_input_bytes()`] or [`Self::with_target_program`].
-    ///   - **NOTE**: If the loader is [`ParameterizedLoader`](styx_loader::ParameterizedLoader::default()) then things
+    ///   - **NOTE**: If the loader is [`ParameterizedLoader`](crate::loader::ParameterizedLoader) then things
     ///     get a little more complicated, see the documentation for
-    ///     [`ParameterizedLoader`](styx_loader::ParameterizedLoader::default()) for more information.
+    ///     [`ParameterizedLoader`](crate::loader::ParameterizedLoader) for more information.
     ///
     /// Once this method returns you'll have a [`Processor`] ready to run code!
     ///
@@ -246,6 +321,7 @@ impl<'a> ProcessorBuilder<'a> {
             runtime: self.runtime.handle(),
             backend: self.cpu_backend,
             exception: self.exception_behavior,
+            config: &self.config,
         };
         let processor = builder.build(&args)?;
         self.build_inner(processor, builder)
@@ -257,7 +333,7 @@ impl<'a> ProcessorBuilder<'a> {
 
     /// Builds processor and initializes components.
     fn build_inner(
-        self,
+        mut self,
         bundle: ProcessorBundle,
         builder: Box<dyn ProcessorImpl>,
     ) -> Result<Processor, UnknownError> {
@@ -269,12 +345,17 @@ impl<'a> ProcessorBuilder<'a> {
             .with_context(|| "could not resolve the ipc port to build the processor")?;
 
         let mut cpu = bundle.cpu;
-        let mut mmu = bundle.mmu;
+        let mut memory = bundle.memory;
+        let tlb = bundle.tlb;
 
         let mut event_controller_impl = bundle.event_controller;
-        event_controller_impl.init(cpu.as_mut(), &mut mmu)?;
+        event_controller_impl.init(cpu.as_mut(), &mut memory)?;
         let event_controller = EventController::new(event_controller_impl);
 
+        let mmu = Mmu {
+            tlb,
+            memory: Arc::new(memory),
+        };
         let mut core = ProcessorCore {
             cpu,
             mmu,
@@ -286,9 +367,8 @@ impl<'a> ProcessorBuilder<'a> {
             bundle.loader_hints,
             self.target_program_source,
             &mut core,
+            &self.config,
         )?;
-
-        let executor = Executor::new(self.executor);
 
         let mut peripherals = bundle.peripherals;
 
@@ -303,7 +383,11 @@ impl<'a> ProcessorBuilder<'a> {
             runtime: &mut runtime,
             routes: Default::default(),
             ipc_connection: IPCConnection::local_from_port(ipc_resolved_port.port()),
+            config: &self.config,
         };
+
+        self.executor.init(&mut building_processor)?;
+        let executor = Executor::new(self.executor);
 
         debug!("initializing plugins");
         let mut plugins = self
@@ -360,6 +444,7 @@ fn autobots_load_up(
     hints: LoaderHints,
     source: Option<TargetProgramSource>,
     core: &mut ProcessorCore,
+    config: &Config,
 ) -> Result<(), UnknownError> {
     debug!("autobots_load_up loader: {loader:?} source: {source:?}");
 
@@ -372,7 +457,7 @@ fn autobots_load_up(
 
     // loader hints?
     let mut memory_desc = loader
-        .load_bytes(source_bytes, hints)
+        .load_bytes(source_bytes, hints, config)
         .context("Loader failed to load bytes")?;
 
     // todo these should be more compatible
@@ -420,6 +505,7 @@ pub struct BuildingProcessor<'a> {
     pub runtime: &'a mut ProcessorRuntime,
     pub routes: RoutesBuilder,
     pub ipc_connection: IPCConnection,
+    pub config: &'a Config,
 }
 
 /// A wrapper type for constraints surrounding port selection.

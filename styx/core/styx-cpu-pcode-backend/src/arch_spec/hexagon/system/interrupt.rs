@@ -104,10 +104,16 @@ pub enum HexagonInterruptCause {
 }
 
 /// Trap instruction, see 11.9.3 Trap.
-/// Hexagon Linux uses this for syscalls.
 ///
-/// See arch/hexagon/kernel/traps.c in Linux for reference,
-/// specifically the do_trap0 function.
+/// Also see implementation in QUIC QEMU, branch hex-next
+/// specifically target/hexagon/hexswi.c, specifically
+/// hexagon_cpu_do_interrupt. Also see fTRAP macro
+/// in target/hexagon/macros.h.
+///
+/// Also see do_raise_exception and hexagon_raise_exception_err
+/// in target/hexagon/op_helper.c.
+///
+/// FIXME: multicore (delayed interrupt may need changing)
 #[derive(Debug)]
 pub struct Trap0Handler;
 impl<T: CpuBackend> CallOtherCallback<T> for Trap0Handler {
@@ -153,6 +159,7 @@ impl<T: CpuBackend> CallOtherCallback<T> for Trap0Handler {
 }
 
 /// Clear pending interrupts - see section 11.9.2 "Clear pending interrupts"
+/// FIXME: multicore (just double check there are no effects to handle)
 #[derive(Debug)]
 pub struct CswiHandler;
 impl<T: CpuBackend> CallOtherCallback<T> for CswiHandler {
@@ -202,6 +209,7 @@ impl<T: CpuBackend> CallOtherCallback<T> for CswiHandler {
 }
 
 /// Clear interrupt auto disbale - see section 11.9.2 "Clear interrupt auto disbale"
+/// FIXME: multicore (just double check there are no effects to handle)
 #[derive(Debug)]
 pub struct CiadHandler;
 impl<T: CpuBackend> CallOtherCallback<T> for CiadHandler {

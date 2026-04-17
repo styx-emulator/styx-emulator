@@ -5,23 +5,25 @@
 //! as they happen, as well as influence execution of the processor.
 //!
 //! Hooks can be added to structs implementing the [`Hookable`] trait, most notably, the
+//! [`CpuBackend`] trait requires a [`Hookable`] implementation.
 //!
 //! # Hooks API
 //!
-//! Hooks are added via the [`Hookable`] trait. The core behavior is a single [Hookable::add_hook()]
-//! function that takes the [StyxHook] enum representing the new hook object and the address range
-//! it is triggered by (if applicable). [Hookable] also provides helper functions such as
-//! [Hookable::code_hook()] as shorthands for adding specific hook types.
+//! Hooks are added via the [`Hookable`] trait. The core behavior is a single [`Hookable::add_hook()`]
+//! function that takes the [`StyxHook`] enum representing the new hook object and the address range
+//! it is triggered by (if applicable). [`Hookable`] also provides helper functions such as
+//! [`Hookable::code_hook()`] as shorthands for adding specific hook types.
 //!
-//! The preferred method for constructing [StyxHook] is using the method constructions e.g.
-//! [StyxHook::code()], [StyxHook::memory_write()], etc. These are ergonomic constructors that take
+//! The preferred method for constructing [`StyxHook`] is using the method constructions e.g.
+//! [`StyxHook::code()`], [`StyxHook::memory_write()`], etc. These are ergonomic constructors that take
 //! rust ranges and any object that impls the correct hook callback trait.
+//! Consult the [`StyxHook`] documentation for detailed information on constructing hooks.
 //!
 //! [`AddHookError::HookTypeNotSupported`] returned from attempting to add a hook, [`Hookable`]
 //! implementers can choose to reject hooks if they are not supported.
 //!
 //! Each type of hook is defined by a trait with a `call` function. Each call function is passed a
-//! mutable reference to the core trinity ([CoreHandle]: see more [crate::core]) as well as any
+//! mutable reference to the core trinity ([`CoreHandle`]: see more [`crate::core`]) as well as any
 //! parameters custom to the hook type. Additionally, the call is give a mut reference to itself
 //! allowing the hook to carry mutable state between calls.
 //!
@@ -72,6 +74,8 @@
 //!     .add_hook(StyxHook::code(0x1000..=0x2000, fn_code_hook)) // use rust ranges
 //!     .add_hook(StyxHook::code(.., closure_code_hook)); // even unbounded ranges
 //! ```
+//!
+//! [`CpuBackend`]: crate::cpu::CpuBackend
 
 mod address_range;
 mod callbacks;
@@ -103,9 +107,7 @@ use std::fmt::Debug;
 /// Err variant returned from a hook will be propagated as a fatal error.
 ///
 /// ## Callback Construction
-///
 /// ### Quick and Dirty
-///
 /// Box a function with the correct args.
 ///
 /// ```
@@ -124,23 +126,57 @@ use std::fmt::Debug;
 /// let styx_hook = StyxHook::memory_read(0x1000, my_memory_read_hook);
 /// // concrete variant construction
 /// let styx_hook = StyxHook::MemoryRead(0x1000.into(), Box::new(my_memory_read_hook));
+/// ```
+///
+/// ### Address Ranges
+/// Hooks use a specialized [`AddressRange`] to represent the ranges of
+/// addresses that the hook should trigger on. the method syntax (i.e.
+/// [`StyxHook::code()`]) will convert compatible Into [`AddressRange`] for you.
+/// See the example below for different ways to specify addressing.
 ///
 /// ```
+/// use styx_processor::hooks::{CoreHandle, StyxHook};
+/// use styx_errors::UnknownError;
+///
+/// fn my_hook(mut proc: CoreHandle) -> Result<(), UnknownError> {
+///     Ok(())
+/// }
+///
+/// // single address (u64) — triggers only on 0x1000
+/// let hook = StyxHook::code(0x1000, my_hook);
+///
+/// // exclusive range (Range) — triggers on 0x1000..0x2000 (0x1FFF is last)
+/// let hook = StyxHook::code(0x1000..0x2000, my_hook);
+///
+/// // inclusive range (RangeInclusive) — triggers on 0x1000..=0x2000 (0x2000 is last)
+/// let hook = StyxHook::code(0x1000..=0x2000, my_hook);
+///
+/// // unbounded start (RangeTo) — triggers on all addresses below 0x2000
+/// let hook = StyxHook::code(..0x2000, my_hook);
+///
+/// // unbounded start, inclusive end (RangeToInclusive)
+/// let hook = StyxHook::code(..=0x2000, my_hook);
+///
+/// // unbounded end (RangeFrom) — triggers on 0x1000 and all addresses above
+/// let hook = StyxHook::code(0x1000.., my_hook);
+///
+/// // fully unbounded (RangeFull) — triggers on every address
+/// let hook = StyxHook::code(.., my_hook);
+/// ```
+///
 /// ### Detailed Use
+/// Hook callbacks are defined by unique traits (e.g. [`CodeHook`]). Each
+/// trait has a `call()` function that takes a [`CoreHandle`] and hook specific
+/// parameters and returns a Result. Additionally, each handle has a trait as
+/// an impl for a `FnMut` of the correct parameters. This is what allows the
+/// closure construction in the example above.
 ///
-/// Hook callbacks are defined by unique traits (e.g. [CodeHook]). Each trait
-/// has a `call()` function that takes a [CoreHandle] and hook specific
-/// parameters and returns a Result. Additionally, each handle has a
-///
-///
-///  ### NOTE
-///
+/// ### NOTE
 /// Orderings of multiple hooks executing on the same address are `undefined`
 /// and cannot be relied upon.
 ///
 /// See individual variants' documentation for specifics on their API
 /// guarantees.
-///
 #[non_exhaustive]
 pub enum StyxHook {
     /// Code hook callback function. Whenever the program counter reaches the physical address

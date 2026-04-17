@@ -204,7 +204,11 @@ impl EventControllerImpl for Mpc866mController {
         None
     }
 
-    fn init(&mut self, cpu: &mut dyn CpuBackend, _mmu: &mut Mmu) -> Result<(), UnknownError> {
+    fn init(
+        &mut self,
+        cpu: &mut dyn CpuBackend,
+        _mmu: &mut MemoryBackend,
+    ) -> Result<(), UnknownError> {
         Ok(())
     }
 }

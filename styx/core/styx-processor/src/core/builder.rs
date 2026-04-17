@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: BSD-2-Clause
+use crate::loader::LoaderHints;
 use styx_cpu_type::Backend;
 use styx_errors::UnknownError;
-use styx_loader::LoaderHints;
 use tokio::runtime::Handle;
 
 use crate::{
     core::ExceptionBehavior,
     cpu::{CpuBackend, DummyBackend},
     event_controller::{DummyEventController, EventControllerImpl, Peripheral},
-    memory::Mmu,
-    processor::BuildingProcessor,
+    memory::{physical::MemoryBackend, DummyTlb, TlbImpl},
+    processor::{BuildingProcessor, Config},
 };
 
 /// Contains the uninitialized parts needed to create a
@@ -20,8 +20,10 @@ use crate::{
 pub struct ProcessorBundle {
     /// Uninitialized [CpuBackend] implementation.
     pub cpu: Box<dyn CpuBackend>,
-    /// Uninitialized [Mmu] implementation.
-    pub mmu: Mmu,
+    /// Physical memory.
+    pub memory: MemoryBackend,
+    /// Processor TLB.
+    pub tlb: Box<dyn TlbImpl>,
     /// Uninitialized [EventControllerImpl] implementation.
     pub event_controller: Box<dyn EventControllerImpl>,
     /// List of peripherals that will be added and initialized.
@@ -33,7 +35,8 @@ impl Default for ProcessorBundle {
     fn default() -> Self {
         Self {
             cpu: Box::new(DummyBackend),
-            mmu: Mmu::default(),
+            memory: MemoryBackend::default(),
+            tlb: Box::new(DummyTlb),
             event_controller: Box::new(DummyEventController::default()),
             peripherals: Default::default(),
             loader_hints: Default::default(),
@@ -41,10 +44,11 @@ impl Default for ProcessorBundle {
     }
 }
 
-pub struct BuildProcessorImplArgs {
+pub struct BuildProcessorImplArgs<'a> {
     pub runtime: Handle,
     pub backend: Backend,
     pub exception: ExceptionBehavior,
+    pub config: &'a Config,
 }
 
 /// Provides behavior to build and initialize a processor.

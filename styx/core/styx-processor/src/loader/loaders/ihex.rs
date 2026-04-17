@@ -9,7 +9,10 @@
 //! - Extended Linear Address records (04)
 //! - Start Linear Address records (05)
 
-use crate::{Loader, LoaderHints, MemoryLoaderDesc, StyxLoaderError};
+use crate::{
+    loader::{Loader, LoaderHints, MemoryLoaderDesc, StyxLoaderError},
+    processor::Config,
+};
 use std::borrow::Cow;
 use std::collections::BTreeMap;
 use styx_cpu_type::Arch;
@@ -238,6 +241,7 @@ impl Loader for IhexLoader {
         &self,
         data: Cow<[u8]>,
         hints: LoaderHints,
+        _config: &Config,
     ) -> Result<MemoryLoaderDesc, StyxLoaderError> {
         // Convert bytes to string for parsing
         let content = std::str::from_utf8(&data).map_err(|e| {
@@ -522,7 +526,11 @@ mod tests {
 
         let loader = IhexLoader;
         let mut desc = loader
-            .load_bytes(Cow::Borrowed(hex_content), HashMap::new())
+            .load_bytes(
+                Cow::Borrowed(hex_content),
+                HashMap::new(),
+                &Config::default(),
+            )
             .unwrap();
 
         let regions = desc.take_memory_regions();
@@ -562,7 +570,7 @@ mod tests {
             Box::new(0x8000u64) as Box<dyn std::any::Any>,
         );
 
-        let result = loader.load_bytes(Cow::Borrowed(hex_content), hints);
+        let result = loader.load_bytes(Cow::Borrowed(hex_content), hints, &Config::default());
         assert!(result.is_err());
         let err_msg = result.unwrap_err().to_string();
         assert!(err_msg.contains("arch hint is missing"));

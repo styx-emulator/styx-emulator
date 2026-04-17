@@ -26,7 +26,7 @@ use styx_processor::{
     event_controller::DummyEventController,
     executor::Forever,
     hooks::{CoreHandle, Hookable, MemFaultData, Resolution, StyxHook},
-    memory::{MemoryPermissions, Mmu},
+    memory::{memory_region::MemoryRegion, DummyTlb, MemoryBackend, MemoryPermissions},
     processor::{Processor, ProcessorBuilder},
 };
 
@@ -39,7 +39,7 @@ use styx_sync::sync::{Arc, OnceLock};
 fn test_abrupt_stop() {
     cpu_test(
         &ALL_BACKENDS,
-        &DEFAULT_CONFIGURAION,
+        &DEFAULT_CONFIGURATION,
         "mov r0, 0xde; mov r1, 0xde",
         |machine, snapshot| {
             let snapshot = snapshot.initial_snapshot(machine);
@@ -71,7 +71,7 @@ fn test_abrupt_stop() {
 fn test_stop_request() {
     cpu_test(
         &ALL_BACKENDS,
-        &DEFAULT_CONFIGURAION,
+        &DEFAULT_CONFIGURATION,
         "mov r1, #1",
         |machine, snapshot| {
             let snapshot = snapshot.initial_snapshot(machine);
@@ -104,7 +104,7 @@ fn test_stop_request() {
 fn test_read_memory_write_empty() {
     cpu_test(
         &ALL_BACKENDS,
-        &DEFAULT_CONFIGURAION,
+        &DEFAULT_CONFIGURATION,
         "",
         |machine, snapshot| {
             let snapshot = snapshot.initial_snapshot(machine);
@@ -201,19 +201,11 @@ fn test_compare_simple_run() {
 #[cfg_attr(asan, ignore)]
 #[test]
 fn test_compare_simple_load() {
-    let mut machines = create_machines("mov r0, #0x00; ldr r1, [r0]");
-
-    compare_two(
-        &mut machines,
-        Box::new(|machine| {
-            machine
-                .proc
-                .core
-                .mmu
-                .memory_map(0x00, 0x1000, MemoryPermissions::all())
-                .unwrap();
-        }),
+    let mut machines = create_machines_regions(
+        "mov r0, #0x00; ldr r1, [r0]",
+        vec![MemoryRegion::new(0x00, 0x1000, MemoryPermissions::all()).unwrap()],
     );
+
     compare_two(&mut machines, Box::new(full_compare));
     compare_two(&mut machines, Box::new(|machine| machine.run()));
     compare_two(&mut machines, Box::new(full_compare));
@@ -270,7 +262,7 @@ fn test_compare_simple_code_hook() {
 fn test_compare_simple_code_hook_blah() {
     cpu_test(
         &ALL_BACKENDS,
-        &DEFAULT_CONFIGURAION,
+        &DEFAULT_CONFIGURATION,
         "movs r0, 0xde; movs r1, 0xde; movs r2, 0xde",
         |machine, snapshot| {
             let snapshot = snapshot.initial_snapshot(machine);
@@ -351,21 +343,16 @@ fn test_compare_simple_interrupt_hook() {
 #[cfg_attr(asan, ignore)]
 #[test]
 fn test_compare_read_memory_hook_args() {
-    let mut machines = create_machines(
+    let mut machines = create_machines_regions(
         "movs r0, #0x00
          ldr r1, [r0]",
+        vec![MemoryRegion::new(0x00, 0x1000, MemoryPermissions::all()).unwrap()],
     );
 
     // map memory at 0x00
     compare_two(
         &mut machines,
         Box::new(|machine| {
-            machine
-                .proc
-                .core
-                .mmu
-                .memory_map(0x00, 0x1000, MemoryPermissions::all())
-                .unwrap();
             machine
                 .proc
                 .core
@@ -424,22 +411,17 @@ fn test_compare_read_memory_hook_args() {
 #[cfg_attr(asan, ignore)]
 #[test]
 fn test_compare_simple_read_memory_hook() {
-    let mut machines = create_machines(
+    let mut machines = create_machines_regions(
         "movs r0, #0x00
          ldr r1, [r0]
          ldr r1, [r0, #20]",
+        vec![MemoryRegion::new(0x00, 0x1000, MemoryPermissions::all()).unwrap()],
     );
 
     // map memory at 0x00
     compare_two(
         &mut machines,
         Box::new(|machine| {
-            machine
-                .proc
-                .core
-                .mmu
-                .memory_map(0x00, 0x1000, MemoryPermissions::all())
-                .unwrap();
             machine
                 .proc
                 .core
@@ -524,25 +506,14 @@ fn test_compare_simple_read_memory_hook() {
 #[cfg_attr(asan, ignore)]
 #[test]
 fn test_compare_simple_write_memory_hook() {
-    let mut machines = create_machines(
+    let mut machines = create_machines_regions(
         "movs r0, #0x00
          movs r1, #0xDE
          str r1, [r0]
          movs r1, #0xAA
          str r1, [r0, #20]",
-    );
-
-    // map memory at 0x00
-    compare_two(
-        &mut machines,
-        Box::new(|machine| {
-            machine
-                .proc
-                .core
-                .mmu
-                .memory_map(0x00, 0x1000, MemoryPermissions::all())
-                .unwrap();
-        }),
+        // map memory at 0x00
+        vec![MemoryRegion::new(0x00, 0x1000, MemoryPermissions::all()).unwrap()],
     );
 
     compare_two(
@@ -620,7 +591,7 @@ fn test_compare_simple_write_memory_hook() {
 fn test_invalid_insn_hooks() {
     cpu_test(
         &ALL_BACKENDS,
-        &DEFAULT_CONFIGURAION,
+        &DEFAULT_CONFIGURATION,
         "movw r1, #0x400b; mov r8, r8; mov r8, r8; bx r1",
         |machine, snapshot| {
             let snapshot = snapshot.initial_snapshot(machine);
@@ -692,7 +663,7 @@ fn test_invalid_insn_hooks() {
 fn test_invalid_insn_hook_fix() {
     cpu_test(
         &[Backend::Pcode],
-        &DEFAULT_CONFIGURAION,
+        &DEFAULT_CONFIGURATION,
         "movs r1, #0x4; movs r2, #21; movs r2, #21; movs r3, #21",
         |machine, snapshot| {
             let snapshot = snapshot.initial_snapshot(machine);
@@ -780,7 +751,7 @@ fn test_invalid_insn_hook_fix() {
 fn test_unmapped_read_hooks() {
     cpu_test(
         &ALL_BACKENDS,
-        &DEFAULT_CONFIGURAION,
+        &DEFAULT_CONFIGURATION,
         "movw r1, #0x9999; ldr r4, [r1];",
         |machine, snapshot| {
             let snapshot = snapshot.initial_snapshot(machine);
@@ -853,7 +824,7 @@ fn test_unmapped_read_hooks() {
 fn test_unmapped_write_hooks() {
     cpu_test(
         &ALL_BACKENDS,
-        &DEFAULT_CONFIGURAION,
+        &DEFAULT_CONFIGURATION,
         "movw r1, #0x9999;str r4, [r1];",
         |machine, snapshot| {
             let snapshot = snapshot.initial_snapshot(machine);
@@ -919,172 +890,176 @@ fn test_unmapped_write_hooks() {
     );
 }
 
-/// tests that the hook gets called when we read from an unmapped address, and that the read is
-/// re-executed if the hook returns true
-#[test]
-#[cfg_attr(miri, ignore)]
-#[cfg_attr(asan, ignore)]
-fn test_unmapped_read_hook_fixed() {
-    cpu_test(
-        &ALL_BACKENDS,
-        &DEFAULT_CONFIGURAION,
-        "movw r1, #0x0000; ldr r4, [r1]",
-        |machine, snapshot| {
-            let snapshot = snapshot.initial_snapshot(machine);
-            let cb = |proc: CoreHandle,
-                      addr: u64,
-                      size: u32,
-                      fault_data: MemFaultData|
-             -> Result<Resolution, UnknownError> {
-                println!("unmapped fault: 0x{addr:x} of size: {size}, type: {fault_data:?}");
+// INFO:
+// The new Mmu for multi-processor configurations removed the ability to map memory
+// during emulation. Until that feature is readded, these tests are worthless.
 
-                proc.cpu.write_register(ArmRegister::R2, 1u32).unwrap();
+// /// tests that the hook gets called when we read from an unmapped address, and that the read is
+// /// re-executed if the hook returns true
+// #[test]
+// #[cfg_attr(miri, ignore)]
+// #[cfg_attr(asan, ignore)]
+// fn test_unmapped_read_hook_fixed() {
+//     cpu_test(
+//         &ALL_BACKENDS,
+//         &DEFAULT_CONFIGURATION,
+//         "movw r1, #0x0000; ldr r4, [r1]",
+//         |machine, snapshot| {
+//             let snapshot = snapshot.initial_snapshot(machine);
+//             let cb = |proc: CoreHandle,
+//                       addr: u64,
+//                       size: u32,
+//                       fault_data: MemFaultData|
+//              -> Result<Resolution, UnknownError> {
+//                 println!("unmapped fault: 0x{addr:x} of size: {size}, type: {fault_data:?}");
 
-                proc.mmu
-                    .memory_map(0x0000, 0x1000, MemoryPermissions::all())
-                    .unwrap();
-                proc.mmu
-                    .write_data(0x0000, &0x1337u32.to_le_bytes())
-                    .unwrap();
+//                 proc.cpu.write_register(ArmRegister::R2, 1u32).unwrap();
 
-                Ok(Resolution::Fixed)
-            };
+//                 proc.mmu
+//                     .memory_map(0x0000, 0x1000, MemoryPermissions::all())
+//                     .unwrap();
+//                 proc.mmu
+//                     .write_data(0x0000, &0x1337u32.to_le_bytes())
+//                     .unwrap();
 
-            // insert hooks and collect tokens for removal later
-            let token1 = machine
-                .proc
-                .unmapped_fault_hook(0, u64::MAX, Box::new(cb))
-                .unwrap();
+//                 Ok(Resolution::Fixed)
+//             };
 
-            // one callback returned `true`, so emulation should exit correctly
-            machine.run();
-            let snapshot = snapshot.snapshot("After execution", machine);
+//             // insert hooks and collect tokens for removal later
+//             let token1 = machine
+//                 .proc
+//                 .unmapped_fault_hook(0, u64::MAX, Box::new(cb))
+//                 .unwrap();
 
-            // basic assertions are correct
-            assert_eq!(
-                0x0000,
-                machine
-                    .proc
-                    .core
-                    .cpu
-                    .read_register::<u32>(ArmRegister::R1)
-                    .unwrap(),
-                "r1 is incorrect immediate value",
-            );
+//             // one callback returned `true`, so emulation should exit correctly
+//             machine.run();
+//             let snapshot = snapshot.snapshot("After execution", machine);
 
-            // assertions to test that the hook was called
-            assert_eq!(
-                1,
-                machine
-                    .proc
-                    .core
-                    .cpu
-                    .read_register::<u32>(ArmRegister::R2)
-                    .unwrap(),
-                "normal hook was not called"
-            );
-            assert_eq!(
-                0x1337,
-                machine
-                    .proc
-                    .core
-                    .cpu
-                    .read_register::<u32>(ArmRegister::R4)
-                    .unwrap(),
-                "hook did not read data properly"
-            );
+//             // basic assertions are correct
+//             assert_eq!(
+//                 0x0000,
+//                 machine
+//                     .proc
+//                     .core
+//                     .cpu
+//                     .read_register::<u32>(ArmRegister::R1)
+//                     .unwrap(),
+//                 "r1 is incorrect immediate value",
+//             );
 
-            // removal of hooks is correct
-            machine.proc.core.cpu.delete_hook(token1).unwrap();
+//             // assertions to test that the hook was called
+//             assert_eq!(
+//                 1,
+//                 machine
+//                     .proc
+//                     .core
+//                     .cpu
+//                     .read_register::<u32>(ArmRegister::R2)
+//                     .unwrap(),
+//                 "normal hook was not called"
+//             );
+//             assert_eq!(
+//                 0x1337,
+//                 machine
+//                     .proc
+//                     .core
+//                     .cpu
+//                     .read_register::<u32>(ArmRegister::R4)
+//                     .unwrap(),
+//                 "hook did not read data properly"
+//             );
 
-            snapshot
-        },
-    );
-}
+//             // removal of hooks is correct
+//             machine.proc.core.cpu.delete_hook(token1).unwrap();
 
-/// tests that the hook gets called when we write to an unmapped address, and that the write is
-/// re-executed if the hook returns true
-#[test]
-#[cfg_attr(miri, ignore)]
-#[cfg_attr(asan, ignore)]
-fn test_unmapped_write_hook_fixed() {
-    cpu_test(
-        &ALL_BACKENDS,
-        &DEFAULT_CONFIGURAION,
-        "movw r1, #0x0000; str r4, [r1];",
-        |machine, snapshot| {
-            let snapshot = snapshot.initial_snapshot(machine);
-            let cb = |proc: CoreHandle,
-                      addr: u64,
-                      size: u32,
-                      fault_data: MemFaultData|
-             -> Result<Resolution, UnknownError> {
-                println!("unmapped fault: 0x{addr:x} of size: {size}, type: {fault_data:?}");
+//             snapshot
+//         },
+//     );
+// }
 
-                proc.cpu.write_register(ArmRegister::R2, 1u32).unwrap();
+// /// tests that the hook gets called when we write to an unmapped address, and that the write is
+// /// re-executed if the hook returns true
+// #[test]
+// #[cfg_attr(miri, ignore)]
+// #[cfg_attr(asan, ignore)]
+// fn test_unmapped_write_hook_fixed() {
+//     cpu_test(
+//         &ALL_BACKENDS,
+//         &DEFAULT_CONFIGURATION,
+//         "movw r1, #0x0000; str r4, [r1];",
+//         |machine, snapshot| {
+//             let snapshot = snapshot.initial_snapshot(machine);
+//             let cb = |proc: CoreHandle,
+//                       addr: u64,
+//                       size: u32,
+//                       fault_data: MemFaultData|
+//              -> Result<Resolution, UnknownError> {
+//                 println!("unmapped fault: 0x{addr:x} of size: {size}, type: {fault_data:?}");
 
-                proc.mmu
-                    .memory_map(0x0000, 0x1000, MemoryPermissions::all())
-                    .unwrap();
+//                 proc.cpu.write_register(ArmRegister::R2, 1u32).unwrap();
 
-                Ok(Resolution::Fixed)
-            };
+//                 proc.mmu
+//                     .memory_map(0x0000, 0x1000, MemoryPermissions::all())
+//                     .unwrap();
 
-            // insert hooks and collect tokens for removal later
-            let token1 = machine
-                .proc
-                .unmapped_fault_hook(0, u64::MAX, Box::new(cb))
-                .unwrap();
+//                 Ok(Resolution::Fixed)
+//             };
 
-            machine
-                .proc
-                .core
-                .cpu
-                .write_register(ArmRegister::R4, 0x1337u32)
-                .unwrap();
+//             // insert hooks and collect tokens for removal later
+//             let token1 = machine
+//                 .proc
+//                 .unmapped_fault_hook(0, u64::MAX, Box::new(cb))
+//                 .unwrap();
 
-            // one callback returned `true`, so emulation should exit correctly
-            machine.run();
-            let snapshot = snapshot.snapshot("After execution", machine);
+//             machine
+//                 .proc
+//                 .core
+//                 .cpu
+//                 .write_register(ArmRegister::R4, 0x1337u32)
+//                 .unwrap();
 
-            // basic assertions are correct
-            assert_eq!(
-                0x0000,
-                machine
-                    .proc
-                    .core
-                    .cpu
-                    .read_register::<u32>(ArmRegister::R1)
-                    .unwrap(),
-                "r1 is incorrect immediate value",
-            );
+//             // one callback returned `true`, so emulation should exit correctly
+//             machine.run();
+//             let snapshot = snapshot.snapshot("After execution", machine);
 
-            // assertions to test that the hook was called
-            assert_eq!(
-                1,
-                machine
-                    .proc
-                    .core
-                    .cpu
-                    .read_register::<u32>(ArmRegister::R2)
-                    .unwrap(),
-                "normal hook was not called"
-            );
-            let mut buf = [0u8; 4];
-            machine.proc.core.mmu.read_data(0x0000, &mut buf).unwrap();
-            assert_eq!(
-                &0x1337u32.to_le_bytes(),
-                &buf,
-                "hook did not write data properly"
-            );
+//             // basic assertions are correct
+//             assert_eq!(
+//                 0x0000,
+//                 machine
+//                     .proc
+//                     .core
+//                     .cpu
+//                     .read_register::<u32>(ArmRegister::R1)
+//                     .unwrap(),
+//                 "r1 is incorrect immediate value",
+//             );
 
-            // removal of hooks is correct
-            machine.proc.core.cpu.delete_hook(token1).unwrap();
+//             // assertions to test that the hook was called
+//             assert_eq!(
+//                 1,
+//                 machine
+//                     .proc
+//                     .core
+//                     .cpu
+//                     .read_register::<u32>(ArmRegister::R2)
+//                     .unwrap(),
+//                 "normal hook was not called"
+//             );
+//             let mut buf = [0u8; 4];
+//             machine.proc.core.mmu.read_data(0x0000, &mut buf).unwrap();
+//             assert_eq!(
+//                 &0x1337u32.to_le_bytes(),
+//                 &buf,
+//                 "hook did not write data properly"
+//             );
 
-            snapshot
-        },
-    );
-}
+//             // removal of hooks is correct
+//             machine.proc.core.cpu.delete_hook(token1).unwrap();
+
+//             snapshot
+//         },
+//     );
+// }
 
 // tests that the basic block hook event will fire when this while true
 // loop is translated then executed
@@ -1095,7 +1070,7 @@ fn test_unmapped_write_hook_fixed() {
 fn test_bb_hooks() {
     cpu_test(
         &ALL_BACKENDS,
-        &DEFAULT_CONFIGURAION,
+        &DEFAULT_CONFIGURATION,
         "movw r1, #0x100b; mov r8, r8; mov r8, r8; bx r1",
         |machine, snapshot| {
             let snapshot = snapshot.initial_snapshot(machine);
@@ -1193,6 +1168,7 @@ fn test_arm_thumb_mode_switch() {
     )
 }
 
+/// Snapshot of all registers and non-zero memory.
 #[derive(PartialEq, Eq, Debug, Clone)]
 struct MachineState {
     registers: BTreeMap<ArchRegister, u32>,
@@ -1231,6 +1207,8 @@ impl MachineState {
         Self { registers, memory }
     }
 }
+
+/// Returns a full [`MachineState`] snapshot from the given machine.
 fn full_compare(machine: &mut TestMachine) -> MachineState {
     let backend = &mut machine.proc.core;
 
@@ -1241,6 +1219,7 @@ fn full_compare(machine: &mut TestMachine) -> MachineState {
     ))
 }
 
+/// Runs `function` on both machines and asserts the results are equal.
 fn compare_two<R: PartialEq + Debug>(
     machines: &mut [TestMachine; 2],
     function: Box<dyn Fn(&mut TestMachine) -> R>,
@@ -1252,18 +1231,27 @@ fn compare_two<R: PartialEq + Debug>(
     assert_eq!(first, second);
 }
 
-pub struct TestProcessor {
+/// Minimal [`ProcessorImpl`] for building Backends with configurable
+/// architecture, endianness, and memory regions.
+struct TestProcessor {
     arch: Arch,
     arch_variant: ArchVariant,
     endian: ArchEndian,
+    regions: Vec<MemoryRegion>,
 }
 
 impl TestProcessor {
-    pub fn new(arch: Arch, arch_variant: impl Into<ArchVariant>, endian: ArchEndian) -> Self {
+    fn new(
+        arch: Arch,
+        arch_variant: impl Into<ArchVariant>,
+        endian: ArchEndian,
+        regions: Vec<MemoryRegion>,
+    ) -> Self {
         Self {
             arch,
             arch_variant: arch_variant.into(),
             endian,
+            regions,
         }
     }
 }
@@ -1283,10 +1271,21 @@ impl ProcessorImpl for TestProcessor {
             )),
             _ => return Err(BackendNotSupported(args.backend).into()),
         };
+        let mut memory = MemoryBackend::new_region_store();
+        for region in &self.regions {
+            memory.add_memory_region(region.clone())?;
+        }
+        memory.add_memory_region(MemoryRegion::new(
+            START_ADDRESS,
+            0x1000,
+            MemoryPermissions::all(),
+        )?)?;
+        let tlb = DummyTlb::new();
 
         Ok(ProcessorBundle {
             cpu,
-            mmu: Mmu::default_region_store(),
+            memory,
+            tlb,
             event_controller: Box::new(DummyEventController::default()),
             peripherals: vec![],
             loader_hints: HashMap::default(),
@@ -1294,7 +1293,11 @@ impl ProcessorImpl for TestProcessor {
     }
 }
 
-/// Test fixture that uses the TestProcessor to test backend behaviour
+/// Base address where assembled instructions are loaded in every test.
+const START_ADDRESS: u64 = 0x1000;
+
+/// Test fixture wrapping a [`Processor`] with assembled instructions loaded
+/// at [`START_ADDRESS`].
 struct TestMachine {
     proc: Processor,
     instruction_count: u32,
@@ -1302,25 +1305,18 @@ struct TestMachine {
 }
 impl TestMachine {
     fn from_proc(instr: &str, mut backend: Processor, configuration: &Configuration) -> Self {
-        let start_address = 0x1000;
         // Assemble instructions
         // Processor default to thumb so we use that
         let ks = Keystone::new(configuration.keystone_arch, configuration.keystone_mode)
             .expect("Could not initialize Keystone engine");
         let asm = ks
-            .asm(instr.to_owned(), start_address)
+            .asm(instr.to_owned(), START_ADDRESS)
             .expect("Could not assemble");
         let code = asm.bytes;
         let instruction_count = asm.stat_count;
 
-        backend
-            .core
-            .mmu
-            .memory_map(start_address, 0x1000, MemoryPermissions::all())
-            .unwrap();
-
         // Write generated instructions to memory
-        backend.core.mmu.write_code(start_address, &code).unwrap();
+        backend.core.mmu.write_code(START_ADDRESS, &code).unwrap();
         // Start execution at our instructions
         let offset = if configuration.keystone_mode == keystone_engine::Mode::THUMB {
             1
@@ -1330,12 +1326,12 @@ impl TestMachine {
         backend
             .core
             .cpu
-            .write_register(ArmRegister::Pc, start_address as u32 + offset)
+            .write_register(ArmRegister::Pc, START_ADDRESS as u32 + offset)
             .unwrap();
 
         // get pc
         assert_eq!(
-            start_address,
+            START_ADDRESS,
             backend.core.pc().unwrap(),
             "pc is not correct"
         );
@@ -1344,12 +1340,12 @@ impl TestMachine {
             .cpu
             .read_register::<u32>(ArmRegister::Pc)
             .unwrap();
-        assert_eq!(start_address, pc_val as u64, "did not read pc correctly");
+        assert_eq!(START_ADDRESS, pc_val as u64, "did not read pc correctly");
 
         TestMachine {
             proc: backend,
             instruction_count,
-            start_address,
+            start_address: START_ADDRESS,
         }
     }
     fn from_builder(instr: &str, builder: ProcessorBuilder, configuration: &Configuration) -> Self {
@@ -1360,6 +1356,14 @@ impl TestMachine {
         backend_type: Backend,
         configuration: &Configuration,
     ) -> Self {
+        Self::from_backend_type_regions(instr, backend_type, configuration, Vec::new())
+    }
+    fn from_backend_type_regions(
+        instr: &str,
+        backend_type: Backend,
+        configuration: &Configuration,
+        regions: Vec<MemoryRegion>,
+    ) -> Self {
         Self::from_builder(
             instr,
             ProcessorBuilder::default()
@@ -1367,6 +1371,7 @@ impl TestMachine {
                     configuration.backend_arch,
                     configuration.backend_arch_variant,
                     configuration.backend_endian,
+                    regions,
                 ))
                 .with_backend(backend_type),
             configuration,
@@ -1394,16 +1399,42 @@ impl TestMachine {
         assert_eq!(exit_report.exit_reason, expected_exit_reason);
     }
 }
+/// Creates a Unicorn and Pcode machine pair with the default configuration.
 fn create_machines(instr: &str) -> [TestMachine; 2] {
     [
-        TestMachine::from_backend_type(instr, Backend::Unicorn, &DEFAULT_CONFIGURAION),
-        TestMachine::from_backend_type(instr, Backend::Pcode, &DEFAULT_CONFIGURAION),
+        TestMachine::from_backend_type(instr, Backend::Unicorn, &DEFAULT_CONFIGURATION),
+        TestMachine::from_backend_type(instr, Backend::Pcode, &DEFAULT_CONFIGURATION),
+    ]
+}
+/// Creates a Unicorn and Pcode machine pair with instantiated memory regions.
+fn create_machines_regions(instr: &str, regions: Vec<MemoryRegion>) -> [TestMachine; 2] {
+    [
+        TestMachine::from_backend_type_regions(
+            instr,
+            Backend::Unicorn,
+            &DEFAULT_CONFIGURATION,
+            regions.clone(),
+        ),
+        TestMachine::from_backend_type_regions(
+            instr,
+            Backend::Pcode,
+            &DEFAULT_CONFIGURATION,
+            regions,
+        ),
     ]
 }
 
+/// Terminal node in the [`Snapshot`] linked list.
 #[derive(Debug, PartialEq, Eq)]
 struct SnapshotParent;
 
+/// A type-level linked list of labeled values used to compare test
+/// observations across backends.
+///
+/// Each node holds a labeled datum and a parent node. Tests build a chain
+/// of snapshots via [`push`](Snapshot::push) and
+/// [`snapshot`](Snapshot::snapshot), then the [`Compare`] trait walks both
+/// chains in lockstep to assert equality.
 #[derive(PartialEq, Eq)]
 struct Snapshot<T, N> {
     message: Option<Box<str>>,
@@ -1448,6 +1479,7 @@ impl<T, N> Snapshot<T, N> {
     }
 }
 
+/// Recursively compares two snapshot chains for equality.
 trait Compare {
     fn compare(&self, other: &Self);
 }
@@ -1488,9 +1520,10 @@ impl<T: Debug, N: Debug> Debug for Snapshot<T, N> {
     }
 }
 
-/// List of all working backends to test.
+/// All backends that must produce identical results in comparison tests.
 const ALL_BACKENDS: [Backend; 2] = [Backend::Unicorn, Backend::Pcode];
 
+/// Assembler and backend settings for a test target architecture.
 struct Configuration {
     keystone_arch: keystone_engine::Arch,
     keystone_mode: keystone_engine::Mode,
@@ -1499,7 +1532,8 @@ struct Configuration {
     backend_endian: ArchEndian,
 }
 
-const DEFAULT_CONFIGURAION: Configuration = Configuration {
+/// ARM Cortex-M4 Thumb mode configuration used by most tests.
+const DEFAULT_CONFIGURATION: Configuration = Configuration {
     keystone_arch: keystone_engine::Arch::ARM,
     keystone_mode: keystone_engine::Mode::THUMB,
     backend_arch: Arch::Arm,
@@ -1509,6 +1543,7 @@ const DEFAULT_CONFIGURAION: Configuration = Configuration {
     backend_endian: ArchEndian::LittleEndian,
 };
 
+/// ARM Cortex-A7 ARM-mode configuration for mode-switching tests.
 const CORTEX_A7_CONFIGURATION: Configuration = Configuration {
     keystone_arch: keystone_engine::Arch::ARM,
     keystone_mode: keystone_engine::Mode::ARM,
@@ -1551,6 +1586,7 @@ fn cpu_test<T: Compare>(
     all_equal(&results)
 }
 
+/// Asserts all elements in `slice` are pairwise equal via [`Compare`].
 fn all_equal<T: Compare>(slice: &[T]) {
     for window in slice.windows(2) {
         window[0].compare(&window[1]);

@@ -34,9 +34,12 @@ use styx_core::core::builder::BuildProcessorImplArgs;
 use styx_core::cpu::arch::ppc32::variants::Mpc8xxVariants;
 
 use styx_core::errors::anyhow::anyhow;
-use styx_core::memory::memory_region::MemoryRegion;
-use styx_core::memory::MemoryPermissions;
-use styx_core::{core::builder::ProcessorImpl, cpu::PcodeBackend, prelude::*};
+use styx_core::{
+    core::builder::ProcessorImpl,
+    cpu::PcodeBackend,
+    memory::{DummyTlb, MemoryRegion},
+    prelude::*,
+};
 use styx_mpc866m::Mpc866mController;
 
 use self::fast_ethernet::FastEthernetController;
@@ -106,9 +109,9 @@ impl ProcessorImpl for Mpc8xxBuilder {
             _ => return Err(BackendNotSupported(args.backend).into()),
         };
 
-        let mut mmu = Mmu::default_region_store();
-
-        self.setup_address_space(&mut mmu)?;
+        let mut memory = MemoryBackend::new_region_store();
+        let tlb = DummyTlb::new();
+        self.setup_address_space(&mut memory)?;
 
         // always start at the reset exception handler located @ 0x100
         cpu.set_pc(0x100)?;
@@ -126,7 +129,8 @@ impl ProcessorImpl for Mpc8xxBuilder {
         hints.insert("arch".to_string().into_boxed_str(), Box::new(Arch::Ppc32));
         Ok(ProcessorBundle {
             cpu,
-            mmu,
+            tlb,
+            memory,
             event_controller: cec,
             peripherals,
             loader_hints: hints,
@@ -135,7 +139,7 @@ impl ProcessorImpl for Mpc8xxBuilder {
 }
 
 impl Mpc8xxBuilder {
-    fn setup_address_space(&self, mmu: &mut Mmu) -> Result<(), UnknownError> {
+    fn setup_address_space(&self, mmu: &mut MemoryBackend) -> Result<(), UnknownError> {
         let mut regions = Vec::new();
 
         // flash

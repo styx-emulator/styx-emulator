@@ -14,13 +14,13 @@ pub use styx_arch_utils as arch_utils;
 pub use styx_cpu::arch;
 pub use styx_errors as errors;
 pub use styx_grpc as grpc;
-pub use styx_loader as loader;
 pub use styx_macros as macros;
 pub use styx_peripheral_clients as peripheral_clients;
 pub use styx_processor::core;
 pub use styx_processor::event_controller;
 pub use styx_processor::executor;
 pub use styx_processor::hooks;
+pub use styx_processor::loader;
 pub use styx_processor::memory;
 pub use styx_processor::plugins;
 pub use styx_processor::processor;
@@ -57,8 +57,8 @@ pub mod prelude {
     pub use super::loader::*;
     pub use super::macros::*;
     pub use super::memory::{
-        MemoryOperation, MemoryOperationError, MemoryPermissions, MemoryRegionSize, MemoryType,
-        Mmu, MmuOpError,
+        MemoryBackend, MemoryOperation, MemoryOperationError, MemoryPermissions, MemoryRegionSize,
+        MemoryType, Mmu, MmuOpError,
     };
     pub use super::plugins::{Plugin, UninitPlugin};
     pub use super::processor::*;

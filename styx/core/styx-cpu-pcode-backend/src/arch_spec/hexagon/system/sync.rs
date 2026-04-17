@@ -23,6 +23,9 @@ use crate::{
 ///
 /// This will be called after the SYSCFG register is set, so we can update
 /// internal emulation state based on SYSCFG sets here.
+///
+/// FIXME: multicore (manual mentions when "TID" register is set, make sure there are
+/// no threading side effects that need to be dealt with here)
 #[derive(Debug)]
 pub struct IsyncHandler {}
 

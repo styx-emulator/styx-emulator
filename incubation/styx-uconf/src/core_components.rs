@@ -5,6 +5,6 @@ use styx_core::{core::builder::DummyProcessorBuilder, prelude::*};
 
 use crate::register_component;
 
-register_component!(register executor: id = default, component = DefaultExecutor);
+register_component!(register executor: id = default, component = DefaultExecutor::default());
 
 register_component!(register processor: id = dummy, component = DummyProcessorBuilder);

@@ -129,6 +129,11 @@ fn create_gdb_multiarch_process(port: u16, runtime: Runtime) -> BlockingGdbClien
             .arg("-nh")
             .arg("-nx")
             .arg("-ex")
+            // gdb 17.1 added emojis in the warning-prefix which output invalid utf-8,
+            // at least in our tests, possibly related to interpreter=mi3.
+            // This causes gdbmi to crash. This is a workaround until it is fixed upstream.
+            .arg("set style emoji off")
+            .arg("-ex")
             .arg(format!("target remote :{port}"))
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
