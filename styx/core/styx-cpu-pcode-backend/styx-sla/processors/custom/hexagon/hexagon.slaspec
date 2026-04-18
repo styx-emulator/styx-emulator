@@ -44946,7 +44946,38 @@ gp: reloc is epsilon [ reloc = 0; ] {
 
 :A2_svaddhs A2_svaddhs_Rd32 A2_svaddhs_Rs32 A2_svaddhs_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b21 = 1 & b22 = 0 & b23 = 0 & b24 = 0 & b25 = 1 & b26 = 1 & b27 = 0 & b28 = 1 & b29 = 1 & b30 = 1 & b31 = 1 & A2_svaddhs_Rd32 & A2_svaddhs_Rs32 & A2_svaddhs_Rt32 unimpl
 
-:A2_svadduhs A2_svadduhs_Rd32 A2_svadduhs_Rs32 A2_svadduhs_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b21 = 1 & b22 = 1 & b23 = 0 & b24 = 0 & b25 = 1 & b26 = 1 & b27 = 0 & b28 = 1 & b29 = 1 & b30 = 1 & b31 = 1 & A2_svadduhs_Rd32 & A2_svadduhs_Rs32 & A2_svadduhs_Rt32 unimpl
+:A2_svadduhs A2_svadduhs_Rd32 A2_svadduhs_Rs32 A2_svadduhs_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b21 = 1 & b22 = 1 & b23 = 0 & b24 = 0 & b25 = 1 & b26 = 1 & b27 = 0 & b28 = 1 & b29 = 1 & b30 = 1 & b31 = 1 & A2_svadduhs_Rd32 & A2_svadduhs_Rs32 & A2_svadduhs_Rt32 {
+    local i:4 = 0;
+    local done:1 = 0;
+    local shld_saturate:1 = 0;
+    local half_s:2 = 0;
+    local half_t:2 = 0;
+    local res:2 = 0;
+    # to truncate to halfword
+    local truncvar:4 = 0;
+    local maskvark:4 = 0;
+<loopstart>
+    truncvar = ((A2_svadduhs_Rs32 >> (i * 16)) & 0xffff);
+    half_s = truncvar:2;
+    truncvar = ((A2_svadduhs_Rt32 >> (i * 16)) & 0xffff); 
+    half_t = truncvar:2;
+
+    # unsigned carry
+    shld_saturate = carry(half_s, half_t);
+    if (shld_saturate) goto <saturate>;
+    # add by default, unless saturate condition is met
+    res = half_s + half_t;
+    goto <write>;
+<saturate>
+    res = 0xffff;    
+    goto <write>;
+<write>
+    maskvar = 0xffffffff - (0xffff << (i * 16));
+    A2_svadduhs_Rd32 = (A2_svadduhs_Rd32 & maskvar) | (zext(res) << (i * 16));
+    i = i + 1;
+    done = i == 2;
+    if (!done) goto <loopstart>;
+}
 
 :A2_svsubh A2_svsubh_Rd32 A2_svsubh_Rt32 A2_svsubh_Rs32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b21 = 0 & b22 = 0 & b23 = 1 & b24 = 0 & b25 = 1 & b26 = 1 & b27 = 0 & b28 = 1 & b29 = 1 & b30 = 1 & b31 = 1 & A2_svsubh_Rd32 & A2_svsubh_Rt32 & A2_svsubh_Rs32 {
   local i:4;

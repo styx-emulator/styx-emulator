@@ -70,7 +70,7 @@ pub struct HexagonTlb {
     enable_translation: bool,
 }
 
-const PAGE_SIZE_BITS: u64 = 12;
+pub const PAGE_SIZE_BITS: u64 = 12;
 // From https://github.com/quic/qemu/blob/3921c6eed6bd7c670eff633fe829e18607125969/hw/hexagon/hexagon_tlb.c
 const PAGE_MASK: [u64; 13] = [
     // 12 bits
@@ -118,6 +118,7 @@ impl HexagonTlb {
 
     // https://github.com/quic/qemu/blob/3921c6eed6bd7c670eff633fe829e18607125969/hw/hexagon/hexagon_tlb.c#L100
     fn get_entry_page_type(ent: &Pte) -> usize {
+        trace!("PPD trailing zeroes is {}", ent.ppd().trailing_zeros());
         ent.ppd().trailing_zeros() as usize // + (ent.pte_hsv39() as usize * 4)
     }
 
@@ -277,6 +278,7 @@ impl TlbImpl for HexagonTlb {
                     }
                 }
 
+                debug!("pte {ent:x?}");
                 let page_type = Self::get_entry_page_type(ent);
                 let page_mask = PAGE_MASK[page_type];
                 trace!("page_mask is {page_mask:x}");
@@ -302,14 +304,11 @@ impl TlbImpl for HexagonTlb {
                 }
             }
 
-            error!(
-                "couldn't translate {virt_addr:x} at pc {:x?}",
-                processor.cpu.pc()
-            );
-
             let err = if matches!(memory_type, MemoryType::Code)
                 && matches!(access_type, MemoryOperation::Read)
             {
+                error!("couldn't translate {virt_addr:x} (pc/code)",);
+
                 update_badva(processor, virt_addr)?;
 
                 if (virt_addr as u64 & page_number_mask) == 0 {
@@ -322,6 +321,11 @@ impl TlbImpl for HexagonTlb {
                     HexagonInterruptType::TlbMissX as i32,
                 ))
             } else if matches!(memory_type, MemoryType::Data) {
+                error!(
+                    "couldn't translate {virt_addr:x} at pc {:x?}",
+                    processor.cpu.pc()
+                );
+
                 update_badva(processor, virt_addr)?;
 
                 if access_type == MemoryOperation::Read {

@@ -26,7 +26,7 @@ use styx_pcode::pcode::{Opcode, Pcode, SpaceName, VarnodeData};
 use styx_pcode_translator::ContextOption;
 use styx_processor::{
     cpu::{CpuBackend, CpuBackendExt, ExecutionReport, ReadRegisterError, WriteRegisterError},
-    event_controller::EventController,
+    event_controller::{EventController, ExceptionNumber},
     hooks::{AddHookError, DeleteHookError, HookToken, Hookable, StyxHook},
     memory::Mmu,
 };
@@ -35,7 +35,7 @@ use thiserror::Error;
 use crate::{
     arch_spec::hexagon::pkt_semantics::DEST_REG_OFFSET,
     backend_helper::BackendHelper,
-    get_pcode::GetPcodeError,
+    get_pcode::{FetchPcodeError, GetPcodeError},
     pcode_gen::{GeneratePcodeError, RegisterTranslator},
     PcodeBackendConfiguration,
 };
@@ -307,20 +307,37 @@ impl BackendHelper<HexagonExecuteSingleInfo, Vec<Pcode>> for HexagonPcodeBackend
                 // banking if this happens
 
                 // This may overwrite the PC, but that's fine.
-                let (target_exit_reason, did_fix) =
-                    handle_pcode_exception(self, mmu, ev, result_err)?;
 
-                trace!("did_fix: {did_fix:?}");
+                match handle_pcode_exception(self, mmu, ev, result_err) {
+                    Ok((target_exit_reason, did_fix)) => {
+                        trace!("did_fix: {did_fix:?}");
 
-                if did_fix.fixed() {
-                    match self.fetch_decode_packet(pcodes, mmu, ev)? {
-                        Ok(bytes_consumed) => bytes_consumed,
-                        Err(exit_reason) => {
-                            return Ok(Err(exit_reason));
+                        if did_fix.fixed() {
+                            match self.fetch_decode_packet(pcodes, mmu, ev)? {
+                                Ok(bytes_consumed) => bytes_consumed,
+                                Err(exit_reason) => {
+                                    return Ok(Err(exit_reason));
+                                }
+                            }
+                        } else {
+                            return Ok(Err(target_exit_reason));
                         }
                     }
-                } else {
-                    return Ok(Err(target_exit_reason));
+                    // We need to handle the tlb exception. This time, this is a Tlb miss where the
+                    // code address could not be translated.
+                    Err(FetchPcodeError::TlbException(irqn)) => {
+                        info!("tlb exception at CODE, pc {:?}", self.pc());
+                        self.handle_tlb_miss(mmu, ev, irqn, None)?;
+
+                        // Same return as Rerun later for tlb miss on data access
+                        return Ok(Ok(HexagonExecuteSingleInfo {
+                            _total_instrs_within_packet_executed: 0,
+                            ordering: SmallVec::new(),
+                        }));
+                    }
+                    Err(e) => {
+                        return Err(e.into());
+                    }
                 }
             }
             Err(HexagonFetchDecodeError::Other(e)) => return Err(e),
@@ -590,6 +607,55 @@ impl CpuBackend for HexagonPcodeBackend {
 }
 
 impl HexagonPcodeBackend {
+    fn handle_tlb_miss(
+        &mut self,
+        mmu: &mut Mmu,
+        ev: &mut EventController,
+        irqn: ExceptionNumber,
+        slot: Option<usize>,
+    ) -> Result<(), UnknownError> {
+        let badva = self
+            .read_register::<u32>(HexagonRegister::BadVa)
+            .with_context(|| "couldn't read badva in exception")?;
+        let mut ssr = Ssr::new_with_raw_value(
+            self.read_register::<u32>(HexagonRegister::Ssr)
+                .with_context(|| "couldn't read ssr in exception")?,
+        );
+
+        info!("slot is {slot:?}, badva is {badva:x}");
+
+        if irqn == HexagonInterruptType::TlbMissX as i32 || slot == Some(0) {
+            info!(
+                "writing slot0 badva0/badva1, badva0 offset is {:x?}",
+                self.pcode_generator
+                    .get_register(&HexagonRegister::BadVa0.into())
+                    .unwrap()
+                    .offset
+            );
+            self.write_register(HexagonRegister::BadVa0, badva)?;
+            self.write_register(HexagonRegister::BadVa1, 0xbadabadau32)?;
+
+            ssr.set_v0(true);
+            ssr.set_v1(false);
+            ssr.set_bvs(false);
+        } else if slot == Some(1) {
+            info!("writing slot1 badva0/badva1");
+            self.write_register(HexagonRegister::BadVa1, badva)?;
+            self.write_register(HexagonRegister::BadVa0, 0xbadabadau32)?;
+
+            ssr.set_v0(false);
+            ssr.set_v1(true);
+            ssr.set_bvs(true);
+        }
+        self.write_register(HexagonRegister::Ssr, ssr.raw_value())?;
+
+        // exception occurred
+        // we should interrupt hook and rerun instruction
+        HookManager::trigger_interrupt_hook(self, mmu, ev, irqn)?;
+
+        Ok(())
+    }
+
     pub fn new_engine(
         _arch: Arch, // Kept to keep interface the same as unicorn
         arch_variant: impl Into<ArchVariant>,
@@ -730,43 +796,8 @@ impl HexagonPcodeBackend {
                         .expect("load/store instruction does not have a slot!");
                     error!("exception: slot is {slot}");
 
-                    let badva = self
-                        .read_register::<u32>(HexagonRegister::BadVa)
-                        .with_context(|| "couldn't read badva in exception")?;
-                    let mut ssr = Ssr::new_with_raw_value(
-                        self.read_register::<u32>(HexagonRegister::Ssr)
-                            .with_context(|| "couldn't read ssr in exception")?,
-                    );
-                    info!("slot is {slot}, badva is {badva:x}");
+                    self.handle_tlb_miss(mmu, ev, irqn, Some(slot))?;
 
-                    if irqn == HexagonInterruptType::TlbMissX as i32 || slot == 0 {
-                        info!(
-                            "writing slot0 badva0/badva1, badva0 offset is {:x?}",
-                            self.pcode_generator
-                                .get_register(&HexagonRegister::BadVa0.into())
-                                .unwrap()
-                                .offset
-                        );
-                        self.write_register(HexagonRegister::BadVa0, badva)?;
-                        self.write_register(HexagonRegister::BadVa1, 0xbadabadau32)?;
-
-                        ssr.set_v0(true);
-                        ssr.set_v1(false);
-                        ssr.set_bvs(false);
-                    } else if slot == 1 {
-                        info!("writing slot1 badva0/badva1");
-                        self.write_register(HexagonRegister::BadVa1, badva)?;
-                        self.write_register(HexagonRegister::BadVa0, 0xbadabadau32)?;
-
-                        ssr.set_v0(false);
-                        ssr.set_v1(true);
-                        ssr.set_bvs(true);
-                    }
-                    self.write_register(HexagonRegister::Ssr, ssr.raw_value())?;
-
-                    // exception occurred
-                    // we should interrupt hook and rerun instruction
-                    HookManager::trigger_interrupt_hook(self, mmu, ev, irqn)?;
                     return Ok(Ok(HexagonSingleInstructionAction::Rerun));
                     // Don't increment PC
                 }
@@ -876,11 +907,16 @@ impl HexagonPcodeBackend {
 
             let mut execution_helper = self.execution_helper.take().unwrap();
             let ctx_opts = {
-                decode_state = execution_helper
-                    .pre_insn_fetch(self, mmu, &decode_state, pc)
-                    .map_err(|e| {
-                        HexagonFetchDecodeError::Other(UnknownError::from_boxed(Box::new(e)))
-                    })?;
+                let decode_state_err =
+                    execution_helper.pre_insn_fetch(self, mmu, &decode_state, pc);
+
+                // If error, restore execution helper before returning
+                if let Err(e) = decode_state_err {
+                    self.execution_helper = Some(execution_helper);
+                    return Err(e.into());
+                }
+
+                decode_state = decode_state_err.unwrap();
 
                 trace!("decode state has changed to {decode_state:?}");
 
