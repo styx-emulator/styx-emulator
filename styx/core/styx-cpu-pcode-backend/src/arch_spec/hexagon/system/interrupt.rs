@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use derive_more::FromStr;
 use log::trace;
-use styx_cpu_type::arch::hexagon::{register_fields::Ssr, HexagonRegister};
+use styx_cpu_type::arch::hexagon::{
+    register_fields::{Ipendad, Ssr},
+    HexagonRegister,
+};
 use styx_errors::anyhow::Context;
 use styx_pcode::{
     pcode::{SpaceName, VarnodeData},
@@ -27,7 +30,7 @@ pub struct InterruptGenericStub {
 
 /// Look at https://github.com/quic/qemu/blob/hex-next/target/hexagon/cpu_bits.h
 #[repr(i32)]
-pub enum InterruptType {
+pub enum HexagonInterruptType {
     None = -1,
     Reset = 0,
     Imprecise = 1,
@@ -56,6 +59,7 @@ pub enum InterruptType {
     IntF = 0x1f,
 }
 #[repr(u8)]
+#[derive(Debug, Copy, Clone)]
 pub enum HexagonInterruptCause {
     Reset = 0x000,
     BiuPrecise = 0x001,
@@ -149,7 +153,7 @@ impl<T: CpuBackend> CallOtherCallback<T> for Trap0Handler {
         );
 
         Ok(PCodeStateChange::DelayedInterrupt(
-            InterruptType::Trap0 as i32,
+            HexagonInterruptType::Trap0 as i32,
         ))
     }
 }
@@ -293,11 +297,18 @@ impl<T: CpuBackend> CallOtherCallback<T> for RteHandler {
     }
 }
 
-/// Return from exception - 11.9.2
+/// Raise NMI on threads - 11.9.2
 #[derive(Debug)]
 pub struct NmiHandler;
 impl<T: CpuBackend> CallOtherCallback<T> for NmiHandler {
-    /// Implement RTE (return from exception)
+    /// Implement NMI on threads
+    ///
+    /// Since Styx only supports single-core emulation,
+    /// this is currently only implemented for one core.
+    /// The instruction handler with panic with the
+    /// unimplemented! directive if the input to nmi
+    /// has hardware thread 0's bit set to zero and
+    /// other hardware threads' bits set to 1.
     fn handle(
         &mut self,
         backend: &mut dyn CallOtherCpu<T>,
@@ -313,17 +324,25 @@ impl<T: CpuBackend> CallOtherCallback<T> for NmiHandler {
             .to_u64()
             .with_context(|| "couldn't turn Rs to u32 for nmi")?;
 
-        // WARN NOTE TODO
+        // FIXME: multicore
         // we only have one thread, so this suffices.
+        // 
+        // In the case, we do not have to NMI on thread 0
+        // and since we are running on thread 0 since Styx only
+        // supports one core, we are done.
         if rs_val & 1 == 0 {
-            trace!("nmi({:x}) called", rs_val);
+            trace!("nmi({rs_val:x}) called");
             Ok(PCodeStateChange::Fallthrough)
-        } else {
-            unimplemented!("nmi({:x}) called", rs_val);
-            Ok(PCodeStateChange::DelayedInterrupt(
-                InterruptType::Imprecise as i32,
-            ))
         }
+        // Some other thread should be sent an nmi,
+        // but Styx doesn't support multicore yet.
+        else {
+            unimplemented!("nmi({:x}) called", rs_val);
+
+            Ok(PCodeStateChange::DelayedInterrupt(
+                HexagonInterruptType::Imprecise as i32,
+            ))
+        } 
     }
 }
 

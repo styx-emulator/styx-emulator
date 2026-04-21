@@ -3,11 +3,15 @@ use std::cmp::min;
 // SPDX-License-Identifier: BSD-2-Clause
 use arbitrary_int::*;
 use derive_more::FromStr;
-use log::{debug, trace};
+use log::{debug, info, trace, warn};
 use styx_errors::anyhow::Context;
 use styx_pcode::{pcode::VarnodeData, sla::SlaUserOps};
 use styx_pcode_translator::sla::HexagonUserOps;
-use styx_processor::{cpu::CpuBackend, event_controller::EventController, memory::Mmu};
+use styx_processor::{
+    cpu::{CpuBackend, CpuBackendExt},
+    event_controller::EventController,
+    memory::Mmu,
+};
 
 use crate::{
     arch_spec::{ArchSpecBuilder, HexagonPcodeBackend},
@@ -17,14 +21,6 @@ use crate::{
 use bitbybit::bitfield;
 
 const FLAGS_NONE: u32 = 0;
-
-#[bitfield(u32, Debug)]
-pub struct TLBProbeField {
-    #[bits(0..=19, rw)]
-    vpn: u20,
-    #[bits(20..=26, rw)]
-    asid: u7,
-}
 
 #[derive(Debug)]
 pub struct TlbGenericStub {
@@ -40,7 +36,7 @@ impl<T: CpuBackend> CallOtherCallback<T> for TlbGenericStub {
         _inputs: &[VarnodeData],
         _output: Option<&VarnodeData>,
     ) -> Result<PCodeStateChange, CallOtherHandleError> {
-        debug!("tlb stub called for {}", self.from);
+        warn!("tlb stub called for {} at {:x?}", self.from, backend.pc());
         unimplemented!();
         Ok(PCodeStateChange::Fallthrough)
     }
@@ -144,21 +140,18 @@ impl<T: CpuBackend> CallOtherCallback<T> for TlbInvAsid {
         // tlbinvasid, read bits 20 to 26 (zero-indexed)
         // of Rs (varnode 0)
 
-        let asid_vn = &inputs[0];
-        assert!(asid_vn.size == 4);
+        let probe_vn = &inputs[0];
+        assert!(probe_vn.size == 4);
 
-        let query = TLBProbeField::new_with_raw_value(
-            cpu.read(asid_vn)
+        let tlb_probe_field =
+            cpu.read(probe_vn)
                 .with_context(|| "couldn't read tlb asid vn")?
                 .to_u64()
-                .with_context(|| "couldn't convert asid vn to u64")? as u32,
-        );
-
-        trace!("hexagon tlb asid {}", query.asid());
+                .with_context(|| "couldn't convert asid vn to u64")? as u32;
 
         // we must pass in the bits as unshifted
         mmu.tlb
-            .invalidate_all(u8::from(query.asid()) as u32)
+            .invalidate_all(tlb_probe_field)
             .with_context(|| "couldn't read from tlb")?;
 
         Ok(PCodeStateChange::Fallthrough)
@@ -185,7 +178,7 @@ impl<T: CpuBackend> CallOtherCallback<T> for TlbProbe {
                 .to_u64()
                 .with_context(|| "couldn't convert asid vn to u64")? as u32;
 
-        trace!("hexagon tlb probe {}", tlb_probe_field);
+        info!("hexagon tlb probe {}", tlb_probe_field);
 
         // we must pass in the bits as unshifted
         let stored_ent = match mmu.tlb.tlb_search(tlb_probe_field as u64, 0) {
@@ -313,13 +306,6 @@ pub fn add_tlb_callothers<S: SlaUserOps<UserOps: FromStr>>(
         .unwrap();
 
     spec.call_other_manager
-        .add_handler_other_sla(
-            HexagonUserOps::Tlbmatch,
-            TlbGenericStub { from: "tlbmatch" },
-        )
-        .unwrap();
-
-    spec.call_other_manager
         .add_handler_other_sla(HexagonUserOps::Tlbmatch, TlbMatch {})
         .unwrap();
 
@@ -344,13 +330,10 @@ pub fn add_tlb_callothers<S: SlaUserOps<UserOps: FromStr>>(
         .unwrap();
 
     spec.call_other_manager
-        .add_handler_other_sla(HexagonUserOps::Tlblock, TlbLockUnlock {} )
+        .add_handler_other_sla(HexagonUserOps::Tlblock, TlbLockUnlock {})
         .unwrap();
 
     spec.call_other_manager
-        .add_handler_other_sla(
-            HexagonUserOps::Tlbunlock,
-            TlbLockUnlock {}
-        )
+        .add_handler_other_sla(HexagonUserOps::Tlbunlock, TlbLockUnlock {})
         .unwrap();
 }

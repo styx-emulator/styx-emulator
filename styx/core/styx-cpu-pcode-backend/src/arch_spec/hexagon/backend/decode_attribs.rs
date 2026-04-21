@@ -3879,6 +3879,7 @@ lazy_static! {
     ];
 }
 
+#[derive(Debug)]
 pub struct BitPattern {
     pattern: &'static str,
     pub mask: u32,
@@ -3916,6 +3917,7 @@ impl BitPattern {
     }
 }
 
+#[derive(Debug)]
 pub struct HexagonInstr {
     opcode: &'static str,
     pub attrs: SmallVec<[HexagonInsnAttributes; 10]>,
@@ -3923,6 +3925,7 @@ pub struct HexagonInstr {
 }
 
 #[repr(u16)]
+#[derive(Debug)]
 pub enum HexagonInsnAttributes {
     AaDummy = 1,
     Fakeinsn = 2,

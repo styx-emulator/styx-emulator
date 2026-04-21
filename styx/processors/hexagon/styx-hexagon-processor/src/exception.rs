@@ -19,6 +19,7 @@ pub fn update_badva(proc: &mut TlbProcessor, va: u32) -> Result<()> {
 }
 
 pub fn ssr_set_cause(processor: &mut TlbProcessor, cause: HexagonInterruptCause) -> Result<()> {
+    info!("cause of interrupt: {:?}", cause);
     let mut ssr = Ssr::new_with_raw_value(
         processor
             .cpu

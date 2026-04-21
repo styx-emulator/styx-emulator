@@ -38,6 +38,7 @@ pub fn build() -> ArchSpecBuilder<sla::Hexagon, HexagonPcodeBackend> {
     system::mem::add_mem_callothers(&mut spec);
     system::arith::add_arith_callothers(&mut spec);
     system::supervisor::add_supervisor_callothers(&mut spec);
+    system::thread::add_thread_callothers(&mut spec);
 
     regpairs::add_vector_register_pair_handlers(&mut spec);
 

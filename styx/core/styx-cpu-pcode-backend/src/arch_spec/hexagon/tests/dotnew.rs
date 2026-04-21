@@ -1036,7 +1036,7 @@ fn test_dotnew_misidentify_load_halfword() {
     assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
     let pc = cpu.read_register::<u32>(HexagonRegister::Pc).unwrap();
-    let memval = mmu.read_u32_le_phys_code(R1START as u64).unwrap() as i32;
+    let memval = mmu.read_u32_le_phys_code(R1START as u64).unwrap() as i16;
 
     assert_eq!(pc, 0x1010);
     assert_eq!(memval, -1);

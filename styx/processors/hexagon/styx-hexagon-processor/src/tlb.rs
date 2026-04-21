@@ -10,7 +10,7 @@ use styx_core::{
         MemoryOperation, MemoryType, TlbImpl, TlbProcessor, TlbTranslateError, TlbTranslateResult,
     },
     prelude::{
-        log::{error, info, trace},
+        log::{debug, error, info, trace},
         Context,
     },
 };
@@ -36,6 +36,8 @@ pub struct Pte {
     ppd: u24,
     #[bits(24..=27, rw)]
     c: u4,
+    #[bit(27, rw)]
+    pte_hsv39: bool,
     #[bit(28, rw)]
     u: bool,
     #[bit(29, rw)]
@@ -65,38 +67,92 @@ pub struct HexagonTlb {
     // mapping of u64 entry to u64 entry
     cache: BTreeMap<u64, u64>,
     enable_code_translation: bool,
-    enable_data_translation: bool,
+    enable_translation: bool,
 }
 
+const PAGE_SIZE_BITS: u64 = 12;
+// From https://github.com/quic/qemu/blob/3921c6eed6bd7c670eff633fe829e18607125969/hw/hexagon/hexagon_tlb.c
+const PAGE_MASK: [u64; 13] = [
+    // 12 bits
+    0x0fff,
+    // 14 bits
+    0x3fff,
+    // 16 bits
+    0xffff,
+    // 18 bits
+    0x3ffff,
+    // 20 bits
+    0xfffff,
+    // 22 bits
+    0x3fffff,
+    // 24 bits
+    0xffffff,
+    // 26 bits
+    0x3ffffff,
+    // 28 bits
+    0xfffffff,
+    // 30 bits
+    0x3fffffff,
+    // 32 bits
+    0xffffffff,
+    // 34 bits
+    0x3ffffffff,
+    // 36 bits
+    0xfffffffff,
+];
+
+/// N.B. It appears that Hexagon uses the words MMU and TLB interchangeably,
+/// as the the TLB-related instructions (tlbw, tlbr, etc.) store the page tables,
+/// translate, and presumably cache as well.
+///
+/// Sources: 11.9.2 "TLB read/write/probe operations" and QEMU sources.
 impl HexagonTlb {
     pub fn new() -> Self {
         Self {
             enable_code_translation: false,
-            enable_data_translation: false,
+            enable_translation: false,
             entries: [Pte::new_with_raw_value(0); MAX_TLB_ENTRIES],
             cache: BTreeMap::new(),
         }
     }
+
+    // https://github.com/quic/qemu/blob/3921c6eed6bd7c670eff633fe829e18607125969/hw/hexagon/hexagon_tlb.c#L100
+    fn get_entry_page_type(ent: &Pte) -> usize {
+        ent.ppd().trailing_zeros() as usize // + (ent.pte_hsv39() as usize * 4)
+    }
+
+    // https://github.com/quic/qemu/blob/3921c6eed6bd7c670eff633fe829e18607125969/hw/hexagon/hexagon_tlb.c#L100
+    fn get_entry_page_num_bits(ent: &Pte) -> u64 {
+        PAGE_SIZE_BITS + (2 * Self::get_entry_page_type(ent) as u64)
+    }
 }
 
 impl TlbImpl for HexagonTlb {
+    /// This seems to be a von Neumann architecture and not Harvard architecture,
+    /// so enabling data translation will also enable code address translation.
     fn enable_data_address_translation(&mut self) -> Result<(), UnknownError> {
-        self.enable_data_translation = true;
+        self.enable_translation = true;
         Ok(())
     }
 
+    /// This seems to be a von Neumann architecture and not Harvard architecture,
+    /// so disabling data translation will also disable code address translation.
     fn disable_data_address_translation(&mut self) -> Result<(), UnknownError> {
-        self.enable_data_translation = false;
+        self.enable_translation = false;
         Ok(())
     }
 
+    /// This seems to be a von Neumann architecture and not Harvard architecture,
+    /// so enabling code translation will also enable data address translation.
     fn enable_code_address_translation(&mut self) -> Result<(), UnknownError> {
-        self.enable_code_translation = true;
+        self.enable_translation = true;
         Ok(())
     }
 
+    /// This seems to be a von Neumann architecture and not Harvard architecture,
+    /// so disabling code translation will also disable cata address translation.
     fn disable_code_address_translation(&mut self) -> Result<(), UnknownError> {
-        self.enable_code_translation = false;
+        self.enable_translation = false;
         Ok(())
     }
 
@@ -191,13 +247,11 @@ impl TlbImpl for HexagonTlb {
             Ok(p_addr)
         } else {
             let virt_addr = virt_addr as u32;
-            // 4k page
-            let vpn = virt_addr >> 16;
-            let offset = virt_addr & 0xffff;
 
             for ent in &self.entries {
+                trace!("pte {ent:x?}");
                 if !ent.v() || (ent.asid() != ssr.asid() && !ent.g()) {
-                    trace!("skipping {ent:x?}");
+                    trace!("skipping pte");
                     continue;
                 }
 
@@ -224,24 +278,26 @@ impl TlbImpl for HexagonTlb {
                 }
 
                 let page_type = Self::get_entry_page_type(ent);
+                let page_mask = PAGE_MASK[page_type];
+                trace!("page_mask is {page_mask:x}");
 
-                let va_vpn = (virt_addr as u64) & !PAGE_MASK[page_type];
-                let va_offset = virt_addr as u64 & PAGE_MASK[page_type];
+                let va_vpn = (virt_addr as u64) & !page_mask;
+                let va_offset = virt_addr as u64 & page_mask;
 
-                let ent_vpn = u64::from(ent.vpn()) << PAGE_SIZE_BITS;
+                let ent_vpn = (u64::from(ent.vpn()) << PAGE_SIZE_BITS) & !page_mask;
 
-                trace!("ent vpn {ent_vpn:x} real vpn {va_vpn:x} va_offset {va_offset:x}",);
+                debug!("ent vpn {ent_vpn:x} real vpn {va_vpn:x} va_offset {va_offset:x} page_mask {page_mask:x}",);
                 if va_vpn == ent_vpn {
-                    let ppd_mask = u64::from(ent.ppd() >> 1)
+                    let ppd_unmask = u64::from(ent.ppd() >> 1)
                         .overflowing_shl(PAGE_SIZE_BITS as u32)
-                        .0
-                        & !PAGE_MASK[page_type];
+                        .0;
+                    let ppd_mask = ppd_unmask & !page_mask;
                     let pa = ppd_mask + va_offset;
 
                     // TODO: invalidate the cache
                     self.cache.insert(vpn_page_masked, pa & page_number_mask);
 
-                    trace!("va {virt_addr:x} ppd_mask {ppd_mask:x} pa {pa:x}");
+                    debug!("va {virt_addr:x} ppd_unmask {ppd_unmask:x} ppd_mask {ppd_mask:x} pa {pa:x}");
                     return Ok(pa);
                 }
             }
@@ -287,17 +343,26 @@ impl TlbImpl for HexagonTlb {
         }
     }
 
+    /// TODO: exception handling
+    ///
+    /// manual doesn't seem to define what to do when the index is junk - should we just
+    /// fill it with zeroes?
     fn tlb_write(&mut self, idx: usize, data: u64, flags: u32) -> Result<(), TlbTranslateError> {
         let pte = Pte::new_with_raw_value(data);
         self.entries[idx] = pte;
         info!(
-            "tlb inserted at {idx} was {pte:x?} PA 0x{:x} VA 0x{:x}",
+            "tlb {data:x} inserted at {idx} was {pte:x?} PA 0x{:x} VA 0x{:x} page size bits {:?}",
             (pte.ppd() >> 1).overflowing_shl(12).0,
-            pte.vpn().overflowing_shl(12).0
+            pte.vpn().overflowing_shl(12).0,
+            Self::get_entry_page_num_bits(&pte)
         );
         Ok(())
     }
 
+    /// TODO: exception handling
+    ///
+    /// manual doesn't seem to define what to do when the index is junk - should we just
+    /// fill it with zeroes?
     fn tlb_read(&self, idx: usize, flags: u32) -> Result<u64, TlbTranslateError> {
         if idx >= MAX_TLB_ENTRIES {
             Err(TlbTranslateError::Other(UnknownError::msg(format!(
@@ -309,10 +374,30 @@ impl TlbImpl for HexagonTlb {
     }
 
     /// This is only used for ASID in our implementation
+    /// 11.9.2 "TLB read/write/probe operations"
+    ///
+    /// The TLBINVASID instruction "invalidates all TLB entries with the Global bit not
+    /// set and with the ASID matching the Rs[26:20] operand." What is passed is a 32-bit
+    /// flags value where **the lower 7 bits are the ASID.**
+    ///
+    /// NOTE: Any bits above the 7th bit will be ignored.
     fn invalidate_all(&mut self, flags: u32) -> Result<(), UnknownError> {
-        todo!()
+        let probe_field = TLBProbeField::new_with_raw_value(flags);
+
+        trace!("tlbinvasid invalidate for asid {:x}", probe_field.asid());
+        for ent in self.entries.iter_mut() {
+            if ent.asid() == probe_field.asid() && !ent.g() {
+                // Set the valid bit to false.
+                ent.set_v(false);
+            }
+        }
+        Ok(())
     }
 
+    /// TODO: exception handling
+    ///
+    /// manual doesn't seem to define what to do when the index is junk - should we just
+    /// fill it with zeroes?
     fn invalidate(&mut self, idx: usize) -> Result<(), UnknownError> {
         if idx >= MAX_TLB_ENTRIES {
             Err(UnknownError::msg(format!(

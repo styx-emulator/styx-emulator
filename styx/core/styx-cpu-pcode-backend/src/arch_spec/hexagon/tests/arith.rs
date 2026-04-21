@@ -66,7 +66,7 @@ pub fn testbit_reg() {
     let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
     assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
-    let p0 = cpu.read_register::<u8>(HexagonRegister::P0).unwrap() as i32;
+    let p0 = cpu.read_register::<u8>(HexagonRegister::P0).unwrap();
     assert_eq!(p0, 0xff);
 }
 
