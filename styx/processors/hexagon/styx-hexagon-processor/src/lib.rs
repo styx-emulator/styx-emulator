@@ -8,8 +8,7 @@ use styx_core::cpu::arch::hexagon::HexagonVariants;
 use styx_core::cpu::{Arch, Backend};
 use styx_core::loader::LoaderHints;
 use styx_core::memory::physical::PhysicalMemoryVariant;
-use styx_core::memory::{MemoryPermissions, Mmu};
-use styx_core::prelude::log::info;
+use styx_core::memory::{MemoryBackend, MemoryPermissions, Mmu};
 use styx_core::prelude::{Context, Peripheral};
 use styx_core::{
     core::{
@@ -110,12 +109,8 @@ impl ProcessorImpl for HexagonBuilder {
 
         cpu.add_hook(StyxHook::interrupt(interrupt_handler))?;
 
-        let mut mmu = match self.variant {
-            HexagonVariants::QDSP6V62 => Mmu::new(
-                Box::new(HexagonTlb::new()),
-                PhysicalMemoryVariant::RegionStore,
-                cpu.as_mut(),
-            )?,
+        let memory = match self.variant {
+            HexagonVariants::QDSP6V62 => MemoryBackend::new(PhysicalMemoryVariant::FlatMemory),
             _ => {
                 return Err(UnknownError::msg(
                     "hexagon variant {self.variant:?} is not supported, only v62 is supported",
@@ -123,9 +118,7 @@ impl ProcessorImpl for HexagonBuilder {
             }
         };
 
-        mmu.memory_map(0, 2u64.pow(32), MemoryPermissions::all())?;
-
-        let hec = Box::new(HexagonEventController::default());
+        let l2vic = Box::new(L2Vic::default());
 
         let peripherals: Vec<Box<dyn Peripheral>> = Vec::new();
 
@@ -134,8 +127,9 @@ impl ProcessorImpl for HexagonBuilder {
 
         Ok(ProcessorBundle {
             cpu,
-            mmu,
-            event_controller: hec,
+            tlb: Box::new(HexagonTlb::new()),
+            memory,
+            event_controller: l2vic,
             peripherals,
             loader_hints: hints,
         })

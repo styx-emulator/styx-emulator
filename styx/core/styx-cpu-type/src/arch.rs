@@ -228,6 +228,11 @@ impl RegisterValue {
             _ => None,
         }
     }
+
+    /// Do these two register value have the same size?
+    pub fn size_equal(self, other: Self) -> bool {
+        self.to_byte_size() == other.to_byte_size()
+    }
 }
 
 pub trait RegisterValueCompatible: Default + Into<RegisterValue> {
