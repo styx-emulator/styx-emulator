@@ -145,12 +145,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "825297538d77367557b912770ca3083f778a196054b3ee63b22673c4a3cae0a5"
 
 [[package]]
-name = "arbitrary-int"
-version = "2.1.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "993a810118f8f37e9c4411c86f1c4c940a09a7ab34b7bf2d88d06f50c553fab7"
-
-[[package]]
 name = "array-init"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -393,7 +387,7 @@ version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dc707ed8ebf81de5cd6c7f48f54b4c8621760926cdf35a57000747c512e67b57"
 dependencies = [
- "arbitrary-int 1.3.0",
+ "arbitrary-int",
  "bilge-impl",
 ]
 
@@ -478,18 +472,7 @@ version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec187a89ab07e209270175faf9e07ceb2755d984954e58a2296e325ddece2762"
 dependencies = [
- "arbitrary-int 1.3.0",
- "proc-macro2",
- "quote",
- "syn 2.0.106",
-]
-
-[[package]]
-name = "bitbybit"
-version = "2.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "71d2a3353d70ac1091a33cbf31fc7e77b19091538a7e306e3740712af19807ca"
-dependencies = [
+ "arbitrary-int",
  "proc-macro2",
  "quote",
  "syn 2.0.106",
@@ -2484,15 +2467,6 @@ name = "hex"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
-
-[[package]]
-name = "hexagonfw"
-version = "0.1.0"
-dependencies = [
- "arbitrary-int 2.1.1",
- "bitbybit 2.0.0",
- "styx-emulator",
-]
 
 [[package]]
 name = "hkdf"
@@ -5860,7 +5834,7 @@ dependencies = [
 name = "styx-blackfin-processor"
 version = "1.2.0"
 dependencies = [
- "arbitrary-int 1.3.0",
+ "arbitrary-int",
  "bilge",
  "derivative",
  "enum-map",
@@ -5948,9 +5922,9 @@ dependencies = [
 name = "styx-cpu-pcode-backend"
 version = "1.2.0"
 dependencies = [
- "arbitrary-int 1.3.0",
+ "arbitrary-int",
  "as-any",
- "bitbybit 1.4.0",
+ "bitbybit",
  "bitfield-struct",
  "derivative",
  "derive_more 1.0.0",
@@ -5984,8 +5958,8 @@ dependencies = [
 name = "styx-cpu-type"
 version = "1.2.0"
 dependencies = [
- "arbitrary-int 1.3.0",
- "bitbybit 1.4.0",
+ "arbitrary-int",
+ "bitbybit",
  "derive_more 1.0.0",
  "enum-as-inner",
  "enum_dispatch",
@@ -6014,7 +5988,7 @@ dependencies = [
 name = "styx-cpu-unicorn-backend"
 version = "1.2.0"
 dependencies = [
- "arbitrary-int 1.3.0",
+ "arbitrary-int",
  "beau_collector",
  "derivative",
  "keystone",
@@ -6046,7 +6020,7 @@ dependencies = [
 name = "styx-cyclonev-processor"
 version = "1.2.0"
 dependencies = [
- "arbitrary-int 1.3.0",
+ "arbitrary-int",
  "async-trait",
  "derivative",
  "embed-doc-image",
@@ -6282,8 +6256,8 @@ dependencies = [
 name = "styx-hexagon-processor"
 version = "1.2.0"
 dependencies = [
- "arbitrary-int 1.3.0",
- "bitbybit 1.4.0",
+ "arbitrary-int",
+ "bitbybit",
  "serde",
  "styx-core",
  "styx-peripherals",

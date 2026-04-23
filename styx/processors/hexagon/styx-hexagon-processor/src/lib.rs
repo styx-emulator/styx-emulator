@@ -23,6 +23,7 @@ use styx_core::{
 };
 use tlb::HexagonTlb;
 
+mod angel;
 mod clade;
 mod exception;
 mod l2vic;

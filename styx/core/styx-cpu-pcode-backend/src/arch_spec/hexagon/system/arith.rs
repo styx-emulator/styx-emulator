@@ -2,7 +2,7 @@
 //! These aren't system instructions, but I guess they can be accelerated by farming them out to Rust.
 //! And I guess analysis doesn't matter as much for this?
 use derive_more::FromStr;
-use log::trace;
+use log::{info, trace};
 use styx_errors::anyhow::Context;
 use styx_pcode::{pcode::VarnodeData, sla::SlaUserOps};
 use styx_pcode_translator::sla::HexagonUserOps;
@@ -91,6 +91,7 @@ impl<T: CpuBackend> CallOtherCallback<T> for BrevHandler {
         // footguns, the check is enforced for other locations where the brev callother
         // is used.
         let rs_rev = if rs_val.size() == 8 {
+            info!("pc {:x?}", cpu.pc());
             assert_eq!(output.size, 8);
             trace!("64-bit brev {:64b} {:64b}", rs_64, rs_64.reverse_bits());
             SizedValue::from_u64(rs_64.reverse_bits(), 8)

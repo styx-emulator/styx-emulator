@@ -1079,3 +1079,61 @@ pub fn not(p0: u8, p0_expected: u8) {
     let p0_result = cpu.read_register::<u8>(HexagonRegister::P0).unwrap();
     assert_eq!(p0_result, p0_expected);
 }
+
+#[test]
+pub fn ct0_64() {
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(
+        r#"
+	0:	42 c0 e0 88	88e0c042 { 	r2 = ct0(r1:0) }
+"#,
+    );
+
+    ct01_common(&mut cpu, &mut mmu, &mut ev, false);
+}
+
+#[test]
+pub fn ct1_64() {
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(
+        r#"
+	0:	82 c0 e0 88	88e0c082 { 	r2 = ct1(r1:0) }
+"#,
+    );
+
+    ct01_common(&mut cpu, &mut mmu, &mut ev, true);
+}
+
+pub fn ct01_common(cpu: &mut dyn CpuBackend, mmu: &mut Mmu, ev: &mut EventController, ones: bool) {
+    const ITERS: u64 = 10000;
+
+    // Not same as brev because the brev output reads a 64 bit output value,
+    // whereas these two read a 32 bit output value.
+    let mut run_check_val = |val: u64| {
+        cpu.set_pc(0x1000).unwrap();
+        cpu.write_register(HexagonRegister::D0, val).unwrap();
+
+        let exit = cpu.execute(mmu, ev, 1).unwrap();
+        assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
+
+        let r2 = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
+        // Count trailing ones
+        if ones {
+            assert_eq!(r2, val.trailing_ones());
+        }
+        // Count trailing zeroes
+        else {
+            assert_eq!(r2, val.trailing_zeros());
+        }
+    };
+
+    for val in (u64::MAX - ITERS)..u64::MAX {
+        run_check_val(val);
+    }
+
+    for val in 0..ITERS {
+        run_check_val(val);
+    }
+
+    for val in (0..u64::MAX).step_by(0x1774aadda1ff) {
+        run_check_val(val);
+    }
+}
