@@ -519,6 +519,7 @@ where
         &mut self,
     ) -> Option<target::ext::lldb_register_info_override::LldbRegisterInfoOverrideOps<'_, Self>>
     {
+        // Not implemented
         None
     }
 
