@@ -298,10 +298,10 @@ fn test_hwloop1() {
     assert_eq!(r1, 32);
 }
 
+/// This test did not address a specific breakage,
+/// but more tests don't hurt.
 #[test]
 fn test_hwloop_register() {
-    // during firmware testing, I found out... this just doesn't work?
-
     const ITERS: u32 = 3;
     const R0_INITIAL: u32 = 3;
     const R1_INITIAL: u32 = 29;
