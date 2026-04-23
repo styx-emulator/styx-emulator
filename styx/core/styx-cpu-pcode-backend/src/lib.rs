@@ -470,14 +470,7 @@ impl CpuBackend for PcodeBackend {
         if reg == pc_reg_variant {
             self.set_pc(sized_value.to_u64().with_context(|| "too big")?)?;
         } else {
-            if !reg.register_value_enum().size_equal(value) {
-                return Err(WriteRegisterError::RegisterBadSize(
-                    value.to_byte_size() as u32,
-                    reg,
-                ));
-            }
-            RegisterManager::write_register(self, reg, sized_value)
-                .with_context(|| "could not write_register_raw")?;
+            RegisterManager::write_register(self, reg, sized_value)?
         }
 
         Ok(())
