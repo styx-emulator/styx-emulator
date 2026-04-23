@@ -326,7 +326,7 @@ impl<T: CpuBackend> CallOtherCallback<T> for NmiHandler {
 
         // FIXME: multicore
         // we only have one thread, so this suffices.
-        // 
+        //
         // In the case, we do not have to NMI on thread 0
         // and since we are running on thread 0 since Styx only
         // supports one core, we are done.
@@ -342,7 +342,7 @@ impl<T: CpuBackend> CallOtherCallback<T> for NmiHandler {
             Ok(PCodeStateChange::DelayedInterrupt(
                 HexagonInterruptType::Imprecise as i32,
             ))
-        } 
+        }
     }
 }
 

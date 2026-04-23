@@ -613,7 +613,11 @@ impl EventControllerImpl for L2Vic {
         todo!()
     }
 
-    fn init(&mut self, cpu: &mut dyn CpuBackend, _mmu: &mut MemoryBackend) -> Result<(), UnknownError> {
+    fn init(
+        &mut self,
+        cpu: &mut dyn CpuBackend,
+        _mmu: &mut MemoryBackend,
+    ) -> Result<(), UnknownError> {
         trace!("the hexagon l2vic has started");
         cpu.mem_write_hook(
             L2VIC_BASE,
