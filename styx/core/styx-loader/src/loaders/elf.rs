@@ -199,7 +199,7 @@ pub(crate) fn load_elf(
 
             // get the data for the source tests
             let src_mem_range = (ph.p_offset as usize)..((ph.p_offset + src_size) as usize);
-            trace!("range is {:x?}", src_mem_range);
+            trace!("PT_load segment {i_ph} range is {src_mem_range:x?}");
 
             // don't add segments that are of size zero
             if src_size == 0 {
