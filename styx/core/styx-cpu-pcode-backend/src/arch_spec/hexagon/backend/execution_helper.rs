@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use log::{info, trace};
+use log::trace;
 use styx_cpu_type::arch::hexagon::HexagonRegister;
-use styx_errors::{anyhow::Context, styx_memory::StyxMemoryError};
 use styx_pcode::pcode::{Opcode, Pcode, SpaceName, VarnodeData};
 use styx_pcode_translator::ContextOption;
 use styx_processor::{
-    cpu::{CpuBackend, CpuBackendExt},
+    cpu::CpuBackendExt,
     memory::{Mmu, MmuOpError, TlbTranslateError},
 };
 

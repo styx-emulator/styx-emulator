@@ -47,6 +47,7 @@ pub enum Iclass {
 }
 
 #[derive(Debug)]
+#[allow(unused)]
 pub enum SlotInfo {
     Slots0,
     Slots1,

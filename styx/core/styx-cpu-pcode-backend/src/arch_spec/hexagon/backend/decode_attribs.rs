@@ -10,7 +10,7 @@
 // ld 01
 // st 01
 
-use log::{info, trace};
+use log::trace;
 use smallvec::{smallvec, SmallVec};
 use styx_sync::lazy_static;
 
@@ -3926,6 +3926,7 @@ pub struct HexagonInstr {
 
 #[repr(u16)]
 #[derive(Debug)]
+#[allow(unused)]
 pub enum HexagonInsnAttributes {
     AaDummy = 1,
     Fakeinsn = 2,

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
 use anyhow::anyhow;
-pub use decode_attribs::BitPattern;
 pub use decode_info::{GeneralHexagonInstruction, Iclass};
 use decode_info::{PktLoopParseBits, SlotInfo};
 use execution_helper::DefaultHexagonExecutionHelper;
