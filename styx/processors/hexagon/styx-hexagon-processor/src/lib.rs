@@ -10,7 +10,7 @@ use styx_core::cpu::{Arch, Backend, CpuBackend, PcodeBackendConfiguration};
 use styx_core::hooks::CoreHandle;
 use styx_core::loader::LoaderHints;
 use styx_core::memory::physical::PhysicalMemoryVariant;
-use styx_core::memory::{MemoryBackend, MemoryPermissions, Mmu};
+use styx_core::memory::{MemoryBackend, MemoryPermissions, MemoryRegion, Mmu};
 use styx_core::prelude::{Context, Peripheral};
 use styx_core::{
     core::{
@@ -65,7 +65,7 @@ impl ProcessorImpl for HexagonBuilder {
             l2vic::interrupt_handler(proc.cpu, proc.mmu, interrupt)
         }))?;
 
-        let memory = match self.variant {
+        let mut memory = match self.variant {
             HexagonVariants::QDSP6V62 => MemoryBackend::new(PhysicalMemoryVariant::FlatMemory),
             _ => {
                 return Err(UnknownError::msg(
@@ -73,6 +73,11 @@ impl ProcessorImpl for HexagonBuilder {
                 ))
             }
         };
+
+        // Peripherals may use this
+        memory
+            .memory_map(0x100000000, 0x40000000, MemoryPermissions::all())
+            .with_context(|| "couldn't add memory region for peripherals")?;
 
         let l2vic = Box::new(L2Vic::default());
 
