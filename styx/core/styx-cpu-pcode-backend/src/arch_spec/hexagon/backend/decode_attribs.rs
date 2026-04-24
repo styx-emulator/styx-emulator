@@ -3881,7 +3881,7 @@ lazy_static! {
 
 #[derive(Debug)]
 pub struct BitPattern {
-    pattern: &'static str,
+    _pattern: &'static str,
     pub mask: u32,
     pub output: u32,
 }
@@ -3898,9 +3898,9 @@ impl BitPattern {
             match b {
                 '0' => {}
                 // Set this bit
-                '1' => output = output | (1 << idx),
+                '1' => output |= 1 << idx,
                 // Clear the bit in the mask here
-                _ => mask = mask & !(1 << idx),
+                _ => mask &= !(1 << idx),
             }
             idx -= 1;
         }
@@ -3908,7 +3908,7 @@ impl BitPattern {
         Self {
             mask,
             output,
-            pattern,
+            _pattern: pattern,
         }
     }
 
@@ -3918,6 +3918,9 @@ impl BitPattern {
 }
 
 #[derive(Debug)]
+// Allow unused for the opcode parameter, as opposed to renaming "opcode" in every instruction
+// defined above
+#[allow(unused)]
 pub struct HexagonInstr {
     opcode: &'static str,
     pub attrs: SmallVec<[HexagonInsnAttributes; 10]>,

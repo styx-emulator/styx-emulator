@@ -62,11 +62,16 @@ pub struct Pte {
     v: bool,
 }
 
+#[derive(Hash, Ord, Eq, PartialEq, PartialOrd)]
+pub struct HexagonTlbCacheEntry {
+    vpn_page_masked: u64,
+    asid: u7,
+}
+
 pub struct HexagonTlb {
     entries: [Pte; MAX_TLB_ENTRIES],
     // mapping of u64 entry to u64 entry
-    cache: BTreeMap<u64, u64>,
-    enable_code_translation: bool,
+    cache: BTreeMap<HexagonTlbCacheEntry, u64>,
     enable_translation: bool,
 }
 
@@ -103,12 +108,15 @@ const PAGE_MASK: [u64; 13] = [
 
 impl Pte {
     /// Invalidate the entry and delete entry from cache.
-    pub fn invalidate(&mut self, cache: &mut BTreeMap<u64, u64>) {
+    pub fn invalidate(&mut self, cache: &mut BTreeMap<HexagonTlbCacheEntry, u64>) {
         self.set_v(false);
 
         // Entry in cache is stored as (VPN << 12)
         let virt_shifted = self.vpn().as_u64() << 12;
-        cache.remove(&virt_shifted);
+        cache.remove(&HexagonTlbCacheEntry {
+            vpn_page_masked: virt_shifted,
+            asid: self.asid(),
+        });
     }
 }
 
@@ -120,7 +128,6 @@ impl Pte {
 impl HexagonTlb {
     pub fn new() -> Self {
         Self {
-            enable_code_translation: false,
             enable_translation: false,
             entries: [Pte::new_with_raw_value(0); MAX_TLB_ENTRIES],
             cache: BTreeMap::new(),
@@ -171,10 +178,10 @@ impl TlbImpl for HexagonTlb {
     /// Hexagon TLB translation.
     ///
     /// The crux of the logic for this function is implemented in
-    /// https://github.com/quic/qemu/blob/bcain/tlb_obj/hw/hexagon/hexagon_tlb.c.
+    /// <https://github.com/quic/qemu/blob/bcain/tlb_obj/hw/hexagon/hexagon_tlb.c>.
     ///
     /// It is worth noting that the default address translation algorithm for QUIC's QEMU fork,
-    /// located at https://github.com/quic/qemu/blob/hex-next/target/hexagon/hex_mmu.c, does not
+    /// located at <https://github.com/quic/qemu/blob/hex-next/target/hexagon/hex_mmu.c>, does not
     /// align with the page table entries that are inserted and are present in tested Hexagon
     /// firmware.
     ///
@@ -192,40 +199,40 @@ impl TlbImpl for HexagonTlb {
     /// with the correct permissions. The parts of the page table entry we care about are the
     /// PPD (physical page descriptor) and the VPN (the virtual page number).
     ///
-    /// - Entry 0: VPN is 0x89104, PPD is 0x112202
-    /// - Entry 1: VPN is 0x1d25c, PPD is 0x022308
-    /// - Entry 2: VPN is 0x1d21c, PPD is 0x03a490
+    /// - Entry 0: VPN is `0x89104`, PPD is `0x112202`
+    /// - Entry 1: VPN is `0x1d25c`, PPD is `0x022308`
+    /// - Entry 2: VPN is `0x1d21c`, PPD is `0x03a490`
     ///
     /// First, we receive a virtual address. For the sake of example, let's say this
-    /// is 0x1d23c210. The way we match the VA to PA is by iterating through the page table
+    /// is `0x1d23c210`. The way we match the VA to PA is by iterating through the page table
     /// entries, finding a mask based on the number of trailing zeroes in the PPD, and then
     /// matching the input VA to the VPN based on this mask.
     ///
-    /// **Iteration 0:** PPD is 0x112202. This has exactly 1 trailing zero, which means
-    /// in our mask table, this corresponds to mask 0x3fff, which is 14 bits for the offset.
-    /// Our mask for the "page number" is the inverse of this, 0xffffc000. There is a chance that
+    /// **Iteration 0:** PPD is `0x112202`. This has exactly 1 trailing zero, which means
+    /// in our mask table, this corresponds to mask `0x3fff`, which is 14 bits for the offset.
+    /// Our mask for the "page number" is the inverse of this, `0xffffc000`. There is a chance that
     /// some of the bits in the actual VPN entry may get cleared by this, which is intentional.
     ///
-    /// The idea with the VPN is we shift left by 12, yielding 0x89104000, then mask with
-    /// 0xffffc000, yielding the same. Now, we do the same mask for the VA, yielding
-    /// 0x1d23c000 (itself).  Now, comparing the two masked values, they don't match, and
+    /// The idea with the VPN is we shift left by 12, yielding `0x89104000`, then mask with
+    /// `0xffffc000`, yielding the same. Now, we do the same mask for the VA, yielding
+    /// `0x1d23c000` (itself).  Now, comparing the two masked values, they don't match, and
     /// we move on.
     ///
-    /// **Iteration 1**: PPD is 0x022308. There are *three* trailing zeroes, so we choose mask
-    /// 0xffff. Now, we wish to mask the (shifted left) VPN and VA with the inverse, which is 0xffff0000.
-    /// The VA masked is 0x1d230000. The VPN shfited left is 0x1d25c000, and masked it is 0x1d250000.
-    /// We see that 0x1d230000 != 0x1d250000, so this isn't a match. Onwards.
+    /// **Iteration 1**: PPD is `0x022308`. There are *three* trailing zeroes, so we choose mask
+    /// 0xffff. Now, we wish to mask the (shifted left) VPN and VA with the inverse, which is `0xffff0000`.
+    /// The VA masked is `0x1d230000`. The VPN shfited left is `0x1d25c000`, and masked it is `0x1d250000`.
+    /// We see that `0x1d230000` != `0x1d250000`, so this isn't a match. Onwards.
     ///
-    /// **Iteration 3:** PPD is 0x03a490. As before, we have *three* trailing zeroes, so our mask is
-    /// 0x3ffff and our inverse is 0xfffc0000. Now, the VPN shifted is 0x1d21c000, with the mask, it's 0x
-    /// 0x1d200000. Our VA masked is 0x1d20000 as well. It's a match!
+    /// **Iteration 3:** PPD is `0x03a490`. As before, we have *three* trailing zeroes, so our mask is
+    /// `0x3ffff` and our inverse is `0xfffc0000`. Now, the VPN shifted is `0x1d21c000`, with the mask, it's 0x
+    /// `0x1d200000`. Our VA masked is `0x1d20000` as well. It's a match!
     ///
     /// Now we can go ahead and translate our PA. We obtain our offset with the original mask:
-    /// 0x1d23c210 & 0x3ffff = 0x3c210.
+    /// `0x1d23c210 & 0x3ffff = 0x3c210`.
     ///
     /// To get the "base" from our PPD, we must shift right by one and then shift left by 12
-    /// (0x03a490 >> 1) << 12 = 0x1d248000. Finally, we add our offset to this base:
-    /// 0x1d248000 + 0x3c210 = 0x1d284210.
+    /// `(0x03a490 >> 1) << 12 = 0x1d248000`. Finally, we add our offset to this base:
+    /// `0x1d248000 + 0x3c210 = 0x1d284210`.
     ///
     /// And that's our PA.
     ///
@@ -252,7 +259,10 @@ impl TlbImpl for HexagonTlb {
         if !self.enable_translation {
             // Physical memory mode
             Ok(virt_addr)
-        } else if let Some(&ppn_addr) = self.cache.get(&vpn_page_masked) {
+        } else if let Some(&ppn_addr) = self.cache.get(&HexagonTlbCacheEntry {
+            vpn_page_masked,
+            asid: ssr.asid(),
+        }) {
             let va_off_mask = (1 << PAGE_SIZE_BITS) - 1;
             let p_addr = ppn_addr + (virt_addr & va_off_mask);
             trace!("fast path: translated {virt_addr:x} to {p_addr:x}");
@@ -267,28 +277,6 @@ impl TlbImpl for HexagonTlb {
                     continue;
                 }
 
-                // Permission checking doesn't happen in monitor mode.
-                // NOTE: not clear if permission checking happens in guest mode.
-                // Need to relearn some stuff about hypervisors.
-                //
-                // See hexagon_cpu_mmu_index function in QEMU (cpu.c)
-                // See hex_tlb_entry_get_perm in QEMU (hexagon_tlb.c/hexagon_mmu.c)
-                if !ssr.monitor_mode() {
-                    if matches!(memory_type, MemoryType::Code) && !ent.x() {
-                        continue;
-                    }
-
-                    match access_type {
-                        MemoryOperation::Read if !ent.r() => {
-                            continue;
-                        }
-                        MemoryOperation::Write if !ent.w() => {
-                            continue;
-                        }
-                        _ => {}
-                    }
-                }
-
                 debug!("pte {ent:x?}");
                 let page_type = Self::get_entry_page_type(ent);
                 let page_mask = PAGE_MASK[page_type];
@@ -301,14 +289,81 @@ impl TlbImpl for HexagonTlb {
 
                 debug!("ent vpn {ent_vpn:x} real vpn {va_vpn:x} va_offset {va_offset:x} page_mask {page_mask:x}",);
                 if va_vpn == ent_vpn {
+                    trace!(
+                        "ssr {:?} ssr raw {:x} usermode? {} x {} w {} r {} memory_type {:?}",
+                        ssr,
+                        ssr.raw_value(),
+                        ssr.user_mode(),
+                        ent.x(),
+                        ent.w(),
+                        ent.r(),
+                        memory_type
+                    );
+
+                    // Do permissions checking here. We do permissions checking _after_ a match
+                    // because in case there is a violation, we are supposed to do a page fault.
+                    // See hexagon_tlb_fill in target/hexagon/cpu.c.
+                    //
+                    // Permission checking doesn't happen in monitor mode.
+                    // NOTE: not clear if permission checking happens in guest mode.
+                    // Need to relearn some stuff about hypervisors.
+                    //
+                    // See hexagon_cpu_mmu_index function in QEMU (cpu.c)
+                    // See hex_tlb_entry_get_perm in QEMU (hexagon_tlb.c/hexagon_mmu.c)
+                    if !ssr.monitor_mode() {
+                        let mut cause = None;
+
+                        if matches!(memory_type, MemoryType::Code) {
+                            if ssr.user_mode() && !ent.u() {
+                                cause = Some(HexagonInterruptCause::FetchNoUpage);
+                            } else if !ent.x() {
+                                cause = Some(HexagonInterruptCause::FetchNoXpage);
+                            }
+                        } else {
+                            match access_type {
+                                MemoryOperation::Read if ssr.user_mode() && !ent.u() => {
+                                    cause = Some(HexagonInterruptCause::PrivNoUread);
+                                }
+                                MemoryOperation::Read if !ent.r() => {
+                                    cause = Some(HexagonInterruptCause::PrivNoRead);
+                                }
+                                MemoryOperation::Write if ssr.user_mode() && !ent.u() => {
+                                    cause = Some(HexagonInterruptCause::PrivNoUwrite);
+                                }
+                                MemoryOperation::Write if !ent.w() => {
+                                    cause = Some(HexagonInterruptCause::PrivNoWrite);
+                                }
+                                _ => {}
+                            }
+                        }
+
+                        if let Some(cause) = cause {
+                            trace!("tlb permissions error cause {cause:?}");
+
+                            update_badva(processor, virt_addr)?;
+                            ssr_set_cause(processor, cause)?;
+                            return Err(TlbTranslateError::Exception(
+                                HexagonInterruptType::Precise as i32,
+                            ));
+                        }
+                    }
+
                     let ppd_unmask = u64::from(ent.ppd() >> 1)
                         .overflowing_shl(PAGE_SIZE_BITS as u32)
                         .0;
                     let ppd_mask = ppd_unmask & !page_mask;
                     let pa = ppd_mask + va_offset;
 
-                    // TODO: invalidate the cache
-                    self.cache.insert(vpn_page_masked, pa & page_number_mask);
+                    // If there were already an entry in the cache, this overwrites it.
+                    // In other cases (eg. removing an entry from the TLB), the cache is
+                    // also invalidated.
+                    self.cache.insert(
+                        HexagonTlbCacheEntry {
+                            vpn_page_masked,
+                            asid: ssr.asid(),
+                        },
+                        pa & page_number_mask,
+                    );
 
                     debug!("va {virt_addr:x} ppd_unmask {ppd_unmask:x} ppd_mask {ppd_mask:x} pa {pa:x}");
                     return Ok(pa);
@@ -322,9 +377,10 @@ impl TlbImpl for HexagonTlb {
 
                 update_badva(processor, virt_addr)?;
 
+                // See hex_tlb_entry_get_perm
                 if (virt_addr as u64 & page_number_mask) == 0 {
                     ssr_set_cause(processor, HexagonInterruptCause::TlbmissxCauseNextpage)?;
-                } else if access_type == MemoryOperation::Write {
+                } else {
                     ssr_set_cause(processor, HexagonInterruptCause::TlbmissxCauseNormal)?;
                 }
 
@@ -358,7 +414,7 @@ impl TlbImpl for HexagonTlb {
         }
     }
 
-    fn tlb_write(&mut self, idx: usize, data: u64, flags: u32) -> Result<(), TlbTranslateError> {
+    fn tlb_write(&mut self, idx: usize, data: u64, _flags: u32) -> Result<(), TlbTranslateError> {
         // In QUIC QEMU branch hex-next, function hexagon_tlb_write in hw/hexagon/hexagon_tlb.c,
         // nothing is done if the TLB index is out of bounds (eg. no error). In our case, we will return an error.
         if idx > MAX_TLB_ENTRIES {
@@ -378,7 +434,7 @@ impl TlbImpl for HexagonTlb {
         Ok(())
     }
 
-    fn tlb_read(&self, idx: usize, flags: u32) -> Result<u64, TlbTranslateError> {
+    fn tlb_read(&self, idx: usize, _flags: u32) -> Result<u64, TlbTranslateError> {
         // In QUIC QEMU branch hex-next, function hexagon_tlb_write in hw/hexagon/hexagon_tlb.c,
         // nothing is done if the TLB index is out of bounds (eg. no error). In our case, we will return an error.
         if idx >= MAX_TLB_ENTRIES {
@@ -394,7 +450,7 @@ impl TlbImpl for HexagonTlb {
     /// 11.9.2 "TLB read/write/probe operations"
     ///
     /// The TLBINVASID instruction "invalidates all TLB entries with the Global bit not
-    /// set and with the ASID matching the Rs[26:20] operand." What is passed is a 32-bit
+    /// set and with the ASID matching the `Rs[26:20]` operand." What is passed is a 32-bit
     /// flags value where **the lower 7 bits are the ASID.**
     ///
     /// NOTE: Any bits above the 7th bit will be ignored.
@@ -404,7 +460,7 @@ impl TlbImpl for HexagonTlb {
         trace!("tlbinvasid invalidate for asid {:x}", probe_field.asid());
         for ent in self.entries.iter_mut() {
             if ent.asid() == probe_field.asid() && !ent.g() {
-                // Set the valid bit to false.
+                // Set the valid bit to false and invalidate in cache.
                 ent.invalidate(&mut self.cache);
             }
         }
@@ -419,6 +475,7 @@ impl TlbImpl for HexagonTlb {
                 "specified tlb entry at index {idx} doesn't exist, cannot invalidate"
             )))
         } else {
+            // Cache is passed to invalidate the entry in the cache as well.
             self.entries[idx].invalidate(&mut self.cache);
             Ok(())
         }
@@ -453,21 +510,26 @@ impl TlbImpl for HexagonTlb {
                     trace!("probe_field_vpn_page_masked {probe_field_vpn_page_masked:x} ent_vpn_shfited {ent_vpn_shifted:x}");
 
                     if probe_field_vpn_page_masked == ent_vpn_shifted {
-                        trace!("tlb search got entry {:x?}", ent);
+                        trace!("tlb search got entry {ent:x?}");
                         return Some(i as u64);
                     }
                 }
             }
+            None
         } else if flags == 1 {
             // TLB match, input is a TLB entry
             let input_entry = Pte::new_with_raw_value(input);
-            let valid = input_entry.v();
-            if !valid {
-                return None;
-            }
+            let mut overlapping_entry = None;
+
+            // In the Hexagon manual, 11.9.2 SYSTEM MONITOR "TLB read/write/probe operations,"
+            // the documentation states that "In the overlap check, the global bit of the incoming
+            // Rss entry is forced to zero and the valid bit is forced to 1." As such, we don't
+            // check the valid bit or global bit.
+            trace!("tlb_search on input entry {input_entry:x?}");
 
             for (i, entry) in self.entries.iter().enumerate() {
-                if !entry.v() {
+                trace!("checking against entry {entry:x?}");
+                if !entry.v() || entry.asid() != input_entry.asid() {
                     continue;
                 }
 
@@ -480,16 +542,49 @@ impl TlbImpl for HexagonTlb {
                 let sz = 1 << Self::get_entry_page_num_bits(entry);
                 let input_sz = 1 << Self::get_entry_page_num_bits(&input_entry);
 
-                if (input_va < va && va < (input_va + input_sz))
-                    || (va < input_va && input_va < (va + sz))
+                trace!("input_va {input_va:x} input_sz {input_sz:x} va {va:x} sz {sz:x}");
+                // Now actually check for overlaps.
+                //
+                // Case 1:
+                //                           |VA............ |
+                //   |INPUT_VA...+INPUT_SZ|                           false (input_va + input_sz < va)
+                //   |INPUT_VA................+INPUT_SZ|              true
+                //                           |INPUT_VA...+INPUT_SZ|   true  (== case)
+                // Case 2:
+                //   |VA............ |
+                //                      |INPUT_VA...+INPUT_SZ|        false ((va+sz) < input_va)
+                //          |INPUT_VA................+INPUT_SZ|       true
+                //   |INPUT_VA...+INPUT_SZ|                           true  (== case)
+                //
+                // Note that input_va <= va and va <= input_va catches all cases to either side of the OR.
+                //
+                // With (input_va + input_sz > va) and (va + sz > input_va), we don't check if these are equal
+                // because then we'd be checking outside of the entry range.
+                //
+                // For example, imagine va = 0x100, sz = 0x100, and input_va = 0x200.
+                // Then va + sz = 0x200. The check (va + sz > input_va) sees if the input entry (input_va)
+                // _starts inside_ of the range [va...end]. For the range of the checked entry to be size sz,
+                // the values must be [va...va+sz-1]. Checking [va...va+sz] (inclusive) would mean checking
+                // a range of 0x201, resulting in a false overlap.
+                //
+                // The actual range for the checked entry is 0x100 to 0x1ff inclusive, so that's what we
+                // check by not including "equal to."
+                if (input_va <= va && (input_va + input_sz) > va)
+                    || (va <= input_va && (va + sz) > input_va)
                 {
-                    if input_entry.asid() == entry.asid() {
-                        return Some(i as u64);
+                    match overlapping_entry {
+                        // In the Hexagon manual, 11.9.2 SYSTEM MONITOR "TLB read/write/probe operations,"
+                        // the documentation states: "If multiple entries overlap, the value
+                        // 0xffff_ffff is returned."
+                        Some(_) => return Some(u32::MAX as u64),
+                        None => overlapping_entry = Some(i as u64),
                     }
                 }
             }
-        }
 
-        return None;
+            overlapping_entry
+        } else {
+            unreachable!("Invalid flags 0x{flags:x} value passed to hexagon TLB search!")
+        }
     }
 }

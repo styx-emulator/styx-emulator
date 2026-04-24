@@ -12,14 +12,13 @@ use styx_core::{
 /// The load parameter is set to true if the memory operation is a load.
 /// It is set to false if it is a store.
 pub fn update_badva(proc: &mut TlbProcessor, va: u32) -> Result<()> {
-    Ok(proc
-        .cpu
+    proc.cpu
         .write_register(HexagonRegister::BadVa, va)
-        .with_context(|| "couldn't write BadVa in page fault")?)
+        .with_context(|| "couldn't write BadVa in page fault")
 }
 
 pub fn ssr_set_cause(processor: &mut TlbProcessor, cause: HexagonInterruptCause) -> Result<()> {
-    info!("cause of interrupt: {:?}", cause);
+    info!("cause of interrupt: {cause:?}");
     let mut ssr = Ssr::new_with_raw_value(
         processor
             .cpu
@@ -28,7 +27,6 @@ pub fn ssr_set_cause(processor: &mut TlbProcessor, cause: HexagonInterruptCause)
     );
 
     ssr.set_cause(cause as u8);
-    ssr.set_ex(true);
 
     info!("setting ssr to {:x}", ssr.raw_value());
     processor

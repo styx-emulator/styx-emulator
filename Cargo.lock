@@ -6381,6 +6381,7 @@ dependencies = [
  "styx-emulator",
  "styx-hexagon-testdata",
  "styx-workspace-hack",
+ "test-case",
 ]
 
 [[package]]

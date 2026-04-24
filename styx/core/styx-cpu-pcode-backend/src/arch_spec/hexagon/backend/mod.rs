@@ -2,6 +2,11 @@
 
 use anyhow::anyhow;
 pub use decode_info::{GeneralHexagonInstruction, Iclass};
+
+// Only used by decode attributes test, so adding this will remove the "unused import" error
+#[cfg(test)]
+pub use decode_attribs::BitPattern;
+
 use decode_info::{PktLoopParseBits, SlotInfo};
 use execution_helper::DefaultHexagonExecutionHelper;
 use log::{error, info, trace};
@@ -125,8 +130,6 @@ struct HexagonFetchDecodeData {
     total_bytes_consumed: u64,
     ordering: SmallVec<[usize; MAX_PACKET_SIZE]>,
     load_store_slot_info: SmallVec<[Option<usize>; 4]>,
-    // from 0 to 3, at what index in the packet did the duplex start?
-    duplex_start: u32,
 }
 
 #[derive(Default)]
@@ -374,7 +377,6 @@ impl BackendHelper<HexagonExecuteSingleInfo, Vec<Pcode>> for HexagonPcodeBackend
                 fetch_decode_data.total_bytes_consumed,
                 Some(i),
                 &fetch_decode_data.load_store_slot_info,
-                fetch_decode_data.duplex_start,
             )? {
                 Ok(HexagonSingleInstructionAction::DelayedInterrupt(irqn)) => {
                     delayed_irqn = Some(irqn);
@@ -424,8 +426,6 @@ impl BackendHelper<HexagonExecuteSingleInfo, Vec<Pcode>> for HexagonPcodeBackend
             fetch_decode_data.total_bytes_consumed,
             None,
             &load_store_info_flush,
-            // There are no duplexes.
-            0,
         )? {
             // Only handle if there was actually an IRQ request
             Ok(HexagonSingleInstructionAction::DelayedInterrupt(irqn)) => {
@@ -728,6 +728,7 @@ impl HexagonPcodeBackend {
     }
 
     /// Execute a single instruction
+    #[allow(clippy::too_many_arguments)]
     pub fn execute_single_instr(
         &mut self,
         pcodes: &[Pcode],
@@ -738,7 +739,6 @@ impl HexagonPcodeBackend {
         order: Option<usize>,
         // Used for handling page faulting
         load_store_slot_info: &SmallVec<[Option<usize>; 4]>,
-        duplex_start: u32,
     ) -> Result<Result<HexagonSingleInstructionAction, TargetExitReason>, UnknownError> {
         // execute
         let mut i = 0;
@@ -850,8 +850,6 @@ impl HexagonPcodeBackend {
     ) -> Result<Result<HexagonFetchDecodeInfo, TargetExitReason>, HexagonFetchDecodeError> {
         full_pcodes.clear();
 
-        // Used for page faults
-        let mut duplex_start = 0;
         let mut pc = self.pc().unwrap() as u32;
         let initial_pc = pc;
 
@@ -912,7 +910,7 @@ impl HexagonPcodeBackend {
                 // If error, restore execution helper before returning
                 if let Err(e) = decode_state_err {
                     self.execution_helper = Some(execution_helper);
-                    return Err(e.into());
+                    return Err(e);
                 }
 
                 decode_state = decode_state_err.unwrap();
@@ -944,14 +942,8 @@ impl HexagonPcodeBackend {
                         &dotnew_regs_written,
                         total_insns_without_immext,
                     ),
-                    PktState::FirstDuplex(insns) => {
-                        duplex_start = total_insns_without_immext;
-
-                        execution_helper.pkt_first_duplex(self, insns)
-                    }
+                    PktState::FirstDuplex(insns) => execution_helper.pkt_first_duplex(self, insns),
                     PktState::PktStartedFirstDuplex(insns) => {
-                        duplex_start = total_insns_without_immext;
-
                         execution_helper
                             .pkt_first_duplex(self, insns)
                             .map_err(|e| {
@@ -1256,7 +1248,6 @@ impl HexagonPcodeBackend {
             total_bytes_consumed,
             ordering: ordering.clone(),
             load_store_slot_info,
-            duplex_start,
         };
 
         // Cache before we return, and indicate that the result is cached.

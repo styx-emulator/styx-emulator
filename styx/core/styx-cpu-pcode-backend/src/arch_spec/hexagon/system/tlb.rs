@@ -1,8 +1,8 @@
-use std::cmp::min;
-
 // SPDX-License-Identifier: BSD-2-Clause
+
 use derive_more::FromStr;
 use log::{info, trace, warn};
+use std::cmp::min;
 use styx_errors::anyhow::Context;
 use styx_pcode::{pcode::VarnodeData, sla::SlaUserOps};
 use styx_pcode_translator::sla::HexagonUserOps;
@@ -32,7 +32,6 @@ impl<T: CpuBackend> CallOtherCallback<T> for TlbGenericStub {
     ) -> Result<PCodeStateChange, CallOtherHandleError> {
         warn!("tlb stub called for {} at {:x?}", self.from, backend.pc());
         unimplemented!();
-        Ok(PCodeStateChange::Fallthrough)
     }
 }
 
@@ -128,7 +127,7 @@ impl<T: CpuBackend> CallOtherCallback<T> for TlbInvAsid {
         mmu: &mut Mmu,
         _ev: &mut EventController,
         inputs: &[VarnodeData],
-        output: Option<&VarnodeData>,
+        _output: Option<&VarnodeData>,
     ) -> Result<PCodeStateChange, CallOtherHandleError> {
         // 11.9.2 TLB read/write/probe operations
         // tlbinvasid, read bits 20 to 26 (zero-indexed)
@@ -172,14 +171,13 @@ impl<T: CpuBackend> CallOtherCallback<T> for TlbProbe {
                 .to_u64()
                 .with_context(|| "couldn't convert asid vn to u64")? as u32;
 
-        info!("hexagon tlb probe {}", tlb_probe_field);
+        info!("hexagon tlb probe {tlb_probe_field}");
 
         // we must pass in the bits as unshifted
-        let stored_ent = match mmu.tlb.tlb_search(tlb_probe_field as u64, 0) {
-            // Store this
-            Some(ent) => ent,
-            None => 0x8000_0000,
-        };
+        let stored_ent = mmu
+            .tlb
+            .tlb_search(tlb_probe_field as u64, 0)
+            .unwrap_or(0x8000_0000);
 
         let output = output.with_context(|| "tlbp hexagon should have an output")?;
 
@@ -246,7 +244,7 @@ impl<T: CpuBackend> CallOtherCallback<T> for TlbMatch {
             0x0
         };
 
-        cpu.write(&output_unwrap, pd.into())
+        cpu.write(output_unwrap, pd.into())
             .with_context(|| "failed to set Pd register for tlbmatch")?;
 
         Ok(PCodeStateChange::Fallthrough)
@@ -254,8 +252,10 @@ impl<T: CpuBackend> CallOtherCallback<T> for TlbMatch {
 }
 
 #[derive(Debug)]
-pub struct Ctlbw {}
-impl<T: CpuBackend> CallOtherCallback<T> for Ctlbw {
+pub struct CtlbwTlboc {
+    write: bool,
+}
+impl<T: CpuBackend> CallOtherCallback<T> for CtlbwTlboc {
     fn handle(
         &mut self,
         cpu: &mut dyn CallOtherCpu<T>,
@@ -269,23 +269,29 @@ impl<T: CpuBackend> CallOtherCallback<T> for Ctlbw {
             .with_context(|| "couldn't read rss varnode")?
             .to_u64()
             .with_context(|| "couldn't turn rss to u64")?;
-        let rt = cpu
-            .read(&inputs[1])
-            .with_context(|| "couldn't read rss varnode")?
-            .to_u64()
-            .with_context(|| "couldn't turn rss to u64")? as u32;
+
         let rd = output.with_context(|| "couldn't unwrap Rd output for ctlbw")?;
 
         let rd_val = if let Some(idx) = mmu.tlb.tlb_search(rss, 1) {
             idx as u32
         } else {
-            mmu.tlb
-                .tlb_write(rt as usize, rss, 0)
-                .with_context(|| "couldn't write to tlb")?;
-            0x8000_0000
-        } as u32;
+            // Logic for Ctlbw and Tlboc are largely the same. This is the only thing that is
+            // different.
+            if self.write {
+                let rt = cpu
+                    .read(&inputs[1])
+                    .with_context(|| "couldn't read rss varnode")?
+                    .to_u64()
+                    .with_context(|| "couldn't turn rss to u64")? as u32;
 
-        cpu.write(&rd, rd_val.into())
+                mmu.tlb
+                    .tlb_write(rt as usize, rss, 0)
+                    .with_context(|| "couldn't write to tlb")?;
+            }
+            0x8000_0000
+        };
+
+        cpu.write(rd, rd_val.into())
             .with_context(|| "couldn't write Rd for ctlbw")?;
 
         Ok(PCodeStateChange::Fallthrough)
@@ -304,11 +310,11 @@ pub fn add_tlb_callothers<S: SlaUserOps<UserOps: FromStr>>(
         .unwrap();
 
     spec.call_other_manager
-        .add_handler_other_sla(HexagonUserOps::Ctlbw, Ctlbw {})
+        .add_handler_other_sla(HexagonUserOps::Ctlbw, CtlbwTlboc { write: true })
         .unwrap();
 
     spec.call_other_manager
-        .add_handler_other_sla(HexagonUserOps::Tlboc, TlbGenericStub { from: "tlboc" })
+        .add_handler_other_sla(HexagonUserOps::Tlboc, CtlbwTlboc { write: false })
         .unwrap();
 
     spec.call_other_manager
