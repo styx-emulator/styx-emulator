@@ -1,16 +1,26 @@
+use std::cmp::min;
+
 // SPDX-License-Identifier: BSD-2-Clause
+use arbitrary_int::*;
 use derive_more::FromStr;
-use log::{debug, trace};
+use log::{debug, info, trace, warn};
 use styx_errors::anyhow::Context;
 use styx_pcode::{pcode::VarnodeData, sla::SlaUserOps};
 use styx_pcode_translator::sla::HexagonUserOps;
-use styx_processor::{cpu::CpuBackend, event_controller::EventController, memory::Mmu};
+use styx_processor::{
+    cpu::{CpuBackend, CpuBackendExt},
+    event_controller::EventController,
+    memory::Mmu,
+};
 
 use crate::{
     arch_spec::{ArchSpecBuilder, HexagonPcodeBackend},
     call_other::{CallOtherCallback, CallOtherCpu, CallOtherHandleError},
     PCodeStateChange,
 };
+use bitbybit::bitfield;
+
+const FLAGS_NONE: u32 = 0;
 
 #[derive(Debug)]
 pub struct TlbGenericStub {
@@ -20,13 +30,14 @@ pub struct TlbGenericStub {
 impl<T: CpuBackend> CallOtherCallback<T> for TlbGenericStub {
     fn handle(
         &mut self,
-        _backend: &mut dyn CallOtherCpu<T>,
+        backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
         _ev: &mut EventController,
         _inputs: &[VarnodeData],
         _output: Option<&VarnodeData>,
     ) -> Result<PCodeStateChange, CallOtherHandleError> {
-        debug!("tlb stub called for {}", self.from);
+        warn!("tlb stub called for {} at {:x?}", self.from, backend.pc());
+        unimplemented!();
         Ok(PCodeStateChange::Fallthrough)
     }
 }
@@ -72,6 +83,221 @@ impl<T: CpuBackend> CallOtherCallback<T> for TlbWrite {
     }
 }
 
+#[derive(Debug)]
+pub struct TlbRead {}
+impl<T: CpuBackend> CallOtherCallback<T> for TlbRead {
+    fn handle(
+        &mut self,
+        cpu: &mut dyn CallOtherCpu<T>,
+        mmu: &mut Mmu,
+        _ev: &mut EventController,
+        inputs: &[VarnodeData],
+        output: Option<&VarnodeData>,
+    ) -> Result<PCodeStateChange, CallOtherHandleError> {
+        // 11.9.2 TLB read/write/probe operations
+        // tlbr, input 0 is index
+
+        let index_vn = &inputs[0];
+        let output_vn = output.with_context(|| "couldn't read output varnode in tlbr")?;
+        assert!(index_vn.size == 4);
+
+        let index = cpu
+            .read(index_vn)
+            .with_context(|| "couldn't read tlb index")?;
+
+        trace!("hexagon tlb read request with index {index}");
+
+        let pte = mmu
+            .tlb
+            .tlb_read(
+                index
+                    .to_u64()
+                    .with_context(|| "couldn't convert index to u64")? as usize,
+                FLAGS_NONE,
+            )
+            .with_context(|| format!("couldn't read from tlb {:x?}", cpu.pc()))?;
+
+        // write the entry to the vn
+        cpu.write(output_vn, pte.into())
+            .with_context(|| "couldn't write PTE to output varnode in tlbr")?;
+
+        Ok(PCodeStateChange::Fallthrough)
+    }
+}
+
+#[derive(Debug)]
+pub struct TlbInvAsid {}
+impl<T: CpuBackend> CallOtherCallback<T> for TlbInvAsid {
+    fn handle(
+        &mut self,
+        cpu: &mut dyn CallOtherCpu<T>,
+        mmu: &mut Mmu,
+        _ev: &mut EventController,
+        inputs: &[VarnodeData],
+        output: Option<&VarnodeData>,
+    ) -> Result<PCodeStateChange, CallOtherHandleError> {
+        // 11.9.2 TLB read/write/probe operations
+        // tlbinvasid, read bits 20 to 26 (zero-indexed)
+        // of Rs (varnode 0)
+
+        let probe_vn = &inputs[0];
+        assert!(probe_vn.size == 4);
+
+        let tlb_probe_field =
+            cpu.read(probe_vn)
+                .with_context(|| "couldn't read tlb asid vn")?
+                .to_u64()
+                .with_context(|| "couldn't convert asid vn to u64")? as u32;
+
+        // we must pass in the bits as unshifted
+        mmu.tlb
+            .invalidate_all(tlb_probe_field)
+            .with_context(|| "couldn't read from tlb")?;
+
+        Ok(PCodeStateChange::Fallthrough)
+    }
+}
+
+#[derive(Debug)]
+pub struct TlbProbe {}
+impl<T: CpuBackend> CallOtherCallback<T> for TlbProbe {
+    fn handle(
+        &mut self,
+        cpu: &mut dyn CallOtherCpu<T>,
+        mmu: &mut Mmu,
+        _ev: &mut EventController,
+        inputs: &[VarnodeData],
+        output: Option<&VarnodeData>,
+    ) -> Result<PCodeStateChange, CallOtherHandleError> {
+        let probe_vn = &inputs[0];
+        assert!(probe_vn.size == 4);
+
+        let tlb_probe_field =
+            cpu.read(probe_vn)
+                .with_context(|| "couldn't read tlb asid vn")?
+                .to_u64()
+                .with_context(|| "couldn't convert asid vn to u64")? as u32;
+
+        info!("hexagon tlb probe {}", tlb_probe_field);
+
+        // we must pass in the bits as unshifted
+        let stored_ent = match mmu.tlb.tlb_search(tlb_probe_field as u64, 0) {
+            // Store this
+            Some(ent) => ent,
+            None => 0x8000_0000,
+        };
+
+        let output = output.with_context(|| "tlbp hexagon should have an output")?;
+
+        cpu.write(output, stored_ent.into())
+            .with_context(|| "couldn't store tlb probe result in output varnode")?;
+
+        Ok(PCodeStateChange::Fallthrough)
+    }
+}
+
+#[derive(Debug)]
+pub struct TlbLockUnlock {}
+impl<T: CpuBackend> CallOtherCallback<T> for TlbLockUnlock {
+    fn handle(
+        &mut self,
+        _cpu: &mut dyn CallOtherCpu<T>,
+        _mmu: &mut Mmu,
+        _ev: &mut EventController,
+        _inputs: &[VarnodeData],
+        _output: Option<&VarnodeData>,
+    ) -> Result<PCodeStateChange, CallOtherHandleError> {
+        Ok(PCodeStateChange::Fallthrough)
+    }
+}
+
+#[derive(Debug)]
+pub struct TlbMatch {}
+impl<T: CpuBackend> CallOtherCallback<T> for TlbMatch {
+    fn handle(
+        &mut self,
+        cpu: &mut dyn CallOtherCpu<T>,
+        _mmu: &mut Mmu,
+        _ev: &mut EventController,
+        inputs: &[VarnodeData],
+        output: Option<&VarnodeData>,
+    ) -> Result<PCodeStateChange, CallOtherHandleError> {
+        // cpu
+
+        let rss = cpu
+            .read(&inputs[0])
+            .with_context(|| "couldn't read Rss")?
+            .to_u64()
+            .with_context(|| "couldn't turn Rss to u64")?;
+
+        // Fine to keep as u64 since we mask with a u64 later.
+        let rt = cpu.read(&inputs[1]).with_context(|| "couldn't read Rt")?;
+        assert_eq!(rt.size(), 4);
+        let rt = rt.to_u64().with_context(|| "couldn't turn Rt to u64")?;
+
+        let output_unwrap = output.with_context(|| "no output for tlbmatch")?;
+
+        let tlblo = rss & 0xffffffff;
+        let tlbhi = (rss >> 32) & 0xffffffff;
+
+        let size = min(6, (!(tlblo.reverse_bits())).leading_ones());
+        let mask = 0x07ffffff & (0xffffffff << (2 * size));
+
+        // The top bit is set (valid bit??)
+        let tlbhi_topbit = ((tlbhi >> 31) & 1) == 1;
+
+        let pd: u32 = if tlbhi_topbit && ((tlbhi & mask) == (rt & mask)) {
+            0xff
+        } else {
+            0x0
+        };
+
+        cpu.write(&output_unwrap, pd.into())
+            .with_context(|| "failed to set Pd register for tlbmatch")?;
+
+        Ok(PCodeStateChange::Fallthrough)
+    }
+}
+
+#[derive(Debug)]
+pub struct Ctlbw {}
+impl<T: CpuBackend> CallOtherCallback<T> for Ctlbw {
+    fn handle(
+        &mut self,
+        cpu: &mut dyn CallOtherCpu<T>,
+        mmu: &mut Mmu,
+        _ev: &mut EventController,
+        inputs: &[VarnodeData],
+        output: Option<&VarnodeData>,
+    ) -> Result<PCodeStateChange, CallOtherHandleError> {
+        let rss = cpu
+            .read(&inputs[0])
+            .with_context(|| "couldn't read rss varnode")?
+            .to_u64()
+            .with_context(|| "couldn't turn rss to u64")?;
+        let rt = cpu
+            .read(&inputs[1])
+            .with_context(|| "couldn't read rss varnode")?
+            .to_u64()
+            .with_context(|| "couldn't turn rss to u64")? as u32;
+        let rd = output.with_context(|| "couldn't unwrap Rd output for ctlbw")?;
+
+        let rd_val = if let Some(idx) = mmu.tlb.tlb_search(rss, 1) {
+            idx as u32
+        } else {
+            mmu.tlb
+                .tlb_write(rt as usize, rss, 0)
+                .with_context(|| "couldn't write to tlb")?;
+            0x8000_0000
+        } as u32;
+
+        cpu.write(&rd, rd_val.into())
+            .with_context(|| "couldn't write Rd for ctlbw")?;
+
+        Ok(PCodeStateChange::Fallthrough)
+    }
+}
+
 pub fn add_tlb_callothers<S: SlaUserOps<UserOps: FromStr>>(
     spec: &mut ArchSpecBuilder<S, HexagonPcodeBackend>,
 ) {
@@ -80,14 +306,11 @@ pub fn add_tlb_callothers<S: SlaUserOps<UserOps: FromStr>>(
         .unwrap();
 
     spec.call_other_manager
-        .add_handler_other_sla(
-            HexagonUserOps::Tlbmatch,
-            TlbGenericStub { from: "tlbmatch" },
-        )
+        .add_handler_other_sla(HexagonUserOps::Tlbmatch, TlbMatch {})
         .unwrap();
 
     spec.call_other_manager
-        .add_handler_other_sla(HexagonUserOps::Ctlbw, TlbGenericStub { from: "ctlbw" })
+        .add_handler_other_sla(HexagonUserOps::Ctlbw, Ctlbw {})
         .unwrap();
 
     spec.call_other_manager
@@ -95,28 +318,22 @@ pub fn add_tlb_callothers<S: SlaUserOps<UserOps: FromStr>>(
         .unwrap();
 
     spec.call_other_manager
-        .add_handler_other_sla(HexagonUserOps::Tlbr, TlbGenericStub { from: "tlbr" })
+        .add_handler_other_sla(HexagonUserOps::Tlbr, TlbRead {})
         .unwrap();
 
     spec.call_other_manager
-        .add_handler_other_sla(HexagonUserOps::Tlbp, TlbGenericStub { from: "tlbp" })
+        .add_handler_other_sla(HexagonUserOps::Tlbp, TlbProbe {})
         .unwrap();
 
     spec.call_other_manager
-        .add_handler_other_sla(
-            HexagonUserOps::Tlbinvasid,
-            TlbGenericStub { from: "tlbinvasid" },
-        )
+        .add_handler_other_sla(HexagonUserOps::Tlbinvasid, TlbInvAsid {})
         .unwrap();
 
     spec.call_other_manager
-        .add_handler_other_sla(HexagonUserOps::Tlblock, TlbGenericStub { from: "tlblock" })
+        .add_handler_other_sla(HexagonUserOps::Tlblock, TlbLockUnlock {})
         .unwrap();
 
     spec.call_other_manager
-        .add_handler_other_sla(
-            HexagonUserOps::Tlbunlock,
-            TlbGenericStub { from: "tlbunlock" },
-        )
+        .add_handler_other_sla(HexagonUserOps::Tlbunlock, TlbLockUnlock {})
         .unwrap();
 }

@@ -20,7 +20,10 @@
 //! representative of your target processor / cpu core.
 #![allow(rustdoc::private_intra_doc_links)] // for the above link to `arch::backends::ArchVariant`
 
-pub use styx_cpu_pcode_backend::{HexagonPcodeBackend, PcodeBackend, PcodeBackendConfiguration};
+pub use styx_cpu_pcode_backend::{
+    HexagonInterruptCause, HexagonInterruptType, HexagonPcodeBackend, PcodeBackend,
+    PcodeBackendConfiguration,
+};
 #[cfg(feature = "unicorn-backend")]
 pub use styx_cpu_unicorn_backend::UnicornBackend;
 
