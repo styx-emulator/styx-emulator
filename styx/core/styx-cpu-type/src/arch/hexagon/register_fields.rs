@@ -104,6 +104,8 @@ pub struct Syscfg {
     l2cfg: u3,
     #[bit(19, rw)]
     itcm: bool,
+    #[bit(20, rw)]
+    clade_en: bool,
     #[bit(21, rw)]
     l2nwa: bool,
     #[bit(22, rw)]
