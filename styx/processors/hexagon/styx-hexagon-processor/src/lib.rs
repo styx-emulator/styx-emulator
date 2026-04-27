@@ -1,29 +1,34 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! # Styx-Processors
 
-use event_controller::HexagonEventController;
+use l2vic::L2Vic;
+use qtimer::QTimer;
 use styx_core::arch::hexagon::HexagonRegister;
 use styx_core::cpu::arch::hexagon::HexagonVariants;
-use styx_core::cpu::{Arch, Backend, CpuBackend, CpuBackendExt};
+use styx_core::cpu::{Arch, Backend, CpuBackend, CpuBackendExt, PcodeBackendConfiguration};
+use styx_core::hooks::CoreHandle;
 use styx_core::loader::LoaderHints;
 use styx_core::memory::physical::PhysicalMemoryVariant;
-use styx_core::memory::{MemoryBackend, Mmu};
 use styx_core::prelude::log::info;
+use styx_core::memory::{MemoryBackend, MemoryPermissions, MemoryRegion, Mmu};
 use styx_core::prelude::{Context, Peripheral};
 use styx_core::{
     core::{
         builder::{BuildProcessorImplArgs, ProcessorImpl},
         ProcessorBundle,
     },
-    cpu::{ArchEndian, HexagonPcodeBackend},
+    cpu::{ArchEndian, CpuBackendExt, HexagonPcodeBackend},
     errors::{anyhow, UnknownError},
+    hooks::{Hookable, StyxHook},
 };
 use tlb::HexagonTlb;
 
 mod angel;
 mod cfgtable;
 mod config;
-mod event_controller;
+mod exception;
+mod l2vic;
+mod qtimer;
 mod tlb;
 
 pub use cfgtable::*;
@@ -51,13 +56,21 @@ impl ProcessorImpl for HexagonBuilder {
             Box::new(HexagonPcodeBackend::new_engine_config(
                 self.variant.clone(),
                 ArchEndian::LittleEndian,
-                &args.into(),
+                &PcodeBackendConfiguration {
+                    register_read_hooks: true,
+                    register_write_hooks: true,
+                    exception: args.exception,
+                },
             ))
         } else {
             return Err(anyhow::anyhow!(
                 "hexagon processor only supports pcode backend"
             ));
         };
+
+        cpu.add_hook(StyxHook::interrupt(|proc: CoreHandle, interrupt: i32| {
+            l2vic::interrupt_handler(proc.cpu, proc.mmu, interrupt)
+        }))?;
 
         let mut memory = match self.variant {
             HexagonVariants::QDSP6V62 => MemoryBackend::new(PhysicalMemoryVariant::FlatMemory),
@@ -95,8 +108,16 @@ impl ProcessorImpl for HexagonBuilder {
             write_cfgtable_field(cpu.as_mut(), &mut memory, *cfgbase_entry as u64, *value);
         }
 
-        let hec = Box::new(HexagonEventController::default());
         let peripherals: Vec<Box<dyn Peripheral>> = Vec::new();
+
+        // Peripherals may use this
+        memory
+            .memory_map(0x100000000, 0x40000000, MemoryPermissions::all())
+            .with_context(|| "couldn't add memory region for peripherals")?;
+
+        let l2vic = Box::new(L2Vic::default());
+
+        let peripherals: Vec<Box<dyn Peripheral>> = vec![Box::new(QTimer::default())];
 
         let mut hints = LoaderHints::new();
         hints.insert("arch".to_string().into_boxed_str(), Box::new(Arch::Hexagon));
@@ -105,7 +126,7 @@ impl ProcessorImpl for HexagonBuilder {
             cpu,
             tlb: Box::new(HexagonTlb::new()),
             memory,
-            event_controller: hec,
+            event_controller: l2vic,
             peripherals,
             loader_hints: hints,
         })
