@@ -1010,3 +1010,130 @@ Not implemented yet:
 )]
 pub fn complex_multiply(objdump: &str, op: OOOperation, post_op: OOPostOperation) {}
 */
+
+/// Some manual test cases in case the "corresponding u64" in the mask_all
+/// is computed wrong
+#[test_case(0b01011010, 0x00ff00ffff00ff00; "mask_four_bits_set")]
+#[test_case(0b11001100, 0xffff0000ffff0000; "mask_some_bits_set")]
+pub fn mask(p0: u8, r1_r0_expected: u64) {
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(
+        r#"
+	0:	00 c0 00 86	8600c000 { 	r1:0 = mask(p0) }
+"#,
+    );
+
+    cpu.write_register(HexagonRegister::P0, p0).unwrap();
+
+    let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
+
+    let d0 = cpu.read_register::<u64>(HexagonRegister::D0).unwrap();
+    assert_eq!(r1_r0_expected, d0);
+}
+
+/// Mask only has 256 possible inputs, so why not test them all?
+#[test]
+pub fn mask_all() {
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(
+        r#"
+	0:	00 c0 00 86	8600c000 { 	r1:0 = mask(p0) }
+"#,
+    );
+
+    for i in 0u8..=255 {
+        cpu.set_pc(0x1000).unwrap();
+
+        let mut corresp_u64 = 0;
+        for j in 0..8 {
+            if ((i >> j) & 1) == 1 {
+                corresp_u64 |= 0xff << (j * 8);
+            }
+        }
+
+        info!("iter {i}");
+        cpu.write_register(HexagonRegister::P0, i).unwrap();
+
+        let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+        assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
+
+        let d0 = cpu.read_register::<u64>(HexagonRegister::D0).unwrap();
+        assert_eq!(corresp_u64, d0);
+    }
+}
+
+/// Some manual test cases in case the "corresponding u64" in the mask_all
+/// is computed wrong
+#[test_case(0x00, 0xff; "zero")]
+pub fn not(p0: u8, p0_expected: u8) {
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(
+        r#"
+	0:	00 c0 c0 6b	6bc0c000 { 	p0 = not(p0) }
+"#,
+    );
+
+    cpu.write_register(HexagonRegister::P0, p0).unwrap();
+
+    let exit = cpu.execute(&mut mmu, &mut ev, 1).unwrap();
+    assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
+
+    let p0_result = cpu.read_register::<u8>(HexagonRegister::P0).unwrap();
+    assert_eq!(p0_result, p0_expected);
+}
+
+#[test]
+pub fn ct0_64() {
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(
+        r#"
+	0:	42 c0 e0 88	88e0c042 { 	r2 = ct0(r1:0) }
+"#,
+    );
+
+    ct01_common(&mut cpu, &mut mmu, &mut ev, false);
+}
+
+#[test]
+pub fn ct1_64() {
+    let (mut cpu, mut mmu, mut ev) = setup_objdump(
+        r#"
+	0:	82 c0 e0 88	88e0c082 { 	r2 = ct1(r1:0) }
+"#,
+    );
+
+    ct01_common(&mut cpu, &mut mmu, &mut ev, true);
+}
+
+pub fn ct01_common(cpu: &mut dyn CpuBackend, mmu: &mut Mmu, ev: &mut EventController, ones: bool) {
+    const ITERS: u64 = 10000;
+
+    // Not same as brev because the brev output reads a 64 bit output value,
+    // whereas these two read a 32 bit output value.
+    let mut run_check_val = |val: u64| {
+        cpu.set_pc(0x1000).unwrap();
+        cpu.write_register(HexagonRegister::D0, val).unwrap();
+
+        let exit = cpu.execute(mmu, ev, 1).unwrap();
+        assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
+
+        let r2 = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
+        // Count trailing ones
+        if ones {
+            assert_eq!(r2, val.trailing_ones());
+        }
+        // Count trailing zeroes
+        else {
+            assert_eq!(r2, val.trailing_zeros());
+        }
+    };
+
+    for val in (u64::MAX - ITERS)..u64::MAX {
+        run_check_val(val);
+    }
+
+    for val in 0..ITERS {
+        run_check_val(val);
+    }
+
+    for val in (0..u64::MAX).step_by(0x1774aadda1ff) {
+        run_check_val(val);
+    }
+}

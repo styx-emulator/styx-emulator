@@ -5827,6 +5827,7 @@ define token SUBINSN(16)
   a11                                  = (11, 11)
   a12                                  = (12, 12)
   SA1_addi_Rx16                        = ( 0,  3)
+  SA1_addi_Rx16match                   = ( 0,  3)
   SA1_addi_s7_0                        = ( 4, 10) signed
   SA1_tfr_Rd16                         = ( 0,  3)
   SA1_tfr_Rs16                         = ( 4,  7)
@@ -5844,6 +5845,7 @@ define token SUBINSN(16)
   SA1_dec_Rd16                         = ( 0,  3)
   SA1_dec_Rs16                         = ( 4,  7)
   SA1_addrx_Rx16                       = ( 0,  3)
+  SA1_addrx_Rx16match                  = ( 0,  3)
   SA1_addrx_Rs16                       = ( 4,  7)
   SA1_zxtb_Rd16                        = ( 0,  3)
   SA1_zxtb_Rs16                        = ( 4,  7)
@@ -12690,8 +12692,12 @@ S2_insert_rp_Rx32d: reloc is S2_insert_rp_Rx32 [reloc = (S2_insert_rp_Rx32 * 4) 
 J2_trap1_Rx32d: reloc is J2_trap1_Rx32 [reloc = (J2_trap1_Rx32 * 4) + $(DESTSTART);] { export *[register]:4 reloc; }
 Y2_crswap0_Rx32d: reloc is Y2_crswap0_Rx32 [reloc = (Y2_crswap0_Rx32 * 4) + $(DESTSTART);] { export *[register]:4 reloc; }
 Y4_crswap1_Rx32d: reloc is Y4_crswap1_Rx32 [reloc = (Y4_crswap1_Rx32 * 4) + $(DESTSTART);] { export *[register]:4 reloc; }
-SA1_addi_Rx16d: reloc is SA1_addi_Rx16 [reloc = (SA1_addi_Rx16 * 4) + $(DESTSTART);] { export *[register]:4 reloc; }
-SA1_addrx_Rx16d: reloc is SA1_addrx_Rx16 [reloc = (SA1_addrx_Rx16 * 4) + $(DESTSTART);] { export *[register]:4 reloc; }
+
+# See table 10-3 in the Hexagon manual. R8-R15 is skipped, and so the "high" R16-R23 must be handled appropriately.
+SA1_addi_Rx16d: reloc is SA1_addi_Rx16match & SA1_addi_Rx16 < 8 [reloc = (SA1_addi_Rx16match * 4) + $(DESTSTART);] { export *[register]:4 reloc; }
+SA1_addi_Rx16d: reloc is SA1_addi_Rx16match & SA1_addi_Rx16 >= 8 [reloc = ((SA1_addi_Rx16match + 8) * 4) + $(DESTSTART);] { export *[register]:4 reloc; }
+SA1_addrx_Rx16d: reloc is SA1_addrx_Rx16match & SA1_addi_Rx16 < 8 [reloc = (SA1_addrx_Rx16match * 4) + $(DESTSTART);] { export *[register]:4 reloc; }
+SA1_addrx_Rx16d: reloc is SA1_addrx_Rx16match & SA1_addi_Rx16 >= 8  [reloc = ((SA1_addrx_Rx16match + 8) * 4) + $(DESTSTART);] { export *[register]:4 reloc; }
 
 # Rxx
 
@@ -78012,17 +78018,17 @@ gp: reloc is epsilon [ reloc = 0; ] {
 }
 
 :S2_ct0p S2_ct0p_Rd32 S2_ct0p_Rss32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b5 = 0 & b6 = 1 & b7 = 0 & b21 = 1 & b22 = 1 & b23 = 1 & b24 = 0 & b25 = 0 & b26 = 0 & b27 = 1 & b28 = 0 & b29 = 0 & b30 = 0 & b31 = 1 & S2_ct0p_Rd32 & S2_ct0p_Rss32 {
-  local tmp0:4;
+  local tmp0:8;
   tmp0 = brev(S2_ct0p_Rss32);
-  local tmp1:4;
-  tmp1 = ~ tmp0;
+  local tmp1:8;
+  tmp1 = ~tmp0;
   local tmp2:4;
   tmp2 = cl1(tmp1);
   S2_ct0p_Rd32 = tmp2;
 }
 
 :S2_ct1p S2_ct1p_Rd32 S2_ct1p_Rss32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b5 = 0 & b6 = 0 & b7 = 1 & b21 = 1 & b22 = 1 & b23 = 1 & b24 = 0 & b25 = 0 & b26 = 0 & b27 = 1 & b28 = 0 & b29 = 0 & b30 = 0 & b31 = 1 & S2_ct1p_Rd32 & S2_ct1p_Rss32 {
-  local tmp0:4;
+  local tmp0:8;
   tmp0 = brev(S2_ct1p_Rss32);
   local tmp1:4;
   tmp1 = cl1(tmp0);
