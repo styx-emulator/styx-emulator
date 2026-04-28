@@ -147,18 +147,26 @@ impl<T: CpuBackend> CallOtherCallback<T> for CswiHandler {
             .read(&inputs[0])
             .with_context(|| "couldn't read cswi register argument value")?
             .to_u64()
-            .with_context(|| "couldn't unwrap mask")? as u32;
+            .with_context(|| "couldn't unwrap mask")? as u16;
 
-        let ipend_value = backend
-            .read_register::<u32>(HexagonRegister::Ipend)
-            .with_context(|| "couldn't read IPEND register")?;
-        let ipend_cleared = ipend_value & !rs;
+        let mut ipendad = Ipendad::new_with_raw_value(
+            backend
+                .read_register::<u32>(HexagonRegister::Ipendad)
+                .with_context(|| "couldn't read IPEND register")?,
+        );
+        let ipendad_old = ipendad;
+
+        ipendad.set_ipend(ipendad.ipend() & !rs);
 
         backend
-            .write_register(HexagonRegister::Ipend, ipend_cleared)
+            .write_register(HexagonRegister::Ipendad, ipendad.raw_value())
             .with_context(|| "couldn't clear specified bits of IPEND register")?;
 
-        trace!("cswi: rs {rs:x} ipend_old {ipend_value:x} ipend_after {ipend_cleared:x}",);
+        trace!(
+            "cswi: rs {rs:x} ipend_old {:x} ipend_after {:x}",
+            ipendad_old.ipend(),
+            ipendad.ipend(),
+        );
 
         Ok(PCodeStateChange::Fallthrough)
     }
