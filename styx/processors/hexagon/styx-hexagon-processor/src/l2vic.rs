@@ -8,17 +8,12 @@
 //! It appears that the l2vic (QEMU) describes that
 //! all interrupts go to VID 0, which is IRQ 2.
 
-use std::process::exit;
-
 use arbitrary_int::*;
 use bitbybit::{bitenum, bitfield};
 use styx_core::{
-    arch::{
-        hexagon::{
-            register_fields::{Ipendad, Ssr},
-            HexagonRegister,
-        },
-        RegisterValue,
+    arch::hexagon::{
+        register_fields::{Ipendad, Ssr},
+        HexagonRegister,
     },
     cpu::{CpuBackend, CpuBackendExt, HexagonInterruptType},
     errors::UnknownError,
@@ -27,7 +22,7 @@ use styx_core::{
     memory::{MemoryBackend, Mmu},
     prelude::{
         log::{error, info, trace, warn},
-        ArchRegister, BasicArchRegister, Context, EventControllerImpl, ExceptionNumber,
+        Context, EventControllerImpl, ExceptionNumber,
     },
 };
 
@@ -315,7 +310,7 @@ impl L2VicSlot {
     pub fn set_irqn_pending(&mut self, n: usize, value: bool) {
         if value {
             // Set bit
-            self.pending |= (1 << n)
+            self.pending |= 1 << n
         } else {
             // Clear bit
             self.pending &= !(1 << n)
@@ -324,7 +319,7 @@ impl L2VicSlot {
     pub fn set_irqn_enable(&mut self, n: usize, value: bool) {
         if value {
             // Set bit
-            self.enable |= (1 << n)
+            self.enable |= 1 << n
         } else {
             // Clear bit
             self.enable &= !(1 << n)
@@ -333,7 +328,7 @@ impl L2VicSlot {
     pub fn set_irqn_status(&mut self, n: usize, value: bool) {
         if value {
             // Set bit
-            self.status |= (1 << n)
+            self.status |= 1 << n
         } else {
             // Clear bit
             self.status &= !(1 << n)
@@ -427,10 +422,7 @@ impl EventControllerImpl for L2Vic {
             .read_register::<u32>(HexagonRegister::Vid)
             .with_context(|| "Couldn't read VID register")?;
         if self.vid != vid {
-            info!(
-                "l2vic: vid was set in code or by ciad, updating to 0x{:x}.",
-                vid
-            );
+            info!("l2vic: vid was set in code or by ciad, updating to 0x{vid:x}.");
             self.vid = vid;
         }
 
@@ -685,7 +677,7 @@ pub fn interrupt_handler(
             .with_context(|| "couldn't read ssr in interrupt")?,
     );
 
-    info!("interrupt number is {}", interrupt_number);
+    info!("interrupt number is {interrupt_number}");
 
     if ssr.cause() == 0 && interrupt_number == HexagonInterruptType::Trap0 as i32 {
         let swi_no = cpu
@@ -707,20 +699,20 @@ pub fn interrupt_handler(
         .with_context(|| "couldn't read interrupt vector base")?;
     let jump_point = evb + (interrupt_number * 4) as u32;
 
-    info!("interrupt jumping to {:x}", jump_point);
+    info!("interrupt jumping to {jump_point:x}");
 
     // set elr to pc
     let pc = cpu
         .pc()
         .with_context(|| "couldn't get pc to write to elr")?;
 
-    info!("interrupt setting elr to {:x}", pc);
+    info!("interrupt setting elr to {pc:x}");
 
     // Very insidious! PC is u64
     cpu.write_register(HexagonRegister::Elr, pc as u32)
         .with_context(|| "couldn't write old pc to elr")?;
 
-    cpu.write_register(HexagonRegister::Pc, jump_point as u32)
+    cpu.write_register(HexagonRegister::Pc, jump_point)
         .with_context(|| "couldn't write interrupt jump point to pc")?;
 
     Ok(())

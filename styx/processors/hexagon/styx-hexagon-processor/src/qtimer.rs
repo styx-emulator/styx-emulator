@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
 //! QTimer for Hexagon. Information was acquired from
-//! https://github.com/quic/qemu, branch hex-next, file
+//! <https://github.com/quic/qemu>, branch hex-next, file
 //! hw/timer/qct-qtimer.c.
 //!
 //! Also QEMU hexagon testing - standalone_systests/src/lock_timer_test.c
@@ -277,7 +277,7 @@ impl QTimerFrame {
     }
 
     /// NOTE WARN: this should not overwrite a previously set value for TimerValue!
-    fn write_timer_value(&mut self, mmu: &mut Mmu, tick_amount: u64) -> Result<(), UnknownError> {
+    fn write_timer_value(&mut self, mmu: &mut Mmu, _tick_amount: u64) -> Result<(), UnknownError> {
         mmu.write_u32_le_phys_data(
             self.frame_base() + QTimerCNTBaseNFrame::CntpTval as u64,
             self.timer_value(),
@@ -326,19 +326,19 @@ impl Default for QTimer {
             pcycles_since_last_tick: 0,
             frame_secure: Default::default(),
             control_access_registers: Default::default(),
-            timer_frames: array::from_fn(|i| QTimerFrame::new(i)),
+            timer_frames: array::from_fn(QTimerFrame::new),
         }
     }
 }
 
 fn qtimer_mmio_read_hook(
-    proc: CoreHandle,
-    address: u64,
-    size: u32,
-    data: &mut [u8],
+    _proc: CoreHandle,
+    _address: u64,
+    _size: u32,
+    _data: &mut [u8],
 ) -> Result<(), UnknownError> {
     unimplemented!("I read an mmio (:");
-    Ok(())
+    // Ok(())
 }
 
 fn qtimer_mmio_write_hook(
@@ -357,8 +357,7 @@ fn qtimer_mmio_write_hook(
         let qtimer_register = QTimerCNTCTLBaseFrame::new_with_raw_value(offset as u16);
 
         error!(
-            "accessed CNTCTL offset {} size {size} access_type WRITE data {data:x?} reg {:?} pc {:x}",
-            offset, qtimer_register, pc
+            "accessed CNTCTL offset {offset} size {size} access_type WRITE data {data:x?} reg {qtimer_register:?} pc {pc:x}",
         );
 
         let data_u32 = u32::from_le_bytes(
@@ -374,7 +373,7 @@ fn qtimer_mmio_write_hook(
             Ok(QTimerCNTCTLBaseFrame::CntNsar) => timer_periph.frame_secure = data_u32,
             // One of the "Control access control registers," between 0 and 6.
             Err(matched_off) => {
-                if matched_off >= CNT_ACR_START && matched_off <= CNT_ACR_END {
+                if (CNT_ACR_START..=CNT_ACR_END).contains(&matched_off) {
                     // Get which control access register. Each register is 4 bytes
                     // TODO enforce secure acces to this based on the secure register stuff.
                     let cntacr_num = (matched_off - CNT_ACR_START) / 4;
@@ -391,7 +390,7 @@ fn qtimer_mmio_write_hook(
     // TODO: calculate which base N
     // TODO: enforce access
     // CNTBaseN frame. each frame is 0x1000 sized.
-    else if offset >= 0x1000 && offset < 0x1000 + (0x1000 * QTIMER_NUM_TIMERS) {
+    else if (0x1000..0x1000 + (0x1000 * QTIMER_NUM_TIMERS)).contains(&offset) {
         let timer_offset = offset % 0x1000;
         let base_n = ((offset - 0x1000) / 0x1000) as usize;
         let qtimer_register = QTimerCNTBaseNFrame::new_with_raw_value(timer_offset as u16);
@@ -402,8 +401,7 @@ fn qtimer_mmio_write_hook(
         );
 
         error!(
-            "accessed base N {base_n} timer_offset {} size {size} access_type WRITE data {data:x?} reg {:?} pc {:x}",
-            timer_offset, qtimer_register, pc
+            "accessed base N {base_n} timer_offset {timer_offset} size {size} access_type WRITE data {data:x?} reg {qtimer_register:?} pc {pc:x}",
         );
 
         match qtimer_register {
@@ -465,7 +463,7 @@ fn qtimer_mmio_write_hook(
             }
             Ok(QTimerCNTBaseNFrame::CntpCtl) => {
                 let register_value = QTimerCNTPCTL::new_with_raw_value(data_u32);
-                info!("the control value was set to {:?}", register_value);
+                info!("the control value was set to {register_value:?}");
 
                 timer_periph.timer_frames[base_n].enabled = register_value.enable();
                 timer_periph.timer_frames[base_n].imask = register_value.imask();
@@ -561,8 +559,8 @@ impl Peripheral for QTimer {
 
     fn on_processor_start(
         &mut self,
-        cpu: &mut dyn styx_core::prelude::CpuBackend,
-        mmu: &mut styx_core::prelude::Mmu,
+        _cpu: &mut dyn styx_core::prelude::CpuBackend,
+        _mmu: &mut styx_core::prelude::Mmu,
         _event_controller: &mut dyn styx_core::prelude::EventControllerImpl,
     ) -> Result<(), styx_core::prelude::UnknownError> {
         Ok(())

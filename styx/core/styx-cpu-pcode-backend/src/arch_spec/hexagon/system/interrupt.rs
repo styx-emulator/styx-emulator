@@ -28,7 +28,7 @@ pub struct InterruptGenericStub {
     from: &'static str,
 }
 
-/// Look at https://github.com/quic/qemu/blob/hex-next/target/hexagon/cpu_bits.h
+/// Look at <https://github.com/quic/qemu/blob/hex-next/target/hexagon/cpu_bits.h>
 #[repr(i32)]
 pub enum HexagonInterruptType {
     None = -1,
@@ -178,7 +178,7 @@ impl<T: CpuBackend> CallOtherCallback<T> for CiadHandler {
         &mut self,
         backend: &mut dyn CallOtherCpu<T>,
         _mmu: &mut Mmu,
-        ev: &mut EventController,
+        _ev: &mut EventController,
         inputs: &[VarnodeData],
         _output: Option<&VarnodeData>,
     ) -> Result<PCodeStateChange, CallOtherHandleError> {
@@ -195,7 +195,7 @@ impl<T: CpuBackend> CallOtherCallback<T> for CiadHandler {
                 .read_register::<u32>(HexagonRegister::Ipendad)
                 .with_context(|| "couldn't read IAD register")?,
         );
-        let ipendad_old = ipendad.clone();
+        let ipendad_old = ipendad;
 
         ipendad.set_iad(ipendad.iad() & !rs);
 

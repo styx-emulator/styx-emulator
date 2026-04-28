@@ -2541,9 +2541,8 @@ checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 name = "hexagonfw"
 version = "0.1.0"
 dependencies = [
- "arbitrary-int 2.1.1",
- "bitbybit 2.0.0",
  "styx-emulator",
+ "styx-workspace-hack",
 ]
 
 [[package]]
