@@ -455,6 +455,18 @@ impl EventControllerImpl for L2Vic {
             return Ok(InterruptExecuted::NotExecuted);
         }
 
+        // Now also fail if any sort of exception is being serviced (
+        // eg. synchronous exceptions).
+        let ssr = Ssr::new_with_raw_value(
+            cpu.read_register::<u32>(HexagonRegister::Ssr)
+                .with_context(|| "couldn't read the Ssr register")?,
+        );
+        if ssr.ex() {
+            trace!("interrupt not executed because SSR.EX = {}, maybe synchronous exception is happening", ssr.ex());
+
+            return Ok(InterruptExecuted::NotExecuted);
+        }
+
         // Hexagon Programmer's Reference Manual:
         //
         // 11.9.2 SYSTEM MONITOR - "highest-priority interrupt 0... lowest-
@@ -698,6 +710,19 @@ pub fn interrupt_handler(
         .read_register::<u32>(HexagonRegister::Evb)
         .with_context(|| "couldn't read interrupt vector base")?;
     let jump_point = evb + (interrupt_number * 4) as u32;
+
+    // inspection of qemu indicates this is required
+    // WARN: is this only required on _some_ synchronous interrupts?
+    // see set_ssr_ex_cause for guess in target/hexagon/hex_interrupts.c
+
+    let new_ssr = Ssr::new_with_raw_value(
+        cpu.read_register::<u32>(HexagonRegister::Ssr)
+            .with_context(|| "couldn't read ssr")?,
+    )
+    .with_ex(true);
+
+    cpu.write_register(HexagonRegister::Ssr, new_ssr.raw_value())
+        .with_context(|| "couldn't set SSR.EX = 1")?;
 
     info!("interrupt jumping to {jump_point:x}");
 

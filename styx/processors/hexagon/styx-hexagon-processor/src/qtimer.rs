@@ -44,7 +44,7 @@ const QTIMER_FREQ: u32 = 19200000;
 const QDSP_FREQ: u32 = 729600000;
 const QTIMER_NUM_TIMERS: u64 = 8;
 
-const PCYCLES_PER_PACKET: u64 = 4;
+const PCYCLES_PER_PACKET: u64 = 4 * 200;
 
 /// D5.7.6 ARM manual
 #[bitfield(u32, default = 0x0, debug)]
@@ -206,10 +206,11 @@ impl QTimerFrame {
         self.write_timer_value(mmu, tick_amount)?;
 
         trace!(
-            "timer number is {} counter is {} compare value is {} istatus is {}",
+            "timer number is {} counter is {} compare value is {} enable is {} istatus is {}",
             self.frame_number,
             self.counter,
             self.compare_value,
+            self.enabled,
             self.istatus
         );
 
