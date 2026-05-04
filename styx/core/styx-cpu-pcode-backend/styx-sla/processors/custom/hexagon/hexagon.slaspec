@@ -44969,6 +44969,15 @@ gp: reloc is epsilon [ reloc = 0; ] {
     res = half_s + half_t;
     goto <write>;
 <saturate>
+    # From Hexagon manual, 11.1.1 "Vector add halfwords":
+    #
+    # > If saturation occurs during execution of this instruction (a result is clamped to either
+    # maximum or minimum values), the OVF bit in the Status Register is set. OVF remains set until
+    # explicitly cleared by a transfer to SR. 
+    #
+    # So in this case, we set USR.OVF. USR is the C8 register, and we want to set the first bit (Ovf) to 1. 
+   
+    D_C8 = C8 | 1;
     res = 0xffff;    
     goto <write>;
 <write>
