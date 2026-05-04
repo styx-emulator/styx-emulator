@@ -6,10 +6,9 @@ use qtimer::QTimer;
 use styx_core::arch::hexagon::HexagonRegister;
 use styx_core::cpu::arch::hexagon::HexagonVariants;
 use styx_core::cpu::{Arch, Backend, CpuBackend, CpuBackendExt, PcodeBackendConfiguration};
-use styx_core::hooks::CoreHandle;
 use styx_core::loader::LoaderHints;
 use styx_core::memory::physical::PhysicalMemoryVariant;
-use styx_core::memory::{MemoryBackend, MemoryPermissions, Mmu};
+use styx_core::memory::{MemoryBackend, Mmu};
 use styx_core::prelude::{Context, Peripheral};
 use styx_core::{
     core::{
@@ -18,7 +17,6 @@ use styx_core::{
     },
     cpu::{ArchEndian, CpuBackendExt, HexagonPcodeBackend},
     errors::{anyhow, UnknownError},
-    hooks::{Hookable, StyxHook},
 };
 use tlb::HexagonTlb;
 
@@ -51,7 +49,7 @@ impl Default for HexagonBuilder {
 
 impl ProcessorImpl for HexagonBuilder {
     fn build(&self, args: &BuildProcessorImplArgs) -> Result<ProcessorBundle, UnknownError> {
-        let mut cpu = if let Backend::Pcode = args.backend {
+        let cpu = if let Backend::Pcode = args.backend {
             Box::new(HexagonPcodeBackend::new_engine_config(
                 self.variant.clone(),
                 ArchEndian::LittleEndian,
@@ -67,11 +65,7 @@ impl ProcessorImpl for HexagonBuilder {
             ));
         };
 
-        cpu.add_hook(StyxHook::interrupt(|proc: CoreHandle, interrupt: i32| {
-            l2vic::interrupt_handler(proc.cpu, proc.mmu, interrupt)
-        }))?;
-
-        let mut memory = match self.variant {
+        let memory = match self.variant {
             HexagonVariants::QDSP6V62 => MemoryBackend::new(PhysicalMemoryVariant::FlatMemory),
             _ => {
                 return Err(UnknownError::msg(

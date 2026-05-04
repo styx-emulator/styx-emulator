@@ -18,7 +18,7 @@ use styx_core::{
     cpu::{CpuBackend, CpuBackendExt, HexagonInterruptType},
     errors::UnknownError,
     event_controller::{ActivateIRQnError, InterruptExecuted, Peripherals},
-    hooks::CoreHandle,
+    hooks::{CoreHandle, StyxHook},
     memory::{MemoryBackend, Mmu},
     prelude::{
         log::{error, info, trace, warn},
@@ -625,6 +625,11 @@ impl EventControllerImpl for L2Vic {
         _mmu: &mut MemoryBackend,
     ) -> Result<(), UnknownError> {
         trace!("the hexagon l2vic has started");
+
+        cpu.add_hook(StyxHook::interrupt(|proc: CoreHandle, interrupt: i32| {
+            interrupt_handler(proc.cpu, proc.mmu, interrupt)
+        }))?;
+
         cpu.mem_write_hook(
             L2VIC_BASE,
             L2VIC_BASE + 0x1000,
