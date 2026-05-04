@@ -3,6 +3,7 @@
 
 use crate::arch_spec::hexagon::tests::*;
 use log::info;
+use styx_cpu_type::arch::hexagon::register_fields::Usr;
 use test_case::test_case;
 
 #[test_case(-392, 392; "negative_392")]
@@ -1061,8 +1062,7 @@ pub fn mask_all() {
     }
 }
 
-/// Some manual test cases in case the "corresponding u64" in the mask_all
-/// is computed wrong
+/// Quick test for not instruction.
 #[test_case(0x00, 0xff; "zero")]
 pub fn not(p0: u8, p0_expected: u8) {
     let (mut cpu, mut mmu, mut ev) = setup_objdump(
@@ -1139,13 +1139,24 @@ pub fn ct01_common(cpu: &mut dyn CpuBackend, mmu: &mut Mmu, ev: &mut EventContro
 }
 
 pub fn vadduh_sat_setup() -> (HexagonPcodeBackend, Mmu, EventController) {
-    let (mut cpu, mut mmu, mut ev) = setup_objdump(
+    let (cpu, mmu, ev) = setup_objdump(
         r#"
 	0:	02 c1 60 f6	f660c102 { 	r2 = vadduh(r0,r1):sat }
 "#,
     );
     (cpu, mmu, ev)
 }
+
+/// Tests the "vector add unsigned halfword" instruction.
+///
+/// In Hexagon manual section 11.1.1, "Vector add halfwords":
+/// "Add the two 16-bit halfwords of Rs to the two 16-bit halfwords of Rt.
+/// The results are optionally saturated to signed or unsigned 16-bit values."
+/// This tests the version with saturate. Tests cases are implemented in the
+/// two functions below, `vadduh_sat_hardcode` and `vadduh_sat_loops`.
+///
+/// The manual (same place as before) specifies that in case of overflow, the
+/// USR.OVF flag should be set, so we test this as well.
 pub fn vadduh_sat_test(
     cpu: &mut dyn CpuBackend,
     mmu: &mut Mmu,
@@ -1156,7 +1167,10 @@ pub fn vadduh_sat_test(
     // Go back to beginning
     cpu.set_pc(0x1000).unwrap();
 
-    info!("left {:x?} right {:x?}", left, right);
+    // Reset USR register (containing Ovf)
+    cpu.write_register(HexagonRegister::Usr, 0u32).unwrap();
+
+    info!("left {left:x?} right {right:x?}");
 
     let pack = |val: [u16; 2]| -> u32 { ((val[0] as u32) << 16) | (val[1] as u32) };
     let unpack = |val: u32| -> [u16; 2] { [(val >> 16) as u16, val as u16] };
@@ -1169,13 +1183,19 @@ pub fn vadduh_sat_test(
     assert_eq!(exit.exit_reason, TargetExitReason::InstructionCountComplete);
 
     // compute result
-    let result = [
+    let expect = [
         left[0].saturating_add(right[0]),
         left[1].saturating_add(right[1]),
     ];
 
+    let ovf_expect =
+        left[0].checked_add(right[0]).is_none() || left[1].checked_add(right[1]).is_none();
+
     let r2_result = cpu.read_register::<u32>(HexagonRegister::R2).unwrap();
-    assert_eq!(unpack(r2_result), result);
+    let ovf_result =
+        Usr::new_with_raw_value(cpu.read_register::<u32>(HexagonRegister::Usr).unwrap()).ovf();
+    assert_eq!(unpack(r2_result), expect);
+    assert_eq!(ovf_result, ovf_expect);
 }
 
 #[test_case([0xabab, 0xffff], [0xffff, 0x1])]
@@ -1189,6 +1209,12 @@ pub fn vadduh_sat_hardcode(left: [u16; 2], right: [u16; 2]) {
 #[test]
 pub fn vadduh_sat_loops() {
     let (mut cpu, mut mmu, mut ev) = vadduh_sat_setup();
+    // The inputs to vadduh are two source and two destination 16-bit values.
+    // See 11.1.1 "Vector add halfwords" in Hexagon ISA manual.
+    // The steps chosen here are somewhat arbitrary but chosen in a way
+    // that the test doesn't take too long. 0x3c1 ends with 1 to potentially
+    // vary the last few bits to ensure addition is working over a variety of
+    // bit patterns.
     for i in (0..0xffff).step_by(0xe4) {
         for j in (0..0xffff).step_by(0x3c1) {
             vadduh_sat_test(

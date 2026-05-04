@@ -74,6 +74,32 @@ fn test_two_loads() {
     assert_eq!(r4, VAL);
 }
 
+/// Tests an instruction that:
+/// 1. After the packet executes, sets R16 to R16 + 8
+/// 2. Reads 4 bytes from address R16 to R0. Since (1)
+///    only causes R16 to be set at the end of the
+///    packet, this instruction uses the original value
+///    of R16.
+///
+/// The issue with this packet was that in a duplex, registers are encoded
+/// such that R6 is 0b0110, R7 is as 0b0111. You would expect R8 to be 0b1000, but there
+/// is a gap skipping R8 to R15 (see table 10-3 in Hexagon manual). So 0b1000 is actually R16,
+/// 0b1001 is R17, etc.
+///
+/// The duplex encoding gap is handled for registers that are _only_ a source reg or destination reg.
+/// Calculating the destination register space location for a duplex reg that is _only_ a destination register
+/// is also straightforward. See "attach variables" sections in hexagon.slaspec.
+///
+/// However, computing the destination register space location for a reg that is
+/// _both_ a source and dest register (Rx prefixed in encoding) uses the encoding
+/// directly. The SLASPEC used to compute the location in the destination register space by doing
+/// eg. REG_SPACE_START+(0b1000*4) [4 is the size in bytes of a register],
+/// which is wrong and gives us the destination register space location for R8, not R16,
+/// so the register R16 would never be written.
+///
+/// This is now fixed, but this test exists to make sure this works as expected.
+///
+/// The memory read is there to make this a duplex.
 #[test]
 fn broken_duplex_add() {
     let (mut cpu, mut mmu, mut ev) = setup_objdump(
@@ -98,6 +124,9 @@ fn broken_duplex_add() {
     assert_eq!(r16, R16ADDR + 8);
 }
 
+/// See explanation for `broken_duplex_add`. This tests the same issue again, but for the only
+/// other instruction in the SLASPEC with a duplex register that serves as both source and
+/// destination.
 #[test]
 fn broken_duplex_reg_add() {
     let (mut cpu, mut mmu, mut ev) = setup_objdump(

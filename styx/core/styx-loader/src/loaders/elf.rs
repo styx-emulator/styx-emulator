@@ -201,6 +201,12 @@ pub(crate) fn load_elf(
             let src_mem_range = (ph.p_offset as usize)..((ph.p_offset + src_size) as usize);
             trace!("PT_load segment {i_ph} range is {src_mem_range:x?}");
 
+            // don't add segments that are of size zero
+            if src_size == 0 {
+                trace!("skipping segment of size zero");
+                continue;
+            }
+
             let mut src_data = data
                 .get(src_mem_range)
                 .ok_or_else(|| {
