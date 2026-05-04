@@ -472,10 +472,10 @@ version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec187a89ab07e209270175faf9e07ceb2755d984954e58a2296e325ddece2762"
 dependencies = [
-  "arbitrary-int",
-  "proc-macro2",
-  "quote",
-  "syn 2.0.117",
+ "arbitrary-int",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.117",
 ]
 
 [[package]]
@@ -2519,14 +2519,6 @@ name = "hex"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
-
-[[package]]
-name = "hexagonfw"
-version = "0.1.0"
-dependencies = [
- "styx-emulator",
- "styx-workspace-hack",
-]
 
 [[package]]
 name = "hkdf"
@@ -6360,9 +6352,9 @@ dependencies = [
 name = "styx-hexagon-processor"
 version = "1.2.0"
 dependencies = [
+ "arbitrary-int",
+ "bitbybit",
  "derivative",
- "arbitrary-int 1.3.0",
- "bitbybit 1.4.0",
  "serde",
  "styx-core",
  "styx-workspace-hack",
@@ -6389,6 +6381,7 @@ dependencies = [
  "styx-emulator",
  "styx-hexagon-testdata",
  "styx-workspace-hack",
+ "test-case",
 ]
 
 [[package]]

@@ -12,9 +12,17 @@ use styx_emulator::cpu::TargetExitReason;
 use styx_emulator::prelude::logging::init_logging;
 use styx_emulator::prelude::styx_async::sync::broadcast;
 use styx_emulator::prelude::Forever;
-use styx_hexagon_testdata::TestData;
+use styx_hexagon_testdata::{hexagon_tests, TestData};
+use test_case::test_case;
 
-#[allow(unused)]
+#[test_case(hexagon_tests::TEST_QTIMER)]
+#[test_case(hexagon_tests::TEST_QTIMER_TEST)]
+#[test_case(hexagon_tests::TEST_TIMER_REG)]
+#[test_case(hexagon_tests::TEST_FASTINT)]
+#[test_case(hexagon_tests::TEST_FASTL2VIC)]
+#[test_case(hexagon_tests::TEST_LEVELINT)]
+#[test_case(hexagon_tests::TEST_CIAD_SIAD)]
+#[test_case(hexagon_tests::TEST_PENDALOT)]
 fn test_qemu_hexagon_testing_unittests(test: TestData) {
     init_logging();
 

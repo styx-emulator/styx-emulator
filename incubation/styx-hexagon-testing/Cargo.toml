@@ -4,7 +4,7 @@ version = "0.1.0"
 edition.workspace = true
 
 [features]
-hexagon-tests = ["dep:styx-hexagon-testdata"]
+hexagon-tests = ["dep:styx-hexagon-testdata", "dep:test-case"]
 disable-hexagon-tests = []
 
 [dependencies]
@@ -13,6 +13,7 @@ styx-workspace-hack = { version = "0.1", path = "../../styx/workspace-hack" }
 styx-hexagon-testdata = { path = "../../data/test-binaries/styx-hexagon-testdata", features = [
   "hexagon-tests",
 ], optional = true }
+test-case = { workspace = true, optional = true }
 
 # External
 clap = { workspace = true }

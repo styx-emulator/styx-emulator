@@ -8,8 +8,12 @@
 //! It appears that the l2vic (QEMU) describes that
 //! all interrupts go to VID 0, which is IRQ 2.
 
+use std::sync::Arc;
+
 use arbitrary_int::*;
 use bitbybit::{bitenum, bitfield};
+use styx_core::processor::Config;
+use styx_core::sync::styx_async::sync::broadcast;
 use styx_core::{
     arch::hexagon::{
         register_fields::{Ipendad, Ssr},
@@ -26,17 +30,13 @@ use styx_core::{
     },
 };
 
-use crate::angel;
+use crate::write_cfgtable_field;
+use crate::{angel, config::HexagonProcessorConfig};
 
-const SUBSYSTEM_BASE: u64 = 0xfc900000;
-
-const L2VIC_BASE: u64 = SUBSYSTEM_BASE + L2VIC_OFFSET;
+const FASTL2VIC_CFGTABLE_OFFSET: u64 = 0x28;
 const L2VIC_OFFSET: u64 = 0x10000;
 const L2VIC_NUM_SLOTS: u64 = 32;
 const L2VIC_CONFIG_START: u64 = 0x100;
-const L2VIC_VID_IRQ_BASE: u64 = 2;
-
-const FASTL2VIC_BASE: u64 = 0x57e0000;
 
 /// The l2vic can handle 32 interrupts.
 /// Each of these interrupts are configured
@@ -197,12 +197,12 @@ fn l2vic_mmio_read_hook(
     data: &mut [u8],
 ) -> Result<(), UnknownError> {
     let l2vic = proc.event_controller.get_impl::<L2Vic>()?;
-    let (register, slot) = l2vic_get_register_slot(address);
+    let (register, slot) = l2vic_get_register_slot(l2vic.l2vic_base(), address);
 
     error!(
-        "l2vic base reading at 0x{address:x} and size 0x{size:x} with data {data:x?}, register {register:?} slot {slot} pc is {:x?}",
-        proc.cpu.pc()
-    );
+         "l2vic base reading at 0x{address:x} and size 0x{size:x} with data {data:x?}, register {register:?} slot {slot} pc is {:x?}",
+         proc.cpu.pc()
+     );
 
     match register {
         Ok(L2VicRegister::Enable) => {
@@ -233,7 +233,7 @@ fn l2vic_mmio_write_hook(
     data: &[u8],
 ) -> Result<(), UnknownError> {
     let l2vic = proc.event_controller.get_impl::<L2Vic>()?;
-    let (register, slot) = l2vic_get_register_slot(address);
+    let (register, slot) = l2vic_get_register_slot(l2vic.l2vic_base(), address);
 
     // All the values are 32 bits, see QEMU l2vic.c and
     // L2VICState.
@@ -257,15 +257,15 @@ fn l2vic_mmio_write_hook(
     Ok(())
 }
 
-fn l2vic_get_register_slot(address: u64) -> (Result<L2VicRegister, u16>, usize) {
+fn l2vic_get_register_slot(l2vic_base: u64, address: u64) -> (Result<L2VicRegister, u16>, usize) {
     // Compute the register that we are writing to and the interrupt number
     let register = L2VicRegister::new_with_raw_value(
-        ((address - L2VIC_BASE - L2VIC_CONFIG_START) / (L2VIC_NUM_SLOTS * 4)) as u16,
+        ((address - l2vic_base - L2VIC_CONFIG_START) / (L2VIC_NUM_SLOTS * 4)) as u16,
     );
 
     // This finds the "offset" into the register array. Since each register value
     // is 4 bytes, we divide by four to get the actual interrupt number.
-    let slot = (((address - L2VIC_BASE - L2VIC_CONFIG_START) % (L2VIC_NUM_SLOTS * 4)) / 4) as usize;
+    let slot = (((address - l2vic_base - L2VIC_CONFIG_START) % (L2VIC_NUM_SLOTS * 4)) / 4) as usize;
 
     (register, slot)
 }
@@ -273,6 +273,12 @@ fn l2vic_get_register_slot(address: u64) -> (Result<L2VicRegister, u16>, usize) 
 pub struct L2Vic {
     slots: [L2VicSlot; L2VIC_NUM_SLOTS as usize],
     vid: u32,
+    /// Only initialized during init() when we have the processor config.
+    l2vic_base: Option<u64>,
+    vid_irq_base: Option<u64>,
+    fastl2vic_base: Option<u64>,
+    // Convenience for semihosting interface
+    semihosting_tx: Option<Arc<broadcast::Sender<u8>>>,
 }
 
 impl Default for L2Vic {
@@ -280,6 +286,12 @@ impl Default for L2Vic {
         Self {
             slots: Default::default(),
             vid: u32::MAX,
+
+            // Only initialized during init() when we have the processor config.
+            l2vic_base: None,
+            vid_irq_base: None,
+            fastl2vic_base: None,
+            semihosting_tx: None,
         }
     }
 }
@@ -344,6 +356,26 @@ impl L2VicSlot {
 }
 
 impl L2Vic {
+    fn semihosting_tx(&self) -> Arc<broadcast::Sender<u8>> {
+        self.semihosting_tx
+            .as_ref()
+            .expect("l2vic doesn't have semihosting tx!! check proc config")
+            .clone()
+    }
+
+    fn l2vic_base(&self) -> u64 {
+        self.l2vic_base
+            .expect("couldn't get l2vic base, expected to be set in init")
+    }
+    fn fastl2vic_base(&self) -> u64 {
+        self.fastl2vic_base
+            .expect("couldn't get fastl2vic base, expected to be set in init")
+    }
+    fn vid_irq_base(&self) -> u64 {
+        self.vid_irq_base
+            .expect("couldn't get vid_irq_base base, expected to be set in init")
+    }
+
     fn handle_register_write(
         &mut self,
         register: L2VicRegister,
@@ -375,6 +407,7 @@ impl L2Vic {
                 self.slots[slot].int_type = data;
             }
             L2VicRegister::Clear => {
+                // wrong
                 self.slots[slot].clear = data;
             }
             L2VicRegister::SoftInt => {
@@ -577,7 +610,7 @@ impl EventControllerImpl for L2Vic {
 
         // We also need to set the SSR cause to the VID
         // See qemu_irq_pulse in hw/intc/l2vic.c in QUIC QEMU
-        let irq_base_offset = L2VIC_VID_IRQ_BASE + vid_n;
+        let irq_base_offset = self.vid_irq_base() + vid_n;
         let ssr = Ssr::new_with_raw_value(cpu.read_register::<u32>(HexagonRegister::Ssr).unwrap())
             .with_cause(irq_base_offset as u8);
         cpu.write_register(HexagonRegister::Ssr, ssr.raw_value())
@@ -622,31 +655,57 @@ impl EventControllerImpl for L2Vic {
     fn init(
         &mut self,
         cpu: &mut dyn CpuBackend,
-        _mmu: &mut MemoryBackend,
+        mmu: &mut MemoryBackend,
+        config: &mut Config,
     ) -> Result<(), UnknownError> {
-        trace!("the hexagon l2vic has started");
+        let proc_cfg = config.get::<HexagonProcessorConfig>().expect("You need to provide a hexagon process configuration in processor config to initialize l2vic");
+        let l2vic_cfg = &proc_cfg.l2vic_config;
 
+        let l2vic_base = proc_cfg.subsystem_base + L2VIC_OFFSET;
+        let fastl2vic_base = l2vic_cfg.fastl2vic_base;
+
+        write_cfgtable_field(
+            cpu,
+            mmu,
+            FASTL2VIC_CFGTABLE_OFFSET,
+            (fastl2vic_base >> 16) as u32,
+        );
+
+        self.l2vic_base = Some(l2vic_base);
+        self.fastl2vic_base = Some(fastl2vic_base);
+        self.vid_irq_base = Some(l2vic_cfg.vid_irq_base);
+
+        self.semihosting_tx = proc_cfg.semihosting_tx.as_ref().map(|tx| tx.clone());
         cpu.add_hook(StyxHook::interrupt(|proc: CoreHandle, interrupt: i32| {
-            interrupt_handler(proc.cpu, proc.mmu, interrupt)
+            // L2Vic contains the TX channel
+            let semihosting_tx = proc
+                .event_controller
+                .get_impl::<L2Vic>()
+                .with_context(|| "couldn't get l2vic in Styx syncrhonous interrupt handler")?
+                .semihosting_tx();
+
+            interrupt_handler(proc.cpu, proc.mmu, interrupt, Some(semihosting_tx))
         }))?;
 
         cpu.mem_write_hook(
-            L2VIC_BASE,
-            L2VIC_BASE + 0x1000,
+            l2vic_base,
+            l2vic_base + 0x1000,
             Box::new(l2vic_mmio_write_hook),
         )?;
 
         cpu.mem_read_hook(
-            L2VIC_BASE,
-            L2VIC_BASE + 0x1000,
+            l2vic_base,
+            l2vic_base + 0x1000,
             Box::new(l2vic_mmio_read_hook),
         )?;
 
         cpu.mem_write_hook(
-            FASTL2VIC_BASE,
-            FASTL2VIC_BASE + 0x4,
+            fastl2vic_base,
+            fastl2vic_base + 0x4,
             Box::new(fastl2vic_mmio_write_hook),
         )?;
+
+        info!("the hexagon l2vic has started");
 
         Ok(())
     }
@@ -676,7 +735,7 @@ pub fn async_interrupt_handler(
     cpu.write_register(HexagonRegister::Ipendad, ipendad.raw_value())
         .with_context(|| "couldn't write ipendad")?;
 
-    interrupt_handler(cpu, mmu, interrupt_number)
+    interrupt_handler(cpu, mmu, interrupt_number, None)
 }
 
 /// WARN: this should always be triggered at the end of a packet, after the pc has
@@ -687,6 +746,8 @@ pub fn interrupt_handler(
     cpu: &mut dyn CpuBackend,
     mmu: &mut Mmu,
     interrupt_number: ExceptionNumber,
+    // Only used for synchronous interrupts, so can be None in asynchronous ones.
+    semihosting_tx: Option<Arc<broadcast::Sender<u8>>>,
 ) -> Result<(), UnknownError> {
     // Get cause, if the cause is 0 with a Trap0 call, then we need to do the angel stuff
     let ssr = Ssr::new_with_raw_value(
@@ -704,7 +765,15 @@ pub fn interrupt_handler(
             .read_register::<u32>(HexagonRegister::R1)
             .with_context(|| "couldn't read r1 in interrupt")?;
 
-        angel::handle_angel(cpu, mmu, swi_no, arg)?;
+        // Get semihosting tx from event controller
+
+        angel::handle_angel(
+            cpu,
+            mmu,
+            swi_no,
+            arg,
+            semihosting_tx.expect("Expected a semihosting TX for angel calls"),
+        )?;
 
         // There are some mailboxes in trap0 that are
         // used depending on the hexagon runtime

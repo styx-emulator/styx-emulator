@@ -4,18 +4,20 @@
 use l2vic::L2Vic;
 use qtimer::QTimer;
 use styx_core::arch::hexagon::HexagonRegister;
+
 use styx_core::cpu::arch::hexagon::HexagonVariants;
 use styx_core::cpu::{Arch, Backend, CpuBackend, CpuBackendExt, PcodeBackendConfiguration};
 use styx_core::loader::LoaderHints;
 use styx_core::memory::physical::PhysicalMemoryVariant;
-use styx_core::memory::{MemoryBackend, Mmu};
+use styx_core::memory::{MemoryBackend, MemoryPermissions, Mmu};
+use styx_core::prelude::log::info;
 use styx_core::prelude::{Context, Peripheral};
 use styx_core::{
     core::{
         builder::{BuildProcessorImplArgs, ProcessorImpl},
         ProcessorBundle,
     },
-    cpu::{ArchEndian, CpuBackendExt, HexagonPcodeBackend},
+    cpu::{ArchEndian, HexagonPcodeBackend},
     errors::{anyhow, UnknownError},
 };
 use tlb::HexagonTlb;
@@ -23,7 +25,6 @@ use tlb::HexagonTlb;
 mod angel;
 mod cfgtable;
 mod config;
-mod exception;
 mod l2vic;
 mod qtimer;
 mod tlb;
@@ -49,7 +50,7 @@ impl Default for HexagonBuilder {
 
 impl ProcessorImpl for HexagonBuilder {
     fn build(&self, args: &BuildProcessorImplArgs) -> Result<ProcessorBundle, UnknownError> {
-        let cpu = if let Backend::Pcode = args.backend {
+        let mut cpu = if let Backend::Pcode = args.backend {
             Box::new(HexagonPcodeBackend::new_engine_config(
                 self.variant.clone(),
                 ArchEndian::LittleEndian,
@@ -65,7 +66,7 @@ impl ProcessorImpl for HexagonBuilder {
             ));
         };
 
-        let memory = match self.variant {
+        let mut memory = match self.variant {
             HexagonVariants::QDSP6V62 => MemoryBackend::new(PhysicalMemoryVariant::FlatMemory),
             _ => {
                 return Err(UnknownError::msg(
@@ -101,15 +102,12 @@ impl ProcessorImpl for HexagonBuilder {
             write_cfgtable_field(cpu.as_mut(), &mut memory, *cfgbase_entry as u64, *value);
         }
 
-        let peripherals: Vec<Box<dyn Peripheral>> = Vec::new();
-
         // Peripherals may use this
         memory
             .memory_map(0x100000000, 0x40000000, MemoryPermissions::all())
             .with_context(|| "couldn't add memory region for peripherals")?;
 
         let l2vic = Box::new(L2Vic::default());
-
         let peripherals: Vec<Box<dyn Peripheral>> = vec![Box::new(QTimer::default())];
 
         let mut hints = LoaderHints::new();
@@ -172,7 +170,6 @@ pub fn read_cfgtable_field(
         .with_context(|| "couldn't read cfgbase")? as u64;
 
     let cfgtable_offset_addr: u64 = (cfgbase << 16) + offset;
-
     mmu.read_u32_le_phys_data(cfgtable_offset_addr)
         .with_context(|| "couldn't read offset from cfg table")
 }
