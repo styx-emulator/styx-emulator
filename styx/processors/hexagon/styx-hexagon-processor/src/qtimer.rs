@@ -15,7 +15,7 @@ use styx_core::{
     hooks::CoreHandle,
     memory::Mmu,
     prelude::{
-        log::{error, info, trace},
+        log::{debug, info, trace},
         Context, EventControllerImpl, ExceptionNumber, Peripheral,
     },
 };
@@ -206,7 +206,7 @@ impl QTimerFrame {
         self.write_timer_value(mmu, tick_amount)?;
 
         trace!(
-            "timer number is {} counter is {} compare value is {} enable is {} istatus is {}",
+            "(tick inner) timer number is {} counter is {} compare value is {} enable is {} istatus is {}",
             self.frame_number,
             self.counter,
             self.compare_value,
@@ -232,16 +232,14 @@ impl QTimerFrame {
 
             // The frame number corresponds to the IRQ.
             event_controller.latch(self.frame_number as ExceptionNumber + QTIMER_IRQ_OFFSET)?;
-            info!(
+            debug!(
                 "Ring ring, I am timer number {}, my and we latched {}.",
                 self.frame_number,
                 self.frame_number as ExceptionNumber + QTIMER_IRQ_OFFSET
             );
-
-            // todo!("Ring ring! The timer went off, but we haven't implemented that yet ):")
         }
 
-        trace!("total ticks in counter {}", self.counter);
+        trace!("(tick inner) total ticks in counter {}", self.counter);
         Ok(())
     }
 
@@ -357,7 +355,7 @@ fn qtimer_mmio_write_hook(
     if offset < 0x1000 {
         let qtimer_register = QTimerCNTCTLBaseFrame::new_with_raw_value(offset as u16);
 
-        error!(
+        trace!(
             "accessed CNTCTL offset {offset} size {size} access_type WRITE data {data:x?} reg {qtimer_register:?} pc {pc:x}",
         );
 
@@ -367,7 +365,7 @@ fn qtimer_mmio_write_hook(
         );
 
         match qtimer_register {
-            Ok(QTimerCNTCTLBaseFrame::CntFrq) => info!(
+            Ok(QTimerCNTCTLBaseFrame::CntFrq) => debug!(
                 "the system set the frequency to {data_u32:x}, system frequency is {:x}",
                 timer_periph.freq
             ),
@@ -378,7 +376,7 @@ fn qtimer_mmio_write_hook(
                     // Get which control access register. Each register is 4 bytes
                     // TODO enforce secure acces to this based on the secure register stuff.
                     let cntacr_num = (matched_off - CNT_ACR_START) / 4;
-                    info!("writing to CNT ACR number {cntacr_num}");
+                    debug!("writing to CNT ACR number {cntacr_num}");
                     timer_periph.control_access_registers[cntacr_num as usize] =
                         u32::from_le_bytes(data.try_into().with_context(|| {
                             "couldn't get control access register values as u32"
@@ -401,7 +399,7 @@ fn qtimer_mmio_write_hook(
                 .with_context(|| "couldn't turn data into u32")?,
         );
 
-        error!(
+        trace!(
             "accessed base N {base_n} timer_offset {timer_offset} size {size} access_type WRITE data {data:x?} reg {qtimer_register:?} pc {pc:x}",
         );
 
@@ -410,7 +408,7 @@ fn qtimer_mmio_write_hook(
                 // This is a timer value. This means B8.1.5 "Operation of the TimerValue views of the timers"
                 // takes effect, so the value here is decremented at the frequency given until it reaches zero,
                 // at which point an event (an interrupt) is triggered.
-                info!("the timer value (as opposed to compare value) is equal to {data_u32:x}. COUNTING DOWN.");
+                debug!("the timer value (as opposed to compare value) is equal to {data_u32:x}. COUNTING DOWN.");
 
                 // We must also set CompareValue. See the write effect on CompareValue for
                 // "Operation of the TimerValue views of the timers" in B8.1.5.
@@ -430,7 +428,7 @@ fn qtimer_mmio_write_hook(
             // the event at that point.
             // TODO: this requires testing.
             Ok(QTimerCNTBaseNFrame::CntpCvalLo | QTimerCNTBaseNFrame::CntpCvalHi) => {
-                info!(
+                debug!(
                     "the compare value LO/HI (as opposed to timer value) is equal to {data_u32:x}, the timer register is {qtimer_register:?}"
                 );
                 let (new_data_replace, data_mask) = match qtimer_register {
@@ -453,7 +451,7 @@ fn qtimer_mmio_write_hook(
                 let new_compare_value = (timer_periph.timer_frames[base_n].compare_value
                     & data_mask)
                     | new_data_replace;
-                info!(
+                debug!(
                     "writing new Compare Value as {new_compare_value:x}, old was {:x}",
                     timer_periph.timer_frames[base_n].compare_value
                 );
@@ -464,7 +462,7 @@ fn qtimer_mmio_write_hook(
             }
             Ok(QTimerCNTBaseNFrame::CntpCtl) => {
                 let register_value = QTimerCNTPCTL::new_with_raw_value(data_u32);
-                info!("the control value was set to {register_value:?}");
+                debug!("the control value was set to {register_value:?}");
 
                 timer_periph.timer_frames[base_n].enabled = register_value.enable();
                 timer_periph.timer_frames[base_n].imask = register_value.imask();
@@ -498,7 +496,7 @@ impl Peripheral for QTimer {
         // but this is what we must do.
         // see SIU in powerquicc
         // just have a cfgbase handle here
-        info!("We initialize the hook for cfgbase.");
+        // info!("We initialize the hook for cfgbase.");
         /*let cfgbase = proc
             .core
             .cpu
@@ -538,7 +536,7 @@ impl Peripheral for QTimer {
         _cpu: &mut dyn styx_core::prelude::CpuBackend,
         _mmu: &mut styx_core::prelude::Mmu,
     ) -> Result<(), styx_core::prelude::UnknownError> {
-        info!("the qtimer was reset");
+        info!("QTimer was reset.");
         Ok(())
     }
 
