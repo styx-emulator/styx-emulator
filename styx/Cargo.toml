@@ -81,3 +81,4 @@ unicorn-backend = [
   "styx-core/unicorn-backend",
   "styx-processors/unicorn-backend",
 ]
+hexagon-clade = ["styx-processors/hexagon-clade"]

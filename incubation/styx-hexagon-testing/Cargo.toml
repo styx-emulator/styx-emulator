@@ -1,0 +1,13 @@
+[package]
+name = "hexagonfw"
+version = "0.1.0"
+edition.workspace = true
+
+[profile.release]
+debug = true
+
+[dependencies]
+styx-emulator = { workspace = true, features = ["hexagon-clade"] }
+styx-workspace-hack = { version = "0.1", path = "../../styx/workspace-hack" }
+
+clap = { workspace = true }

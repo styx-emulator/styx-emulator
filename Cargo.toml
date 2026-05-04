@@ -68,6 +68,7 @@ members = [
   "./styx/generated/styx-stm32f405-sys",
   "./styx/generated/styx-stm32f745-sys",
   "./styx/generated/styx-blackfin-sys",
+  "./styx/generated/styx-hexagon-sys",
   "./styx/integration-tests",
   "./styx/peripherals",
   "./styx/peripherals/styx-base-clock",
@@ -250,6 +251,7 @@ heck = "0.5.0"
 bitfield-struct = "0.9.2"
 bitbybit = "1.4.0"
 binrw = "0.14.1"
+bitvec = "1.0.1"
 num_enum = "0.7.3"
 tap = "1.0.1"
 toml_edit = "0.25.2"
@@ -299,7 +301,7 @@ bitflags_serde_shim = "0.2.5"
 
 # bindings
 pyo3 = "0.25.0"
-bindgen = "0.70.1"
+bindgen = "0.72"
 
 # async
 futures = "0.3.31"
