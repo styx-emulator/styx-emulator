@@ -76,5 +76,14 @@ compile_commands.json
 # faux cargo home
 .cargo-home
 
+# emacs backup files
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
 # helix editor configuration
 .helix/
