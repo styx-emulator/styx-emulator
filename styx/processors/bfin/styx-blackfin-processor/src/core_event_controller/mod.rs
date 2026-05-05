@@ -177,6 +177,7 @@ impl EventControllerImpl for CoreEventController {
         &mut self,
         cpu: &mut dyn CpuBackend,
         _mmu: &mut MemoryBackend,
+        _config: &mut Config,
     ) -> Result<(), UnknownError> {
         register_hooks(cpu)?;
         Ok(())

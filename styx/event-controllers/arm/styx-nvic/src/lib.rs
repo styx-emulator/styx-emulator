@@ -509,6 +509,7 @@ impl EventControllerImpl for Nvic {
         &mut self,
         cpu: &mut dyn CpuBackend,
         mmu: &mut MemoryBackend,
+        _config: &mut Config,
     ) -> Result<(), UnknownError> {
         self.register_hooks(cpu, mmu)?;
         self.reset_state(cpu, mmu)?;

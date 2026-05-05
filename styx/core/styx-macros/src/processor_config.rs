@@ -10,7 +10,6 @@ pub fn derive_processor_config(input: TokenStream) -> TokenStream {
 
     let mut trait_path = crate::styx_manifest::StyxManifest::shared(|m| m.get_processor_path());
     trait_path.segments.push(format_ident!("processor").into());
-    trait_path.segments.push(format_ident!("config").into());
     trait_path
         .segments
         .push(format_ident!("ProcessorConfig").into());

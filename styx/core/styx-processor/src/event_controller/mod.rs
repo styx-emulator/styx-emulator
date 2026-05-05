@@ -23,6 +23,7 @@ use crate::{
     cpu::CpuBackend,
     executor::Delta,
     memory::{MemoryBackend, Mmu},
+    processor::Config,
 };
 
 pub type ExceptionNumber = i32;
@@ -93,6 +94,7 @@ pub trait EventControllerImpl: AsAny + Send {
         &mut self,
         cpu: &mut dyn CpuBackend,
         mmu: &mut MemoryBackend,
+        config: &mut Config,
     ) -> Result<(), UnknownError>;
 
     fn reset(&mut self, _cpu: &mut dyn CpuBackend, _mmu: &mut Mmu) -> Result<(), UnknownError> {

@@ -1,0 +1,63 @@
+name: hexagon-ci
+on:
+  pull_request:
+    # dont run if only docs change
+    paths:
+      - "data/test-binaries/styx-hexagon-testdata/**"
+      - "incubation/styx-hexagon-testing/**"
+      - "styx/core/**"
+      - "styx/processors/hexagon/styx-hexagon-processor/**"
+  push:
+    branches:
+      - main
+
+concurrency:
+  # Cancels pending runs when a PR gets updated.
+  group: ${{ github.head_ref || github.run_id }}-${{ github.actor }}-${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: hexagon testing
+    runs-on: self-hosted
+
+    steps:
+    - name: Checkout source code
+      uses: actions/checkout@v4
+
+    - name: Install prerequisites
+      shell: bash
+      run: |
+        sudo apt-get -y update
+        sudo apt-get install -y \
+           clang \
+           g++ \
+           pkg-config \
+           cmake \
+           curl \
+           git \
+           gdb-multiarch \
+           libclang-dev \
+           ninja-build \
+           wget \
+           cmake
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@v1
+      with:
+        toolchain: stable
+        components: ''
+
+    - uses: Swatinem/rust-cache@v2
+      with:
+        cache-bin: "false"
+
+    - name: Test
+      shell: bash
+      run: |
+        just hexagon-test --profile ci
+
+    - name: clean
+      shell: bash
+      run: |
+        cargo clean

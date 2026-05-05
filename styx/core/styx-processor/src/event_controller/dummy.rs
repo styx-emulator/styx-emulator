@@ -5,6 +5,7 @@ use styx_errors::UnknownError;
 use crate::{
     cpu::CpuBackend,
     memory::{MemoryBackend, Mmu},
+    processor::Config,
 };
 
 use super::{
@@ -58,6 +59,7 @@ impl EventControllerImpl for DummyEventController {
         &mut self,
         _cpu: &mut dyn CpuBackend,
         _mmu: &mut MemoryBackend,
+        _init: &mut Config,
     ) -> Result<(), UnknownError> {
         Ok(())
     }

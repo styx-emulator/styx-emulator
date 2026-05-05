@@ -10,6 +10,7 @@ use crate::{
     executor::{ConditionalExecutor, DefaultExecutor, Executor, ExecutorImpl, SingleStepExecutor},
     memory::{physical::MemoryBackend, Mmu},
     plugins::{Plugin, Plugins},
+    processor::Config,
 };
 
 type SyncTicker = Arc<Mutex<Ticker>>;
@@ -124,6 +125,7 @@ impl EventControllerImpl for SyncTicker {
         &mut self,
         _cpu: &mut dyn crate::cpu::CpuBackend,
         _mmu: &mut MemoryBackend,
+        _config: &mut Config,
     ) -> Result<(), styx_errors::UnknownError> {
         Ok(())
     }

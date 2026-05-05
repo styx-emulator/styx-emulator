@@ -11,6 +11,7 @@ use exception::*;
 use external_event_controller::ExternalEventController;
 use styx_core::event_controller::{ActivateIRQnError, Exception, OptionalFeatureError};
 use styx_core::prelude::*;
+use styx_core::processor::Config;
 use styx_core::{cpu::arch::ppc32::Ppc32Register, event_controller::InterruptExecuted};
 
 use tokio::runtime::Handle;
@@ -213,6 +214,7 @@ impl EventControllerImpl for CoreEventController {
         &mut self,
         cpu: &mut dyn CpuBackend,
         _mmu: &mut MemoryBackend,
+        _config: &mut Config,
     ) -> Result<(), UnknownError> {
         cpu.intr_hook(Box::new(hooks::interrupt_hook))?;
         cpu.add_hook(StyxHook::code(.., hooks::EventsContainerCodeHook))?;

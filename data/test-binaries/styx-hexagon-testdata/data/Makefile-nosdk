@@ -1,0 +1,144 @@
+##
+##  Copyright(c) 2019-2023 Qualcomm Innovation Center, Inc. All Rights Reserved.
+##
+##  This program is free software; you can redistribute it and/or modify
+##  it under the terms of the GNU General Public License as published by
+##  the Free Software Foundation; either version 2 of the License, or
+##  (at your option) any later version.
+##
+##  This program is distributed in the hope that it will be useful,
+##  but WITHOUT ANY WARRANTY; without even the implied warranty of
+##  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+##  GNU General Public License for more details.
+##
+##  You should have received a copy of the GNU General Public License
+##  along with this program; if not, see <http://www.gnu.org/licenses/>.
+##
+##
+## This file has modifications.
+##
+## Modifications:
+## - Lennon Anderson - 2025-08-20
+## - Ramesh Balaji   - 2026-04-29
+
+# For reference, this file is from: tests/tcg/hexagon/Makefile.target
+.PHONY: all
+
+CC = $(addprefix $(CCPATH),clang)
+AR = $(addprefix $(CCPATH),llvm-ar)
+RANLIB = $(addprefix $(CCPATH),llvm-ranlib)
+
+INCLUDES = -I standalone_systests -I standalone_systests/include -I standalone_systests/crt0
+
+CFLAGS += -Wno-incompatible-pointer-types -Wno-undefined-internal
+CFLAGS += -fno-unroll-loops -fno-stack-protector
+CFLAGS += -Wall -O2 -g -fno-strict-aliasing -mv71
+
+HEXFLAGS += -DLOG2VLEN=7 -DQDSP6SS_PUB_BASE=0xFE200000 -DCSR_BASE=0xfc900000 -DQTMR_FREQ=19200000 -DIRQ1=3 -DIRQ2=4
+
+ASSEMBLE_CFLAGS += -nostartfiles
+
+VPATH += standalone_systests/src
+VPATH += standalone_systests/crt0
+
+# General recipes
+
+OBJDIR = build/objs
+TESTDIR = build
+
+$(OBJDIR):
+	mkdir -p $(OBJDIR)
+
+$(OBJDIR)/%.o: %.c $(OBJDIR)
+	$(CC) -c $(CFLAGS) $(HEXFLAGS) $(INCLUDES) $< -o $@
+$(OBJDIR)/%.o: %.S $(OBJDIR)
+	$(CC) -c $(CFLAGS) $(INCLUDES) $^ -o $@
+
+# For the test cases
+$(TESTDIR)/%: $(OBJDIR)/%.o $(OBJDIR)/crt.a
+	$(CC) $(CFLAGS) $(ASSEMBLE_CFLAGS) $(OBJDIR)/crt.a $< -o $@
+
+# Build the runtime
+_CRTDEPS = min_libc.o int.o tlb.o crt0.o crt0_standalone.o pte.o # test-thread.o
+CRTDEPS = $(patsubst %, $(OBJDIR)/%, $(_CRTDEPS))
+$(OBJDIR)/crt.a: $(CRTDEPS) $(OBJDIR)
+	$(AR) qc $(OBJDIR)/crt.a $(CRTDEPS)
+	$(RANLIB) $(OBJDIR)/crt.a
+
+
+# Define the test cases
+
+HEX_TESTS = access
+HEX_TESTS += badva
+# HEX_TESTS += bestwait
+HEX_TESTS += checkforpriv
+HEX_TESTS += ciad-siad
+HEX_TESTS += dirent
+# HEX_TESTS += double_ex
+HEX_TESTS += fastint
+HEX_TESTS += fastl2vic
+HEX_TESTS += float_excp
+HEX_TESTS += fopen
+HEX_TESTS += framelimit
+HEX_TESTS += ftrunc
+HEX_TESTS += getcwd
+# HEX_TESTS += gregs
+# HEX_TESTS += hvx_64b
+# HEX_TESTS += hvx_ext
+# HEX_TESTS += hvx-multi
+# HEX_TESTS += hvx_nocoproc
+HEX_TESTS += hsv39_tlb
+# HEX_TESTS += inf-loop
+HEX_TESTS += int_range
+HEX_TESTS += invalid_insn_for_rev
+HEX_TESTS += invalid_opcode
+# HEX_TESTS += k0lock-syscfg
+# HEX_TESTS += k0lock
+HEX_TESTS += k0locklock
+HEX_TESTS += levelint
+HEX_TESTS += llsc_on_excp
+# HEX_TESTS += lock_timer_test
+# HEX_TESTS += lock_verify
+HEX_TESTS += memcpy
+HEX_TESTS += mmu_asids
+HEX_TESTS += mmu_cacheops
+HEX_TESTS += mmu_multi_tlb
+HEX_TESTS += mmu_overlap
+HEX_TESTS += mmu_page_size
+HEX_TESTS += mmu_permissions
+HEX_TESTS += multiple_writes
+# HEX_TESTS += pend_wake_wait
+HEX_TESTS += pendalot
+# HEX_TESTS += pmu
+# HEX_TESTS += qfloat_test
+HEX_TESTS += qtimer
+HEX_TESTS += qtimer_test
+# HEX_TESTS += reg-reads
+HEX_TESTS += reg-writes
+HEX_TESTS += rev
+HEX_TESTS += semihost
+HEX_TESTS += # standalone_hw          # Disabled: missing test_set_prio function
+# HEX_TESTS += standalone_vec
+# HEX_TESTS += start
+# HEX_TESTS += single_step
+# HEX_TESTS += swi
+# HEX_TESTS += swi2
+HEX_TESTS += swi_fs
+# HEX_TESTS += swi_wait               # Disabled: we should be able to make this work though (assert/pause)
+# HEX_TESTS += sys_atomics
+# HEX_TESTS += sys_reg_mut
+# HEX_TESTS += test-thread
+# HEX_TESTS += thread_scheduling
+HEX_TESTS += timer_reg
+# HEX_TESTS += tlblock
+HEX_TESTS += tlblocklock
+# HEX_TESTS += udma
+HEX_TESTS += unaligned
+# HEX_TESTS += vid-group
+HEX_TESTS += vid_reg
+HEX_TESTS += vm_test
+# HEX_TESTS += vtcm_error
+HEX_TESTS += # vwctrl                 # Disabled: missing Q6_mxmem2_bias_A intrinsic
+
+TESTS = $(patsubst %, $(TESTDIR)/%, $(HEX_TESTS))
+all: $(TESTS)

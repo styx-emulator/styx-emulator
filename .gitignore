@@ -87,3 +87,6 @@ tramp
 .\#*
 # helix editor configuration
 .helix/
+
+# emacs temporary files
+*~

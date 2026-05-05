@@ -349,7 +349,7 @@ impl<'a> ProcessorBuilder<'a> {
         let tlb = bundle.tlb;
 
         let mut event_controller_impl = bundle.event_controller;
-        event_controller_impl.init(cpu.as_mut(), &mut memory)?;
+        event_controller_impl.init(cpu.as_mut(), &mut memory, &mut self.config)?;
         let event_controller = EventController::new(event_controller_impl);
 
         let mmu = Mmu {
