@@ -27,6 +27,7 @@ members = [
   "./incubation/styx-pcs",
   "./incubation/styx-uconf",
   "./incubation/styx-uconf-cli",
+  "./incubation/styx-hexagon-testing",
   "./data/test-binaries",
   "./data/test-binaries/arm/big_endian_generic",
   "./data/test-binaries/styx-blackfin-testdata",

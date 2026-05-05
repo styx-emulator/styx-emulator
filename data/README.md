@@ -1,15 +1,17 @@
 # Data
 
-All static data to be included in builds, tests, or anything else should get added here
+Binaries for testing Styx's Hexagon support. Binaries here are built using the Docker container build process. See `build.rs` for more information on this process.
 
 ## Contents
 
-### gdb-xml
+### Data
 
-gdb target descriptions used by gdb server instances.
+There is some miscellaneous data that is in this crate.
 
-### test-binaries
+- `Makefile-nosdk`: work-in-progress Makefile that builds some (but not all) of the tests in qemu-hexagon-testing.
+- `build_ci.sh`: a shell script that fetches `qemu-hexagon-testing` and builds it. Used in the process of building the Docker container with the test binaries.
+- `hexagon-builder.Containerfile`: the file that specifies how to build the container image.
 
-Static test binaries used to validate emulator behavior, prefer new test binaries
-with source as opposed to embedding bytes / shellcode in tests (even if its documented
-bytecode).
+### qemu-hexagon-testing
+
+See https://github.com/qualcomm/qemu-hexagon-testing. The tests here test hexagon system functionality (eg. multithreading, MMU, semihosting, and more) along with peripherals (timer, interrupt controller, UART).

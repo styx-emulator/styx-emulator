@@ -176,3 +176,7 @@ docker *ARGS:
 # Pass all arguments to cargo
 cargo *ARGS:
     cargo {{ARGS}}
+
+# By default the hexagon tests are behind a feature flag, so we test them separately
+hexagon-test *ARGS:
+    cargo nextest run --package styx-hexagon-testing --features hexagon-tests --no-tests=warn {{ARGS}}

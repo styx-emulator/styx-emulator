@@ -1,0 +1,19 @@
+[package]
+name = "styx-hexagon-testing"
+version = "0.1.0"
+edition.workspace = true
+
+[features]
+hexagon-tests = ["dep:styx-hexagon-testdata"]
+disable-hexagon-tests = []
+
+[dependencies]
+styx-emulator = { workspace = true }
+styx-workspace-hack = { version = "0.1", path = "../../styx/workspace-hack" }
+styx-hexagon-testdata = { path = "../../data/test-binaries/styx-hexagon-testdata", features = [
+  "hexagon-tests",
+], optional = true }
+
+# External
+clap = { workspace = true }
+log = { workspace = true }

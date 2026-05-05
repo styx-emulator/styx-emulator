@@ -9,7 +9,7 @@ license = "GPL-2.0-or-later"
 workspace = true
 
 [features]
-binutils-tests = []
+hexagon-tests = []
 # This is a hack to disable the hexagon tests in the CI
 # when passing `--all-features` to cargo
 disable-hexagon-tests = []

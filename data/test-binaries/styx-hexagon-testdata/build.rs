@@ -19,8 +19,8 @@
 
 fn main() -> anyhow::Result<()> {
     // build bintutils tests
-    if cfg!(feature = "binutils-tests") && !cfg!(feature = "disable-hexagon-tests") {
-        docker_build::build_binutils_tests()?;
+    if cfg!(feature = "hexagon-tests") && !cfg!(feature = "disable-hexagon-tests") {
+        docker_build::build_hexagon_tests()?;
     }
 
     Ok(())
@@ -40,7 +40,7 @@ mod docker_build {
     use quote::{format_ident, quote};
     use thiserror::Error;
 
-    pub fn build_binutils_tests() -> anyhow::Result<()> {
+    pub fn build_hexagon_tests() -> anyhow::Result<()> {
         // build time directory for our compiled outputs
         let out_dir = env::var("OUT_DIR").with_context(|| "OUT_DIR not set")?;
 
@@ -73,9 +73,9 @@ mod docker_build {
 
         let test_str = tokens.to_string();
 
-        let out_file = Path::new(&out_dir).join("generated_binutils_binaries.rs");
+        let out_file = Path::new(&out_dir).join("generated_hexagon_binaries.rs");
         std::fs::write(out_file, test_str)
-            .with_context(|| "could not write generated binutils rust code")?;
+            .with_context(|| "could not write generated hexagon rust code")?;
 
         Ok(())
     }

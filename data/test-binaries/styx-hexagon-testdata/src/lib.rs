@@ -10,17 +10,17 @@
 //! The C tests return an int ro report status but have not investigated how this translates to
 //! baremetal.
 
-#[cfg(feature = "hexagon-binutils-tests")]
-pub mod binutils_tests {
-    //! Unit tests taken from binutils-gdb simulator.
+#[cfg(feature = "hexagon-tests")]
+pub mod hexagon_tests {
+    //! Unit tests taken qemu-hexagon-testing (from Qualcomm)
     #[cfg(not(feature = "disable-hexagon-tests"))] // hack for when using `--all-features`
     use super::TestData;
 
     #[cfg(not(feature = "disable-hexagon-tests"))] // hack for when using `--all-features`
-    include!(concat!(env!("OUT_DIR"), "/generated_binutils_binaries.rs"));
+    include!(concat!(env!("OUT_DIR"), "/generated_hexagon_binaries.rs"));
 }
 
-#[allow(dead_code)] // for now we only use this in binutils-tests
+#[allow(dead_code)] // for now we only use this in hexagon-tests
 pub struct TestData {
     bytes: &'static [u8],
 }

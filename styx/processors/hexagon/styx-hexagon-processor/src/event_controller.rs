@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
+use std::sync::Arc;
+
 use styx_core::{
     arch::hexagon::{register_fields::Ssr, HexagonRegister},
     cpu::{CpuBackend, CpuBackendExt},
@@ -9,14 +11,26 @@ use styx_core::{
     memory::{MemoryBackend, Mmu},
     prelude::{
         log::{info, trace},
-        Context, EventControllerImpl, ExceptionNumber,
+        Config, Context, EventControllerImpl, ExceptionNumber,
     },
+    sync::styx_async::sync::broadcast,
 };
 
-use crate::angel::handle_angel;
+use crate::{angel::handle_angel, HexagonProcessorConfig};
 
 #[derive(Default)]
-pub struct HexagonEventController {}
+pub struct HexagonEventController {
+    semihosting_tx: Option<Arc<broadcast::Sender<u8>>>,
+}
+
+impl HexagonEventController {
+    fn semihosting_tx(&self) -> Arc<broadcast::Sender<u8>> {
+        self.semihosting_tx
+            .as_ref()
+            .expect("hexagon event controller doesn't have semihosting tx!! check proc config")
+            .clone()
+    }
+}
 
 impl EventControllerImpl for HexagonEventController {
     fn next(
@@ -54,14 +68,18 @@ impl EventControllerImpl for HexagonEventController {
         &mut self,
         cpu: &mut dyn CpuBackend,
         _mmu: &mut MemoryBackend,
+        config: &mut Config,
     ) -> Result<(), UnknownError> {
         trace!("the hexagon event controller has started");
+
+        let proc_cfg = config.get::<HexagonProcessorConfig>().expect("You need to provide a hexagon process configuration in processor config to initialize l2vic");
 
         // This should always be triggered at the end of a packet (see `HexagonPcodeBackend` implementation,
         // specifically details about the `DelayedInterrupt`, for more information), after the pc has
         // been incremented, so at this point, the Elr register will be set to the pc to return to.
         //
         // FIXME: multicore
+        self.semihosting_tx = proc_cfg.semihosting_tx.as_ref().map(|tx| tx.clone());
         let interrupt_handler = |handle: CoreHandle, interrupt_number: i32| {
             // get cause, if the cause is 0 then we need to do the angel stuff
             let ssr = Ssr::new_with_raw_value(
@@ -84,8 +102,15 @@ impl EventControllerImpl for HexagonEventController {
                     .cpu
                     .read_register::<u32>(HexagonRegister::R1)
                     .with_context(|| "couldn't read r1 in interrupt")?;
+                // event controller contains the TX channel
+                let semihosting_tx = handle
+                    .event_controller
+                    .get_impl::<HexagonEventController>()
+                    .with_context(|| "couldn't get l2vic in Styx syncrhonous interrupt handler")?
+                    .semihosting_tx();
 
-                handle_angel(swi_no, arg);
+                handle_angel(handle.cpu, handle.mmu, swi_no, arg, semihosting_tx)
+                    .expect("angel call failed");
             }
 
             // get evb which is the interrupt vector base
