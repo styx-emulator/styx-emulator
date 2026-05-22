@@ -5,11 +5,10 @@ use event_controller::HexagonEventController;
 use styx_core::arch::hexagon::HexagonRegister;
 use styx_core::cpu::arch::hexagon::HexagonVariants;
 use styx_core::cpu::{Arch, Backend, CpuBackend, CpuBackendExt};
-use styx_core::loader::LoaderHints;
 use styx_core::memory::physical::PhysicalMemoryVariant;
 use styx_core::memory::{MemoryBackend, Mmu};
 use styx_core::prelude::log::info;
-use styx_core::prelude::{Context, Peripheral};
+use styx_core::prelude::Context;
 use styx_core::{
     core::{
         builder::{BuildProcessorImplArgs, ProcessorImpl},
@@ -95,20 +94,16 @@ impl ProcessorImpl for HexagonBuilder {
             write_cfgtable_field(cpu.as_mut(), &mut memory, *cfgbase_entry as u64, *value);
         }
 
-        let hec = Box::new(HexagonEventController::default());
-        let peripherals: Vec<Box<dyn Peripheral>> = Vec::new();
-
-        let mut hints = LoaderHints::new();
-        hints.insert("arch".to_string().into_boxed_str(), Box::new(Arch::Hexagon));
-
-        Ok(ProcessorBundle {
-            cpu,
-            tlb: Box::new(HexagonTlb::new()),
-            memory,
-            event_controller: hec,
-            peripherals,
-            loader_hints: hints,
-        })
+        // Default EventDistributor here.
+        Ok(ProcessorBundle::builder()
+            .with_memory(memory)
+            .with_vcpu(|v| {
+                v.with_cpu_box(cpu)
+                    .with_tlb(HexagonTlb::new())
+                    .with_event_controller(HexagonEventController::default())
+            })
+            .with_arch_hint(Arch::Hexagon)
+            .build()?)
     }
 }
 
