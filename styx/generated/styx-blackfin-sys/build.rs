@@ -12,6 +12,9 @@ fn main() {
         // generating struct defs for these types emits the following error:
         // `packed type cannot transitively contain a `#[repr(align)]` type`
         .opaque_type("^(ADI_DMA_DESCRIPTOR_.*)$")
+        // These types fail to be resolved.
+        .opaque_type("ADI_DCB_ENTRY_HDR")
+        .opaque_type("ADI_DEV_BUFFER")
         .derive_default(true)
         // Invalidate the built crate whenever any of the
         // included header files changed.
