@@ -6,7 +6,7 @@ use styx_emulator::{
     hooks::{CoreHandle, StyxHook},
     prelude::{
         log::{info, trace},
-        Processor,
+        Processor, WriteExt,
     },
     processors::hexagon::hexagon::{HexagonConfigTable, HexagonProcessorConfig, QTimerConfig},
 };
@@ -123,10 +123,10 @@ impl HexagonDevice for S22 {
     }
 
     fn post_init(&self, proc: &mut Processor) -> Result<(), UnknownError> {
+        let memory = proc.memory().data();
         // Mystery peripheral
-        proc.core.mmu.write_u32_le_phys_data(0x10c2004, 1).unwrap();
-        proc.core.mmu.write_u32_le_phys_data(0x10c2000, 1).unwrap();
-
+        memory.write(0x10c2004).le().value(1u32)?;
+        memory.write(0x10c2000).le().value(1u32)?;
         Ok(())
     }
 }
