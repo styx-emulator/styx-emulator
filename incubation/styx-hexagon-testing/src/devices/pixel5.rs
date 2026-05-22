@@ -3,7 +3,7 @@
 use styx_emulator::{
     errors::UnknownError,
     hooks::{CoreHandle, StyxHook},
-    prelude::Processor,
+    prelude::{Processor, WriteExt},
     processors::hexagon::hexagon::{HexagonConfigTable, HexagonProcessorConfig, QTimerConfig},
 };
 
@@ -64,11 +64,9 @@ impl HexagonDevice for Pixel5 {
     }
 
     fn post_init(&self, proc: &mut Processor) -> Result<(), UnknownError> {
-        proc.core.mmu.write_u32_le_phys_data(0x04122000, 0x100)?;
-        proc.core
-            .mmu
-            .write_u32_le_phys_data(0x4090000, 0xffffffff)?;
-
+        let memory = proc.memory().data();
+        memory.write(0x04122000).le().value(0x100u32)?;
+        memory.write(0x4090000).le().value(0xffffffffu32)?;
         Ok(())
     }
 }

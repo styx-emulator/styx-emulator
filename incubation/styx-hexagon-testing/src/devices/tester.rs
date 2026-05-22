@@ -3,7 +3,7 @@
 use styx_emulator::{
     errors::UnknownError,
     hooks::StyxHook,
-    prelude::Processor,
+    prelude::{Processor, WriteExt},
     processors::hexagon::hexagon::{HexagonConfigTable, HexagonProcessorConfig},
 };
 
@@ -52,10 +52,10 @@ impl HexagonDevice for Tester {
         //
         // isdb = in-silicon debugger
         // isdb_secure
-        proc.core.mmu.write_u32_le_phys_data(0x30, 1)?;
+        let memory = proc.memory().data();
+        memory.write(0x30).le().value(1u32)?;
         // isdb_trusted
-        proc.core.mmu.write_u32_le_phys_data(0x34, 1)?;
-
+        memory.write(0x34).le().value(1u32)?;
         Ok(())
     }
 }

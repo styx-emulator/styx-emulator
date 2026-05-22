@@ -18,8 +18,9 @@ pub enum HexagonTarget {
 }
 
 pub trait HexagonDevice {
-    // Returns a list of `StyxHook`s, which are added. Runs after the `ProcessorBuilder`
-    // finishes but before `Self::post_init`.
+    // Returns a list of `StyxHook`s which are added to each vcpu.
+    //
+    // Runs after the `ProcessorBuilder` finishes but before `Self::post_init`.
     fn hooks(&self) -> Result<Vec<StyxHook>, UnknownError>;
     // Returns the processor config, which is passed to the builder and used to
     // set up both the processor and various Hexagon peripherals.

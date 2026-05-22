@@ -43,7 +43,7 @@ pub fn setup_load_hexagon(
 
     if let Some(debug) = debug {
         let gdb_params = GdbPluginParams::tcp("0.0.0.0", debug.gdb_remote_port, true);
-        proc = proc.with_executor(
+        proc = proc.with_custom_executor(
             GdbExecutor::<HexagonHvxCpuTargetDescription>::new(gdb_params)?.with_options(
                 GDBOptions {
                     step_irqs: StepIRQs::Enabled,
@@ -60,8 +60,10 @@ pub fn setup_load_hexagon(
     .build()?;
 
     // Setup hooks
-    for hook in device.hooks().expect("couldn't get hexagon hooks") {
-        proc.add_hook(hook).expect("Couldn't add hexagon hook");
+    for vcpu in proc.vcpus.iter_mut() {
+        for hook in device.hooks().expect("couldn't get hexagon hooks") {
+            vcpu.cpu.add_hook(hook).expect("Couldn't add hexagon hook");
+        }
     }
 
     device.post_init(&mut proc)?;
