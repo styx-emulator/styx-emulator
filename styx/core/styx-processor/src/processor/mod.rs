@@ -12,6 +12,8 @@ mod builder;
 mod config;
 pub use config::*;
 use std::fmt::Debug;
+use std::ops::DerefMut;
+use std::sync::Arc;
 
 pub use builder::*;
 
@@ -148,6 +150,11 @@ impl Processor {
             vcpu.context_restore()?;
         }
         Ok(())
+    }
+
+    /// Shortcut to `self.core.memory`
+    pub fn memory(&self) -> &Arc<MemoryBackend> {
+        &self.core.memory
     }
 }
 
