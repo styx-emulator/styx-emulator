@@ -98,7 +98,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .add_hook(StyxHook::code(0x0000_0444, irq_handler))
         .build()?;
 
-    println!("initial PC: 0x{:x}", proc.core.cpu.pc().unwrap());
+    println!("initial PC: 0x{:x}", proc.vcpus[0].cpu.pc().unwrap());
     let exit = proc.run(Forever);
     println!("{exit:?}");
 

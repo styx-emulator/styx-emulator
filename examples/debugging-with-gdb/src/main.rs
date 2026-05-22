@@ -54,7 +54,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // build the processor
     let mut proc_builder = ProcessorBuilder::default()
         .with_builder(PowerPC405Builder::default())
-        .with_executor(GdbExecutor::<Ppc4xxTargetDescription>::new(gdb_params)?)
+        .with_custom_executor(GdbExecutor::<Ppc4xxTargetDescription>::new(gdb_params)?)
         .with_loader(ParameterizedLoader::default()) // takes an input yaml
         .with_input_bytes(loader_yaml.as_bytes().into());
 
