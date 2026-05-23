@@ -147,7 +147,7 @@ To perform host development, you'll need somewhat recent versions of the followi
 - [direnv](https://direnv.net/)
 - A working rust installation (cargo will automatically install the correct versions)
 - `python` > 3.9 + `python3-virtualenv` + `python3-pip`
-- [protobuf-compiler](https://grpc.io/docs/protoc-installation/) >= 21.5
+- [protobuf-compiler](https://grpc.io/docs/protoc-installation/) >= 21.5 and protbuf headers (libprotobuf-dev on debian based systems, protobuf-devel on RHEL/Fedora)
 - `cmake`
 
 #### For Tests + Local CI
