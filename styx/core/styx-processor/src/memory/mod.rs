@@ -183,7 +183,7 @@ mod region;
 mod tlb;
 
 pub use atomic_word::CompareExchangeResult;
-pub use llsc::{StoreConditionalError, StoreConditionalResult};
+pub use llsc::{AtomicMmuOpError, Load, StoreConditionalError, StoreConditionalResult};
 pub use mem_arch::MemoryArchitecture;
 pub use memory_region::{
     HasRegions, MemoryRegion, MemoryRegionFormat, MemoryRegionPerms, MemoryRegionRawData,

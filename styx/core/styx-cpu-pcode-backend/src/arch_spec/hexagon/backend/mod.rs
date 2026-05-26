@@ -33,6 +33,7 @@ use styx_processor::{
     event_controller::{EventController, ExceptionNumber},
     hooks::{AddHookError, DeleteHookError, HookToken, Hookable, StyxHook},
     memory::Mmu,
+    processor::Config,
 };
 use thiserror::Error;
 
@@ -184,6 +185,9 @@ pub struct HexagonPcodeBackend {
     // Used for performance, P-code translation is quite slow
     // Maps PC to pcodes and other info for running hexagon code
     cache: Option<BTreeMap<u32, CachedFetchDecodeResult>>,
+
+    // Threading information
+    num_hthreads: u32,
 }
 
 impl Hookable for HexagonPcodeBackend {
@@ -606,6 +610,11 @@ impl CpuBackend for HexagonPcodeBackend {
 }
 
 impl HexagonPcodeBackend {
+    /// Return the number of hardware threads
+    pub(crate) fn num_hthreads(&self) -> u32 {
+        self.num_hthreads
+    }
+
     fn handle_tlb_miss(
         &mut self,
         mmu: &mut Mmu,
@@ -660,13 +669,21 @@ impl HexagonPcodeBackend {
         arch_variant: impl Into<ArchVariant>,
         endian: ArchEndian,
     ) -> HexagonPcodeBackend {
-        Self::new_engine_config(arch_variant, endian, &PcodeBackendConfiguration::default())
+        Self::new_engine_config(
+            arch_variant,
+            endian,
+            &PcodeBackendConfiguration::default(),
+            None,
+        )
     }
 
     pub fn new_engine_config(
         arch_variant: impl Into<ArchVariant>,
         endian: ArchEndian,
         config: &PcodeBackendConfiguration,
+        // Pass this in instead of processor config since
+        // the processor config isn't accessible from here.
+        num_hthreads: Option<u32>,
     ) -> HexagonPcodeBackend {
         let arch_variant = arch_variant.into();
 
@@ -699,6 +716,7 @@ impl HexagonPcodeBackend {
             .expect("can't get p0 register as varnode")
             .offset;
 
+        // Temporary hack while we figure this out better. 6 threads default.
         Self {
             saved_context_opts: SavedContextOpts::default(),
             saved_execution_helper: None,
@@ -718,6 +736,7 @@ impl HexagonPcodeBackend {
             hexagon_predicate_start,
             hexagon_predicate_end,
             cache: Some(BTreeMap::new()),
+            num_hthreads: num_hthreads.unwrap_or(6),
         }
     }
     /// Indicate when we should update the context reg

@@ -49,6 +49,9 @@ pub struct HexagonProcessorConfig {
     pub cfgbase: u64,
     #[derivative(Default(value = "192"))]
     pub tlb_entries: u32,
+    #[derivative(Default(value = "4"))]
+    pub hardware_threads: u32,
+
     /// Config table values. Will eventually be removed when the config is integrated into the peripherals.
     pub config_table: HashMap<HexagonConfigTable, u32>,
 

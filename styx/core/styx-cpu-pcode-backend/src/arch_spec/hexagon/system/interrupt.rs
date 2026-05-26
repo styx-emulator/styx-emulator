@@ -54,6 +54,7 @@ pub enum HexagonInterruptType {
     IntD = 0x1d,
     IntE = 0x1e,
     IntF = 0x1f,
+    Halt = 0x20,
 }
 #[repr(u8)]
 #[derive(Debug, Copy, Clone)]

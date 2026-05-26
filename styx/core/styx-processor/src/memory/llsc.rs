@@ -14,6 +14,7 @@ use super::{
 ///
 /// Refer to the [module documentation](crate::memory#load-linkstore-conditional)
 /// for detailed information and gotchas.
+#[derive(Debug)]
 pub struct Load {
     /// Address of access.
     ///
@@ -87,7 +88,7 @@ impl Mmu {
     ) -> Result<Load, AtomicMmuOpError> {
         let phys_addr = self.translate_va(vaddr, MemoryOperation::Read, MemoryType::Data, cpu)?;
         let mut load = check_load(phys_addr, size)?;
-        self.read_data(vaddr, &mut load.value[..size])
+        self.read_data(phys_addr, &mut load.value[..size])
             .map_err(|e| e.conv::<AtomicMemoryOperationError>())?;
         Ok(load)
     }
@@ -178,10 +179,11 @@ impl Mmu {
         store: &[u8],
         cpu: &mut dyn CpuBackend,
     ) -> Result<StoreConditionalResult, VirtStoreConditionalError> {
-        if vaddr != load.address {
+        let paddr = self.translate_va(vaddr, MemoryOperation::Read, MemoryType::Data, cpu)?;
+        if paddr != load.address {
             return Err(StoreConditionalError::MismatchAddress(vaddr, load.address).into());
         }
-        let paddr = self.translate_va(vaddr, MemoryOperation::Read, MemoryType::Data, cpu)?;
+
         Ok(StoreConditionalResult::from_success(
             self.compare_exchange_data(paddr, load.data(), store)
                 .map_err(|e| e.conv::<StoreConditionalError>())?

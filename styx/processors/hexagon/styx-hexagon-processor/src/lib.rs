@@ -48,11 +48,18 @@ impl Default for HexagonBuilder {
 
 impl ProcessorImpl for HexagonBuilder {
     fn build(&self, args: &BuildProcessorImplArgs) -> Result<ProcessorBundle, UnknownError> {
+        let thread_count = args
+            .config
+            .get::<HexagonProcessorConfig>()
+            .with_context(|| "expected hexagon processor config")?
+            .hardware_threads;
+
         let mut cpu = if let Backend::Pcode = args.backend {
             Box::new(HexagonPcodeBackend::new_engine_config(
                 self.variant.clone(),
                 ArchEndian::LittleEndian,
                 &args.into(),
+                Some(thread_count),
             ))
         } else {
             return Err(anyhow::anyhow!(
