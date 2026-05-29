@@ -3,12 +3,15 @@
 
 use event_controller::HexagonEventController;
 use styx_core::arch::hexagon::HexagonRegister;
+use styx_core::core::builder::VcpuBundleBuilder;
 use styx_core::cpu::arch::hexagon::HexagonVariants;
-use styx_core::cpu::{Arch, Backend, CpuBackend, CpuBackendExt};
+use styx_core::cpu::{Arch, Backend, CpuBackend, CpuBackendExt, PcodeBackendConfiguration};
+use styx_core::hooks::MemoryReadHook;
+use styx_core::loader::LoaderHints;
 use styx_core::memory::physical::PhysicalMemoryVariant;
 use styx_core::memory::{MemoryBackend, Mmu};
 use styx_core::prelude::log::info;
-use styx_core::prelude::Context;
+use styx_core::prelude::{Context, Peripheral, PrimaryEventController};
 use styx_core::{
     core::{
         builder::{BuildProcessorImplArgs, ProcessorImpl},
@@ -23,6 +26,7 @@ mod angel;
 mod cfgtable;
 mod config;
 mod event_controller;
+mod shared_state_hooks;
 mod tlb;
 
 pub use cfgtable::*;
@@ -47,11 +51,12 @@ impl Default for HexagonBuilder {
 impl ProcessorImpl for HexagonBuilder {
     fn build(&self, args: &BuildProcessorImplArgs) -> Result<ProcessorBundle, UnknownError> {
         let mut cpu = if let Backend::Pcode = args.backend {
-            Box::new(HexagonPcodeBackend::new_engine_config(
+            HexagonPcodeBackend::new_engine_config(
                 self.variant.clone(),
                 ArchEndian::LittleEndian,
                 &args.into(),
-            ))
+                Some(thread_count),
+            )
         } else {
             return Err(anyhow::anyhow!(
                 "hexagon processor only supports pcode backend"
@@ -77,13 +82,13 @@ impl ProcessorImpl for HexagonBuilder {
 
         // Set subsystem base
         write_cfgtable_field(
-            cpu.as_mut(),
+            &mut cpu,
             &mut memory,
             SUBSYSTEM_CFGTABLE_OFFSET,
             (proc_config.subsystem_base >> 16) as u32,
         );
         write_cfgtable_field(
-            cpu.as_mut(),
+            &mut cpu,
             &mut memory,
             JTLB_ENTRIES_CFGTABLE_OFFSET,
             proc_config.tlb_entries,
@@ -91,19 +96,24 @@ impl ProcessorImpl for HexagonBuilder {
 
         // Setup cfgtable (cfgbase is written in HexagonBuilder)
         for (cfgbase_entry, value) in proc_config.config_table.iter() {
-            write_cfgtable_field(cpu.as_mut(), &mut memory, *cfgbase_entry as u64, *value);
+            write_cfgtable_field(&mut cpu, &mut memory, *cfgbase_entry as u64, *value);
         }
 
+         // Peripherals may use this
+         memory
+             .memory_map(0x100000000, 0x40000000, MemoryPermissions::all())
+             .with_context(|| "couldn't add memory region for peripherals")?;
+ 
         // Default EventDistributor here.
-        Ok(ProcessorBundle::builder()
-            .with_memory(memory)
-            .with_vcpu(|v| {
-                v.with_cpu_box(cpu)
-                    .with_tlb(HexagonTlb::new())
-                    .with_event_controller(HexagonEventController::default())
-            })
-            .with_arch_hint(Arch::Hexagon)
-            .build()?)
+         Ok(ProcessorBundle::builder()
+             .with_memory(memory)
+             .with_vcpu(|v| {
+                 v.with_cpu_box(cpu)
+                     .with_tlb(HexagonTlb::new())
+                     .with_event_controller(HexagonEventController::default())
+             })
+             .with_arch_hint(Arch::Hexagon)
+             .build()?)
     }
 }
 

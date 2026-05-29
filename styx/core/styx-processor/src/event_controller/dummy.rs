@@ -61,7 +61,7 @@ impl EventControllerImpl for DummyEventController {
         &mut self,
         _cpu: &mut dyn CpuBackend,
         _mmu: &mut MemoryBackend,
-        _init: &mut Config,
+        _config: &mut Config,
     ) -> Result<(), UnknownError> {
         Ok(())
     }

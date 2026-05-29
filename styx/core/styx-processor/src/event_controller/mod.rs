@@ -86,17 +86,17 @@ assert_obj_safe!(EventControllerImpl);
 /// and completing interrupts. Does not own peripherals which are managed by
 /// the [`EventDistributor`].
 pub trait EventControllerImpl: AsAny + Send {
-    /// Retrieve and execute the highest priority interrupt.
+    /// Retrieve and execute the highest priority interrupt
     fn next(
         &mut self,
         cpu: &mut dyn CpuBackend,
         mmu: &mut Mmu,
     ) -> Result<InterruptExecuted, UnknownError>;
 
-    /// Queue an interrupt to be executed.
+    /// Queue an interrupt to be executed
     fn latch(&mut self, event: ExceptionNumber) -> Result<(), ActivateIRQnError>;
 
-    /// Directly execute an interrupt (useful for things like syscall).
+    /// Directly execute an interrupt (useful for things like syscall)
     fn execute(
         &mut self,
         irq: ExceptionNumber,
@@ -158,6 +158,10 @@ pub trait EventControllerImpl: AsAny + Send {
     /// - `Err(OptionalFeatureError::Unsupported)` indicates this feature is not available on this
     ///   event controller.
     fn current_exception(&mut self) -> Result<Option<Exception>, OptionalFeatureError> {
+        Err(OptionalFeatureError::Unsupported)
+    }
+
+    fn available_exceptions(&mut self) -> Result<Cow<'_, [Exception]>, OptionalFeatureError> {
         Err(OptionalFeatureError::Unsupported)
     }
 }

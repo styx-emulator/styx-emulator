@@ -357,7 +357,7 @@ impl<'a> ProcessorBuilder<'a> {
         bundle: ProcessorBundle,
         builder: Box<dyn ProcessorImpl>,
     ) -> Result<Processor, UnknownError> {
-        let mut runtime = self.runtime;
+	let mut runtime = self.runtime;
 
         let ipc_resolved_port = runtime
             .handle()

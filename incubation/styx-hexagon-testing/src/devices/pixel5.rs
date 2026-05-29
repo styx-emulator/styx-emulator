@@ -67,6 +67,11 @@ impl HexagonDevice for Pixel5 {
         let memory = proc.memory().data();
         memory.write(0x04122000).le().value(0x100u32)?;
         memory.write(0x4090000).le().value(0xffffffffu32)?;
+        proc.core.mmu.write_u32_le_phys_data(0x04122000, 0x100)?;
+        proc.core
+            .mmu
+            .write_u32_le_phys_data(0x4090000, 0xffffffff)?;
+
         Ok(())
     }
 }
