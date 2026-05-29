@@ -75,18 +75,15 @@ fn virtual_gdb_tests_builder() -> ProcessorBuilder<'static> {
 
         let cec = Box::new(DummyEventController::default());
 
-        let peripherals: Vec<Box<dyn Peripheral>> = Vec::new();
-
-        let mut hints = LoaderHints::new();
-        hints.insert("arch".to_string().into_boxed_str(), Box::new(Arch::Ppc32));
-        Ok(ProcessorBundle {
-            cpu,
-            memory,
-            tlb,
-            event_controller: cec,
-            peripherals,
-            loader_hints: hints,
-        })
+        Ok(ProcessorBundle::builder()
+            .with_memory(memory)
+            .with_vcpu(|v| {
+                v.with_cpu_box(cpu)
+                    .with_tlb_box(tlb)
+                    .with_event_controller_box(cec)
+            })
+            .with_arch_hint(Arch::Ppc32)
+            .build()?)
     };
 
     ProcessorBuilder::default()
