@@ -17,6 +17,7 @@ unicorn-backend = [
   "styx-cyclonev-processor/unicorn-backend",
   "styx-powerquicci-processor/unicorn-backend",
 ]
+hexagon-clade = ["styx-hexagon-processor/hexagon-clade"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
