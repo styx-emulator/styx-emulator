@@ -3,8 +3,8 @@ use std::collections::HashMap;
 
 use log::{debug, trace};
 use styx_cpu_type::arch::{
-    backends::{ArchRegister, BasicArchRegister},
-    hexagon::HexagonRegister,
+    backends::{ArchRegister, BasicArchRegister, GlobalArchRegister},
+    hexagon::{GlobalHexagonRegister, HexagonRegister},
 };
 use styx_errors::anyhow::anyhow;
 use styx_processor::cpu::{CpuBackend, CpuBackendExt};
@@ -122,134 +122,6 @@ lazy_static! {
                 (HexagonRegister::S15, HexagonRegister::S14)
             ),
             (
-                HexagonRegister::S17S16,
-                (HexagonRegister::ModeCtl, HexagonRegister::Evb)
-            ),
-            (
-                HexagonRegister::S19S18,
-                (HexagonRegister::Segment, HexagonRegister::SysCfg)
-            ),
-            (
-                HexagonRegister::S21S20,
-                (HexagonRegister::Vid, HexagonRegister::Ipendad)
-            ),
-            (
-                HexagonRegister::S23S22,
-                (HexagonRegister::BestWait, HexagonRegister::Vid1)
-            ),
-            (
-                HexagonRegister::S25S24,
-                (HexagonRegister::SchedCfg, HexagonRegister::S24)
-            ),
-            (
-                HexagonRegister::S27S26,
-                (HexagonRegister::CfgBase, HexagonRegister::S26)
-            ),
-            (
-                HexagonRegister::S29S28,
-                (HexagonRegister::Rev, HexagonRegister::Diag)
-            ),
-            (
-                HexagonRegister::Pcycle,
-                (HexagonRegister::PcycleHi, HexagonRegister::PcycleLo)
-            ),
-            (
-                HexagonRegister::S33S32,
-                (HexagonRegister::IsdbCfg0, HexagonRegister::IsdbSt)
-            ),
-            (
-                HexagonRegister::S35S34,
-                (HexagonRegister::Livelock, HexagonRegister::IsdbCfg1)
-            ),
-            (
-                HexagonRegister::S37S36,
-                (HexagonRegister::BrkptCfg0, HexagonRegister::BrkptPc0)
-            ),
-            (
-                HexagonRegister::S39S38,
-                (HexagonRegister::BrkptCfg1, HexagonRegister::BrkptPc1)
-            ),
-            (
-                HexagonRegister::S41S40,
-                (HexagonRegister::IsdbMbxOut, HexagonRegister::IsdbMbxIn)
-            ),
-            (
-                HexagonRegister::S43S42,
-                (HexagonRegister::IsdbGpr, HexagonRegister::IsdbEn)
-            ),
-            (
-                HexagonRegister::S45S44,
-                (HexagonRegister::PmuCnt5, HexagonRegister::PmuCnt4)
-            ),
-            (
-                HexagonRegister::S47S46,
-                (HexagonRegister::PmuCnt7, HexagonRegister::PmuCnt6)
-            ),
-            (
-                HexagonRegister::S49S48,
-                (HexagonRegister::PmuCnt1, HexagonRegister::PmuCnt0)
-            ),
-            (
-                HexagonRegister::S51S50,
-                (HexagonRegister::PmuCnt3, HexagonRegister::PmuCnt2)
-            ),
-            (
-                HexagonRegister::S53S52,
-                (HexagonRegister::PmuStId0, HexagonRegister::PmuEvtCfg)
-            ),
-            (
-                HexagonRegister::S55S54,
-                (HexagonRegister::PmuStId1, HexagonRegister::PmuEvtCfg1)
-            ),
-            (
-                HexagonRegister::Timer,
-                (HexagonRegister::TimerHi, HexagonRegister::TimerLo)
-            ),
-            (
-                HexagonRegister::S59S58,
-                (HexagonRegister::Rgdr2, HexagonRegister::PmuCfg)
-            ),
-            (
-                HexagonRegister::S61S60,
-                (HexagonRegister::Turkey, HexagonRegister::Rgdr)
-            ),
-            (
-                HexagonRegister::S63S62,
-                (HexagonRegister::Chicken, HexagonRegister::Duck)
-            ),
-            (
-                HexagonRegister::S65S64,
-                (HexagonRegister::Commit2t, HexagonRegister::Commit1t)
-            ),
-            (
-                HexagonRegister::S67S66,
-                (HexagonRegister::Commit4t, HexagonRegister::Commit3t)
-            ),
-            (
-                HexagonRegister::S69S68,
-                (HexagonRegister::Commit6t, HexagonRegister::Commit5t)
-            ),
-            (
-                HexagonRegister::S71S70,
-                (HexagonRegister::Pcycle2t, HexagonRegister::Pcycle1t)
-            ),
-            (
-                HexagonRegister::S73S72,
-                (HexagonRegister::Pcycle4t, HexagonRegister::Pcycle3t)
-            ),
-            (
-                HexagonRegister::S75S74,
-                (HexagonRegister::Pcycle6t, HexagonRegister::Pcycle5t)
-            ),
-            (
-                HexagonRegister::S77S76,
-                (HexagonRegister::IsdbCmd, HexagonRegister::StfInst)
-            ),
-            (
-                HexagonRegister::S79S78,
-                (HexagonRegister::BrkptInfo, HexagonRegister::IsdbVer)
-            ),
-            (
                 HexagonRegister::G1G0,
                 (HexagonRegister::Gsr, HexagonRegister::Gelr)
             ),
@@ -359,6 +231,140 @@ lazy_static! {
                 HexagonRegister::Utimer,
                 (HexagonRegister::UtimerHi, HexagonRegister::UtimerLo)
             )
+
+    ]);
+
+    pub static ref GLOBAL_REGPAIR_MAP:
+    HashMap<GlobalHexagonRegister, (GlobalHexagonRegister, GlobalHexagonRegister)> =
+    HashMap::from([
+            (
+                GlobalHexagonRegister::S17S16,
+                (GlobalHexagonRegister::ModeCtl, GlobalHexagonRegister::Evb)
+            ),
+            (
+                GlobalHexagonRegister::S19S18,
+                (GlobalHexagonRegister::Segment, GlobalHexagonRegister::SysCfg)
+            ),
+            (
+                GlobalHexagonRegister::S21S20,
+                (GlobalHexagonRegister::Vid, GlobalHexagonRegister::Ipendad)
+            ),
+            (
+                GlobalHexagonRegister::S23S22,
+                (GlobalHexagonRegister::BestWait, GlobalHexagonRegister::Vid1)
+            ),
+            (
+                GlobalHexagonRegister::S25S24,
+                (GlobalHexagonRegister::SchedCfg, GlobalHexagonRegister::S24)
+            ),
+            (
+                GlobalHexagonRegister::S27S26,
+                (GlobalHexagonRegister::CfgBase, GlobalHexagonRegister::S26)
+            ),
+            (
+                GlobalHexagonRegister::S29S28,
+                (GlobalHexagonRegister::Rev, GlobalHexagonRegister::Diag)
+            ),
+            (
+                GlobalHexagonRegister::Pcycle,
+                (GlobalHexagonRegister::PcycleHi, GlobalHexagonRegister::PcycleLo)
+            ),
+            (
+                GlobalHexagonRegister::S33S32,
+                (GlobalHexagonRegister::IsdbCfg0, GlobalHexagonRegister::IsdbSt)
+            ),
+            (
+                GlobalHexagonRegister::S35S34,
+                (GlobalHexagonRegister::Livelock, GlobalHexagonRegister::IsdbCfg1)
+            ),
+            (
+                GlobalHexagonRegister::S37S36,
+                (GlobalHexagonRegister::BrkptCfg0, GlobalHexagonRegister::BrkptPc0)
+            ),
+            (
+                GlobalHexagonRegister::S39S38,
+                (GlobalHexagonRegister::BrkptCfg1, GlobalHexagonRegister::BrkptPc1)
+            ),
+            (
+                GlobalHexagonRegister::S41S40,
+                (GlobalHexagonRegister::IsdbMbxOut, GlobalHexagonRegister::IsdbMbxIn)
+            ),
+            (
+                GlobalHexagonRegister::S43S42,
+                (GlobalHexagonRegister::IsdbGpr, GlobalHexagonRegister::IsdbEn)
+            ),
+            (
+                GlobalHexagonRegister::S45S44,
+                (GlobalHexagonRegister::PmuCnt5, GlobalHexagonRegister::PmuCnt4)
+            ),
+            (
+                GlobalHexagonRegister::S47S46,
+                (GlobalHexagonRegister::PmuCnt7, GlobalHexagonRegister::PmuCnt6)
+            ),
+            (
+                GlobalHexagonRegister::S49S48,
+                (GlobalHexagonRegister::PmuCnt1, GlobalHexagonRegister::PmuCnt0)
+            ),
+            (
+                GlobalHexagonRegister::S51S50,
+                (GlobalHexagonRegister::PmuCnt3, GlobalHexagonRegister::PmuCnt2)
+            ),
+            (
+                GlobalHexagonRegister::S53S52,
+                (GlobalHexagonRegister::PmuStId0, GlobalHexagonRegister::PmuEvtCfg)
+            ),
+            (
+                GlobalHexagonRegister::S55S54,
+                (GlobalHexagonRegister::PmuStId1, GlobalHexagonRegister::PmuEvtCfg1)
+            ),
+            (
+                GlobalHexagonRegister::Timer,
+                (GlobalHexagonRegister::TimerHi, GlobalHexagonRegister::TimerLo)
+            ),
+            (
+                GlobalHexagonRegister::S59S58,
+                (GlobalHexagonRegister::Rgdr2, GlobalHexagonRegister::PmuCfg)
+            ),
+            (
+                GlobalHexagonRegister::S61S60,
+                (GlobalHexagonRegister::Turkey, GlobalHexagonRegister::Rgdr)
+            ),
+            (
+                GlobalHexagonRegister::S63S62,
+                (GlobalHexagonRegister::Chicken, GlobalHexagonRegister::Duck)
+            ),
+            (
+                GlobalHexagonRegister::S65S64,
+                (GlobalHexagonRegister::Commit2t, GlobalHexagonRegister::Commit1t)
+            ),
+            (
+                GlobalHexagonRegister::S67S66,
+                (GlobalHexagonRegister::Commit4t, GlobalHexagonRegister::Commit3t)
+            ),
+            (
+                GlobalHexagonRegister::S69S68,
+                (GlobalHexagonRegister::Commit6t, GlobalHexagonRegister::Commit5t)
+            ),
+            (
+                GlobalHexagonRegister::S71S70,
+                (GlobalHexagonRegister::Pcycle2t, GlobalHexagonRegister::Pcycle1t)
+            ),
+            (
+                GlobalHexagonRegister::S73S72,
+                (GlobalHexagonRegister::Pcycle4t, GlobalHexagonRegister::Pcycle3t)
+            ),
+            (
+                GlobalHexagonRegister::S75S74,
+                (GlobalHexagonRegister::Pcycle6t, GlobalHexagonRegister::Pcycle5t)
+            ),
+            (
+                GlobalHexagonRegister::S77S76,
+                (GlobalHexagonRegister::IsdbCmd, GlobalHexagonRegister::StfInst)
+            ),
+            (
+                GlobalHexagonRegister::S79S78,
+                (GlobalHexagonRegister::BrkptInfo, GlobalHexagonRegister::IsdbVer)
+            ),
         ]);
 
     pub static ref VECTOR_REGPAIR_MAP: HashMap<HexagonRegister, (HexagonRegister, HexagonRegister)> =
@@ -413,6 +419,17 @@ impl RegpairHandler {
         // WARN: this assumes the registers are defined contiguously
         match register {
             ArchRegister::Basic(BasicArchRegister::Hexagon(reg)) => REGPAIR_MAP.get(&reg).copied(),
+            _ => unreachable!(),
+        }
+    }
+    fn get_global_pairs_from_archregister(
+        register: ArchRegister,
+    ) -> Option<(GlobalHexagonRegister, GlobalHexagonRegister)> {
+        // WARN: this assumes the registers are defined contiguously
+        match register {
+            ArchRegister::Global(GlobalArchRegister::Hexagon(reg)) => {
+                GLOBAL_REGPAIR_MAP.get(&reg).copied()
+            }
             _ => unreachable!(),
         }
     }

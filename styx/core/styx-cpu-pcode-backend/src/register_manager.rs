@@ -7,10 +7,12 @@ use crate::PcodeBackend;
 use log::trace;
 use std::collections::HashMap;
 use std::fmt::Debug;
+use std::sync::{Arc, RwLock};
 use styx_cpu_type::arch::backends::ArchRegister;
+use styx_cpu_type::arch::RegisterValue;
 use styx_errors::anyhow::Context;
 use styx_errors::UnknownError;
-use styx_processor::cpu::{CpuBackend, WriteRegisterError};
+use styx_processor::cpu::{CpuBackend, GlobalRegisterStore, ReadRegisterError, WriteRegisterError};
 use thiserror::Error;
 
 #[derive(Error, Debug)]

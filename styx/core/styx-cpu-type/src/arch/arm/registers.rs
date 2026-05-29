@@ -377,6 +377,7 @@ create_basic_register_enums!(
 );
 
 create_special_register_enums!(Arm, CoProcessor);
+create_global_register_enums!(Arm);
 
 #[cfg(test)]
 mod tests {

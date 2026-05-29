@@ -6,11 +6,11 @@ use execution_helper::DefaultHexagonExecutionHelper;
 use log::trace;
 pub use saved_context_opts::SavedContextOpts;
 use smallvec::{smallvec, SmallVec};
-use std::{borrow::Cow, collections::BTreeMap};
+use std::{borrow::Cow, collections::BTreeMap, ops::Range, sync::Arc};
 use styx_cpu_type::{
     arch::{
-        backends::{ArchRegister, ArchVariant, BasicArchRegister},
-        hexagon::HexagonRegister,
+        backends::{ArchRegister, ArchVariant, BasicArchRegister, GlobalArchRegister},
+        hexagon::{register_fields::Ssr, GlobalHexagonRegister, HexagonRegister},
         ArchitectureDef, RegisterValue,
     },
     Arch, ArchEndian, TargetExitReason,
@@ -23,8 +23,11 @@ use styx_errors::{
 use styx_pcode::pcode::{Opcode, Pcode, SpaceName, VarnodeData};
 use styx_pcode_translator::ContextOption;
 use styx_processor::{
-    cpu::{CpuBackend, ExecutionReport, ReadRegisterError, WriteRegisterError},
-    event_controller::EventController,
+    cpu::{
+        CpuBackend, CpuBackendExt, CpuBuilding, ExecutionReport, GlobalRegisterStore,
+        ReadRegisterError, WriteRegisterError,
+    },
+    event_controller::{EventController, ExceptionNumber},
     hooks::{AddHookError, DeleteHookError, HookToken, Hookable, StyxHook},
     memory::Mmu,
 };
@@ -188,6 +191,36 @@ impl Hookable for HexagonPcodeBackend {
 
     fn delete_hook(&mut self, token: HookToken) -> Result<(), DeleteHookError> {
         self.hook_manager.delete_hook(token)
+    }
+}
+
+impl CpuBuilding for HexagonPcodeBackend {
+    fn add_global_registers(
+        &mut self,
+        register_store: Arc<Box<dyn GlobalRegisterStore>>,
+    ) -> Result<(), UnknownError> {
+        // Here, build the BTreeMap mapping from VarNode (offset -> GlobalArchRegister)
+
+        let hex_glreg_start = self
+            .pcode_generator
+            .get_register(&ArchRegister::Global(GlobalHexagonRegister::Evb.into()))
+            .unwrap();
+        let hex_glreg_end = self
+            .pcode_generator
+            .get_register(&ArchRegister::Global(
+                GlobalHexagonRegister::BrkptInfo1.into(),
+            ))
+            .unwrap();
+
+        let range = Range {
+            start: hex_glreg_start.offset,
+            end: hex_glreg_end.offset,
+        };
+
+        // TODO: handle register pairs properly.
+        self.space_manager
+            .setup_global_register_store(register_store, range);
+        Ok(())
     }
 }
 

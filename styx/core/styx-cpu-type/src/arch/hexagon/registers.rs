@@ -127,113 +127,23 @@ create_basic_register_enums!(
     (Utimer, 64),   // Alias to C31C30
     // Skipping HVX extensions for now
     // System registers
-    (Sgp0, 32),     // S0
-    (Sgp1, 32),     // S1
-    (Stid, 32),     // S2
-    (Elr, 32),      // S3
-    (BadVa0, 32),   // S4
-    (BadVa1, 32),   // S5
-    (Ssr, 32),      // S6
-    (Ccr, 32),      // S7
-    (Htid, 32),     // S8
-    (BadVa, 32),    // S9
-    (Imask, 32),    // S10
-    (Gevb, 32),     // S11
-    (VwCtrl, 32),   // S12
-    (S13, 32),      // S13
-    (S14, 32),      // S14
-    (S15, 32),      // S15
-    (Evb, 32),      // S16
-    (ModeCtl, 32),  // S17
-    (SysCfg, 32),   // S18
-    (Segment, 32),  // S19
-    (Ipendad, 32),  // S20
-    (Vid, 32),      // S21
-    (Vid1, 32),     // S22
-    (BestWait, 32), // S23
-    (S24, 32),      // S24
-    (SchedCfg, 32), // S25
-    (S26, 32),
-    (CfgBase, 32),    // S27
-    (Diag, 32),       // S28
-    (Rev, 32),        // S29
-    (PcycleLo, 32),   // S30
-    (PcycleHi, 32),   // S31
-    (IsdbSt, 32),     // S32
-    (IsdbCfg0, 32),   // S33
-    (IsdbCfg1, 32),   // S34
-    (Livelock, 32),   // S35
-    (BrkptPc0, 32),   // S36
-    (BrkptCfg0, 32),  // S37
-    (BrkptPc1, 32),   // S38
-    (BrkptCfg1, 32),  // S39
-    (IsdbMbxIn, 32),  // S40
-    (IsdbMbxOut, 32), // S41
-    (IsdbEn, 32),     // S42
-    (IsdbGpr, 32),    // S43
-    (PmuCnt4, 32),    // S44
-    (PmuCnt5, 32),    // S45
-    (PmuCnt6, 32),    // S46
-    (PmuCnt7, 32),    // S47
-    (PmuCnt0, 32),    // S48
-    (PmuCnt1, 32),    // S49
-    (PmuCnt2, 32),    // S50
-    (PmuCnt3, 32),    // S51
-    (PmuEvtCfg, 32),  // S52
-    (PmuStId0, 32),   // S53
-    (PmuEvtCfg1, 32), // S54
-    (PmuStId1, 32),   // S55
-    (TimerLo, 32),    // S56
-    (TimerHi, 32),    // S57
-    (PmuCfg, 32),     // S58
-    (Rgdr2, 32),      // S59
-    (Rgdr, 32),       // S60
-    (Turkey, 32),     // S61
-    (Duck, 32),       // S62
-    (Chicken, 32),    // S63
-    (Commit1t, 32),   // S64
-    (Commit2t, 32),   // S65
-    (Commit3t, 32),   // S66
-    (Commit4t, 32),   // S67
-    (Commit5t, 32),   // S68
-    (Commit6t, 32),   // S69
-    (Pcycle1t, 32),   // S70
-    (Pcycle2t, 32),   // S71
-    (Pcycle3t, 32),   // S72
-    (Pcycle4t, 32),   // S73
-    (Pcycle5t, 32),   // S74
-    (Pcycle6t, 32),   // S75
-    (StfInst, 32),    // S76
-    (IsdbCmd, 32),    // S77
-    (IsdbVer, 32),    // S78
-    (BrkptInfo, 32),  // S79
-    (Rgdr3, 32),      // S80
-    (Commit7t, 32),   // S81
-    (Commit8t, 32),   // S82
-    (Pcycle7t, 32),   // S83
-    (Pcycle8t, 32),   // S84
-    (Commit9t, 32),   // S85
-    (Commit10t, 32),  // S86
-    (Commit11t, 32),  // S87
-    (Commit12t, 32),  // S88
-    (Commit13t, 32),  // S89
-    (Commit14t, 32),  // S90
-    (Commit15t, 32),  // S91
-    (Commit16t, 32),  // S92
-    (Pcycle9t, 32),   // S93
-    (Pcycle10t, 32),  // S94
-    (Pcycle11t, 32),  // S95
-    (Pcycle12t, 32),  // S96
-    (Pcycle13t, 32),  // S97
-    (Pcycle14t, 32),  // S98
-    (Pcycle15t, 32),  // S99
-    (Pcycle16t, 32),  // S100
-    (Ipend, 32),      // S101
-    (Iad, 32),        // S102
-    (IsdbSt1, 32),    // S103
-    (IsdbSt2, 32),    // S104
-    (BrkptInfo1, 32), // S105
-    // System register pairs
+    (Sgp0, 32),   // S0
+    (Sgp1, 32),   // S1
+    (Stid, 32),   // S2
+    (Elr, 32),    // S3
+    (BadVa0, 32), // S4
+    (BadVa1, 32), // S5
+    (Ssr, 32),    // S6
+    (Ccr, 32),    // S7
+    (Htid, 32),   // S8
+    (BadVa, 32),  // S9
+    (Imask, 32),  // S10
+    (Gevb, 32),   // S11
+    (VwCtrl, 32), // S12
+    (S13, 32),    // S13
+    (S14, 32),    // S14
+    (S15, 32),    // S15
+    // System register pairs (per-thread)
     (SGP1SGP0, 64),
     (S3S2, 64),
     (S5S4, 64),
@@ -242,38 +152,9 @@ create_basic_register_enums!(
     (S11S10, 64),
     (S13S12, 64),
     (S15S14, 64),
-    (S17S16, 64),
-    (S19S18, 64),
-    (S21S20, 64),
-    (S23S22, 64),
-    (S25S24, 64),
-    (S27S26, 64),
-    (S29S28, 64),
-    (Pcycle, 64), // S31S30
-    (S33S32, 64),
-    (S35S34, 64),
-    (S37S36, 64),
-    (S39S38, 64),
-    (S41S40, 64),
-    (S43S42, 64),
-    (S45S44, 64),
-    (S47S46, 64),
-    (S49S48, 64),
-    (S51S50, 64),
-    (S53S52, 64),
-    (S55S54, 64),
-    (Timer, 64), // S57S56
-    (S59S58, 64),
-    (S61S60, 64),
-    (S63S62, 64),
-    (S65S64, 64),
-    (S67S66, 64),
-    (S69S68, 64),
-    (S71S70, 64),
-    (S73S72, 64),
-    (S75S74, 64),
-    (S77S76, 64),
-    (S79S78, 64),
+    // The rest of the system registers are global registers shared
+    // across all hardware threads and are thus in create_global_register_enums.
+    //
     // Guest registers
     (Gelr, 32),      // G0
     (Gsr, 32),       // G1
@@ -424,6 +305,132 @@ lazy_static::lazy_static! {
 }
 
 create_special_register_enums!(Hexagon);
+create_global_register_enums!(
+    Hexagon,
+    (Evb, 32),      // S16
+    (ModeCtl, 32),  // S17
+    (SysCfg, 32),   // S18
+    (Segment, 32),  // S19
+    (Ipendad, 32),  // S20
+    (Vid, 32),      // S21
+    (Vid1, 32),     // S22
+    (BestWait, 32), // S23
+    (S24, 32),      // S24
+    (SchedCfg, 32), // S25
+    (S26, 32),
+    (CfgBase, 32),    // S27
+    (Diag, 32),       // S28
+    (Rev, 32),        // S29
+    (PcycleLo, 32),   // S30
+    (PcycleHi, 32),   // S31
+    (IsdbSt, 32),     // S32
+    (IsdbCfg0, 32),   // S33
+    (IsdbCfg1, 32),   // S34
+    (Livelock, 32),   // S35
+    (BrkptPc0, 32),   // S36
+    (BrkptCfg0, 32),  // S37
+    (BrkptPc1, 32),   // S38
+    (BrkptCfg1, 32),  // S39
+    (IsdbMbxIn, 32),  // S40
+    (IsdbMbxOut, 32), // S41
+    (IsdbEn, 32),     // S42
+    (IsdbGpr, 32),    // S43
+    (PmuCnt4, 32),    // S44
+    (PmuCnt5, 32),    // S45
+    (PmuCnt6, 32),    // S46
+    (PmuCnt7, 32),    // S47
+    (PmuCnt0, 32),    // S48
+    (PmuCnt1, 32),    // S49
+    (PmuCnt2, 32),    // S50
+    (PmuCnt3, 32),    // S51
+    (PmuEvtCfg, 32),  // S52
+    (PmuStId0, 32),   // S53
+    (PmuEvtCfg1, 32), // S54
+    (PmuStId1, 32),   // S55
+    (TimerLo, 32),    // S56
+    (TimerHi, 32),    // S57
+    (PmuCfg, 32),     // S58
+    (Rgdr2, 32),      // S59
+    (Rgdr, 32),       // S60
+    (Turkey, 32),     // S61
+    (Duck, 32),       // S62
+    (Chicken, 32),    // S63
+    (Commit1t, 32),   // S64
+    (Commit2t, 32),   // S65
+    (Commit3t, 32),   // S66
+    (Commit4t, 32),   // S67
+    (Commit5t, 32),   // S68
+    (Commit6t, 32),   // S69
+    (Pcycle1t, 32),   // S70
+    (Pcycle2t, 32),   // S71
+    (Pcycle3t, 32),   // S72
+    (Pcycle4t, 32),   // S73
+    (Pcycle5t, 32),   // S74
+    (Pcycle6t, 32),   // S75
+    (StfInst, 32),    // S76
+    (IsdbCmd, 32),    // S77
+    (IsdbVer, 32),    // S78
+    (BrkptInfo, 32),  // S79
+    (Rgdr3, 32),      // S80
+    (Commit7t, 32),   // S81
+    (Commit8t, 32),   // S82
+    (Pcycle7t, 32),   // S83
+    (Pcycle8t, 32),   // S84
+    (Commit9t, 32),   // S85
+    (Commit10t, 32),  // S86
+    (Commit11t, 32),  // S87
+    (Commit12t, 32),  // S88
+    (Commit13t, 32),  // S89
+    (Commit14t, 32),  // S90
+    (Commit15t, 32),  // S91
+    (Commit16t, 32),  // S92
+    (Pcycle9t, 32),   // S93
+    (Pcycle10t, 32),  // S94
+    (Pcycle11t, 32),  // S95
+    (Pcycle12t, 32),  // S96
+    (Pcycle13t, 32),  // S97
+    (Pcycle14t, 32),  // S98
+    (Pcycle15t, 32),  // S99
+    (Pcycle16t, 32),  // S100
+    (Ipend, 32),      // S101
+    (Iad, 32),        // S102
+    (IsdbSt1, 32),    // S103
+    (IsdbSt2, 32),    // S104
+    (BrkptInfo1, 32), // S105
+    // System register pairs
+    (S17S16, 64),
+    (S19S18, 64),
+    (S21S20, 64),
+    (S23S22, 64),
+    (S25S24, 64),
+    (S27S26, 64),
+    (S29S28, 64),
+    (Pcycle, 64), // S31S30
+    (S33S32, 64),
+    (S35S34, 64),
+    (S37S36, 64),
+    (S39S38, 64),
+    (S41S40, 64),
+    (S43S42, 64),
+    (S45S44, 64),
+    (S47S46, 64),
+    (S49S48, 64),
+    (S51S50, 64),
+    (S53S52, 64),
+    (S55S54, 64),
+    (Timer, 64), // S57S56
+    (S59S58, 64),
+    (S61S60, 64),
+    (S63S62, 64),
+    (S65S64, 64),
+    (S67S66, 64),
+    (S69S68, 64),
+    (S71S70, 64),
+    (S73S72, 64),
+    (S75S74, 64),
+    (S77S76, 64),
+    (S79S78, 64),
+);
 
 #[cfg(test)]
 mod tests {

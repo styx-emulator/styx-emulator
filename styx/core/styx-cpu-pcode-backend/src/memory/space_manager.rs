@@ -9,11 +9,14 @@ use crate::{HasConfig, PcodeBackend};
 use core::panic;
 use log::{info, trace, warn};
 use smallvec::SmallVec;
-use styx_cpu_type::arch::backends::ArchRegister;
+use std::collections::BTreeMap;
+use std::ops::Range;
+use std::sync::Arc;
+use styx_cpu_type::arch::backends::{ArchRegister, GlobalArchRegister};
 use styx_cpu_type::arch::RegisterValue;
 use styx_cpu_type::ArchEndian;
 use styx_pcode::pcode::{SpaceId, SpaceName, VarnodeData};
-use styx_processor::cpu::CpuBackend;
+use styx_processor::cpu::{CpuBackend, GlobalRegisterStore};
 use styx_processor::event_controller::EventController;
 use styx_processor::memory::{MemoryOperation, MemoryType, Mmu, MmuOpError};
 use thiserror::Error;
@@ -138,6 +141,17 @@ impl SpaceManager {
             .unwrap();
 
         new_self
+    }
+
+    /// Set the global register store.
+    pub fn setup_global_register_store(
+        &mut self,
+        register_store: Arc<Box<dyn GlobalRegisterStore>>,
+        global_register_range: Range<u64>,
+    ) {
+        if let Ok(spc) = self.get_space_mut(&SpaceName::Register) {
+            spc.setup_global_register_store(register_store, global_register_range);
+        }
     }
 
     /// Get a space from the manager if it exists.

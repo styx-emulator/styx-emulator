@@ -1,5 +1,8 @@
+use styx_cpu_type::arch::backends::ArchRegister;
+use styx_pcode_translator::sla::hexagon_global_reg_to_str;
+
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::arch_spec::hexagon::regpairs::REGPAIR_MAP;
+use crate::arch_spec::hexagon::regpairs::{GLOBAL_REGPAIR_MAP, REGPAIR_MAP};
 use crate::arch_spec::hexagon::tests::*;
 
 #[test]
@@ -14,6 +17,19 @@ fn verify_regpairs() {
         let regpair_str = hexagon_reg_to_str(k);
         let reglo_str = hexagon_reg_to_str(&v.1);
         let reghi_str = hexagon_reg_to_str(&v.0);
+
+        let regs: Vec<&str> = re.find_iter(&regpair_str).map(|m| m.as_str()).collect();
+        trace!("regs for {regpair_str} are {regs:?} and hi {reghi_str} lo {reglo_str}");
+        // check these regs aginst the values, make sure the first value in regs
+        // aligns with the hi in the map and second aligns with lo in the map
+        assert_eq!(reghi_str, regs[0].into());
+        assert_eq!(reglo_str, regs[1].into());
+    }
+
+    for (k, v) in GLOBAL_REGPAIR_MAP.iter() {
+        let regpair_str = hexagon_global_reg_to_str(k);
+        let reglo_str = hexagon_global_reg_to_str(&v.1);
+        let reghi_str = hexagon_global_reg_to_str(&v.0);
 
         let regs: Vec<&str> = re.find_iter(&regpair_str).map(|m| m.as_str()).collect();
         trace!("regs for {regpair_str} are {regs:?} and hi {reghi_str} lo {reglo_str}");
@@ -49,20 +65,40 @@ fn test_all_regpairs() {
         );
         test_regpair_helper(&mut cpu, *k, v.0, v.1);
     }
+
+    for (k, v) in GLOBAL_REGPAIR_MAP.iter() {
+        // since the registers are named consistently in ghidra, we can extract out the register pair name used
+        // by keystone/llvm
+
+        let regpair_str = hexagon_global_reg_to_str(k);
+        let regs: Vec<&str> = re.find_iter(&regpair_str).map(|m| m.as_str()).collect();
+
+        let keystone_regpair_str = regs[0].to_owned() + ":" + &regs[1][1..];
+        trace!(
+            "calling test_regpair_helper on {} {:?} {:?} {:?}",
+            keystone_regpair_str,
+            k,
+            v.0,
+            v.1
+        );
+        test_regpair_helper(&mut cpu, *k, v.0, v.1);
+    }
 }
 
 fn test_regpair_helper(
     cpu: &mut HexagonPcodeBackend,
-    hex_regpair: HexagonRegister,
-    hex_hi_reg: HexagonRegister,
-    hex_lo_reg: HexagonRegister,
+    hex_regpair: impl Into<ArchRegister>,
+    hex_hi_reg: impl Into<ArchRegister>,
+    hex_lo_reg: impl Into<ArchRegister>,
 ) {
     const LO: u64 = 0x29884433;
     // pretty sure this has to be a byte unless you want to copy from another
     // register
     const HI: u64 = 100;
 
-    cpu.write_register(hex_regpair, (HI << 32) | LO).unwrap();
+    let hex_regpair: ArchRegister = hex_regpair.into();
+    cpu.write_register(hex_regpair.clone(), (HI << 32) | LO)
+        .unwrap();
 
     let reg_lo = cpu.read_register::<u32>(hex_lo_reg).unwrap();
     let reg_hi = cpu.read_register::<u32>(hex_hi_reg).unwrap();

@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! # Styx-Processors
 
+use std::borrow::BorrowMut;
+
 use event_controller::HexagonEventController;
+use styx_core::arch::hexagon::GlobalHexagonRegister;
 use styx_core::arch::hexagon::HexagonRegister;
 use styx_core::core::builder::VcpuBundleBuilder;
 use styx_core::cpu::arch::hexagon::HexagonVariants;
@@ -11,7 +14,7 @@ use styx_core::loader::LoaderHints;
 use styx_core::memory::physical::PhysicalMemoryVariant;
 use styx_core::memory::{MemoryBackend, Mmu};
 use styx_core::prelude::log::info;
-use styx_core::prelude::{Context, Peripheral, PrimaryEventController};
+use styx_core::prelude::{BuildingProcessor, Context, Peripheral, PrimaryEventController};
 use styx_core::{
     core::{
         builder::{BuildProcessorImplArgs, ProcessorImpl},
@@ -99,21 +102,65 @@ impl ProcessorImpl for HexagonBuilder {
             write_cfgtable_field(&mut cpu, &mut memory, *cfgbase_entry as u64, *value);
         }
 
-         // Peripherals may use this
-         memory
-             .memory_map(0x100000000, 0x40000000, MemoryPermissions::all())
-             .with_context(|| "couldn't add memory region for peripherals")?;
- 
+        // Peripherals may use this
+        memory
+            .memory_map(0x100000000, 0x40000000, MemoryPermissions::all())
+            .with_context(|| "couldn't add memory region for peripherals")?;
+
         // Default EventDistributor here.
-         Ok(ProcessorBundle::builder()
-             .with_memory(memory)
-             .with_vcpu(|v| {
-                 v.with_cpu_box(cpu)
-                     .with_tlb(HexagonTlb::new())
-                     .with_event_controller(HexagonEventController::default())
-             })
-             .with_arch_hint(Arch::Hexagon)
-             .build()?)
+        Ok(ProcessorBundle::builder()
+            .with_memory(memory)
+            .with_vcpu(|v| {
+                v.with_cpu_box(cpu)
+                    .with_tlb(HexagonTlb::new())
+                    .with_event_controller(HexagonEventController::default())
+            })
+            .with_arch_hint(Arch::Hexagon)
+            .build()?)
+    }
+
+    // Wait for global regs to be initialized before writing CfgBase.
+    fn init(&self, proc: &mut BuildingProcessor) -> Result<(), UnknownError> {
+        // Set cfgbase
+
+        info!("init");
+        let proc_config = proc
+            .config
+            .get::<HexagonProcessorConfig>()
+            .expect("expected Hexagon processor config during build");
+
+        proc.vcpus[0]
+            .cpu
+            .write_register(
+                GlobalHexagonRegister::CfgBase,
+                (proc_config.cfgbase >> 16) as u32,
+            )
+            .expect("Couldn't write config table for hexagon");
+
+        let mut cpu = &mut proc.vcpus[0].cpu;
+
+        // Set subsystem base
+        write_cfgtable_field(
+            &mut **cpu,
+            &proc.core.memory,
+            SUBSYSTEM_CFGTABLE_OFFSET,
+            (proc_config.subsystem_base >> 16) as u32,
+        );
+
+        write_cfgtable_field(
+            &mut **cpu,
+            &proc.core.memory,
+            JTLB_ENTRIES_CFGTABLE_OFFSET,
+            proc_config.tlb_entries,
+        );
+
+        // Setup cfgtable (cfgbase is written in HexagonBuilder)
+        for (cfgbase_entry, value) in proc_config.config_table.iter() {
+            write_cfgtable_field(&mut **cpu, &proc.core.memory, *cfgbase_entry as u64, *value);
+        }
+
+        info!("init end");
+        Ok(())
     }
 }
 
@@ -159,7 +206,7 @@ pub fn read_cfgtable_field(
     offset: u64,
 ) -> Result<u32, UnknownError> {
     let cfgbase = cpu
-        .read_register::<u32>(HexagonRegister::CfgBase)
+        .read_register::<u32>(GlobalHexagonRegister::CfgBase)
         .with_context(|| "couldn't read cfgbase")? as u64;
 
     let cfgtable_offset_addr: u64 = (cfgbase << 16) + offset;
@@ -169,12 +216,12 @@ pub fn read_cfgtable_field(
 
 pub fn write_cfgtable_field(
     cpu: &mut dyn CpuBackend,
-    mmu: &mut MemoryBackend,
+    mmu: &MemoryBackend,
     offset: u64,
     value: u32,
 ) {
     let cfgbase = cpu
-        .read_register::<u32>(HexagonRegister::CfgBase)
+        .read_register::<u32>(GlobalHexagonRegister::CfgBase)
         .expect("Couldn't read cfgbase")
         << 16;
 
