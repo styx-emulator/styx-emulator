@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: BSD-2-Clause
 /// Hooks assume reads/writes are aligned to 4 bytes
+use std::sync::{Arc, Mutex};
+
 use styx_core::{
     hooks::{MemoryReadHook, MemoryWriteHook},
     prelude::*,
 };
-use styx_peripherals::uart::UartController;
 use tracing::debug;
 
 use super::UartPortInner;
@@ -22,7 +23,7 @@ const STAT_REG_TX_FIFO_EMPTY: u8 = 0x4;
 const STAT_REG_RX_FIFO_VALID: u8 = 0x1;
 
 pub struct UartHook {
-    pub interface_id: String,
+    pub inner: Arc<Mutex<UartPortInner>>,
 }
 
 impl MemoryReadHook for UartHook {
@@ -41,14 +42,7 @@ impl MemoryReadHook for UartHook {
             data
         );
 
-        let uart_controller = proc
-            .event_controller
-            .peripherals
-            .get::<UartController>()
-            .unwrap();
-        let uart_port = &mut uart_controller
-            .get::<UartPortInner>(&self.interface_id)
-            .unwrap();
+        let mut uart_port = self.inner.lock().unwrap();
 
         // a pointer to the last byte in the read data, the 1 byte register
         let register_data = &mut data[3];
@@ -103,12 +97,7 @@ impl MemoryWriteHook for UartHook {
             size,
             data
         );
-        let uart_controller = proc
-            .event_controller
-            .peripherals
-            .get::<UartController>()
-            .unwrap();
-        let uart_port = &mut uart_controller.try_get::<UartPortInner>("0")?;
+        let mut uart_port = self.inner.lock().unwrap();
         let register_data: u8 = data[3];
 
         match address {
