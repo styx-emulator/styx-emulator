@@ -25,6 +25,7 @@ impl HexagonDevice for Tester {
 
     fn proc_config(&self) -> Result<HexagonProcessorConfig, UnknownError> {
         Ok(HexagonProcessorConfig {
+            hardware_threads: 6,
             config_table: [
                 (HexagonConfigTable::L2TCM, 0x540),
                 (HexagonConfigTable::L2EcomemSize, 0x800),

@@ -18,6 +18,7 @@ impl HexagonDevice for S22 {
         trace!("S22 processor config");
 
         Ok(HexagonProcessorConfig {
+            hardware_threads: 1, // 8,
             config_table: [
                 (HexagonConfigTable::L2TCM, 0x540),
                 (HexagonConfigTable::L2EcomemSize, 0x800),

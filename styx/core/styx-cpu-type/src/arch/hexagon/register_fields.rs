@@ -221,3 +221,20 @@ pub struct Ccr {
     #[bit(31, rw)]
     vv3: bool,
 }
+
+/// Software Thread ID register
+#[bitfield(u32)]
+pub struct Stid {
+    #[bits(0..=7, rw)]
+    stid: u8,
+    #[bits(16..=23, rw)]
+    prio: u8,
+}
+
+#[bitfield(u32)]
+pub struct ModeCtl {
+    #[bits(0..=15, rw)]
+    enable_mask: u16,
+    #[bits(16..=31, rw)]
+    wait_mask: u16,
+}

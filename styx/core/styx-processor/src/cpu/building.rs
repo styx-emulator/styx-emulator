@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
 use derive_more::Debug;
-use log::info;
+use log::{info, trace};
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex, RwLock},
@@ -110,7 +110,7 @@ impl GlobalRegisterStore for RwLock<Vec<u8>> {
 
         let value = &locked[reg..(reg + size)];
 
-        info!("global read {reg:?} val {value:x?}");
+        trace!("global read {reg:?} val {value:x?}");
         let val = match size {
             1 => RegisterValue::u8(value[0]),
             2 => RegisterValue::u16(match endian {

@@ -399,6 +399,23 @@ impl EventDistributorImpl for CapturingPrimaryEc {
             .extend_from_slice(pending_irqs);
         Ok(())
     }
+
+    fn init(
+        &mut self,
+        _cpu: &mut dyn crate::cpu::CpuBackend,
+        _mmu: &mut MemoryBackend,
+    ) -> Result<(), UnknownError> {
+        Ok(())
+    }
+
+    fn init(
+        &mut self,
+        _cpu: &mut dyn crate::cpu::CpuBackend,
+        _mmu: &mut MemoryBackend,
+        _config: &mut Config,
+    ) -> Result<(), UnknownError> {
+        Ok(())
+    }
 }
 
 /// Test that IRQs returned from Peripheral::tick() are passed to

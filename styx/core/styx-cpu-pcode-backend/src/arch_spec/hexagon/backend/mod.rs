@@ -1,16 +1,20 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
+use crate::arch_spec::hexagon::system::interrupt::HexagonInterruptType;
 use anyhow::anyhow;
 pub use decode_info::{GeneralHexagonInstruction, Iclass};
 use execution_helper::DefaultHexagonExecutionHelper;
-use log::trace;
+use log::{error, info, trace, warn};
 pub use saved_context_opts::SavedContextOpts;
 use smallvec::{smallvec, SmallVec};
 use std::{borrow::Cow, collections::BTreeMap, ops::Range, sync::Arc};
 use styx_cpu_type::{
     arch::{
         backends::{ArchRegister, ArchVariant, BasicArchRegister, GlobalArchRegister},
-        hexagon::{register_fields::Ssr, GlobalHexagonRegister, HexagonRegister},
+        hexagon::{
+            register_fields::{ModeCtl, Ssr},
+            GlobalHexagonRegister, HexagonRegister,
+        },
         ArchitectureDef, RegisterValue,
     },
     Arch, ArchEndian, TargetExitReason,
@@ -182,6 +186,7 @@ pub struct HexagonPcodeBackend {
 
     // Threading information
     num_hthreads: u32,
+    running: bool,
 }
 
 impl Hookable for HexagonPcodeBackend {
@@ -544,16 +549,29 @@ impl CpuBackend for HexagonPcodeBackend {
         event_controller: &mut EventController,
         count: u64,
     ) -> Result<ExecutionReport, UnknownError> {
-        self.execute_helper(mmu, event_controller, count)
-            .map(|mut i| {
-                // Add the packet order to the execution report
-                // so that we can check it in test cases
-                i.report.last_packet_order = match i.execute_single_info {
-                    Some(execute_single_info) => Some(execute_single_info.ordering),
-                    None => None,
-                };
-                i.report
+        // Don't execute if the thread isn't running
+
+        let htid = self.read_register::<u32>(HexagonRegister::Htid).unwrap();
+        if !self.running {
+            warn!("bailing because thread {htid} is not running");
+            Ok(ExecutionReport {
+                instructions_executed: Some(0),
+                last_packet_order: None,
+                exit_reason: TargetExitReason::InstructionCountComplete,
             })
+        } else {
+            warn!("running htid {htid}");
+            self.execute_helper(mmu, event_controller, count)
+                .map(|mut i| {
+                    // Add the packet order to the execution report
+                    // so that we can check it in test cases
+                    i.report.last_packet_order = match i.execute_single_info {
+                        Some(execute_single_info) => Some(execute_single_info.ordering),
+                        None => None,
+                    };
+                    i.report
+                })
+        }
     }
 
     fn context_save(&mut self) -> Result<(), UnknownError> {
@@ -600,12 +618,114 @@ impl CpuBackend for HexagonPcodeBackend {
 
         Ok(())
     }
+
+    fn handle_event(
+        &mut self,
+        _mmu: &mut Mmu,
+        number: ExceptionNumber,
+    ) -> Result<(), UnknownError> {
+        match number {
+            n if (n == HexagonInterruptType::K0Unlock as i32) => {}
+            n if (n == HexagonInterruptType::TlbUnlock as i32) => {}
+            // Don't start an already running thread
+            n if (n == HexagonInterruptType::ThreadStart as i32 && self.running) => {
+                info!("skipping thread was already started")
+            }
+            n if (n == HexagonInterruptType::ThreadStart as i32 && !self.running) => {
+                info!("starting thread...");
+                // "soft reset"
+                // ssr cause 0 = Reset
+                self.write_register(HexagonRegister::Ssr, 0u32).unwrap();
+                // There are definitely some threading issues with GlobalHexagonRegister.
+                let modectl = ModeCtl::new_with_raw_value(
+                    self.read_register::<u32>(GlobalHexagonRegister::ModeCtl)
+                        .unwrap(),
+                );
+                let htid = self.read_register::<u32>(HexagonRegister::Htid).unwrap();
+                self.write_register(
+                    GlobalHexagonRegister::ModeCtl,
+                    modectl
+                        .with_enable_mask(modectl.enable_mask() | (1 << htid))
+                        .raw_value(),
+                )
+                .unwrap();
+
+                // reset
+                let evb = self
+                    .read_register::<u32>(GlobalHexagonRegister::Evb)
+                    .unwrap()
+                    + HexagonInterruptType::Reset as u32;
+                self.write_register(HexagonRegister::Pc, evb).unwrap();
+
+                self.running = true;
+            }
+            _ => unreachable!(),
+        }
+
+        Ok(())
+    }
 }
 
 impl HexagonPcodeBackend {
     /// Return the number of hardware threads
     pub(crate) fn num_hthreads(&self) -> u32 {
         self.num_hthreads
+    }
+
+    pub fn set_running(&mut self, state: bool) {
+        // Start a previously non-running thread
+        if state {}
+
+        self.running = state
+    }
+
+    fn handle_tlb_miss(
+        &mut self,
+        mmu: &mut Mmu,
+        ev: &mut EventController,
+        irqn: ExceptionNumber,
+        slot: Option<usize>,
+    ) -> Result<(), UnknownError> {
+        let badva = self
+            .read_register::<u32>(HexagonRegister::BadVa)
+            .with_context(|| "couldn't read badva in exception")?;
+        let mut ssr = Ssr::new_with_raw_value(
+            self.read_register::<u32>(HexagonRegister::Ssr)
+                .with_context(|| "couldn't read ssr in exception")?,
+        );
+
+        info!("slot is {slot:?}, badva is {badva:x}");
+
+        if irqn == HexagonInterruptType::TlbMissX as i32 || slot == Some(0) {
+            info!(
+                "writing slot0 badva0/badva1, badva0 offset is {:x?}",
+                self.pcode_generator
+                    .get_register(&HexagonRegister::BadVa0.into())
+                    .unwrap()
+                    .offset
+            );
+            self.write_register(HexagonRegister::BadVa0, badva)?;
+            self.write_register(HexagonRegister::BadVa1, 0xbadabadau32)?;
+
+            ssr.set_v0(true);
+            ssr.set_v1(false);
+            ssr.set_bvs(false);
+        } else if slot == Some(1) {
+            info!("writing slot1 badva0/badva1");
+            self.write_register(HexagonRegister::BadVa1, badva)?;
+            self.write_register(HexagonRegister::BadVa0, 0xbadabadau32)?;
+
+            ssr.set_v0(false);
+            ssr.set_v1(true);
+            ssr.set_bvs(true);
+        }
+        self.write_register(HexagonRegister::Ssr, ssr.raw_value())?;
+
+        // exception occurred
+        // we should interrupt hook and rerun instruction
+        HookManager::trigger_interrupt_hook(self, mmu, ev, irqn)?;
+
+        Ok(())
     }
 
     pub fn new_engine(
@@ -680,6 +800,7 @@ impl HexagonPcodeBackend {
             hexagon_predicate_end,
             cache: Some(BTreeMap::new()),
             num_hthreads: num_hthreads.unwrap_or(6),
+            running: false,
         }
     }
     /// Indicate when we should update the context reg

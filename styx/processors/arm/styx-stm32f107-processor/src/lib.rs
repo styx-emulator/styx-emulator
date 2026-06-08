@@ -41,6 +41,65 @@ const SPI1_EVENT_IRQN: ExceptionNumber = 35;
 const SPI2_EVENT_IRQN: ExceptionNumber = 36;
 const SPI3_EVENT_IRQN: ExceptionNumber = 51;
 
+/// Routes IRQs returned by peripheral ticks to the single vCPU's NVIC.
+struct SingleVcpuIrqRouter;
+
+impl PrimaryEventControllerImpl for SingleVcpuIrqRouter {
+    fn latch(&mut self, _event: ExceptionNumber) -> Result<(), ActivateIRQnError> {
+        Ok(())
+    }
+
+    fn tick(
+        &mut self,
+        _delta: &GlobalDelta,
+        pending_irqs: &[ExceptionNumber],
+        vcpus: &mut [VCpuCore],
+    ) -> Result<(), UnknownError> {
+        for &irq in pending_irqs {
+            vcpus[0].event_controller.latch(irq)?;
+        }
+        Ok(())
+    }
+
+    fn init(
+        &mut self,
+        _cpu: &mut dyn CpuBackend,
+        _mmu: &mut MemoryBackend,
+    ) -> Result<(), UnknownError> {
+        Ok(())
+    }
+}
+
+/// Routes IRQs returned by peripheral ticks to the single vCPU's NVIC.
+struct SingleVcpuIrqRouter;
+
+impl PrimaryEventControllerImpl for SingleVcpuIrqRouter {
+    fn latch(&mut self, _event: ExceptionNumber) -> Result<(), ActivateIRQnError> {
+        Ok(())
+    }
+
+    fn tick(
+        &mut self,
+        _delta: &GlobalDelta,
+        pending_irqs: &[ExceptionNumber],
+        vcpus: &mut [VCpuCore],
+    ) -> Result<(), UnknownError> {
+        for &irq in pending_irqs {
+            vcpus[0].event_controller.latch(irq)?;
+        }
+        Ok(())
+    }
+
+    fn init(
+        &mut self,
+        _cpu: &mut dyn CpuBackend,
+        _mmu: &mut MemoryBackend,
+        _config: &mut Config,
+    ) -> Result<(), UnknownError> {
+        Ok(())
+    }
+}
+
 impl ProcessorImpl for Stm32f107Builder {
     fn build(&self, args: &BuildProcessorImplArgs) -> Result<ProcessorBundle, UnknownError> {
         let mut cpu: Box<dyn CpuBackend> = match args.backend {

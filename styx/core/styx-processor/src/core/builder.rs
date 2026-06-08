@@ -2,7 +2,7 @@
 
 use crate::cpu::CpuBuilding;
 use crate::event_controller::DummyEventController;
-use crate::memory::{DummyTlb, TlbImpl};
+use crate::memory::{DummyTlb, MemoryBackend, TlbImpl};
 use crate::processor::BuildingProcessor;
 use crate::{
     core::ExceptionBehavior,
@@ -158,6 +158,15 @@ pub struct BuildProcessorImplArgs<'a> {
 /// Refer to documentation of the [ProcessorBundle] fields for more information.
 pub trait ProcessorImpl {
     fn build(&self, args: &BuildProcessorImplArgs) -> Result<ProcessorBundle, UnknownError>;
+    /// called after global registers and other shared state is set up across processors.
+    fn post_shared_state_setup(
+        &self,
+        _cpu: &mut dyn CpuBackend,
+        _mmu: &mut MemoryBackend,
+        _config: &mut Config,
+    ) -> Result<(), UnknownError> {
+        Ok(())
+    }
     /// called after the build method, but before the processor is started
     fn init(&self, _proc: &mut BuildingProcessor) -> Result<(), UnknownError> {
         Ok(())

@@ -402,13 +402,16 @@ impl<'a> ProcessorBuilder<'a> {
 	    }
 	}
 	
-
+	
+        if let Some((cpu, _, _)) = vcpu_data.first_mut() {
+	    builder.post_shared_state_setup(cpu.as_mut(), &mut memory, &mut self.config)?;
+	}
 
         // Init each secondary EC before memory is moved into Arc.
         for (cpu, _, ec_impl) in &mut vcpu_data {
             ec_impl.init(cpu.as_mut(), &mut memory, &mut self.config)?;
         }
-
+ 
         let memory = Arc::new(memory);
 
         // Build VcpuCores now that memory is wrapped in Arc.
@@ -466,7 +469,7 @@ impl<'a> ProcessorBuilder<'a> {
                 .context("failed to add initial processor hooks")?;
         }
 
-        let mut building_processor = BuildingProcessor {
+	let mut building_processor = BuildingProcessor {
             vcpus: &mut vcpus,
             core: &mut core,
             runtime: &mut runtime,

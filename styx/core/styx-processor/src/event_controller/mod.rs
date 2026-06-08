@@ -10,8 +10,8 @@ use std::fmt::Display;
 use std::{any::type_name, sync::Arc};
 
 use as_any::AsAny;
-pub use dummy::DummyEventController;
-use log::trace;
+pub use dummy::{DummyEventController, DummyEventDistributor};
+use log::{info, trace};
 pub use peripheral::{DummyPeripheral, Peripheral, PeripheralTickCtx, RaisedIrqs};
 pub use peripherals::Peripherals;
 pub use single_vcpu_ec::SingleVcpuEventDistributor;
@@ -273,6 +273,7 @@ impl EventController {
         vcpu_idx: usize,
     ) -> Result<(), ActivateIRQnError> {
         self.irqs_to.push((vcpu_idx, event));
+        info!("adding to IRQ, {:?}", self.irqs_to);
         Ok(())
     }
 

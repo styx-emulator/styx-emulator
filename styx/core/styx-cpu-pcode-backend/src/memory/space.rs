@@ -4,7 +4,7 @@ use super::{
     sized_value::SizedValue,
 };
 use enum_dispatch::enum_dispatch;
-use log::info;
+use log::{info, trace};
 use std::{ops::Range, sync::Arc};
 use styx_cpu_type::arch::RegisterValue;
 use styx_pcode::pcode::{SpaceId, SpaceInfo, SpaceName, VarnodeData};
@@ -144,7 +144,7 @@ impl Space {
     ) -> Option<SizedValue> {
         if let Some(global_register_range) = self.global_register_range.as_ref() {
             if global_register_range.contains(&offset) {
-                info!("get_value_mmu {offset:x?}");
+                trace!("get_value_mmu {offset:x?}");
                 // Check if this is a global register.
                 let store = self.global_register_store.as_ref().unwrap();
 
