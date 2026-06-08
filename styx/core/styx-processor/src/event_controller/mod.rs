@@ -14,8 +14,8 @@ pub use dummy::DummyEventController;
 use log::trace;
 pub use peripheral::{DummyPeripheral, Peripheral, PeripheralTickCtx, RaisedIrqs};
 pub use peripherals::Peripherals;
-pub use single_vcpu_ec::SingleVcpuEventDistributor;
-use smallvec::SmallVec;
+pub use single_vcpu_ec::SingleVcpuEventController;
+use smallvec::{Drain, SmallVec};
 use static_assertions::assert_obj_safe;
 use styx_errors::anyhow::Context;
 use styx_errors::UnknownError;
@@ -230,6 +230,8 @@ pub struct EventController {
     pub inner: Box<dyn EventControllerImpl>,
     /// Which vcpu does this event controller belong to.
     pub vcpu_index: VcpuId,
+    /// IRQs to latch on other vcpus
+    pub irqs_to: SmallVec<[(usize, ExceptionNumber); 4]>,
 }
 
 impl Default for EventController {
@@ -240,7 +242,11 @@ impl Default for EventController {
 
 impl EventController {
     pub fn new(inner: Box<dyn EventControllerImpl>, vcpu_index: VcpuId) -> Self {
-        Self { inner, vcpu_index }
+        Self {
+            inner,
+            vcpu_index,
+            irqs_to: Default::default(),
+        }
     }
 
     /// Provides a dummy event controller on vcpu 0. Good for tests.
@@ -259,6 +265,24 @@ impl EventController {
 
     pub fn latch(&mut self, event: ExceptionNumber) -> Result<(), ActivateIRQnError> {
         self.inner.latch(event)
+    }
+
+    pub fn execute_to(
+        &mut self,
+        event: ExceptionNumber,
+        vcpu_idx: usize,
+    ) -> Result<(), ActivateIRQnError> {
+        self.irqs_to.push((vcpu_idx, event));
+        Ok(())
+    }
+
+    pub fn vcpu_irqs(
+        &mut self,
+    ) -> Result<SmallVec<[(usize, ExceptionNumber); 4]>, ActivateIRQnError> {
+        let irqs = self.irqs_to.clone();
+        self.irqs_to.clear();
+
+        Ok(irqs)
     }
 
     pub fn execute(
@@ -336,6 +360,8 @@ pub struct EventDistributor {
     /// Processor-level event controller implementation.
     pub inner: Box<dyn EventDistributorImpl>,
     pub peripherals: Peripherals,
+    /// IRQs to latch on other vcpus
+    pub irqs_to: SmallVec<[(usize, ExceptionNumber); 4]>,
 }
 
 impl Default for EventDistributor {
@@ -349,6 +375,7 @@ impl EventDistributor {
         Self {
             inner,
             peripherals: Peripherals::default(),
+            irqs_to: Default::default(),
         }
     }
 

@@ -35,6 +35,7 @@ pub trait CpuBuilding {
 
 /// Blanket default implementation
 impl CpuBuilding for dyn CpuBackend {}
+impl CpuBuilding for Box<dyn CpuBackend> {}
 
 pub trait GlobalRegisterStore: Send + Sync + Debug {
     fn initialize(&mut self, regs_size: usize) -> Result<(), UnknownError>;

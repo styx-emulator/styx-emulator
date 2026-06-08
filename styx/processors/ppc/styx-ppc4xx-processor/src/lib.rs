@@ -64,7 +64,7 @@ impl ProcessorImpl for PowerPC405Builder {
             .map(|a| a.0)
             .unwrap_or(args.backend);
 
-        let mut cpu = if let Backend::Pcode = backend {
+        let mut cpu: Box<dyn CpuBackend> = if let Backend::Pcode = backend {
             Box::new(PcodeBackend::new_engine_config(
                 Ppc32Variants::Ppc405,
                 ArchEndian::BigEndian,

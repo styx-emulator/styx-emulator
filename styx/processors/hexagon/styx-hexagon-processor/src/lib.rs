@@ -14,7 +14,7 @@ use styx_core::loader::LoaderHints;
 use styx_core::memory::physical::PhysicalMemoryVariant;
 use styx_core::memory::{MemoryBackend, Mmu};
 use styx_core::prelude::log::info;
-use styx_core::prelude::{BuildingProcessor, Context, Peripheral, PrimaryEventController};
+use styx_core::prelude::{BuildingProcessor, Context, EventDistributor, Peripheral};
 use styx_core::{
     core::{
         builder::{BuildProcessorImplArgs, ProcessorImpl},

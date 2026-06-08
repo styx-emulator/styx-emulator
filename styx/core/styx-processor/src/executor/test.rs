@@ -5,7 +5,7 @@ use std::time::Duration;
 use styx_errors::UnknownError;
 
 use crate::{
-    core::ProcessorCore,
+    core::{ProcessorCore, VcpuCore},
     cpu::DummyBackend,
     event_controller::{
         EventController, EventControllerImpl, EventDistributor, EventDistributorImpl,

@@ -18,6 +18,7 @@ use super::ProcessorBundle;
 
 pub trait CpuBackendBuilding: CpuBackend + CpuBuilding {}
 impl<T: CpuBackend + CpuBuilding> CpuBackendBuilding for T {}
+
 impl CpuBackendBuilding for dyn CpuBackend {}
 impl Into<Box<dyn CpuBackendBuilding>> for Box<dyn CpuBackend> {
     fn into(self) -> Box<dyn CpuBackendBuilding> {

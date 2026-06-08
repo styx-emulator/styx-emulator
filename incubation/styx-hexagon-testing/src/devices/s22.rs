@@ -122,8 +122,9 @@ impl HexagonDevice for S22 {
     fn post_init(&self, proc: &mut Processor) -> Result<(), UnknownError> {
         let memory = proc.memory().data();
         // Mystery peripheral
-        memory.write(0x10c2004).le().value(1u32)?;
-        memory.write(0x10c2000).le().value(1u32)?;
+
+        memory.write(0x10c2004).le().value(1u32).unwrap();
+        memory.write(0x10c2000).le().value(1u32).unwrap();
 
         Ok(())
     }
