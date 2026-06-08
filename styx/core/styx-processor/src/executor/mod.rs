@@ -239,7 +239,7 @@ impl RunnerState {
         idx: usize,
         primary_ev: &mut EventDistributor,
     ) -> Result<StrideResult, UnknownError> {
-        let (report, emulate_time) = vcpus[idx].execute_timed(self.state.stride)?;
+        let (report, emulate_time) = vcpus[idx].execute_and_time(self.state.stride)?;
         vcpus[idx]
             .time
             .record_stride(&report, self.state.stride, emulate_time);
@@ -303,7 +303,7 @@ fn run_round_robin(
                 return Err(anyhow!("vcpu exited nonfatal before others"));
             }
             // The primary event controller is passed in
-            let result = runner.single_stride(&mut vcpus, vcpu_idx, &mut core.event_controller)?;
+            let result = runner.single_stride(vcpus, vcpu_idx, &mut core.event_distributor)?;
             *report = result.exit_reason;
         }
 

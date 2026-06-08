@@ -440,10 +440,10 @@ impl<'a> ProcessorBuilder<'a> {
         debug!("initializing event distributor");
         let mut primary_ec_impl = bundle.event_distributor;
         primary_ec_impl.init(&mut vcpus, &memory, &mut self.config)?;
-        let primary_ec = EventDistributor::new(primary_ec_impl);
+        let primary_ed = EventDistributor::new(primary_ec_impl);
         let mut core = ProcessorCore {
             memory: Arc::clone(&memory),
-            event_controller: primary_ec,
+            event_distributor: primary_ed,
             time: ProcessorTime::default(),
         };
 
