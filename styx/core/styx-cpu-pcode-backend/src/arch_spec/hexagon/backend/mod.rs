@@ -625,14 +625,36 @@ impl CpuBackend for HexagonPcodeBackend {
         number: ExceptionNumber,
     ) -> Result<(), UnknownError> {
         match number {
-            n if (n == HexagonInterruptType::K0Unlock as i32) => {}
-            n if (n == HexagonInterruptType::TlbUnlock as i32) => {}
+            n if (n == HexagonInterruptType::Wake as i32) => {
+                self.running = true;
+            }
+            n if (n == HexagonInterruptType::Sleep as i32) => {
+                self.running = false;
+            }
+            // Don't stop an already stopped thread
+            n if (n == HexagonInterruptType::ThreadStop as i32 && !self.running) => {}
+            n if (n == HexagonInterruptType::ThreadStop as i32 && self.running) => {
+                self.running = false;
+                // Clear modectl
+                let modectl = ModeCtl::new_with_raw_value(
+                    self.read_register::<u32>(GlobalHexagonRegister::ModeCtl)
+                        .unwrap(),
+                );
+                let htid = self.read_register::<u32>(HexagonRegister::Htid).unwrap();
+
+                self.write_register(
+                    GlobalHexagonRegister::ModeCtl,
+                    modectl
+                        .with_enable_mask(modectl.enable_mask() & !(1 << htid))
+                        .raw_value(),
+                )
+                .unwrap();
+            }
             // Don't start an already running thread
             n if (n == HexagonInterruptType::ThreadStart as i32 && self.running) => {
                 info!("skipping thread was already started")
             }
             n if (n == HexagonInterruptType::ThreadStart as i32 && !self.running) => {
-                info!("starting thread...");
                 // "soft reset"
                 // ssr cause 0 = Reset
                 self.write_register(HexagonRegister::Ssr, 0u32).unwrap();
@@ -642,6 +664,7 @@ impl CpuBackend for HexagonPcodeBackend {
                         .unwrap(),
                 );
                 let htid = self.read_register::<u32>(HexagonRegister::Htid).unwrap();
+
                 self.write_register(
                     GlobalHexagonRegister::ModeCtl,
                     modectl
@@ -657,9 +680,11 @@ impl CpuBackend for HexagonPcodeBackend {
                     + HexagonInterruptType::Reset as u32;
                 self.write_register(HexagonRegister::Pc, evb).unwrap();
 
+                info!("starting thread... {htid}");
+
                 self.running = true;
             }
-            _ => unreachable!(),
+            _ => unreachable!("event was {number:?}"),
         }
 
         Ok(())

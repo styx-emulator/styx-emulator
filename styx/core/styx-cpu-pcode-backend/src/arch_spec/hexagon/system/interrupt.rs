@@ -59,11 +59,12 @@ pub enum HexagonInterruptType {
     IntE = 0x1e,
     IntF = 0x1f,
     Halt = 0x20,
-    // From QEMU
-    K0Unlock = 0x800,
-    TlbUnlock = 0x2000,
-    // Made this up
+    // Made this up, inspired by QEMU. The difference is ThreadStop will set ModeCtl/ThreadStart will jump to Reset,
+    // but sleep/wake just pause the thread.
+    Sleep = 0x1000,
+    Wake = 0x2000,
     ThreadStart = 0x4000,
+    ThreadStop = 0x6000,
 }
 
 #[repr(u8)]

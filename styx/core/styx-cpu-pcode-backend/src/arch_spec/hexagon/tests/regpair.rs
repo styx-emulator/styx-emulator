@@ -1,9 +1,9 @@
-use styx_cpu_type::arch::backends::ArchRegister;
-use styx_pcode_translator::sla::hexagon_global_reg_to_str;
-
 // SPDX-License-Identifier: BSD-2-Clause
 use crate::arch_spec::hexagon::regpairs::{GLOBAL_REGPAIR_MAP, REGPAIR_MAP};
 use crate::arch_spec::hexagon::tests::*;
+
+use styx_cpu_type::arch::backends::ArchRegister;
+use styx_pcode_translator::sla::hexagon_global_reg_to_str;
 
 #[test]
 fn verify_regpairs() {

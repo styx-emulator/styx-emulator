@@ -236,7 +236,9 @@ define pcodeop l2gunlock;
 define pcodeop l2gclean;
 define pcodeop l2gcleaninv;
 define pcodeop memw_locked;
+define pcodeop memw_loadlinked;
 define pcodeop memd_locked;
+define pcodeop memd_loadlinked;
 define pcodeop memw_phys;
 define pcodeop cl1;
 define pcodeop brev;
@@ -21726,7 +21728,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
 :L2_loadw_locked L2_loadw_locked_Rd32 L2_loadw_locked_Rs32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b5 = 0 & b6 = 0 & b12 = 0 & b13 = 0 & b21 = 0 & b22 = 0 & b23 = 0 & b24 = 0 & b25 = 1 & b26 = 0 & b27 = 0 & b28 = 1 & b29 = 0 & b30 = 0 & b31 = 1 & L2_loadw_locked_Rd32 & L2_loadw_locked_Rs32 {
   local EA:4;
   EA = L2_loadw_locked_Rs32;
-  L2_loadw_locked_Rd32 = *:4 EA;
+  L2_loadw_locked_Rd32 = memw_loadlinked(EA);
 }
 
 :S2_storew_locked S2_storew_locked_Pd4 S2_storew_locked_Rs32 S2_storew_locked_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b21 = 1 & b22 = 0 & b23 = 1 & b24 = 0 & b25 = 0 & b26 = 0 & b27 = 0 & b28 = 0 & b29 = 1 & b30 = 0 & b31 = 1 & S2_storew_locked_Pd4 & S2_storew_locked_Rs32 & S2_storew_locked_Rt32 {
@@ -21740,7 +21742,7 @@ gp: reloc is epsilon [ reloc = 0; ] {
 :L4_loadd_locked L4_loadd_locked_Rdd32 L4_loadd_locked_Rs32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b5 = 0 & b6 = 0 & b12 = 1 & b13 = 0 & b21 = 0 & b22 = 0 & b23 = 0 & b24 = 0 & b25 = 1 & b26 = 0 & b27 = 0 & b28 = 1 & b29 = 0 & b30 = 0 & b31 = 1 & L4_loadd_locked_Rdd32 & L4_loadd_locked_Rs32 {
   local EA:4;
   EA = L4_loadd_locked_Rs32;
-  L4_loadd_locked_Rdd32 = *:8 EA;
+  L4_loadd_locked_Rdd32 = memd_loadlinked(EA);
 }
 
 :L4_loadw_phys L4_loadw_phys_Rd32 L4_loadw_phys_Rs32 L4_loadw_phys_Rt32 is phase = 1 & immext = 0xffffffff & Parse != 0b00 & subinsn = 0 & b5 = 0 & b6 = 0 & b13 = 1 & b21 = 0 & b22 = 0 & b23 = 0 & b24 = 0 & b25 = 1 & b26 = 0 & b27 = 0 & b28 = 1 & b29 = 0 & b30 = 0 & b31 = 1 & L4_loadw_phys_Rd32 & L4_loadw_phys_Rs32 & L4_loadw_phys_Rt32 {

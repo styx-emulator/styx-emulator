@@ -50,7 +50,7 @@ impl HexagonDevice for S22 {
             StyxHook::CodeVirtual(
                 0xbc499670u64.into(),
                 Box::new(|proc: CoreHandle| {
-                    info!("playing with pc for long insn");
+                    trace!("playing with pc for long insn");
                     // update r0 to equal r7, since this
                     // packet breaks its loop after r7 is equal to r0
                     let r7 = proc.cpu.read_register::<u32>(HexagonRegister::R7).unwrap();
@@ -123,8 +123,8 @@ impl HexagonDevice for S22 {
     fn post_init(&self, proc: &mut Processor) -> Result<(), UnknownError> {
         let memory = proc.memory().data();
         // Mystery peripheral
-        memory.write(0x10c2004).le().value(1u32).unwrap();
-        memory.write(0x10c2000).le().value(1u32).unwrap();
+        memory.write(0x10c2004).le().value(1u32)?;
+        memory.write(0x10c2000).le().value(1u32)?;
         Ok(())
     }
 }
