@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! Load-Linked/Store-Conditional methods for Mmu.
+use derive_more::derive::Debug;
 use tap::Conv;
 use thiserror::Error;
 
@@ -12,6 +13,7 @@ use crate::cpu::CpuBackend;
 ///
 /// Refer to the [module documentation](crate::memory#load-linkstore-conditional)
 /// for detailed information and gotchas.
+#[derive(Debug)]
 pub struct Load {
     /// Address of access.
     ///

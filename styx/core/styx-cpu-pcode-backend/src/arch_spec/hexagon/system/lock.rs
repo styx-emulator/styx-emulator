@@ -10,9 +10,11 @@ use smallvec::SmallVec;
 use styx_cpu_type::arch::hexagon::{
     register_fields::Syscfg, GlobalHexagonRegister, HexagonRegister,
 };
+use styx_cpu_type::TargetExitReason;
 use styx_errors::anyhow::Context;
 use styx_pcode::{pcode::VarnodeData, sla::SlaUserOps};
 use styx_pcode_translator::sla::HexagonUserOps;
+use styx_processor::event_controller::ExceptionNumber;
 use styx_processor::{
     cpu::{CpuBackend, CpuBackendExt},
     event_controller::EventController,
@@ -57,8 +59,8 @@ impl<T: CpuBackend> CallOtherCallback<T> for HardwareLock {
     fn handle(
         &mut self,
         cpu: &mut dyn CallOtherCpu<T>,
-        _mmu: &mut Mmu,
-        _ev: &mut EventController,
+        mmu: &mut Mmu,
+        ev: &mut EventController,
         _inputs: &[VarnodeData],
         _output: Option<&VarnodeData>,
     ) -> Result<PCodeStateChange, CallOtherHandleError> {
@@ -108,10 +110,12 @@ impl<T: CpuBackend> CallOtherCallback<T> for HardwareLock {
             match lock_state_this_thread {
                 HexagonLockState::LockHeld => {
                     // Halting interrupt. According to qemu, the same thread that holds the lock locking itself
-                    //  would be a double interrupt.
-                    warn!("htid {htid} trttried to lock twice");
-                    Ok(PCodeStateChange::DelayedInterrupt(
-                        HexagonInterruptType::Halt as i32,
+                    // would be a double interrupt. (deadlocks?)
+                    warn!("htid {htid} tried to lock twice");
+
+                    cpu.handle_event(mmu, HexagonInterruptType::Sleep as ExceptionNumber)?;
+                    Ok(PCodeStateChange::Exit(
+                        TargetExitReason::InstructionCountComplete,
                     ))
                 }
                 // We need to queue the lock.
@@ -121,8 +125,9 @@ impl<T: CpuBackend> CallOtherCallback<T> for HardwareLock {
 
                     info!("lock held but {htid} wants it, halting {htid} till lock released");
 
-                    Ok(PCodeStateChange::DelayedInterrupt(
-                        HexagonInterruptType::Halt as i32,
+                    cpu.handle_event(mmu, HexagonInterruptType::Sleep as ExceptionNumber)?;
+                    Ok(PCodeStateChange::Exit(
+                        TargetExitReason::InstructionCountComplete,
                     ))
                 }
                 // If we are running the instruction with this, then we
@@ -202,6 +207,7 @@ impl<T: CpuBackend> CallOtherCallback<T> for HardwareUnlock {
 
                     if let HexagonLockState::Waiting = lock_state[i] {
                         // Give them the lock
+                        info!("in tlbunlock, giving htid {i} the lock");
                         let syscfg = Syscfg::new_with_raw_value(
                             cpu.read_register::<u32>(GlobalHexagonRegister::SysCfg)
                                 .with_context(|| "couldn't read syscfg")?,
@@ -210,17 +216,19 @@ impl<T: CpuBackend> CallOtherCallback<T> for HardwareUnlock {
                         cpu.write_register(
                             GlobalHexagonRegister::SysCfg,
                             match self.lock_type {
-                                HexagonLockType::K0 => syscfg.with_k0lock(true),
-                                HexagonLockType::Tlb => syscfg.with_tlblock(true),
+                                HexagonLockType::K0 => syscfg.with_k0lock(false),
+                                HexagonLockType::Tlb => syscfg.with_tlblock(false),
                             }
                             .raw_value(),
                         )
                         .with_context(|| "couldn't write syscfg")?;
 
                         lock_state[i] = HexagonLockState::Queued;
-                        unimplemented!("unimpl lowkey");
 
-                        // ev.execute_to(i, HexagonInterruptType::K0Lock);
+                        ev.execute_to(HexagonInterruptType::Wake as ExceptionNumber, i as usize)
+                            .with_context(|| "couldn't execute K0 unlock to other vcpu")?;
+
+                        break;
                         // ipend check that QEMU does
                     }
                 }
