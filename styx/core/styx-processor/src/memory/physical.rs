@@ -493,6 +493,7 @@ impl MemoryBackend {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct Data<'a>(&'a MemoryBackend);
 impl super::helpers::Readable for Data<'_> {
     type Error = MemoryOperationError;
@@ -509,6 +510,7 @@ impl super::helpers::Writable for Data<'_> {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct Code<'a>(&'a MemoryBackend);
 impl super::helpers::Readable for Code<'_> {
     type Error = MemoryOperationError;
