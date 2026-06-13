@@ -146,7 +146,13 @@ impl StyxConcreteTargetBackend {
     ) -> PyResult<Bound<'py, PyBytes>> {
         let buf = self
             .processor
-            .access(move |core| core.mmu.data().read(address).vec(nbytes as usize))
+            .access(move |context| {
+                context.vcpus[0]
+                    .mmu
+                    .data()
+                    .read(address)
+                    .vec(nbytes as usize)
+            })
             .map_err(|e| PyAssertionError::new_err(format!("unable to write memory: {e}")))?;
         debug!("read_memory: addr={address:X} size={nbytes} bytes={buf:X?}");
         Ok(PyBytes::new(py, buf.as_slice()))
