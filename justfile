@@ -137,9 +137,8 @@ rust-docs: rust-docs-inner
     @echo "The Rust API docs are located at ./target/doc/index.html"
 
 docs:
-    @echo  "Making docs"
-    #!/usr/bin/env -S bash -e
-    . venv/bin/activate && sphinx-build -b html -jauto docs/source/ docs/build/
+    @echo "Making docs"
+    {{ py-path }} -m sphinx -b html -jauto docs/source/ docs/build/
 
 # Host docs on webserver that refreshes on updates.
 host-docs PORT="8000":
