@@ -94,7 +94,7 @@ impl ProcessorBuilder {
             .take()
             .ok_or(anyhow!("executor already taken"))
             .map_err(super::convert_machine_err)?;
-        self.swapero(|builder| builder.with_executor_box(executor));
+        self.swapero(|builder| builder.with_executor_kind(executor));
 
         Ok(())
     }
