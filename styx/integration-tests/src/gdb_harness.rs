@@ -668,10 +668,6 @@ impl BlockingGdbClient {
     }
 
     /// Load symbols from an object/ELF file, placing its `.text` at `text_addr`.
-    ///
-    /// This gives the gdb client function boundaries for the target, which it
-    /// needs to unwind the call stack — and therefore to recognize a call
-    /// instruction when stepping over it with `next`/`nexti`.
     pub fn add_symbol_file(&self, path: &str, text_addr: u64) -> Result<(), GdbHarnessError> {
         let inner = self.inner.clone();
         self.runtime.block_on(async {
@@ -685,13 +681,14 @@ impl BlockingGdbClient {
     /// Issue `set scheduler-locking <mode>` to the gdb client (e.g. `"off"`,
     /// `"on"`, `"step"`).
     ///
-    /// NOTE: Styx's gdbserver accepts this command but does **not** honor it —
-    /// see [`set_scheduler_locking`](GdbHarness::set_scheduler_locking).
-    pub fn set_scheduler_locking(&self, mode: &str) -> Result<(), GdbHarnessError> {
+    /// NOTE: Styx's gdbserver accepts this command but does **not** honor it.
+    /// See [`set_scheduler_locking`](GdbHarness::set_scheduler_locking).
+    pub fn set_scheduler_locking(&self, mode: SchedulerLockingMode) -> Result<(), GdbHarnessError> {
+        let mode_gdb_option = mode.gdb_string();
         let inner = self.inner.clone();
         self.runtime.block_on(async {
             inner
-                .raw_console_cmd(&format!("set scheduler-locking {mode}"))
+                .raw_console_cmd(&format!("set scheduler-locking {mode_gdb_option}"))
                 .await
         })?;
         Ok(())
@@ -866,19 +863,41 @@ impl GdbHarness {
     }
 
     /// Load symbols from an object/ELF file with its `.text` at `text_addr`.
-    /// See [`BlockingGdbClient::add_symbol_file`].
     pub fn add_symbol_file(&self, path: &str, text_addr: u64) -> Result<(), GdbHarnessError> {
         self.gdb_client.add_symbol_file(path, text_addr)
     }
 
-    /// Set gdb's `scheduler-locking` mode (`"off"`, `"on"`, or `"step"`).
+    /// Issue `set scheduler-locking <mode>` to the gdb client (e.g. `"off"`,
+    /// `"on"`, `"step"`).
     ///
-    /// NOTE: Styx's gdbserver accepts the command (gdbstub fatally errors if the
-    /// target doesn't implement `MultiThreadSchedulerLocking`) but treats it as a
-    /// no-op: it executes vCPUs round-robin and always advances *every* thread on
-    /// a resume/step, so only the default `off` matches the emulator's actual
-    /// behavior. See `styx-gdbserver`'s `target_impl` module docs.
-    pub fn set_scheduler_locking(&self, mode: &str) -> Result<(), GdbHarnessError> {
+    /// NOTE: Styx's gdbserver accepts this command but does **not** honor it.
+    /// See [`set_scheduler_locking`](GdbHarness::set_scheduler_locking).
+    pub fn set_scheduler_locking(&self, mode: SchedulerLockingMode) -> Result<(), GdbHarnessError> {
         self.gdb_client.set_scheduler_locking(mode)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+pub enum SchedulerLockingMode {
+    /// No locking, any thread may run at any time.
+    On,
+    /// Only the current thread runs when resumed.
+    Off,
+    /// Acts as "on" when stepping and "off" otherwise.
+    Step,
+    /// Acts as "on" in replay mode and "off" otherwise.
+    #[default]
+    Replay,
+}
+
+impl SchedulerLockingMode {
+    /// Mode string given to `set scheduler-locking`.
+    pub fn gdb_string(self) -> &'static str {
+        match self {
+            SchedulerLockingMode::On => "on",
+            SchedulerLockingMode::Off => "off",
+            SchedulerLockingMode::Step => "step",
+            SchedulerLockingMode::Replay => "replay",
+        }
     }
 }

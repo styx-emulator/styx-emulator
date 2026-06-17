@@ -21,6 +21,7 @@ members = [
   "./examples/using-a-processor",
   "./examples/using-processor-hooks",
   "./examples/external-backend",
+  "./examples/gdb-multicore-ppc",
   "./incubation/styx-trace-tools",
   "./incubation/styx-cow",
   "./incubation/styx-macros-args",

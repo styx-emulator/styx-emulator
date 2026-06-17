@@ -5197,6 +5197,7 @@ dependencies = [
  "clap",
  "derivative",
  "gdbstub",
+ "itertools 0.14.0",
  "num-traits",
  "serde",
  "styx-core",

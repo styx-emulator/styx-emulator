@@ -21,6 +21,7 @@ benefit from the additions. Enjoy.
 10. [DIY styx-device](#diy-styx-device)
 11. [Fuzzer Plugin Example](#using-the-fuzzer-plugin)
 12. [Adding an External Cpu Backend](#adding-an-external-backend)
+13. [GDB Multi-vCPU (two-core PPC405)](#gdb-multicore-ppc)
 
 .. _using-a-processor:
 
@@ -144,3 +145,16 @@ to produce a usable list of coverage points to measure.
 Path: `./external-backend`
 
 This example showcases creating a custom CPU Backend by implementing the CpuBackend trait.
+
+.. _gdb-multicore-ppc:
+
+### GDB Multi-vCPU (two-core PPC405)
+
+Path: `./gdb-multicore-ppc`
+
+This example demonstrates the Styx GDB plugin against a multi-vCPU target: a
+custom two-core PPC405 processor (`DualPpc405Builder`) where each core runs
+a tiny counter loop that has one per-core private counter and one shared
+counter in memory. Use it to explore `info threads`, per-core breakpoints, and
+watchpoints. See the example's own README for the full memory layout of the
+firmware/counters and interactive GDB session walkthrough.
