@@ -22,7 +22,7 @@ use styx_stm32f107_sys as stm32f107_sys;
 pub mod example_gpio;
 mod i2c;
 
-use example_gpio::Gpio;
+use example_gpio::GpioPeripheral;
 use i2c::I2CController;
 
 use crate::spi::StmSpiPrecursor;
@@ -62,38 +62,39 @@ impl ProcessorImpl for Stm32f107Builder {
         let mut memory = MemoryBackend::new_region_store();
         let tlb = DummyTlb::new();
         // nvic event controller
-        let event_controller = Box::new(Nvic::default());
-        let mut loader_hints = LoaderHints::new();
-        loader_hints.insert("arch".to_string().into_boxed_str(), Box::new(Arch::Arm));
+        let event_controller = Nvic::default();
 
         setup_address_space(&mut memory)?;
         set_hooks(cpu.as_mut())?;
 
         // setup the peripherals
-        let mut peripherals: Vec<Box<dyn Peripheral>> = Vec::new();
-        let gpio = Gpio::new();
-        peripherals.push(Box::new(gpio));
+        let gpio = GpioPeripheral::new();
         let i2c = I2CController::new();
-        peripherals.push(Box::new(i2c));
         let spi = SPIController::new(vec![
             SpiPort::new(0, StmSpiPrecursor::new(SPI1_BASE_ADDR, SPI1_EVENT_IRQN)),
             SpiPort::new(1, StmSpiPrecursor::new(SPI2_BASE_ADDR, SPI2_EVENT_IRQN)),
             SpiPort::new(2, StmSpiPrecursor::new(SPI3_BASE_ADDR, SPI3_EVENT_IRQN)),
         ]);
-        peripherals.push(Box::new(spi));
 
-        Ok(ProcessorBundle {
-            cpu,
-            memory,
-            tlb,
-            event_controller,
-            peripherals,
-            loader_hints,
-        })
+        Ok(ProcessorBundle::builder()
+            .with_memory(memory)
+            .with_vcpu(|v| {
+                v.with_cpu_box(cpu)
+                    .with_tlb_box(tlb)
+                    .with_event_controller(event_controller)
+            })
+            // single vcpu, route all peripheral irqs to vcpu 0
+            .with_event_distributor(SingleVcpuEventDistributor::default())
+            .add_peripheral(gpio)
+            .add_peripheral(i2c)
+            .add_peripheral(spi)
+            .with_arch_hint(Arch::Arm)
+            .build()?)
     }
 
     fn init(&self, proc: &mut BuildingProcessor) -> Result<(), UnknownError> {
-        populate_default_registers(proc.core.cpu.as_mut(), &mut proc.core.mmu)?;
+        let vcpu = proc.vcpus.first_mut();
+        populate_default_registers(vcpu.cpu.as_mut(), &mut vcpu.mmu)?;
 
         Ok(())
     }
