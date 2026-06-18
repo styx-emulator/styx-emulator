@@ -8,7 +8,7 @@ mod raw;
 
 // re-export under styx-loader::loaders::*;
 pub use blackfin::BlackfinLDRLoader;
-pub use elf::{ElfLoader, ElfLoaderConfig};
+pub use elf::{ElfLoader, ElfLoaderConfig, SegmentAddr};
 pub use ihex::IhexLoader;
 pub use parameterized::*;
 pub use raw::RawLoader;
