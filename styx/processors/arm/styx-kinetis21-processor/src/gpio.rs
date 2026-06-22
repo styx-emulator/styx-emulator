@@ -34,6 +34,8 @@
 //!                                    └───────────►│ Pin  │
 //!                                                 └──────┘
 //!
+use std::sync::{Arc, Mutex};
+use styx_core::hooks::{MemoryReadHook, MemoryWriteHook};
 use styx_core::prelude::*;
 use tracing::trace;
 
@@ -47,7 +49,9 @@ use port::GPIOPort;
 /// Notional example of a GPIO peripheral for `kinetis_21`.
 pub struct Gpio {
     /// A vector of all the GPIO ports in the system.
-    ports: Vec<GPIOPort>,
+    ///
+    /// Shared with the memory-mapped register hooks via this handle.
+    ports: Arc<Mutex<Vec<GPIOPort>>>,
     base: u64,
     end: u64,
 }
@@ -62,7 +66,7 @@ impl Default for Gpio {
         }
 
         Self {
-            ports,
+            ports: Arc::new(Mutex::new(ports)),
             base: GPIO_BASE,
             end: GPIO_END,
         }
@@ -77,19 +81,27 @@ impl Peripheral for Gpio {
         trace!("GPIO .register_hooks()");
         trace!("Set GPIO read and write hooks at {:#8x}", self.base);
 
-        proc.core
-            .cpu
-            .mem_write_hook(self.base, self.end, Box::new(gpio_write_callback))?;
-        proc.core
-            .cpu
-            .mem_read_hook(self.base, self.end, Box::new(gpio_read_callback))?;
+        proc.vcpus[0].cpu.mem_write_hook(
+            self.base,
+            self.end,
+            Box::new(GpioWriteHook {
+                ports: self.ports.clone(),
+            }),
+        )?;
+        proc.vcpus[0].cpu.mem_read_hook(
+            self.base,
+            self.end,
+            Box::new(GpioReadHook {
+                ports: self.ports.clone(),
+            }),
+        )?;
 
         Ok(())
     }
 
-    fn reset(&mut self, _cpu: &mut dyn CpuBackend, mmu: &mut Mmu) -> Result<(), UnknownError> {
+    fn reset(&mut self, mmu: &mut Mmu) -> Result<(), UnknownError> {
         trace!("GPIO .reset_state()");
-        for port in self.ports.iter_mut() {
+        for port in self.ports.lock().unwrap().iter_mut() {
             port.reset_state(mmu)?;
         }
         Ok(())
@@ -104,46 +116,56 @@ impl Peripheral for Gpio {
 ///
 /// Based on the address, find the corresponding port and call its instance's `mem_write_callback`
 /// function.
-pub fn gpio_write_callback(
-    proc: CoreHandle, // Emulator
-    address: u64,     // Accessed Address
-    size: u32,        // Number of bytes accessed
-    value: &[u8],     // Write Value
-) -> Result<(), UnknownError> {
-    let gpio = proc.event_controller.peripherals.get::<Gpio>().unwrap();
+struct GpioWriteHook {
+    ports: Arc<Mutex<Vec<GPIOPort>>>,
+}
 
-    // TODO: need to <T> - pretty much hard-coded to u32
-    assert!(size == 4, "We assume 4-byte GPIO writes.");
+impl MemoryWriteHook for GpioWriteHook {
+    fn call(
+        &mut self,
+        _proc: CoreHandle,
+        address: u64,
+        size: u32,
+        value: &[u8],
+    ) -> Result<(), UnknownError> {
+        // TODO: need to <T> - pretty much hard-coded to u32
+        assert!(size == 4, "We assume 4-byte GPIO writes.");
 
-    for port in gpio.ports.iter_mut() {
-        if port.addr_range.contains(&address) {
-            port.mem_write_callback(address, size, value);
+        for port in self.ports.lock().unwrap().iter_mut() {
+            if port.addr_range.contains(&address) {
+                port.mem_write_callback(address, size, value);
+            }
         }
-    }
 
-    Ok(())
+        Ok(())
+    }
 }
 
 /// Callback function for reads of GPIO memory-mapped registers.
 ///
 /// Based on the address, find the corresponding port and call its instance's `mem_read_callback`
 /// function.
-pub fn gpio_read_callback(
-    proc: CoreHandle, // Emulator
-    address: u64,     // Accessed Address
-    size: u32,        // Number of bytes accessed
-    value: &mut [u8], // Read Value
-) -> Result<(), UnknownError> {
-    let gpio = proc.event_controller.peripherals.get::<Gpio>().unwrap();
+struct GpioReadHook {
+    ports: Arc<Mutex<Vec<GPIOPort>>>,
+}
 
-    // TODO: need to <T> - pretty much hard-coded to u32
-    assert!(size == 4, "We assume 4-byte GPIO reads.");
+impl MemoryReadHook for GpioReadHook {
+    fn call(
+        &mut self,
+        proc: CoreHandle,
+        address: u64,
+        size: u32,
+        value: &mut [u8],
+    ) -> Result<(), UnknownError> {
+        // TODO: need to <T> - pretty much hard-coded to u32
+        assert!(size == 4, "We assume 4-byte GPIO reads.");
 
-    for port in gpio.ports.iter_mut() {
-        if port.addr_range.contains(&address) {
-            port.mem_read_callback(proc.mmu, address, size, value);
+        for port in self.ports.lock().unwrap().iter_mut() {
+            if port.addr_range.contains(&address) {
+                port.mem_read_callback(proc.mmu, address, size, value);
+            }
         }
-    }
 
-    Ok(())
+        Ok(())
+    }
 }

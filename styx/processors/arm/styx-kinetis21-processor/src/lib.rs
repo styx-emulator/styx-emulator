@@ -137,43 +137,40 @@ impl ProcessorImpl for Kinetis21Builder {
             .add_band(0x4000_0000..0x4010_0000, 0x4200_0000)
             .register_hooks(cpu.as_mut())?;
 
-        let peripherals: Vec<Box<dyn Peripheral>> = vec![
-            Box::new(SysTickTimer::new()),
-            Box::new(Mcg {}),
-            Box::new(FtmController::new()),
-            Box::new(Gpio::default()),
-            Box::new(UartController::new(get_uarts())),
-        ];
-
-        let mut hints = LoaderHints::new();
-        hints.insert("arch".to_string().into_boxed_str(), Box::new(Arch::Arm));
-
-        Ok(ProcessorBundle {
-            cpu,
-            memory,
-            tlb,
-            event_controller: Box::new(Nvic::default()),
-            peripherals,
-            loader_hints: hints,
-        })
+        Ok(ProcessorBundle::builder()
+            .with_memory(memory)
+            .with_vcpu(|v| {
+                v.with_cpu_box(cpu)
+                    .with_tlb_box(tlb)
+                    .with_event_controller(Nvic::default())
+            })
+            // single vcpu, route all peripheral irqs to vcpu 0
+            .with_event_distributor(SingleVcpuEventDistributor::default())
+            .add_peripheral(SysTickTimer::new())
+            .add_peripheral(Mcg {})
+            .add_peripheral(FtmController::new())
+            .add_peripheral(Gpio::default())
+            .add_peripheral(UartController::new(get_uarts()))
+            .with_arch_hint(Arch::Arm)
+            .build()?)
     }
 
     /// need to set SP from address 0 and PC from address 4
     fn init(&self, proc: &mut BuildingProcessor) -> Result<(), UnknownError> {
         // first try to read from address 0
-        match proc.core.mmu.read_u32_le_phys_data(0) {
+        match proc.vcpus[0].mmu.read_u32_le_phys_data(0) {
             Ok(sp) => {
-                proc.core.cpu.write_register(ArmRegister::Sp, sp)?;
-                if let Ok(pc) = proc.core.mmu.read_u32_le_phys_data(4) {
-                    proc.core.cpu.write_register(ArmRegister::Pc, pc)?;
+                proc.vcpus[0].cpu.write_register(ArmRegister::Sp, sp)?;
+                if let Ok(pc) = proc.vcpus[0].mmu.read_u32_le_phys_data(4) {
+                    proc.vcpus[0].cpu.write_register(ArmRegister::Pc, pc)?;
                     return Ok(());
                 }
             }
             _ => {
-                if let Ok(sp) = proc.core.mmu.read_u32_le_phys_data(0x0800_0000) {
-                    proc.core.cpu.write_register(ArmRegister::Sp, sp)?;
-                    if let Ok(pc) = proc.core.mmu.read_u32_le_phys_data(0x0800_0004) {
-                        proc.core.cpu.write_register(ArmRegister::Pc, pc)?;
+                if let Ok(sp) = proc.vcpus[0].mmu.read_u32_le_phys_data(0x0800_0000) {
+                    proc.vcpus[0].cpu.write_register(ArmRegister::Sp, sp)?;
+                    if let Ok(pc) = proc.vcpus[0].mmu.read_u32_le_phys_data(0x0800_0004) {
+                        proc.vcpus[0].cpu.write_register(ArmRegister::Pc, pc)?;
                         return Ok(());
                     }
                 }
@@ -489,9 +486,9 @@ mod tests {
             .build()
             .unwrap();
 
-        proc.code_hook(FAIL_ADDR, FAIL_ADDR | 1, Box::new(fail))
+        proc.add_hooks(|_| StyxHook::code(FAIL_ADDR..=FAIL_ADDR | 1, fail))
             .unwrap();
-        proc.code_hook(PASS_ADDR, PASS_ADDR | 1, Box::new(pass))
+        proc.add_hooks(|_| StyxHook::code(PASS_ADDR..=PASS_ADDR | 1, pass))
             .unwrap();
 
         proc.run(Forever).unwrap();
