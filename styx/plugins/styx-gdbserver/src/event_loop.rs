@@ -135,7 +135,17 @@ where
             RunEvent::Event(event) => {
                 // translate emulator stop reason into GDB stop reason
                 let stop_reason: MultiThreadStopReason<GdbArchImpl::Usize> = match event {
-                    Event::DoneStep(_tid) => MultiThreadStopReason::DoneStep,
+                    // Deliberately not using MultiThreadStopReason::DoneStep here:
+                    // MultiThreadStopReason::DoneStep is an alias to SigTrap anyway,
+                    // and the MultiThreadStopReason::DoneStep shortcut loses the
+                    // thread id causing the gdb client to forget which thread stepped.
+                    //
+                    // See more information on this gdbstub issue:
+                    // <`https://github.com/daniel5151/gdbstub/issues/196`>
+                    Event::DoneStep(tid) => MultiThreadStopReason::SignalWithThread {
+                        tid,
+                        signal: Signal::SIGTRAP,
+                    },
                     Event::Halted => MultiThreadStopReason::Terminated(Signal::SIGSTOP),
                     Event::Break(tid) => MultiThreadStopReason::SwBreak(tid),
                     // map styx host stopping cpu to sigint
