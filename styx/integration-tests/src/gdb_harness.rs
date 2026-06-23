@@ -666,6 +666,21 @@ impl BlockingGdbClient {
 
         Ok(())
     }
+
+    /// Load symbols from an object/ELF file, placing its `.text` at `text_addr`.
+    ///
+    /// This gives the gdb client function boundaries for the target, which it
+    /// needs to unwind the call stack — and therefore to recognize a call
+    /// instruction when stepping over it with `next`/`nexti`.
+    pub fn add_symbol_file(&self, path: &str, text_addr: u64) -> Result<(), GdbHarnessError> {
+        let inner = self.inner.clone();
+        self.runtime.block_on(async {
+            inner
+                .raw_console_cmd(&format!("add-symbol-file {path} 0x{text_addr:x}"))
+                .await
+        })?;
+        Ok(())
+    }
 }
 
 /// Default timeout for sending a GDB command to the client.
@@ -833,5 +848,11 @@ impl GdbHarness {
 
     pub fn exec_interrupt(&self) -> Result<(), GdbHarnessError> {
         self.gdb_client.exec_interrupt()
+    }
+
+    /// Load symbols from an object/ELF file with its `.text` at `text_addr`.
+    /// See [`BlockingGdbClient::add_symbol_file`].
+    pub fn add_symbol_file(&self, path: &str, text_addr: u64) -> Result<(), GdbHarnessError> {
+        self.gdb_client.add_symbol_file(path, text_addr)
     }
 }
