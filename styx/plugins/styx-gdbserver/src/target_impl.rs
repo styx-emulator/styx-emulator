@@ -887,25 +887,27 @@ where
     ) -> TargetResult<usize, Self> {
         let idx = tid_to_index(tid);
         trace!("read_register {:?} (vcpu {})", reg_id, idx);
+        // according to gdbstub docs, this should write to buf with target byte order
+        let cpu = self.vcpus[idx].cpu.as_mut();
+        let endian = cpu.endian();
+
         match self.reg_size {
             32 => {
-                buf.copy_from_slice(
-                    &self.vcpus[idx]
-                        .cpu
-                        .read_register::<u32>(reg_id)
-                        .unwrap()
-                        .to_le_bytes(),
-                );
+                let value = cpu.read_register::<u32>(reg_id).unwrap();
+                let bytes = match endian {
+                    ArchEndian::LittleEndian => value.to_le_bytes(),
+                    ArchEndian::BigEndian => value.to_be_bytes(),
+                };
+                buf.copy_from_slice(&bytes);
                 Ok(buf.len())
             }
             64 => {
-                buf.copy_from_slice(
-                    &self.vcpus[idx]
-                        .cpu
-                        .read_register::<u64>(reg_id)
-                        .unwrap()
-                        .to_le_bytes(),
-                );
+                let value = cpu.read_register::<u64>(reg_id).unwrap();
+                let bytes = match endian {
+                    ArchEndian::LittleEndian => value.to_le_bytes(),
+                    ArchEndian::BigEndian => value.to_be_bytes(),
+                };
+                buf.copy_from_slice(&bytes);
                 Ok(buf.len())
             }
             _ => Err(().into()),
