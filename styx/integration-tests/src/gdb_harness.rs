@@ -681,6 +681,21 @@ impl BlockingGdbClient {
         })?;
         Ok(())
     }
+
+    /// Issue `set scheduler-locking <mode>` to the gdb client (e.g. `"off"`,
+    /// `"on"`, `"step"`).
+    ///
+    /// NOTE: Styx's gdbserver accepts this command but does **not** honor it —
+    /// see [`set_scheduler_locking`](GdbHarness::set_scheduler_locking).
+    pub fn set_scheduler_locking(&self, mode: &str) -> Result<(), GdbHarnessError> {
+        let inner = self.inner.clone();
+        self.runtime.block_on(async {
+            inner
+                .raw_console_cmd(&format!("set scheduler-locking {mode}"))
+                .await
+        })?;
+        Ok(())
+    }
 }
 
 /// Default timeout for sending a GDB command to the client.
@@ -854,5 +869,16 @@ impl GdbHarness {
     /// See [`BlockingGdbClient::add_symbol_file`].
     pub fn add_symbol_file(&self, path: &str, text_addr: u64) -> Result<(), GdbHarnessError> {
         self.gdb_client.add_symbol_file(path, text_addr)
+    }
+
+    /// Set gdb's `scheduler-locking` mode (`"off"`, `"on"`, or `"step"`).
+    ///
+    /// NOTE: Styx's gdbserver accepts the command (gdbstub fatally errors if the
+    /// target doesn't implement `MultiThreadSchedulerLocking`) but treats it as a
+    /// no-op: it executes vCPUs round-robin and always advances *every* thread on
+    /// a resume/step, so only the default `off` matches the emulator's actual
+    /// behavior. See `styx-gdbserver`'s `target_impl` module docs.
+    pub fn set_scheduler_locking(&self, mode: &str) -> Result<(), GdbHarnessError> {
+        self.gdb_client.set_scheduler_locking(mode)
     }
 }
