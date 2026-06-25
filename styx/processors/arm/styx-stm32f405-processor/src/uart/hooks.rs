@@ -5,6 +5,7 @@
 
 use std::ops::DerefMut;
 
+use styx_core::event_controller::EventControllerImpl;
 use styx_core::prelude::*;
 use tracing::debug;
 use tracing::error;
@@ -534,7 +535,7 @@ pub(crate) fn usart_port_cr1_r_hook(
 #[cfg(test)]
 mod tests {
     use crate::uart::get_uarts;
-    use crate::uart::inner::UartPortInner;
+    use crate::uart::inner::UartPort;
     use std::ops::DerefMut;
     use styx_core::core::builder::DummyProcessorBuilder;
     use styx_core::prelude::ProcessorBuilder;
@@ -550,7 +551,9 @@ mod tests {
             .unwrap();
         let mut uarts = UartController::new(get_uarts());
         // create a USART port
-        let port = uarts.get::<UartPortInner>("1").unwrap();
+        let uart = uarts.get::<UartPort>("1").unwrap();
+        let mut guard = uart.inner.lock().unwrap();
+        let port = &mut *guard;
 
         // pretend the USART has received too much data and is in overrrun
         port.inner_hal()
@@ -565,9 +568,10 @@ mod tests {
         let mut data: [u8; 2] = [0x00, 0x00];
 
         // read from the port
+        let vcpu = &mut proc.vcpus[0];
         super::usart_port_dr_r_hook(
-            proc.core.cpu.as_mut(),
-            proc.core.event_controller.inner.as_mut(),
+            vcpu.cpu.as_mut(),
+            vcpu.event_controller.inner.as_mut(),
             0x0000_0000,
             2,
             &mut data,
@@ -595,7 +599,9 @@ mod tests {
             .unwrap();
         let mut uarts = UartController::new(get_uarts());
         // create a USART port
-        let port = uarts.get::<UartPortInner>("1").unwrap();
+        let uart = uarts.get::<UartPort>("1").unwrap();
+        let mut guard = uart.inner.lock().unwrap();
+        let port = &mut *guard;
 
         // pretend the USART has sent data and is empty
         port.inner_hal()
@@ -613,9 +619,10 @@ mod tests {
             .set_recent_sr_read();
 
         // write new data to clear the interrupts
+        let vcpu = &mut proc.vcpus[0];
         super::usart_port_dr_w_hook(
-            proc.core.cpu.as_mut(),
-            proc.core.event_controller.inner.as_mut(),
+            vcpu.cpu.as_mut(),
+            vcpu.event_controller.inner.as_mut(),
             0x0000_0000,
             2,
             &[0xAA, 0x00],
@@ -646,7 +653,9 @@ mod tests {
             .unwrap();
         let mut uarts = UartController::new(get_uarts());
         // create a USART port
-        let port = uarts.get::<UartPortInner>("1").unwrap();
+        let uart = uarts.get::<UartPort>("1").unwrap();
+        let mut guard = uart.inner.lock().unwrap();
+        let port = &mut *guard;
 
         // set the status bits TC and RXNE that are clearable by software
         port.inner_hal()
@@ -659,9 +668,10 @@ mod tests {
             .set_tx_complete();
 
         // write new data to clear the status bits
+        let vcpu = &mut proc.vcpus[0];
         super::usart_port_sr_w_hook(
-            proc.core.cpu.as_mut(),
-            proc.core.event_controller.inner.as_mut(),
+            vcpu.cpu.as_mut(),
+            vcpu.event_controller.inner.as_mut(),
             0x0000_0000,
             2,
             &[0x00, 0x00],
@@ -684,9 +694,10 @@ mod tests {
             .set_tx_complete();
 
         // this write should not clear anything
+        let vcpu = &mut proc.vcpus[0];
         super::usart_port_sr_w_hook(
-            proc.core.cpu.as_mut(),
-            proc.core.event_controller.inner.as_mut(),
+            vcpu.cpu.as_mut(),
+            vcpu.event_controller.inner.as_mut(),
             0x0000_0000,
             2,
             &[0xFF, 0xFF],
@@ -709,7 +720,9 @@ mod tests {
             .unwrap();
         let mut uarts = UartController::new(get_uarts());
         // create a USART port
-        let port = uarts.get::<UartPortInner>("1").unwrap();
+        let uart = uarts.get::<UartPort>("1").unwrap();
+        let mut guard = uart.inner.lock().unwrap();
+        let port = &mut *guard;
 
         // set and clear some status bits
         port.inner_hal()
@@ -731,9 +744,10 @@ mod tests {
 
         // read status register
         let mut sr = [0x00, 0x00];
+        let vcpu = &mut proc.vcpus[0];
         super::usart_port_sr_r_hook(
-            proc.core.cpu.as_mut(),
-            proc.core.event_controller.inner.as_mut(),
+            vcpu.cpu.as_mut(),
+            vcpu.event_controller.inner.as_mut(),
             0x0000_0000,
             2,
             &mut sr,
@@ -760,7 +774,9 @@ mod tests {
             .unwrap();
         let mut uarts = UartController::new(get_uarts());
         // create a USART port
-        let port = uarts.get::<UartPortInner>("1").unwrap();
+        let uart = uarts.get::<UartPort>("1").unwrap();
+        let mut guard = uart.inner.lock().unwrap();
+        let port = &mut *guard;
 
         // set some control bits
         port.inner_hal().deref_mut().data_terminals.rx_enable();
@@ -769,9 +785,10 @@ mod tests {
 
         // read cr1 register
         let mut cr1 = [0x00, 0x00];
+        let vcpu = &mut proc.vcpus[0];
         super::usart_port_cr1_r_hook(
-            proc.core.cpu.as_mut(),
-            proc.core.event_controller.inner.as_mut(),
+            vcpu.cpu.as_mut(),
+            vcpu.event_controller.inner.as_mut(),
             0x0000_0000,
             2,
             &mut cr1,
@@ -794,13 +811,16 @@ mod tests {
             .unwrap();
         let mut uarts = UartController::new(get_uarts());
         // create a USART port
-        let port = uarts.get::<UartPortInner>("1").unwrap();
+        let uart = uarts.get::<UartPort>("1").unwrap();
+        let mut guard = uart.inner.lock().unwrap();
+        let port = &mut *guard;
 
         // write to the cr1 register to enable some control flags
         let cr1 = [0x6C, 0x00];
+        let vcpu = &mut proc.vcpus[0];
         super::usart_port_cr1_w_hook(
-            proc.core.cpu.as_mut(),
-            proc.core.event_controller.inner.as_mut(),
+            vcpu.cpu.as_mut(),
+            vcpu.event_controller.inner.as_mut(),
             0x0000_0000,
             2,
             &cr1,

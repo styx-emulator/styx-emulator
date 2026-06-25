@@ -2,7 +2,9 @@
 //! Emulation of UART/USART controller for STM32F405
 use derivative::Derivative;
 use num_derive::ToPrimitive;
+use std::sync::{Arc, Mutex};
 use std::{collections::VecDeque, mem::size_of};
+use styx_core::event_controller::{EventControllerImpl, PeripheralTickCtx, RaisedIrqs};
 use styx_core::prelude::*;
 use styx_peripherals::uart::{IntoUartImpl, UartImpl};
 use styx_stm32f405_sys::interrupt::Interrupt;
@@ -484,16 +486,26 @@ impl IntoUartImpl for UartPortBuilder {
         miso_rx: broadcast::Sender<u8>,
         interface_id: String,
     ) -> Result<Box<dyn UartImpl>, UnknownError> {
-        Ok(Box::new(UartPortInner {
-            interface_id,
-            base_address: self.base_address,
-            tx_rx_irqn: self.tx_rx_irqn,
-            inner_hal: UsartHalLayer::new(self.port),
-            rx_fifo: VecDeque::default(),
-            miso_stream: miso_rx,
-            mosi_stream: mosi_tx,
+        Ok(Box::new(UartPort {
+            inner: Arc::new(Mutex::new(UartPortInner {
+                interface_id,
+                base_address: self.base_address,
+                tx_rx_irqn: self.tx_rx_irqn,
+                inner_hal: UsartHalLayer::new(self.port),
+                rx_fifo: VecDeque::default(),
+                miso_stream: miso_rx,
+                mosi_stream: mosi_tx,
+            })),
         }))
     }
+}
+
+/// Shared handle to the [`UartPortInner`] state.
+///
+/// State is shared via this handle: the peripheral's [`UartImpl::tick`] and the
+/// memory-mapped register hooks each hold a clone of the same `Arc`.
+pub struct UartPort {
+    pub(crate) inner: Arc<Mutex<UartPortInner>>,
 }
 
 // USART Controller port emulation
@@ -533,14 +545,14 @@ impl UartPortInner {
         trace!("Send new value to {} subscriber", subscribers);
     }
 
-    pub fn checked_generate_receive_interrupts(&mut self, ev: &mut dyn EventControllerImpl) {
+    pub fn checked_generate_receive_interrupts(&mut self, raised: &mut RaisedIrqs) {
         // first, check for and generate overrun error
         if self.inner_hal.data_terminals.overrun_condition() {
             self.inner_hal.interrupt_control.int_ore.set();
 
             if self.inner_hal.interrupt_control.int_ore.triggered() {
-                // latch the event with the event controller
-                self.queue_interrupt(ev);
+                // raise the event with the event controller
+                raised.push(self.tx_rx_irqn);
             }
         }
 
@@ -549,8 +561,8 @@ impl UartPortInner {
             self.inner_hal.interrupt_control.int_rxne.set();
 
             if self.inner_hal.interrupt_control.int_rxne.triggered() {
-                // now latch the event with the event controller
-                self.queue_interrupt(ev);
+                // now raise the event with the event controller
+                raised.push(self.tx_rx_irqn);
             }
         }
     }
@@ -603,49 +615,38 @@ impl UartPortInner {
     }
 }
 
-impl UartImpl for UartPortInner {
+impl UartImpl for UartPort {
     fn init(&mut self, proc: &mut BuildingProcessor) -> Result<(), UnknownError> {
-        trace!("Uart{} .reset_state()", self.interface_id);
-        self.inner_hal.reset(&mut proc.core.mmu).unwrap();
-        debug!("Uart{} .register_hooks()", self.interface_id);
-        self.register_mmio_hooks(proc.core.cpu.as_mut())?;
+        let mut inner = self.inner.lock().unwrap();
+        trace!("Uart{} .reset_state()", inner.interface_id);
+        inner.inner_hal.reset(&mut proc.vcpus[0].mmu).unwrap();
+        debug!("Uart{} .register_hooks()", inner.interface_id);
+        let base_address = inner.base_address();
+        super::register_mmio_hooks(&self.inner, base_address, proc.vcpus[0].cpu.as_mut())?;
 
-        Ok(())
-    }
-
-    fn post_event_hook(
-        &mut self,
-        _cpu: &mut dyn CpuBackend,
-        _mmu: &mut Mmu,
-        _event_controller: &mut dyn EventControllerImpl,
-    ) -> Result<(), UnknownError> {
-        trace!("UART{} got post_event_hook", self.interface_id);
-        // TODO: UART vs USART technically
         Ok(())
     }
 
     fn irqs(&self) -> Vec<ExceptionNumber> {
-        vec![self.tx_rx_irqn as ExceptionNumber]
+        vec![self.inner.lock().unwrap().tx_rx_irqn as ExceptionNumber]
     }
 
-    fn tick(
-        &mut self,
-        _cpu: &mut dyn CpuBackend,
-        _mmu: &mut Mmu,
-        event_controller: &mut dyn EventControllerImpl,
-    ) -> Result<(), UnknownError> {
-        // get bytes from mosi buffer
-        self.grab_bytes();
+    fn tick(&mut self, _ctx: &PeripheralTickCtx<'_>) -> Result<RaisedIrqs, UnknownError> {
+        let mut inner = self.inner.lock().unwrap();
 
-        // latch interrupt if uart data is available
-        // this will latch multiple times even if no uart data arrived but uart data is available
+        // get bytes from mosi buffer
+        inner.grab_bytes();
+
+        // raise interrupt if uart data is available
+        // this will raise multiple times even if no uart data arrived but uart data is available
         // ... probably not an issue :D
-        if let Some(front) = self.rx_fifo.pop_front() {
+        let mut raised = RaisedIrqs::none();
+        if let Some(front) = inner.rx_fifo.pop_front() {
             trace!("latching!!");
-            // now latch the event with the event controller
-            self.inner_hal.data_terminals.receive_to_rdr(front);
-            self.checked_generate_receive_interrupts(event_controller);
+            // now raise the event with the event controller
+            inner.inner_hal.data_terminals.receive_to_rdr(front);
+            inner.checked_generate_receive_interrupts(&mut raised);
         }
-        Ok(())
+        Ok(raised)
     }
 }
