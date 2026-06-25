@@ -153,9 +153,8 @@ pub struct BlockTerminator {
     pub target: Option<u64>,
 }
 
-
 /// Classifies the control-flow behavior of the last instruction of the basic block
-/// 
+///
 /// Decodes instructions forwards from `addr` until it reaches a control-transfer
 /// instruction. This is done to account for architectures with variable-length
 /// instructions (ex: x86)
@@ -164,7 +163,7 @@ pub fn classify_block_terminator(
     addr: u64,
     size: u32,
     mmu: &mut Mmu,
-    ev: &mut EventController
+    ev: &mut EventController,
 ) -> Option<BlockTerminator> {
     let end = addr + (size as u64);
     let mut pc = addr;
@@ -190,12 +189,12 @@ pub fn classify_block_terminator(
             return Some(BlockTerminator {
                 flow,
                 target: info.target,
-            })
+            });
         } else if pc >= end {
             return Some(BlockTerminator {
                 flow: ControlFlowType::Fallthrough,
                 target: None,
-            })
+            });
         }
     }
 }
@@ -282,4 +281,3 @@ pub trait CpuBackend: Debug + Hookable + Send {
         None
     }
 }
-

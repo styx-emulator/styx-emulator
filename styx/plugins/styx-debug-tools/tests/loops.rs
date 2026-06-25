@@ -103,7 +103,7 @@ fn return_pops_to_caller_frame() {
 // without classification (every terminator `Unknown`), the shadow stack stays
 // single-framed and the back-edge heuristic alone applies, so the call to a
 // lower address is (incorrectly) reported
-// 
+//
 // documents the degraded-mode behavior
 #[test]
 fn unknown_classification_degrades_to_backedge_only() {
@@ -119,6 +119,3 @@ fn unknown_classification_degrades_to_backedge_only() {
     );
     assert_eq!(reports[0].head_addr, 0x100);
 }
-
-
-

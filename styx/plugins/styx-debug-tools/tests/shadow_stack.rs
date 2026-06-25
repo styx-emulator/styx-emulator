@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
 use styx_core::cpu::ControlFlowType;
-use styx_debug_tools::{ShadowStack, FrameTransitionType};
+use styx_debug_tools::{FrameTransitionType, ShadowStack};
 
 #[test]
 fn call_pushes_and_return_pops() {
@@ -10,7 +10,10 @@ fn call_pushes_and_return_pops() {
     // first block seeds the base frame
     s.record_block(0x10, 4, ControlFlowType::Call);
     assert_eq!(s.depth(), 1);
-    assert_eq!(s.prev_transition(), Some(FrameTransitionType::Start { target: 0x10 }));
+    assert_eq!(
+        s.prev_transition(),
+        Some(FrameTransitionType::Start { target: 0x10 })
+    );
 
     // the call (0x10 -> 0x100) pushes a callee frame
     s.record_block(0x100, 4, ControlFlowType::Return);
@@ -24,7 +27,10 @@ fn call_pushes_and_return_pops() {
     // the return lands back at 0x14 and pops the callee
     s.record_block(0x14, 4, ControlFlowType::Branch);
     assert_eq!(s.depth(), 1);
-    assert_eq!(s.prev_transition(), Some(FrameTransitionType::Return { target: 0x14 }));
+    assert_eq!(
+        s.prev_transition(),
+        Some(FrameTransitionType::Return { target: 0x14 })
+    );
     assert_eq!(s.top().unwrap().entry_addr, 0x10);
 }
 
@@ -95,10 +101,10 @@ fn indirect_call_pushes_without_target() {
     // an indirect call has no static target, so it's taken at face value
     s.record_block_with_target(0x100, 0x10, ControlFlowType::Call, None);
     s.record_block_with_target(0x900, 0x10, ControlFlowType::Branch, None);
-    assert_eq!(s.depth(), 2, "an indirect call (no known target) still pushes");
+    assert_eq!(
+        s.depth(),
+        2,
+        "an indirect call (no known target) still pushes"
+    );
     assert_eq!(s.top().unwrap().entry_addr, 0x900);
 }
-
-
-
-

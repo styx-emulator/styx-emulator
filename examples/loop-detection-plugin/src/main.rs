@@ -5,10 +5,10 @@
 //! Emulates an STM32F107 (ARM Cortex-M3) running a small GPIO "blink" firmware
 //! and uses the loop-detection plugin to report a loop once it has iterated at
 //! least a configured number of times.
-//! 
+//!
 //! This binary and architecture is the same one used in the `diy-processor` plugin,
-//! so look at that example to better understand this one. 
-//! 
+//! so look at that example to better understand this one.
+//!
 //! Note: the shadow stack plugin that the loop detection relies on depends on
 //! control-flow classification, which is provided by the pcode backend, and
 //! not on the Unicorn backend
@@ -47,7 +47,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let loop_detector = LoopDetectionPlugin::new(
         5,             // threshold: report a loop once it iterates >= 5 times
-        false,          // halt_on_detection: stop emulation at the first reported loop
+        false,         // halt_on_detection: stop emulation at the first reported loop
         Some(on_loop), // on_detection callback (pass `None` to just use the built-in log)
         None,          // shadow_stack: `None` => the plugin manages its own private one
     );
@@ -68,7 +68,3 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
-
-
-
-

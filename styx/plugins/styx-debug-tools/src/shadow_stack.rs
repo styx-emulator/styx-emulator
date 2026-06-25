@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
 //! This plugin maintains a shadow stack that approximates the actual call stack.
-//! 
+//!
 //! This plugin installs a block hook that classifies the last instruction of the
 //! basic block ([`ControlFlowType`]). We then use this classification to determine
 //! if we need to push ([`ControlFlowType::Call`]) or pop a frame
 //! ([`ControlFlowType::Return`]). Users and other plugins can read this shadow stack
 //! via a handle.
-//! 
+//!
 //! Currently, this plugin only works for the PCode backend as we need to be able to
 //! classify the last instruction of a basic block (is it a call, return, branch, etc)
 //! to update the shadow stack. It can be extended for the Unicorn backend, but
-//! we'd have to deal with architecture-specfic stuff. 
-//! 
+//! we'd have to deal with architecture-specfic stuff.
+//!
 //! The initial motivation for this plugin was so that the loop detector plugin
 //! could determine what stack frame the state was currently in, and this
 //! technique of getting a view into the call stack is more robust and
@@ -97,7 +97,7 @@ impl ShadowStack {
     }
 
     /// Checks if a hook responsible for updating this stack has been registered.
-    /// 
+    ///
     /// Other plugins use this to enforce wiring order: the updater hook must be
     /// registered before any downstream plugin, so its block hook runs first.
     pub fn has_updater(&self) -> bool {
@@ -113,7 +113,7 @@ impl ShadowStack {
         self.record_block_with_target(addr, size, flow, None);
     }
 
-    /// Same as [`Self::record_block`]`, except target is the statically-known direct call/branch
+    /// Same as [`Self::record_block`], except target is the statically-known direct call/branch
     /// destination
     pub fn record_block_with_target(
         &mut self,
@@ -184,13 +184,13 @@ impl ShadowStack {
     }
 
     /// Pop the frame until we land at curr
-    /// 
+    ///
     /// Cleanest case is `curr` matching the top frame's recorded return address
-    /// 
+    ///
     /// However, sometimes it won't due to a variety of reasons (tail calls, longjmp,
     /// interrupt returns, etc.). This will desync the shadow stack. We resync it by
     /// popping to the frame that was expecting `curr`.
-    /// 
+    ///
     /// We don't pop out the initial frame
     fn pop_to(&mut self, curr: u64) {
         if self.frames.len() <= 1 {
@@ -234,14 +234,18 @@ impl ShadowStackHandle {
 
     /// Bottom of the stack to the top
     pub fn bottom_to_top(&self) -> Vec<Frame> {
-        self.0.lock().unwrap().bottom_to_top_iter().copied().collect()
+        self.0
+            .lock()
+            .unwrap()
+            .bottom_to_top_iter()
+            .copied()
+            .collect()
     }
 
     pub fn has_updater(&self) -> bool {
         self.0.lock().unwrap().has_updater
     }
 }
-
 
 // Install block hook and sets `has_updater` variable to true so donwstream handles
 // know that this shadow stack has an updater
@@ -256,7 +260,9 @@ pub(crate) fn install_hook(
         .add_hook(StyxHook::block(move |core: CoreHandle, address, size| {
             let term =
                 classify_block_terminator(core.cpu, address, size, core.mmu, core.event_controller);
-            if (term.is_none() || term.unwrap().flow == ControlFlowType::Unknown) && !warned_weird_state {
+            if (term.is_none() || term.unwrap().flow == ControlFlowType::Unknown)
+                && !warned_weird_state
+            {
                 warn!(
                     "ShadowStack: backend cannot classify control flow; \
                     the shadow stack might get weird man!"
@@ -265,7 +271,12 @@ pub(crate) fn install_hook(
             }
             hook_handle.update(|stack| {
                 // defaulting is OK because we've warned the user that the state would get weird
-                stack.record_block_with_target(address, size, term.unwrap_or_default().flow, term.unwrap_or_default().target)
+                stack.record_block_with_target(
+                    address,
+                    size,
+                    term.unwrap_or_default().flow,
+                    term.unwrap_or_default().target,
+                )
             });
             Ok(())
         }))?;
@@ -275,7 +286,7 @@ pub(crate) fn install_hook(
 
 /// Plugin for the [`ShadowStack`]. Other plugins/tasks can use the [`Self::handle`]
 /// to read the shadow stack
-/// 
+///
 /// Add this plugin before any other plugin that uses the shadow stack, so the updater
 /// hook runs first on each basic block
 #[derive(Default, serde::Deserialize)]
@@ -311,5 +322,3 @@ impl UninitPlugin for ShadowStackPlugin {
         Ok(self)
     }
 }
-
-

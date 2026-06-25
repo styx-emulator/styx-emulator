@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
 //! Loop detection plugin built on top of the [shadow stack](crate::shadow_stack) plugin.
-//! 
+//!
 //! Based on the paper: [LoopProf: Dynamic Techniques for Loop Detection and Profiling](<https://www.researchgate.net/profile/Daniel-Connors-2/publication/249981892_LoopProf_Dynamic_Techniques_for_Loop_Detection_and_Profiling/links/547eb6da0cf2d2200ede9d06/LoopProf-Dynamic-Techniques-for-Loop-Detection-and-Profiling.pdf>)
-//! 
+//!
 //! This plugin reports a loop once it has been iterated through at least a user-provided
 //! number of times. Unlike the paper, this plugin collects no profiling information: it
 //! only detects and reports loops. Profiling information can be added in the future, but
 //! it would have to be a configurable feature because collecting profiling information
 //! will dramatically slow down the speed of the emulator.
 
-use std::collections::{HashMap, HashSet};
-use styx_core::prelude::{log::info, *};
 use crate::shadow_stack::{
     install_hook, FrameId, FrameTransitionType, ShadowStack, ShadowStackHandle,
 };
+use std::collections::{HashMap, HashSet};
+use styx_core::prelude::{log::info, *};
 
 /// Report on loop that has been detected and has been iterated over by the user
 /// specified threshold.
@@ -35,7 +35,7 @@ impl LoopReport {
             head_addr,
             frame_addr,
             iters,
-            stack_depth
+            stack_depth,
         }
     }
 }
@@ -91,7 +91,12 @@ impl LoopCounters {
                 state.iterations += 1;
                 if !state.reported && state.iterations >= self.threshold {
                     state.reported = true;
-                    Some(LoopReport::new(target, frame.entry_addr,state.iterations,depth))
+                    Some(LoopReport::new(
+                        target,
+                        frame.entry_addr,
+                        state.iterations,
+                        depth,
+                    ))
                 } else {
                     None
                 }
@@ -144,7 +149,12 @@ impl LoopDetector {
 }
 
 impl BlockHook for LoopDetector {
-    fn call(&mut self, mut proc: CoreHandle, _address: u64, _size: u32) -> Result<(), UnknownError> {
+    fn call(
+        &mut self,
+        mut proc: CoreHandle,
+        _address: u64,
+        _size: u32,
+    ) -> Result<(), UnknownError> {
         let report = self.handle.read(|stack| self.counters.observe_stack(stack));
         if let Some(report) = report {
             self.report_loop(&report, &mut proc);
@@ -170,12 +180,17 @@ pub struct LoopDetectionPlugin {
 styx_uconf::register_component_config!(register plugin: id = loops, component = LoopDetectionPlugin);
 
 impl LoopDetectionPlugin {
-    pub fn new(threshold: u64, halt_on_detection: bool, on_detection: Option<LoopCallback>, shadow_stack: Option<ShadowStackHandle>) -> Self {
+    pub fn new(
+        threshold: u64,
+        halt_on_detection: bool,
+        on_detection: Option<LoopCallback>,
+        shadow_stack: Option<ShadowStackHandle>,
+    ) -> Self {
         Self {
             threshold,
             halt_on_report: halt_on_detection,
             on_report: on_detection,
-            shadow_stack
+            shadow_stack,
         }
     }
 }
@@ -218,7 +233,3 @@ impl UninitPlugin for LoopDetectionPlugin {
         Ok(self)
     }
 }
-
-
-
-

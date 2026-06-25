@@ -76,4 +76,3 @@ pub mod prelude {
     pub use styx_processor::memory::helpers::{ReadExt, WriteExt};
     pub use styx_processor::memory::memory_region::MemoryRegion;
 }
-

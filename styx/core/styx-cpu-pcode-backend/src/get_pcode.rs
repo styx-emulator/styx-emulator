@@ -265,7 +265,7 @@ fn contains_branch_instruction(pcodes: &[Pcode]) -> bool {
 /// about detecting if an instruction is a call/return. I'm not 100% of the specifics of how
 /// Ghidra decomposes an instruction into multiple pcode ops, but there might be a better
 /// heuristic for collapsing the ops into a single classification.
-/// 
+///
 /// If the instruction cannot be decoded, it returns [`InstructionClass::Unknown`] with a length of `0`
 pub(crate) fn classify_instruction(
     cpu: &mut PcodeBackend,
@@ -297,7 +297,7 @@ pub(crate) fn classify_instruction(
 }
 
 /// Extract the statically known target of a direct call/branch
-/// 
+///
 /// Returns `None` for indirect transfers and returns
 fn branch_target(class: InstructionClass, pcodes: &[Pcode]) -> Option<u64> {
     let opcode = match class {
@@ -315,17 +315,17 @@ fn branch_target(class: InstructionClass, pcodes: &[Pcode]) -> Option<u64> {
 }
 
 /// Project the Pcode ops of an instruction into an [`InstructionClass`]
-/// 
+///
 /// This function is useful for when we need to classify the "type" of a machine instruction. For
 /// example, does this instruction correspond to a function prologue and epilogue (useful for the
 /// shadow stack plugin), or does this instruction do some comparison, etc.
-/// 
+///
 /// However, one machine instruction lowers to several pcode ops, so we walk through all of the
 /// pcode ops that were generated and record which ones were present. We then pick a single one
 /// based on a heuristic priority (a return instruction being in the generated pcode ops indicates
 /// that the original instruction is a return instruction, even if there was a load or branch pcode op
 /// present).
-/// 
+///
 /// This is a heuristic, so it could be improved upon.
 fn classify_pcodes(pcodes: &[Pcode]) -> InstructionClass {
     use Opcode::*;
@@ -373,7 +373,3 @@ fn classify_pcodes(pcodes: &[Pcode]) -> InstructionClass {
         InstructionClass::Other
     }
 }
-
-
-
-

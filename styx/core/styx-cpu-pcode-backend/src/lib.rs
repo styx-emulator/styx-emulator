@@ -517,7 +517,12 @@ impl CpuBackend for PcodeBackend {
         mmu: &mut Mmu,
         event_controller: &mut EventController,
     ) -> Option<InstructionInfo> {
-        Some(crate::get_pcode::classify_instruction(self, addr, mmu, event_controller))
+        Some(crate::get_pcode::classify_instruction(
+            self,
+            addr,
+            mmu,
+            event_controller,
+        ))
     }
 
     fn stop(&mut self) {
@@ -1494,6 +1499,3 @@ mod mips32_tests {
         );
     }
 }
-
-
-
