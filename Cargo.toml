@@ -12,6 +12,7 @@ members = [
   "./examples/diy-processor",
   "./examples/fuzzer-plugin",
   "./examples/kinetis21-interrupt-angr",
+  "./examples/loop-detection-plugin",
   "./examples/multiple-processors",
   "./examples/ppc405-freertos-demo",
   "./examples/raw-processor",
@@ -380,7 +381,7 @@ opt-level = 3
 lto = "fat"
 strip = "symbols"
 debug = "full"
-split-debuginfo = "true"
+split-debuginfo = "packed"
 debug-assertions = false
 overflow-checks = false
 codegen-units = 1
