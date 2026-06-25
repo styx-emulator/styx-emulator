@@ -118,23 +118,23 @@ impl ProcessorImpl for Mpc8xxBuilder {
 
         let cec = Box::new(Mpc866mController::new(self.family_variant));
 
-        let peripherals: Vec<Box<dyn Peripheral>> = vec![
-            Box::new(FastEthernetController),
-            Box::new(Pcmcia),
-            Box::new(UtopiaBlock),
-            Box::new(SystemInterfaceUnit::new(self.family_variant)),
-        ];
-
         let mut hints = LoaderHints::new();
         hints.insert("arch".to_string().into_boxed_str(), Box::new(Arch::Ppc32));
-        Ok(ProcessorBundle {
-            cpu,
-            tlb,
-            memory,
-            event_controller: cec,
-            peripherals,
-            loader_hints: hints,
-        })
+        Ok(ProcessorBundle::builder()
+            .with_memory(memory)
+            .with_vcpu(|v| {
+                v.with_cpu_box(cpu)
+                    .with_tlb_box(tlb)
+                    .with_event_controller_box(cec)
+            })
+            // single vcpu, route any peripheral interrupts to vcpu 0
+            .with_event_distributor(SingleVcpuEventDistributor::default())
+            .add_peripheral(FastEthernetController)
+            .add_peripheral(Pcmcia)
+            .add_peripheral(UtopiaBlock)
+            .add_peripheral(SystemInterfaceUnit::new(self.family_variant))
+            .with_loader_hints(hints)
+            .build()?)
     }
 }
 
