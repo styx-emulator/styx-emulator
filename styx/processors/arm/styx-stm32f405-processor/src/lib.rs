@@ -122,29 +122,30 @@ impl ProcessorImpl for Stm32f405Builder {
         let tlb = DummyTlb::new();
         // nvic event controller
         let event_controller = Box::new(Nvic::default());
-        let mut loader_hints = LoaderHints::new();
-        loader_hints.insert("arch".to_string().into_boxed_str(), Box::new(Arch::Arm));
 
         setup_address_space(&mut memory)?;
         set_hooks(cpu.as_mut())?;
 
         // setup the peripherals
-        let mut peripherals: Vec<Box<dyn Peripheral>> = Vec::new();
         let uart = UartController::new(get_uarts());
-        peripherals.push(Box::new(uart));
 
-        Ok(ProcessorBundle {
-            cpu,
-            tlb,
-            memory,
-            event_controller,
-            peripherals,
-            loader_hints,
-        })
+        Ok(ProcessorBundle::builder()
+            .with_memory(memory)
+            .with_vcpu(|v| {
+                v.with_cpu_box(cpu)
+                    .with_tlb_box(tlb)
+                    .with_event_controller_box(event_controller)
+            })
+            // single vcpu, route raised interrupts to vcpu 0
+            .with_event_distributor(SingleVcpuEventDistributor::default())
+            .add_peripheral(uart)
+            .with_arch_hint(Arch::Arm)
+            .build()?)
     }
 
     fn init(&self, proc: &mut BuildingProcessor) -> Result<(), UnknownError> {
-        populate_default_registers(proc.core.cpu.as_mut(), &mut proc.core.mmu)
+        let vcpu = proc.vcpus.first_mut();
+        populate_default_registers(vcpu.cpu.as_mut(), &mut vcpu.mmu)
     }
 }
 
