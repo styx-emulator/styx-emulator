@@ -14,7 +14,7 @@ use crate::{
 /// Add to a processor using
 /// [`ProcessorBuilder::with_executor()`](crate::processor::ProcessorBuilder::with_executor()).
 ///
-/// Implementing this trait allows executors to decide how many instructions, to emulate at a time,
+/// Implementing this trait allows executors to decide how many instructions to emulate at a time,
 /// when to handle events, when to update the state of peripherals, and when to stop emulation.
 ///
 /// Both `halt_emulation` and `post_stride_processing` take a [`Delta`] representing the number of
@@ -155,3 +155,5 @@ pub trait ExecutorImpl: Send {
         1000
     }
 }
+
+

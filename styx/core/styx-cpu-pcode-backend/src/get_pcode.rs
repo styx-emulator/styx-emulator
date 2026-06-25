@@ -3,11 +3,11 @@ use log::{debug, trace};
 use smallvec::SmallVec;
 use styx_cpu_type::TargetExitReason;
 use styx_errors::{anyhow::Context, UnknownError};
-use styx_pcode::pcode::Pcode;
+use styx_pcode::pcode::{Opcode, Pcode, SpaceName};
 use styx_pcode_translator::ContextOption;
 use styx_processor::{
     core::{FetchException, HandleExceptionAction},
-    cpu::CpuBackend,
+    cpu::{CpuBackend, InstructionClass, InstructionInfo},
     event_controller::{EventController, ExceptionNumber},
     hooks::{MemFaultData, Resolution},
     memory::{MemoryOperationError, MemoryPermissions, Mmu, MmuOpError},
@@ -260,3 +260,110 @@ pub(crate) fn is_branching_instruction<
 fn contains_branch_instruction(pcodes: &[Pcode]) -> bool {
     pcodes.iter().any(|p| p.is_branch())
 }
+
+/// This function is currently only used for the shadow stack plugin and as such we only care
+/// about detecting if an instruction is a call/return. I'm not 100% of the specifics of how
+/// Ghidra decomposes an instruction into multiple pcode ops, but there might be a better
+/// heuristic for collapsing the ops into a single classification.
+/// 
+/// If the instruction cannot be decoded, it returns [`InstructionClass::Unknown`] with a length of `0`
+pub(crate) fn classify_instruction(
+    cpu: &mut PcodeBackend,
+    addr: u64,
+    mmu: &mut Mmu,
+    ev: &mut EventController,
+) -> InstructionInfo {
+    let mut pcodes = Vec::with_capacity(16);
+
+    let mut helper = cpu.pcode_generator.helper.take().unwrap();
+    let ctx_opts = helper.pre_fetch(cpu).unwrap();
+    cpu.pcode_generator.helper = Some(helper);
+
+    match get_pcode_at_address(cpu, addr, &mut pcodes, &ctx_opts, mmu, ev) {
+        Ok(length) => {
+            let class = classify_pcodes(&pcodes);
+            InstructionInfo {
+                class,
+                length: length as u32,
+                target: branch_target(class, &pcodes),
+            }
+        }
+        Err(_) => InstructionInfo {
+            class: InstructionClass::Unknown,
+            length: 0,
+            target: None,
+        },
+    }
+}
+
+/// Extract the statically known target of a direct call/branch
+/// 
+/// Returns `None` for indirect transfers and returns
+fn branch_target(class: InstructionClass, pcodes: &[Pcode]) -> Option<u64> {
+    let opcode = match class {
+        InstructionClass::Call => Opcode::Call,
+        InstructionClass::Branch => Opcode::Branch,
+        InstructionClass::ConditionalBranch => Opcode::CBranch,
+        _ => return None,
+    };
+    let dest = pcodes.iter().find(|p| p.opcode == opcode)?.inputs.first()?;
+    if dest.space != SpaceName::Constant {
+        Some(dest.offset)
+    } else {
+        None
+    }
+}
+
+/// Project the Pcode ops of an instruction into an [`InstructionClass`]
+/// 
+/// This is a heuristic, so it could be improved upon
+fn classify_pcodes(pcodes: &[Pcode]) -> InstructionClass {
+    use Opcode::*;
+    let mut ret = false;
+    let mut call = false;
+    let mut indirect = false;
+    let mut cbranch = false;
+    let mut branch = false;
+    let mut load = false;
+    let mut store = false;
+    let mut compare = false;
+
+    for p in pcodes {
+        match p.opcode {
+            Return => ret = true,
+            Call | CallInd => call = true,
+            BranchInd => indirect = true,
+            CBranch => cbranch = true,
+            Branch => branch = true,
+            Load => load = true,
+            Store => store = true,
+            IntEqual | IntNotEqual | IntLess | IntSLess | IntLessEqual | IntSLessEqual
+            | FloatEqual | FloatNotEqual | FloatLess | FloatLessEqual => compare = true,
+            _ => {}
+        }
+    }
+
+    if ret {
+        InstructionClass::Return
+    } else if call {
+        InstructionClass::Call
+    } else if indirect {
+        InstructionClass::IndirectBranch
+    } else if cbranch {
+        InstructionClass::ConditionalBranch
+    } else if branch {
+        InstructionClass::Branch
+    } else if store {
+        InstructionClass::Store
+    } else if load {
+        InstructionClass::Load
+    } else if compare {
+        InstructionClass::Compare
+    } else {
+        InstructionClass::Other
+    }
+}
+
+
+
+

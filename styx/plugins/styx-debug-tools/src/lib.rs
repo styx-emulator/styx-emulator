@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: BSD-2-Clause
+
 //! Debug Tools Plugins Module
 //!
 //! Provides some hooks that are useful when things are not working as expected
 //! and you need help figuring out where in the emulation stack things are borked.
 //!
+//! It also provides the [`shadow_stack`] and the [`loops`] detector plugins
+
 use styx_core::{
     hooks::{MemFaultData, ProtectionFaultHook, Resolution, UnmappedFaultHook},
     memory::MemoryPermissions,
@@ -11,6 +14,14 @@ use styx_core::{
 };
 use styx_sync::sync::Arc;
 use tracing::error;
+
+pub mod loops;
+pub mod shadow_stack;
+
+pub use loops::{LoopCallback, LoopCounters, LoopDetectionPlugin, LoopReport};
+pub use shadow_stack::{
+    Frame, FrameId, ShadowStack, ShadowStackHandle, ShadowStackPlugin, FrameTransitionType,
+};
 
 struct HaltableHook {
     halt: bool,

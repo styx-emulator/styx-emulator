@@ -82,6 +82,119 @@ impl ExecutionReport {
 
 assert_obj_safe!(CpuBackend);
 
+/// Classification of a control flow instruction. This lets us reason about control flow operations
+/// in a hardware-agnostic way. This is used, for example, with the shadow stack plugin: in order to
+/// emulate the stack, we need to see if an instruction is a call or a return instruction.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ControlFlowType {
+    Call,
+    Return,
+    /// Catch-all for any branch type instruction beyond call or return.
+    /// Can be factored into different kinds of calls later on (conditional,
+    /// unconditional, etc.)
+    Branch,
+    Fallthrough,
+    Unknown,
+}
+
+/// Classification of an instruction. This is very general, so it might need some refinement,
+/// but this is useful when needing to deal with instruction types in a hardware-agnostic way
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum InstructionClass {
+    Call,
+    Return,
+    ConditionalBranch,
+    IndirectBranch,
+    Branch,
+    Load,
+    Store,
+    Compare,
+    Other,
+    Unknown,
+}
+
+impl InstructionClass {
+    /// Whether an instruction of this class transfers control, and therefore
+    /// terminates a basic block.
+    pub fn is_control_transfer(self) -> bool {
+        matches!(
+            self,
+            Self::Call
+                | Self::Return
+                | Self::ConditionalBranch
+                | Self::IndirectBranch
+                | Self::Branch
+        )
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct InstructionInfo {
+    pub class: InstructionClass,
+    /// Is 0 if it could not be decoded
+    pub length: u32,
+    /// For a direct call/branch, the target address
+    pub target: Option<u64>,
+}
+
+/// A basic block's terminating instruction classification
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct BlockTerminator {
+    /// Control-flow effect of the terminator.
+    pub flow: ControlFlowType,
+    /// Used if the terminating control instruction has a static
+    /// target address
+    pub target: Option<u64>,
+}
+
+
+/// Classifies the control-flow behavior of the last instruction of the basic block
+/// 
+/// Decodes instructions forwards from `addr` until it reaches a control-transfer
+/// instruction. This is done to account for architectures with variable-length
+/// instructions (ex: x86)
+pub fn classify_block_terminator(
+    cpu: &mut dyn CpuBackend,
+    addr: u64,
+    size: u32,
+    mmu: &mut Mmu,
+    ev: &mut EventController
+) -> BlockTerminator {
+    let end = addr + (size as u64);
+    let mut pc = addr;
+    loop {
+        let info = cpu.classify_instruction(pc, mmu, ev);
+        if info.class.is_control_transfer() {
+            let flow = match info.class {
+                InstructionClass::Call => ControlFlowType::Call,
+                InstructionClass::Return => ControlFlowType::Return,
+                // conditional, indirect, and unconditional branches are all
+                // intra-procedural for control-flow purposes; this is just
+                // an approximation and can be made more robust later on
+                _ => ControlFlowType::Branch,
+            };
+            return BlockTerminator {
+                flow,
+                target: info.target,
+            };
+        }
+        // undecodable instruction
+        if info.length == 0 {
+            return BlockTerminator {
+                flow: ControlFlowType::Unknown,
+                target: None,
+            };
+        }
+        pc += info.length as u64;
+        if pc >= end {
+            return BlockTerminator {
+                flow: ControlFlowType::Fallthrough,
+                target: None,
+            };
+        }
+    }
+}
+
 pub trait CpuBackend: Debug + Hookable + Send {
     /// Reads the value of the desired register from the target cpu.
     ///
@@ -152,4 +265,20 @@ pub trait CpuBackend: Debug + Hookable + Send {
 
     /// Set the current value of the current `pc` register.
     fn set_pc(&mut self, value: u64) -> Result<(), UnknownError>;
+
+    /// Classifies instruction at `addr` into a generic class
+    fn classify_instruction(
+        &mut self,
+        addr: u64,
+        mmu: &mut Mmu,
+        event_controller: &mut EventController,
+    ) -> InstructionInfo {
+        let _ = (addr, mmu, event_controller);
+        InstructionInfo {
+            class: InstructionClass::Unknown,
+            length: 0,
+            target: None,
+        }
+    }
 }
+
