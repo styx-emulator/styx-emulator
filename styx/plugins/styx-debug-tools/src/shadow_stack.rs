@@ -256,7 +256,7 @@ pub(crate) fn install_hook(
         .add_hook(StyxHook::block(move |core: CoreHandle, address, size| {
             let term =
                 classify_block_terminator(core.cpu, address, size, core.mmu, core.event_controller);
-            if term.flow == ControlFlowType::Unknown && !warned_weird_state {
+            if (term.is_none() || term.unwrap().flow == ControlFlowType::Unknown) && !warned_weird_state {
                 warn!(
                     "ShadowStack: backend cannot classify control flow; \
                     the shadow stack might get weird man!"
@@ -264,7 +264,8 @@ pub(crate) fn install_hook(
                 warned_weird_state = true;
             }
             hook_handle.update(|stack| {
-                stack.record_block_with_target(address, size, term.flow, term.target)
+                // defaulting is OK because we've warned the user that the state would get weird
+                stack.record_block_with_target(address, size, term.unwrap_or_default().flow, term.unwrap_or_default().target)
             });
             Ok(())
         }))?;

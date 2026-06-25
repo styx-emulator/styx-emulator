@@ -97,6 +97,12 @@ pub enum ControlFlowType {
     Unknown,
 }
 
+impl Default for ControlFlowType {
+    fn default() -> Self {
+        Self::Unknown
+    }
+}
+
 /// Classification of an instruction. This is very general, so it might need some refinement,
 /// but this is useful when needing to deal with instruction types in a hardware-agnostic way
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -138,7 +144,7 @@ pub struct InstructionInfo {
 }
 
 /// A basic block's terminating instruction classification
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct BlockTerminator {
     /// Control-flow effect of the terminator.
     pub flow: ControlFlowType,
@@ -159,12 +165,20 @@ pub fn classify_block_terminator(
     size: u32,
     mmu: &mut Mmu,
     ev: &mut EventController
-) -> BlockTerminator {
+) -> Option<BlockTerminator> {
     let end = addr + (size as u64);
     let mut pc = addr;
     loop {
-        let info = cpu.classify_instruction(pc, mmu, ev);
-        if info.class.is_control_transfer() {
+        let info = cpu.classify_instruction(pc, mmu, ev)?;
+        pc += info.length as u64;
+
+        // undecodable instruction
+        if info.length == 0 {
+            return Some(BlockTerminator {
+                flow: ControlFlowType::Unknown,
+                target: None,
+            });
+        } else if info.class.is_control_transfer() {
             let flow = match info.class {
                 InstructionClass::Call => ControlFlowType::Call,
                 InstructionClass::Return => ControlFlowType::Return,
@@ -173,24 +187,15 @@ pub fn classify_block_terminator(
                 // an approximation and can be made more robust later on
                 _ => ControlFlowType::Branch,
             };
-            return BlockTerminator {
+            return Some(BlockTerminator {
                 flow,
                 target: info.target,
-            };
-        }
-        // undecodable instruction
-        if info.length == 0 {
-            return BlockTerminator {
-                flow: ControlFlowType::Unknown,
-                target: None,
-            };
-        }
-        pc += info.length as u64;
-        if pc >= end {
-            return BlockTerminator {
+            })
+        } else if pc >= end {
+            return Some(BlockTerminator {
                 flow: ControlFlowType::Fallthrough,
                 target: None,
-            };
+            })
         }
     }
 }
@@ -267,18 +272,14 @@ pub trait CpuBackend: Debug + Hookable + Send {
     fn set_pc(&mut self, value: u64) -> Result<(), UnknownError>;
 
     /// Classifies instruction at `addr` into a generic class
+    #[allow(unused_variables)]
     fn classify_instruction(
         &mut self,
         addr: u64,
         mmu: &mut Mmu,
         event_controller: &mut EventController,
-    ) -> InstructionInfo {
-        let _ = (addr, mmu, event_controller);
-        InstructionInfo {
-            class: InstructionClass::Unknown,
-            length: 0,
-            target: None,
-        }
+    ) -> Option<InstructionInfo> {
+        None
     }
 }
 

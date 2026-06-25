@@ -35,7 +35,7 @@ fn classify_block_terminator_ppc() {
     mmu.code().write(0x30).bytes(&[0x7c, 0x63, 0x22, 0x14]).unwrap();
 
     assert_eq!(
-        classify_block_terminator(&mut cpu, 0x00, 4, &mut mmu, &mut ev).flow,
+        classify_block_terminator(&mut cpu, 0x00, 4, &mut mmu, &mut ev).unwrap().flow,
         ControlFlowType::Branch,
         "`b` should classify as an intra-procedural branch"
     );
@@ -43,16 +43,16 @@ fn classify_block_terminator_ppc() {
     // `bl .` is a direct call, so its static target is extracted
     //
     // here the instruction's own address, 0x10 (displacement 0)
-    let call = classify_block_terminator(&mut cpu, 0x10, 4, &mut mmu, &mut ev);
+    let call = classify_block_terminator(&mut cpu, 0x10, 4, &mut mmu, &mut ev).unwrap();
     assert_eq!(call.flow, ControlFlowType::Call, "`bl` should classify as a call");
     assert_eq!(call.target, Some(0x10), "direct call target should be extracted");
 
-    let ret = classify_block_terminator(&mut cpu, 0x20, 4, &mut mmu, &mut ev);
+    let ret = classify_block_terminator(&mut cpu, 0x20, 4, &mut mmu, &mut ev).unwrap();
     assert_eq!(ret.flow, ControlFlowType::Return, "`blr` should classify as a return");
     assert_eq!(ret.target, None, "an indirect return has no static target");
 
     assert_eq!(
-        classify_block_terminator(&mut cpu, 0x30, 4, &mut mmu, &mut ev).flow,
+        classify_block_terminator(&mut cpu, 0x30, 4, &mut mmu, &mut ev).unwrap().flow,
         ControlFlowType::Fallthrough,
         "a non-branching block should classify as fallthrough"
     );
@@ -76,7 +76,7 @@ fn classify_instruction_ppc() {
     mmu.code().write(0x50).bytes(&[0x2c, 0x03, 0x00, 0x05]).unwrap();
 
     let class = |cpu: &mut PcodeBackend, mmu: &mut Mmu, ev: &mut EventController, addr| {
-        let info = cpu.classify_instruction(addr, mmu, ev);
+        let info = cpu.classify_instruction(addr, mmu, ev).unwrap();
         assert_eq!(info.length, 4, "PPC instructions are 4 bytes");
         info.class
     };

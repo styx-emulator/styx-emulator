@@ -516,8 +516,8 @@ impl CpuBackend for PcodeBackend {
         addr: u64,
         mmu: &mut Mmu,
         event_controller: &mut EventController,
-    ) -> InstructionInfo {
-        crate::get_pcode::classify_instruction(self, addr, mmu, event_controller)
+    ) -> Option<InstructionInfo> {
+        Some(crate::get_pcode::classify_instruction(self, addr, mmu, event_controller))
     }
 
     fn stop(&mut self) {
