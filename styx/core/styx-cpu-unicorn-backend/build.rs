@@ -3,5 +3,12 @@
 //! This file exists to add libatomic when linking.
 
 fn main() {
-    println!("cargo:rustc-link-lib=atomic");
+    // MacOS does not need libatomic, will fail to compile if included on MacOS
+    if std::env::var("CARGO_CFG_TARGET_OS").unwrap() == "linux" {
+        println!("cargo:rustc-link-lib=atomic");
+    }
 }
+
+
+
+
