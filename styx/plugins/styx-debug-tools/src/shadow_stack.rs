@@ -24,7 +24,7 @@
 
 use styx_core::prelude::*;
 use styx_sync::sync::{Arc, Mutex};
-use tracing::warn;
+// use tracing::warn;
 
 pub type FrameId = u64;
 
@@ -249,17 +249,26 @@ impl ShadowStackHandle {
 
 // Install block hook and sets `has_updater` variable to true so donwstream handles
 // know that this shadow stack has an updater
+//
+// The warning code is commented out: ideally, an error in the shadow stack plugin
+// shouldn't propagate through the entire emulator, but right now there is not a way
+// (as far as I'm aware at least) to just shut down the plugin
 pub(crate) fn install_hook(
     proc: &mut BuildingProcessor,
     handle: &ShadowStackHandle,
 ) -> Result<(), UnknownError> {
     let hook_handle = handle.clone();
-    let mut warned_weird_state = false;
+    // let mut warned_weird_state = false;
     proc.core
         .cpu
         .add_hook(StyxHook::block(move |core: CoreHandle, address, size| {
             let term =
                 classify_block_terminator(core.cpu, address, size, core.mmu, core.event_controller);
+
+            if term.is_none() || term.unwrap().flow == ControlFlowType::Unknown {
+                panic!("ShadowStack: backend cannot classify control flow");
+            }
+            /*
             if (term.is_none() || term.unwrap().flow == ControlFlowType::Unknown)
                 && !warned_weird_state
             {
@@ -269,6 +278,7 @@ pub(crate) fn install_hook(
                 );
                 warned_weird_state = true;
             }
+            */
             hook_handle.update(|stack| {
                 // defaulting is OK because we've warned the user that the state would get weird
                 stack.record_block_with_target(

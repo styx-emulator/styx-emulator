@@ -19,9 +19,7 @@ pub mod loops;
 pub mod shadow_stack;
 
 pub use loops::{LoopCallback, LoopCounters, LoopDetectionPlugin, LoopReport};
-pub use shadow_stack::{
-    Frame, FrameId, FrameTransitionType, ShadowStack, ShadowStackHandle, ShadowStackPlugin,
-};
+pub use shadow_stack::{FrameTransitionType, ShadowStack, ShadowStackHandle, ShadowStackPlugin};
 
 struct HaltableHook {
     halt: bool,

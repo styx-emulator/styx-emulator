@@ -38,19 +38,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     set_env_log_info();
     init_logging();
 
-    let on_loop: LoopCallback = Box::new(|report: &LoopReport| {
+    let on_loop: LoopCallback = Box::new(|report: &LoopReport, _proc: &mut CoreHandle| {
         println!(
             ">> loop detected: header={:#x}, function={:#x}, iterations={}, call depth={}",
             report.head_addr, report.frame_addr, report.iters, report.stack_depth,
         );
     });
 
-    let loop_detector = LoopDetectionPlugin::new(
-        5,             // threshold: report a loop once it iterates >= 5 times
-        false,         // halt_on_detection: stop emulation at the first reported loop
-        Some(on_loop), // on_detection callback (pass `None` to just use the built-in log)
-        None,          // shadow_stack: `None` => the plugin manages its own private one
-    );
+    let loop_detector = LoopDetectionPlugin::default()
+        .with_threshold(100) // report a loop once it iterates >= 100 times
+        .with_halt_on_report(false) // stop emulation at the first reported loop
+        .with_callback(on_loop); // callback upon reporting the loop
+                                 // did not pass in a shadow stack => plugin manages its own private one
 
     let mut proc = ProcessorBuilder::default()
         .with_builder(Stm32f107Builder)

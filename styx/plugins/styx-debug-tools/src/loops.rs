@@ -14,6 +14,7 @@ use crate::shadow_stack::{
     install_hook, FrameId, FrameTransitionType, ShadowStack, ShadowStackHandle,
 };
 use std::collections::{HashMap, HashSet};
+use std::num::NonZeroU64;
 use styx_core::prelude::{log::info, *};
 
 /// Report on loop that has been detected and has been iterated over by the user
@@ -30,7 +31,7 @@ pub struct LoopReport {
 }
 
 impl LoopReport {
-    pub fn new(head_addr: u64, frame_addr: u64, iters: u64, stack_depth: usize) -> Self {
+    fn new(head_addr: u64, frame_addr: u64, iters: u64, stack_depth: usize) -> Self {
         Self {
             head_addr,
             frame_addr,
@@ -40,18 +41,17 @@ impl LoopReport {
     }
 }
 
-pub type LoopCallback = Box<dyn FnMut(&LoopReport) + Send>;
+pub type LoopCallback = Box<dyn FnMut(&LoopReport, &mut CoreHandle) + Send>;
 
 #[derive(Default)]
-struct LoopState {
-    iterations: u64,
-    reported: bool,
+pub struct LoopState {
+    pub iterations: u64,
+    pub reported: bool,
 }
 
-#[derive(Default)]
 pub struct LoopCounters {
-    threshold: u64,
-    counters: HashMap<FrameId, HashMap<u64, LoopState>>,
+    pub threshold: u64,
+    pub counters: HashMap<FrameId, HashMap<u64, LoopState>>,
 }
 
 impl LoopCounters {
@@ -106,7 +106,7 @@ impl LoopCounters {
     }
 
     /// Drop counters for frames no longer on the stack.
-    fn remove_loops(&mut self, stack: &ShadowStack) {
+    pub fn remove_loops(&mut self, stack: &ShadowStack) {
         let live: HashSet<FrameId> = stack.frames().iter().map(|f| f.id).collect();
         self.counters.retain(|id, _| live.contains(id));
     }
@@ -140,7 +140,7 @@ impl LoopDetector {
             report.head_addr, report.frame_addr, report.stack_depth, report.iters
         );
         if let Some(callback) = self.on_detection.as_mut() {
-            callback(report);
+            callback(report, proc);
         }
         if self.halt_on_detection {
             proc.cpu.stop();
@@ -163,10 +163,11 @@ impl BlockHook for LoopDetector {
     }
 }
 
-#[derive(Default, serde::Deserialize)]
+#[derive(serde::Deserialize)]
 pub struct LoopDetectionPlugin {
     /// Number of iterations of the loop before it's reported
-    threshold: u64,
+    /// Minimum threshold = 1
+    threshold: NonZeroU64,
     /// If true, stop emulation when loop is reported
     #[serde(default)]
     halt_on_report: bool,
@@ -177,21 +178,38 @@ pub struct LoopDetectionPlugin {
     shadow_stack: Option<ShadowStackHandle>,
 }
 
+impl Default for LoopDetectionPlugin {
+    fn default() -> Self {
+        Self {
+            threshold: NonZeroU64::new(1).unwrap(),
+            halt_on_report: false,
+            on_report: None,
+            shadow_stack: None,
+        }
+    }
+}
+
 styx_uconf::register_component_config!(register plugin: id = loops, component = LoopDetectionPlugin);
 
 impl LoopDetectionPlugin {
-    pub fn new(
-        threshold: u64,
-        halt_on_detection: bool,
-        on_detection: Option<LoopCallback>,
-        shadow_stack: Option<ShadowStackHandle>,
-    ) -> Self {
-        Self {
-            threshold,
-            halt_on_report: halt_on_detection,
-            on_report: on_detection,
-            shadow_stack,
-        }
+    pub fn with_threshold(mut self, threshold: u64) -> Self {
+        self.threshold = NonZeroU64::new(threshold).unwrap();
+        self
+    }
+
+    pub fn with_halt_on_report(mut self, halt_on_report: bool) -> Self {
+        self.halt_on_report = halt_on_report;
+        self
+    }
+
+    pub fn with_callback(mut self, callback: LoopCallback) -> Self {
+        self.on_report = Some(callback);
+        self
+    }
+
+    pub fn with_shadow_stack(mut self, shadow_stack: ShadowStackHandle) -> Self {
+        self.shadow_stack = Some(shadow_stack);
+        self
     }
 }
 
@@ -222,10 +240,9 @@ impl UninitPlugin for LoopDetectionPlugin {
                 handle
             }
         };
-        // minimum threshold value is 1
         let reader = LoopDetector::new(
             handle,
-            self.threshold.max(1),
+            self.threshold.get(),
             self.halt_on_report,
             self.on_report.take(),
         );
