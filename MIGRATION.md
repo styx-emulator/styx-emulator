@@ -244,6 +244,22 @@ impl MemoryWriteHook for I2cCr1WHook {
 }
 ```
 
+### Migrate away from `post_event_hook`
+
+`post_event_hook`, and any related "peripheral event done" callbacks, is removed
+from the `Peripheral` trait and from its UART and SPI implementations. The
+callback fired on the peripheral that raised an interrupt once the firmware
+returned from the handler, letting the peripheral do post-event cleanup such as
+re-latching an IRQ that still had data pending. Detecting return from interrupt
+is architecture specific and fragile, and some firmware never returns from the
+handler at all (FreeRTOS on PPC, for example), so the mechanism was dropped. The
+[Remove Post Event Hook ADR](docs/source/adrs/3-remove-post-event-hook.rst) has
+the full rationale.
+
+If your peripheral relied on `post_event_hook` to re-check state, move that logic
+into `Peripheral::tick`. It runs every round and returns the IRQs to raise, so
+re-latching happens on the next tick without a dedicated callback.
+
 ## 3. Timing: `Delta` vs `GlobalDelta`
 
 The split introduces two delta types, one for processor time and one for vCPU
