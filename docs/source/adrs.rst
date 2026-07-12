@@ -80,3 +80,4 @@ ADR List
    :caption: Decisions (and their record)
 
    adrs/1-use-of-rfcs-and-adrs
+   adrs/3-remove-post-event-hook
