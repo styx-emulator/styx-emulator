@@ -87,7 +87,7 @@ fn content_template(name: String, number: u32) -> String {
     let title_name = name.to_case(Case::Title);
     let titled_line = format!("{number}. {title_name}");
     let title_under: String = vec!['#'; titled_line.len()].into_iter().collect();
-    let section_under: String = vec!['='; title_name.len()].into_iter().collect();
+    let section_under: String = vec!['*'; title_name.len()].into_iter().collect();
 
     format!(
         r#"
