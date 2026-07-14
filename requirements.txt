@@ -11,3 +11,4 @@ sphinxnotes-strike==1.2.1
 sphinx-substitution-extensions==2025.1.2
 west>=1.4.0
 sphinx-lint==1.0.0
+sphinx-autobuild>=2025.8.25

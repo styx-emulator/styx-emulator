@@ -14,7 +14,8 @@ alias bench := cargo-bench
 alias rs-doctest := cargo-doc-test
 
 # hardcode path to the python interpreter
-py-path := "./venv/bin/python3"
+venv-bin-path := "./venv/bin"
+py-path := venv-bin-path + "/python3"
 
 # List of crates, checks if the sub-directory contains Cargo.toml
 GENERATED_CRATES := `find ./styx/generated -mindepth 1 -maxdepth 1 -type d -name "styx*" -exec test -e "{}/Cargo.toml" \; -print -prune | xargs -n1 basename`
@@ -139,6 +140,11 @@ docs:
     @echo  "Making docs"
     #!/usr/bin/env -S bash -e
     . venv/bin/activate && sphinx-build -b html -jauto docs/source/ docs/build/
+
+# Host docs on webserver that refreshes on updates.
+host-docs PORT="8000":
+    @echo "Hosting docs"
+    {{ venv-bin-path }}/sphinx-autobuild -b html -jauto --port {{ PORT }} docs/source/ docs/build/
 
 cargo-test-deps:
     cargo build -p workspace-service
