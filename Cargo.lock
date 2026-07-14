@@ -6816,6 +6816,7 @@ dependencies = [
  "derive_more 1.0.0",
  "diffy",
  "heck 0.5.0",
+ "jobserver",
  "styx-cpu-type",
  "styx-pcode",
  "styx-pcode-sleigh-backend",
