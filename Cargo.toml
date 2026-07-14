@@ -242,6 +242,7 @@ cc = { version = "1", features = [
 ] } # Enables parallel building for cxx
 cxx = "1.0.129"
 cxx-build = "1.0.129"
+jobserver = "0.1"
 enum-as-inner = "0.6.1"
 bytes = { version = "1.8.0", features = ["serde"] }
 strum = "0.26.3"

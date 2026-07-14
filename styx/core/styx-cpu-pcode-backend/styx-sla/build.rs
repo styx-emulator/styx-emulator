@@ -1,10 +1,35 @@
 // SPDX-License-Identifier: BSD-2-Clause
+
+//! Build script for `styx-sla`: turns the checked-in SLEIGH processor
+//! definitions into compiled `.sla` artifacts plus generated Rust bindings.
+//!
+//! Pipeline (see [`main`]):
+//! 1. Copy the `processors/` tree (Ghidra + custom slaspecs) into `OUT_DIR`,
+//!    then apply the unified-diff patches from `patches/` onto that copy.
+//! 2. For every arch feature enabled at build time (see [`SPECS`] and the
+//!    `arch_*` cargo features), compile each `.slaspec` into a `.sla` with
+//!    Ghidra's SLEIGH compiler ([`process`]).
+//! 3. Load each `.sla` to extract its user-ops and emit Rust into
+//!    `$OUT_DIR/sla_artifacts.rs`: a `SlaSpec`/`SlaUserOps` impl per spec plus a
+//!    `<Spec>UserOps` enum. `src/lib.rs` `include!`s that file.
+//!
+//! ## Concurrency
+//! Compiling a slaspec goes through Ghidra's C++ SLEIGH compiler, which
+//! relies on process-global lexer/parser state and therefore cannot be run
+//! concurrently within a single process (threads would corrupt each other).
+//! To use more than one core we instead spawn one *child process* per
+//! spec by re-executing this same build-script binary in "worker" mode. Each
+//! worker compiles exactly one spec and writes the generated rust snippet
+//! to a file which the parent then concatenates them.
+//!
 use heck::ToUpperCamelCase;
 use std::{
+    collections::VecDeque,
     env,
-    fs::File,
     io::{BufWriter, Write},
     path::{Path, PathBuf},
+    sync::{Arc, Mutex},
+    thread::JoinHandle,
 };
 use styx_pcode_sleigh_backend::Sleigh;
 
@@ -105,11 +130,17 @@ const SPECS: &[(ArchFeature, &[&str])] = &[
     (ArchFeature::Hexagon, &["custom/hexagon/hexagon"]),
 ];
 
-/// Takes a single slaspec source and writes the generated rust code to `generated_code`.
-fn process(spec_path: &str, generated_code: &mut BufWriter<File>) {
-    let global_out_dir = PathBuf::from(env::var_os("OUT_DIR").unwrap());
-    let spec_file = global_out_dir.join(PathBuf::from(format!("./processors/{spec_path}.slaspec")));
+/// Slaspec paths are relative to the `processors` directory in this crate and
+/// omit the slapsec file extension.
+fn path_from_spec_rel(spec_path: &str) -> PathBuf {
+    PathBuf::from(env::var_os("OUT_DIR").expect("no OUT_DIR"))
+        .join(PathBuf::from(format!("./processors/{spec_path}.slaspec")))
+}
 
+/// Takes a single slaspec path, compiles it, and returns the generated rust code.
+fn process(job: JobInputs) {
+    let spec_file = path_from_spec_rel(&job.spec_path);
+    let spec_file = &spec_file;
     let spec_dir = spec_file.parent().unwrap();
     // e.g. ARMv7le
     let spec_name = spec_file.file_stem().unwrap().to_string_lossy();
@@ -117,7 +148,7 @@ fn process(spec_path: &str, generated_code: &mut BufWriter<File>) {
     let sla_file = out_dir.join(format!("{spec_name}.sla"));
 
     // compile the slaspec into sla
-    styx_pcode_sleigh_backend::compile(&spec_file, &sla_file).unwrap();
+    styx_pcode_sleigh_backend::compile(spec_file, &sla_file).unwrap();
 
     let rust_name = spec_name.to_upper_camel_case();
 
@@ -188,12 +219,84 @@ fn process(spec_path: &str, generated_code: &mut BufWriter<File>) {
         {user_op_impl_str}
         "#};
 
-    generated_code
-        .write_all(out_rust_string.as_bytes())
-        .unwrap();
+    let out_path = &job.output_path;
+    std::fs::write(out_path, out_rust_string)
+        .unwrap_or_else(|e| panic!("failed to write worker output {out_path:?}: {e}"));
+}
+
+/// Represents the inputs to one worker slaspec conversion.
+struct JobInputs {
+    /// Slaspec path relative to the crate's `processors/` directory, without the
+    /// `.slaspec` extension (e.g. `ghidra/ARM/data/languages/ARM7_le`).
+    ///
+    /// Resolve it to an absolute path with [`path_from_spec_rel`] when the file
+    /// is needed.
+    spec_path: String,
+    /// Path to the file to output generated rust to.
+    output_path: PathBuf,
+}
+
+impl JobInputs {
+    fn try_from_env() -> Option<Self> {
+        match (env::var(WORKER_SPEC_ENV), env::var(WORKER_OUT_ENV)) {
+            (Ok(spec_path), Ok(output_str)) => {
+                let output_path = PathBuf::from(output_str);
+                Some(Self {
+                    spec_path,
+                    output_path,
+                })
+            }
+            // We should never have just one or the other.
+            (Ok(_), Err(_)) => {
+                panic!("worker env `{WORKER_SPEC_ENV}` present but `{WORKER_OUT_ENV}` missing")
+            }
+            (Err(_), Ok(_)) => {
+                panic!("worker env `{WORKER_OUT_ENV}` present but `{WORKER_SPEC_ENV}` missing")
+            }
+            // Not a worker.
+            (Err(_), Err(_)) => None,
+        }
+    }
+}
+
+/// Env var used to re-invoke this build script binary in "worker" mode. When
+/// set, its value is the single slaspec path to compile (see [`worker_main`]).
+const WORKER_SPEC_ENV: &str = "STYX_SLA_WORKER_SPEC";
+/// Env var giving the worker the absolute path it should write generated rust to.
+const WORKER_OUT_ENV: &str = "STYX_SLA_WORKER_OUT";
+
+/// Run one slaspec compilation by re-executing this build-script binary in
+/// worker mode (see file-level docs). Any failure is recorded in `errors`
+/// rather than panicking, so the caller can join every worker before reporting.
+fn run_worker(self_exe: &Path, job: &JobInputs, errors: &Mutex<Vec<String>>) {
+    let status = std::process::Command::new(self_exe)
+        .env(WORKER_SPEC_ENV, &job.spec_path)
+        .env(WORKER_OUT_ENV, &job.output_path)
+        .status();
+    let spec = &job.spec_path;
+    match status {
+        Ok(status) if status.success() => {}
+        Ok(status) => errors
+            .lock()
+            .unwrap()
+            .push(format!("worker for `{spec}` failed: {status}")),
+        Err(e) => errors
+            .lock()
+            .unwrap()
+            .push(format!("failed to spawn worker for `{spec}`: {e}")),
+    }
 }
 
 fn main() {
+    // Check if this process is a worker (see file level documentation).
+    if let Some(job) = JobInputs::try_from_env() {
+        // Worker entry point: compile a single spec and write the generated rust to the
+        // path given in [`WORKER_OUT_ENV`]. Runs in a dedicated child process so that
+        // the non-reentrant C++ SLEIGH compiler can run in parallel across specs.
+        process(job);
+        return;
+    }
+
     let out_dir = PathBuf::from(env::var_os("OUT_DIR").unwrap());
 
     // out_dir is sometimes not empty
@@ -204,29 +307,142 @@ fn main() {
     println!("Output Directory:\n{}", out_dir.to_string_lossy());
     copy_dir::copy_dir("./processors", out_dir.join("processors")).unwrap();
 
-    let generated_code_file = std::fs::File::create(out_dir.join("sla_artifacts.rs")).unwrap();
-    let mut generated_code = BufWriter::new(generated_code_file);
-
     // apply patches
     apply_file_patches_in_place("./patches", &processors_dir, false, false).unwrap();
 
+    // Collect the list of enabled specs (in declaration order for deterministic
+    // output).
+    let mut enabled_specs: Vec<&str> = Vec::new();
     for (arch_feature, specs) in SPECS {
         let env_feature = arch_feature.env_feature_flag();
-        let env = env::var(&env_feature);
-        if env.is_ok() {
+        if env::var(&env_feature).is_ok() {
             println!("{env_feature} enabled");
-            for spec in *specs {
-                process(spec, &mut generated_code);
-            }
+            enabled_specs.extend(*specs);
         } else {
             println!("{env_feature} disabled");
         }
+    }
+
+    let self_exe = env::current_exe().expect("could not resolve build script path");
+    let gen_dir = out_dir.join("gen");
+    let _ = std::fs::remove_dir_all(&gen_dir);
+    std::fs::create_dir_all(&gen_dir).unwrap();
+
+    // Bound concurrency using Cargo's jobserver.
+    //
+    // SAFETY: Recommended to be called early, which we do.
+    let client = unsafe { jobserver::Client::from_env() }.expect("no jobserver configured");
+
+    // Build the per-spec output paths up front and turn every enabled spec into
+    // a queued job.
+    let jobs: Arc<Mutex<VecDeque<JobInputs>>> = Arc::new(Mutex::new(
+        enabled_specs
+            .iter()
+            .enumerate()
+            .map(|(idx, spec)| JobInputs {
+                spec_path: spec.to_string(),
+                output_path: gen_dir.join(format!("{idx}.rs")),
+            })
+            .collect(),
+    ));
+
+    // Collect worker failures instead of panicking inside a thread, so every
+    // worker is joined and all failures are reported cleanly afterwards.
+    let errors: Arc<Mutex<Vec<String>>> = Arc::new(Mutex::new(Vec::new()));
+    // Join handles for worker threads spawned by the jobserver helper thread.
+    let handles: Arc<Mutex<Vec<JoinHandle<()>>>> = Arc::new(Mutex::new(Vec::new()));
+    let self_exe = Arc::new(self_exe);
+
+    // A build script is itself a "make thread" that already holds one implicit
+    // jobserver token, so it may always run *one* unit of work without asking
+    // the jobserver for anything.
+    //
+    // Instead we split the work two ways:
+    //   * The helper thread requests extra tokens from the jobserver; each
+    //     granted token dispatches one job onto its own worker thread.
+    //   * The main thread, using our implicit token, drains the same queue
+    //     sequentially.
+    let helper = client
+        .into_helper_thread({
+            let jobs = jobs.clone();
+            let errors = errors.clone();
+            let handles = handles.clone();
+            let self_exe = self_exe.clone();
+
+            // Run on token aquisition.
+            move |token| match token {
+                Ok(acquired) => {
+                    // Grab a job.
+                    let job = jobs.lock().unwrap().pop_front();
+                    if let Some(job) = job {
+                        let errors = errors.clone();
+                        let self_exe = self_exe.clone();
+                        let handle = std::thread::spawn(move || {
+                            run_worker(&self_exe, &job, &errors);
+                            // Move token into thread and drop when done.
+                            drop(acquired);
+                        });
+                        handles.lock().unwrap().push(handle);
+                    }
+                    // Ope, didn't need that token, no more jobs.
+                }
+                Err(e) => errors
+                    .lock()
+                    .unwrap()
+                    .push(format!("jobserver token error: {e}")),
+            }
+        })
+        .expect("failed to spawn jobserver helper thread");
+
+    // Ask for a token per job.
+    for _ in 0..enabled_specs.len() {
+        helper.request_token();
+    }
+
+    // Drain the queue on the main thread using our implicit token.
+    loop {
+        // Note for future devs, this looks like it could be rewritten as a
+        // `while let Some(job) = jobs.lock().unwrap().pop_front() {}`,
+        // however, this will hold the lock while inide the loop body,
+        // which is not what we want here.
+        let job = jobs.lock().unwrap().pop_front();
+        match job {
+            Some(job) => run_worker(&self_exe, &job, &errors),
+            // All jobs taken.
+            None => break,
+        }
+    }
+
+    // Join all threads.
+    drop(helper);
+    loop {
+        let handle = handles.lock().unwrap().pop();
+        match handle {
+            Some(handle) => handle.join().unwrap(),
+            None => break,
+        }
+    }
+
+    let errors = Arc::try_unwrap(errors).unwrap().into_inner().unwrap();
+    assert!(
+        errors.is_empty(),
+        "sla worker(s) failed:\n{}",
+        errors.join("\n")
+    );
+
+    // Assemble the final artifacts file.
+    let generated_code_file = std::fs::File::create(out_dir.join("sla_artifacts.rs")).unwrap();
+    let mut generated_code = BufWriter::new(generated_code_file);
+    for (idx, spec) in enabled_specs.iter().enumerate() {
+        let snippet_path = gen_dir.join(format!("{idx}.rs"));
+        let snippet = std::fs::read(&snippet_path)
+            .unwrap_or_else(|e| panic!("missing worker output for `{spec}`: {e}"));
+        generated_code.write_all(&snippet).unwrap();
     }
     generated_code.flush().unwrap();
 
     println!("cargo::rerun-if-changed=processors/");
     println!("cargo::rerun-if-changed=patches/");
-    println!("cargo::rerun-if-changed=src/lib.rs");
 }
 
 // The following patch functions were taken from AndrejOrsula/built_different licensed under the MIT license

@@ -20,6 +20,7 @@ heck = { workspace = true }
 walkdir = { workspace = true }
 diffy = { workspace = true }
 copy_dir = { workspace = true }
+jobserver = { workspace = true }
 
 [features]
 default = [
