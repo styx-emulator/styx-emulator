@@ -15,7 +15,10 @@ use crate::shadow_stack::{
 };
 use std::collections::{HashMap, HashSet};
 use std::num::NonZeroU64;
-use styx_core::prelude::{log::info, *};
+use styx_core::prelude::{
+    log::{self, Level},
+    *,
+};
 
 /// Report on loop that has been detected and has been iterated over by the user
 /// specified threshold.
@@ -112,39 +115,55 @@ impl LoopCounters {
     }
 }
 
+#[derive(Default)]
+struct DetectionBehavior {
+    /// Halt emulation
+    halt: bool,
+    /// Invokes user callback function
+    callback: Option<LoopCallback>,
+    /// Log at given level
+    log: Option<Level>,
+    /// Error with message
+    err: Option<String>,
+}
+
 struct LoopDetector {
     handle: ShadowStackHandle,
     counters: LoopCounters,
-    halt_on_detection: bool,
-    on_detection: Option<LoopCallback>,
+    on_detection: DetectionBehavior,
 }
 
 impl LoopDetector {
-    fn new(
-        handle: ShadowStackHandle,
-        threshold: u64,
-        halt_on_detection: bool,
-        on_detection: Option<LoopCallback>,
-    ) -> Self {
+    fn new(handle: ShadowStackHandle, threshold: u64, on_detection: DetectionBehavior) -> Self {
         Self {
             handle,
             counters: LoopCounters::new(threshold),
-            halt_on_detection,
             on_detection,
         }
     }
 
-    fn report_loop(&mut self, report: &LoopReport, proc: &mut CoreHandle) {
-        info!(
-            "LoopDetectionPlugin: loop @ {:#x} in frame {:#x} (call depth {}) reached {} iterations",
-            report.head_addr, report.frame_addr, report.stack_depth, report.iters
-        );
-        if let Some(callback) = self.on_detection.as_mut() {
+    fn report_loop(
+        &mut self,
+        report: &LoopReport,
+        proc: &mut CoreHandle,
+    ) -> Result<(), UnknownError> {
+        if let Some(level) = self.on_detection.log {
+            log::log!(
+                level,
+                "LoopDetectionPlugin: loop @ {:#x} in frame {:#x} (call depth {}) reached {} iterations",
+                report.head_addr, report.frame_addr, report.stack_depth, report.iters
+            );
+        }
+        if let Some(callback) = self.on_detection.callback.as_mut() {
             callback(report, proc);
         }
-        if self.halt_on_detection {
+        if self.on_detection.halt {
             proc.cpu.stop();
         }
+        if let Some(err_msg) = &self.on_detection.err {
+            return Err(anyhow!("LoopDetectionPlugin: {err_msg}"));
+        }
+        Ok(())
     }
 }
 
@@ -157,7 +176,7 @@ impl BlockHook for LoopDetector {
     ) -> Result<(), UnknownError> {
         let report = self.handle.read(|stack| self.counters.observe_stack(stack));
         if let Some(report) = report {
-            self.report_loop(&report, &mut proc);
+            self.report_loop(&report, &mut proc)?;
         }
         Ok(())
     }
@@ -174,6 +193,12 @@ pub struct LoopDetectionPlugin {
     /// Invoked when loop is reported
     #[serde(skip)]
     on_report: Option<LoopCallback>,
+    /// Optional logging; if set, log each report at this level
+    #[serde(skip)]
+    log_level: Option<Level>,
+    /// If set, the hook fails with this error message when a loop is reported
+    #[serde(default)]
+    err_on_report: Option<String>,
     #[serde(skip)]
     shadow_stack: Option<ShadowStackHandle>,
 }
@@ -184,6 +209,8 @@ impl Default for LoopDetectionPlugin {
             threshold: NonZeroU64::new(1).unwrap(),
             halt_on_report: false,
             on_report: None,
+            log_level: Some(Level::Info),
+            err_on_report: None,
             shadow_stack: None,
         }
     }
@@ -204,6 +231,16 @@ impl LoopDetectionPlugin {
 
     pub fn with_callback(mut self, callback: LoopCallback) -> Self {
         self.on_report = Some(callback);
+        self
+    }
+
+    pub fn with_log_level(mut self, level: Option<Level>) -> Self {
+        self.log_level = level;
+        self
+    }
+
+    pub fn with_err(mut self, message: impl Into<String>) -> Self {
+        self.err_on_report = Some(message.into());
         self
     }
 
@@ -240,12 +277,13 @@ impl UninitPlugin for LoopDetectionPlugin {
                 handle
             }
         };
-        let reader = LoopDetector::new(
-            handle,
-            self.threshold.get(),
-            self.halt_on_report,
-            self.on_report.take(),
-        );
+        let behavior = DetectionBehavior {
+            halt: self.halt_on_report,
+            callback: self.on_report.take(),
+            log: self.log_level,
+            err: self.err_on_report.take(),
+        };
+        let reader = LoopDetector::new(handle, self.threshold.get(), behavior);
         proc.core.cpu.add_hook(StyxHook::block(reader))?;
         Ok(self)
     }

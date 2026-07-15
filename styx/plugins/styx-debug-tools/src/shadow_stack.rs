@@ -266,7 +266,8 @@ pub(crate) fn install_hook(
                 classify_block_terminator(core.cpu, address, size, core.mmu, core.event_controller);
 
             if term.is_none() || term.unwrap().flow == ControlFlowType::Unknown {
-                panic!("ShadowStack: backend cannot classify control flow");
+                return Err(anyhow!("ShadowStack: backend cannot classify control flow"));
+                //panic!("ShadowStack: backend cannot classify control flow");
             }
             /*
             if (term.is_none() || term.unwrap().flow == ControlFlowType::Unknown)
