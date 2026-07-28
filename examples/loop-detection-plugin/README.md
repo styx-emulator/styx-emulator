@@ -23,7 +23,8 @@ and prints a report.
   (`proc.run(2_000_000u64)`) to observe multiple loops instead of stopping at
   the first one.
 - Pair the detector with a `ShadowStackPlugin` (added *before* the loop
-  detector, so its hook runs first) and pass that plugin's handle as the last
-  argument to `LoopDetectionPlugin::new`. You can then read a stack trace
-  (`handle.bottom_to_top()`) inside your callback to print the call chain a loop
-  was detected in.
+  detector, so its hook runs first) and pass that plugin's handles
+  (`ShadowStackPlugin::new(vcpu_count).clone_handles()`) to
+  `LoopDetectionPlugin::with_shadow_stacks`. You can then read a stack trace
+  (`handles[vcpu_id].bottom_to_top()`) inside your callback to print the call
+  chain a loop was detected in.
