@@ -67,9 +67,12 @@ pub mod prelude {
     pub use super::tracebus::*;
     pub use super::util::*;
     pub use styx_processor::cpu::{
-        CpuBackend, CpuBackendExt, DummyBackend, ReadRegisterError, WriteRegisterError,
+        classify_block_terminator, BlockTerminator, ControlFlowType, CpuBackend, CpuBackendExt,
+        DummyBackend, InstructionClass, InstructionInfo, ReadRegisterError, WriteRegisterError,
     };
-    pub use styx_processor::hooks::{AddressRange, CoreHandle, Hookable, MemFaultData, StyxHook};
+    pub use styx_processor::hooks::{
+        AddressRange, BlockHook, CoreHandle, Hookable, MemFaultData, StyxHook,
+    };
     pub use styx_processor::memory::helpers::{ReadExt, WriteExt};
     pub use styx_processor::memory::memory_region::MemoryRegion;
 }
