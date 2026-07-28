@@ -247,74 +247,95 @@ impl ShadowStackHandle {
     }
 }
 
-// Install block hook and sets `has_updater` variable to true so donwstream handles
-// know that this shadow stack has an updater
+// Install a block hook on each vcpu, updating that vcpu's handle, and sets the
+// `has_updater` variable to true so donwstream handles know that this shadow stack
+// has an updater
 //
 // The warning code is commented out: ideally, an error in the shadow stack plugin
 // shouldn't propagate through the entire emulator, but right now there is not a way
 // (as far as I'm aware at least) to just shut down the plugin
-pub(crate) fn install_hook(
+pub(crate) fn install_hooks(
     proc: &mut BuildingProcessor,
-    handle: &ShadowStackHandle,
+    handles: &[ShadowStackHandle],
 ) -> Result<(), UnknownError> {
-    let hook_handle = handle.clone();
-    // let mut warned_weird_state = false;
-    proc.core
-        .cpu
-        .add_hook(StyxHook::block(move |core: CoreHandle, address, size| {
-            let term =
-                classify_block_terminator(core.cpu, address, size, core.mmu, core.event_controller);
-
-            if term.is_none() || term.unwrap().flow == ControlFlowType::Unknown {
-                return Err(anyhow!("ShadowStack: backend cannot classify control flow"));
-                //panic!("ShadowStack: backend cannot classify control flow");
-            }
-            /*
-            if (term.is_none() || term.unwrap().flow == ControlFlowType::Unknown)
-                && !warned_weird_state
-            {
-                warn!(
-                    "ShadowStack: backend cannot classify control flow; \
-                    the shadow stack might get weird man!"
-                );
-                warned_weird_state = true;
-            }
-            */
-            hook_handle.update(|stack| {
-                // defaulting is OK because we've warned the user that the state would get weird
-                stack.record_block_with_target(
+    if handles.len() != proc.vcpus.len() {
+        return Err(anyhow!(
+            "ShadowStack: got {} handles for {} vcpus",
+            handles.len(),
+            proc.vcpus.len()
+        ));
+    }
+    for (vcpu, handle) in proc.vcpus.iter_mut().zip(handles) {
+        let hook_handle = handle.clone();
+        // let mut warned_weird_state = false;
+        vcpu.cpu
+            .add_hook(StyxHook::block(move |core: CoreHandle, address, size| {
+                let term = classify_block_terminator(
+                    core.cpu,
                     address,
                     size,
-                    term.unwrap_or_default().flow,
-                    term.unwrap_or_default().target,
-                )
-            });
-            Ok(())
-        }))?;
-    handle.update(|s| s.set_updater());
+                    core.mmu,
+                    core.event_controller,
+                );
+
+                if term.is_none() || term.unwrap().flow == ControlFlowType::Unknown {
+                    return Err(anyhow!(
+                        "ShadowStack: backend cannot classify control flow on vcpu {}",
+                        core.vcpu_id()
+                    ));
+                    //panic!("ShadowStack: backend cannot classify control flow");
+                }
+                /*
+                if (term.is_none() || term.unwrap().flow == ControlFlowType::Unknown)
+                    && !warned_weird_state
+                {
+                    warn!(
+                        "ShadowStack: backend cannot classify control flow; \
+                        the shadow stack might get weird man!"
+                    );
+                    warned_weird_state = true;
+                }
+                */
+                hook_handle.update(|stack| {
+                    // defaulting is OK because we've warned the user that the state would get weird
+                    stack.record_block_with_target(
+                        address,
+                        size,
+                        term.unwrap_or_default().flow,
+                        term.unwrap_or_default().target,
+                    )
+                });
+                Ok(())
+            }))?;
+        handle.update(|s| s.set_updater());
+    }
     Ok(())
 }
 
-/// Plugin for the [`ShadowStack`]. Other plugins/tasks can use the [`Self::handle`]
-/// to read the shadow stack
+/// Plugin for the [`ShadowStack`]. Each vcpu gets its own stack. Other plugins/tasks
+/// can use [`Self::clone_handles`] to read the shadow stacks, indexed by vcpu id.
 ///
 /// Add this plugin before any other plugin that uses the shadow stack, so the updater
 /// hook runs first on each basic block
 #[derive(Default, serde::Deserialize)]
 pub struct ShadowStackPlugin {
+    /// One handle per vcpu. Empty means "one per vcpu, allocated at init".
     #[serde(skip)]
-    handle: ShadowStackHandle,
+    handles: Vec<ShadowStackHandle>,
 }
 
 styx_uconf::register_component_config!(register plugin: id = shadow_stack, component = ShadowStackPlugin);
 
 impl ShadowStackPlugin {
-    pub fn new() -> Self {
-        Self::default()
+    /// Allocate one handle per vcpu; the count must match the processor being built.
+    pub fn new(vcpu_count: usize) -> Self {
+        Self {
+            handles: (0..vcpu_count).map(|_| ShadowStackHandle::new()).collect(),
+        }
     }
 
-    pub fn clone_handle(&self) -> ShadowStackHandle {
-        self.handle.clone()
+    pub fn clone_handles(&self) -> Vec<ShadowStackHandle> {
+        self.handles.clone()
     }
 }
 
@@ -326,10 +347,15 @@ impl Plugin for ShadowStackPlugin {
 
 impl UninitPlugin for ShadowStackPlugin {
     fn init(
-        self: Box<Self>,
+        mut self: Box<Self>,
         proc: &mut BuildingProcessor,
     ) -> Result<Box<dyn Plugin>, UnknownError> {
-        install_hook(proc, &self.handle)?;
+        if self.handles.is_empty() {
+            self.handles = (0..proc.vcpus.len())
+                .map(|_| ShadowStackHandle::new())
+                .collect();
+        }
+        install_hooks(proc, &self.handles)?;
         Ok(self)
     }
 }
