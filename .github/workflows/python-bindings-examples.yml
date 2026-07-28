@@ -64,7 +64,9 @@ jobs:
         run: |
           . venv/bin/activate
           cd styx/bindings/styx-py-api
-          pip install ruff
+          # ruff 16.0 added many more lints that we currently fail.
+          # see #213
+          pip install ruff==0.15.22
           just lint-ci
 
       - name: Test
