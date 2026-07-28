@@ -45,7 +45,7 @@ use styx_errors::{
 use styx_pcode::pcode::{Pcode, VarnodeData};
 use styx_processor::{
     core::{builder::BuildProcessorImplArgs, ExceptionBehavior},
-    cpu::{CpuBackend, ExecutionReport, ReadRegisterError, WriteRegisterError},
+    cpu::{CpuBackend, ExecutionReport, InstructionInfo, ReadRegisterError, WriteRegisterError},
     event_controller::{EventController, ExceptionNumber},
     memory::Mmu,
     processor::ProcessorConfig,
@@ -509,6 +509,20 @@ impl CpuBackend for PcodeBackend {
         self.pc_manager = Some(pc_manager);
         RegisterManager::write_register(self, pc_reg_variant, isa_pc)?;
         Ok(())
+    }
+
+    fn classify_instruction(
+        &mut self,
+        addr: u64,
+        mmu: &mut Mmu,
+        event_controller: &mut EventController,
+    ) -> Option<InstructionInfo> {
+        Some(crate::get_pcode::classify_instruction(
+            self,
+            addr,
+            mmu,
+            event_controller,
+        ))
     }
 
     fn stop(&mut self) {
