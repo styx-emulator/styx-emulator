@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use derive_more::FromStr;
 use log::trace;
-use styx_cpu_type::arch::hexagon::{register_fields::Ssr, HexagonRegister};
+use styx_cpu_type::arch::hexagon::{
+    register_fields::{Ipendad, Ssr},
+    HexagonRegister,
+};
 use styx_errors::anyhow::Context;
 use styx_pcode::{
     pcode::{SpaceName, VarnodeData},
@@ -27,8 +30,7 @@ pub struct InterruptGenericStub {
 
 /// Look at <https://github.com/quic/qemu/blob/hex-next/target/hexagon/cpu_bits.h>
 #[repr(i32)]
-#[allow(unused)]
-pub enum InterruptType {
+pub enum HexagonInterruptType {
     None = -1,
     Reset = 0,
     Imprecise = 1,
@@ -107,7 +109,7 @@ impl<T: CpuBackend> CallOtherCallback<T> for Trap0Handler {
         );
 
         Ok(PCodeStateChange::DelayedInterrupt(
-            InterruptType::Trap0 as i32,
+            HexagonInterruptType::Trap0 as i32,
         ))
     }
 }
@@ -145,18 +147,26 @@ impl<T: CpuBackend> CallOtherCallback<T> for CswiHandler {
             .read(&inputs[0])
             .with_context(|| "couldn't read cswi register argument value")?
             .to_u64()
-            .with_context(|| "couldn't unwrap mask")? as u32;
+            .with_context(|| "couldn't unwrap mask")? as u16;
 
-        let ipend_value = backend
-            .read_register::<u32>(HexagonRegister::Ipend)
-            .with_context(|| "couldn't read IPEND register")?;
-        let ipend_cleared = ipend_value & !rs;
+        let mut ipendad = Ipendad::new_with_raw_value(
+            backend
+                .read_register::<u32>(HexagonRegister::Ipendad)
+                .with_context(|| "couldn't read IPEND register")?,
+        );
+        let ipendad_old = ipendad;
+
+        ipendad.set_ipend(ipendad.ipend() & !rs);
 
         backend
-            .write_register(HexagonRegister::Ipend, ipend_cleared)
+            .write_register(HexagonRegister::Ipendad, ipendad.raw_value())
             .with_context(|| "couldn't clear specified bits of IPEND register")?;
 
-        trace!("cswi: rs {rs:x} ipend_old {ipend_value:x} ipend_after {ipend_cleared:x}",);
+        trace!(
+            "cswi: rs {rs:x} ipend_old {:x} ipend_after {:x}",
+            ipendad_old.ipend(),
+            ipendad.ipend(),
+        );
 
         Ok(PCodeStateChange::Fallthrough)
     }
@@ -169,6 +179,7 @@ pub struct CiadHandler;
 impl<T: CpuBackend> CallOtherCallback<T> for CiadHandler {
     /// Implement CIAD (clear interrupt auto disable)
     /// NOTE: the implementation of this may change when we implement the interrupt controller.
+    /// NOTE: this implementation uses IPENDAD.IAD, but some older DSPs use the full IAD register.
     ///
     /// See [CswiHandler::handle], the same note about implementation applies here.
     fn handle(
@@ -185,19 +196,35 @@ impl<T: CpuBackend> CallOtherCallback<T> for CiadHandler {
             .read(&inputs[0])
             .with_context(|| "couldn't read ciad register argument value")?
             .to_u64()
-            .with_context(|| "couldn't unwrap mask")? as u32;
+            .with_context(|| "couldn't unwrap mask")? as u16;
 
-        let iad_value = backend
-            .read_register::<u32>(HexagonRegister::Iad)
-            .with_context(|| "couldn't read IAD register")?;
+        let mut ipendad = Ipendad::new_with_raw_value(
+            backend
+                .read_register::<u32>(HexagonRegister::Ipendad)
+                .with_context(|| "couldn't read IAD register")?,
+        );
+        let ipendad_old = ipendad;
 
-        let iad_cleared = iad_value & !rs;
+        ipendad.set_iad(ipendad.iad() & !rs);
 
         backend
-            .write_register(HexagonRegister::Iad, iad_cleared)
+            .write_register(HexagonRegister::Ipendad, ipendad.raw_value())
             .with_context(|| "couldn't clear specified bits of IAD register")?;
 
-        trace!("ciad: rs {rs:x} iad_old {iad_value:x} after {iad_cleared:x}",);
+        // CIAD also resets the value of the VID register, according to QEMU.
+        // See op_helper.c, and specifically the ciad instruction.
+        //
+        // -1 resets the Vid back into "invalid" state.
+        // See hw/include/intc/l2vic.h and target/hexagon/op_helper.c (hexagon_set_vid)
+        backend
+            .write_register(HexagonRegister::Vid, u32::MAX)
+            .with_context(|| "couldn't reset the Vid register")?;
+
+        trace!(
+            "ciad: rs {rs:x} iad_old {:x} after {:x}",
+            ipendad_old.iad(),
+            ipendad.iad()
+        );
 
         Ok(PCodeStateChange::Fallthrough)
     }

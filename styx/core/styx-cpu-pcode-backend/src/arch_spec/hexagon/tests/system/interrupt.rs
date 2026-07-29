@@ -46,9 +46,9 @@ fn test_trap0() {
 #[test]
 fn test_ciad() {
     // We could mask this here, but it feels better to spell it out.
-    const IAD_INITIAL: u32 = 0x11020f74;
+    const IPENDAD_INITIAL: u32 = 0x0f741102;
     const MASK: u32 = 0x914;
-    const RESULT: u32 = 0x11020660;
+    const RESULT: u32 = 0x06601102;
 
     let (mut cpu, mut mmu, mut ev) = setup_objdump(
         r#"
@@ -56,7 +56,7 @@ fn test_ciad() {
 "#,
     );
 
-    cpu.write_register(HexagonRegister::Iad, IAD_INITIAL)
+    cpu.write_register(HexagonRegister::Ipendad, IPENDAD_INITIAL)
         .unwrap();
     cpu.write_register(HexagonRegister::R10, MASK).unwrap();
 
@@ -66,9 +66,9 @@ fn test_ciad() {
         TargetExitReason::InstructionCountComplete
     );
 
-    let iad = cpu.read_register::<u32>(HexagonRegister::Iad).unwrap();
+    let ipendad = cpu.read_register::<u32>(HexagonRegister::Ipendad).unwrap();
 
-    assert_eq!(iad, RESULT);
+    assert_eq!(ipendad, RESULT);
 }
 
 /// Cancel pending interrupts
@@ -81,9 +81,9 @@ fn test_ciad() {
 #[test]
 fn test_cswi() {
     // We could mask this here, but it feels better to spell it out.
-    const IPEND_INITIAL: u32 = 0x11020f74;
-    const MASK: u32 = 0x914;
-    const RESULT: u32 = 0x11020660;
+    const IPENDAD_INITIAL: u32 = 0x0f741103;
+    const MASK: u32 = 0x102;
+    const RESULT: u32 = 0x0f741001;
 
     let (mut cpu, mut mmu, mut ev) = setup_objdump(
         r#"
@@ -91,7 +91,7 @@ fn test_cswi() {
 "#,
     );
 
-    cpu.write_register(HexagonRegister::Ipend, IPEND_INITIAL)
+    cpu.write_register(HexagonRegister::Ipendad, IPENDAD_INITIAL)
         .unwrap();
     cpu.write_register(HexagonRegister::R10, MASK).unwrap();
 
@@ -101,7 +101,7 @@ fn test_cswi() {
         TargetExitReason::InstructionCountComplete
     );
 
-    let ipend = cpu.read_register::<u32>(HexagonRegister::Ipend).unwrap();
+    let ipendad = cpu.read_register::<u32>(HexagonRegister::Ipendad).unwrap();
 
-    assert_eq!(ipend, RESULT);
+    assert_eq!(ipendad, RESULT);
 }
