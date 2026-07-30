@@ -12,9 +12,13 @@ use styx_emulator::cpu::TargetExitReason;
 use styx_emulator::prelude::logging::init_logging;
 use styx_emulator::prelude::styx_async::sync::broadcast;
 use styx_emulator::prelude::Forever;
-use styx_hexagon_testdata::TestData;
+use styx_hexagon_testdata::{hexagon_tests, TestData};
+use test_case::test_case;
 
-#[allow(unused)]
+#[test_case(hexagon_tests::TEST_MMU_PAGE_SIZE)]
+#[test_case(hexagon_tests::TEST_MMU_PERMISSIONS)]
+#[test_case(hexagon_tests::TEST_MMU_ASIDS)]
+#[test_case(hexagon_tests::TEST_MMU_OVERLAP)]
 fn test_qemu_hexagon_testing_unittests(test: TestData) {
     init_logging();
 

@@ -31,10 +31,29 @@ impl<T: CpuBackend> CallOtherCallback<T> for WaitHandler {
     }
 }
 
+#[derive(Debug)]
+pub struct StartHandler {}
+
+impl<T: CpuBackend> CallOtherCallback<T> for StartHandler {
+    fn handle(
+        &mut self,
+        cpu: &mut dyn CallOtherCpu<T>,
+        _mmu: &mut Mmu,
+        _ev: &mut EventController,
+        inputs: &[VarnodeData],
+        _output: Option<&VarnodeData>,
+    ) -> Result<PCodeStateChange, CallOtherHandleError> {
+        Ok(PCodeStateChange::Fallthrough)
+    }
+}
+
 pub fn add_thread_callothers<S: SlaUserOps<UserOps: FromStr>>(
     spec: &mut ArchSpecBuilder<S, HexagonPcodeBackend>,
 ) {
     spec.call_other_manager
         .add_handler_other_sla(HexagonUserOps::Wait, WaitHandler {})
+        .unwrap();
+    spec.call_other_manager
+        .add_handler_other_sla(HexagonUserOps::Start, StartHandler {})
         .unwrap();
 }

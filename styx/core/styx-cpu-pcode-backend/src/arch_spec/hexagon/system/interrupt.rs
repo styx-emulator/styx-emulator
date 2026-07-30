@@ -27,8 +27,7 @@ pub struct InterruptGenericStub {
 
 /// Look at <https://github.com/quic/qemu/blob/hex-next/target/hexagon/cpu_bits.h>
 #[repr(i32)]
-#[allow(unused)]
-pub enum InterruptType {
+pub enum HexagonInterruptType {
     None = -1,
     Reset = 0,
     Imprecise = 1,
@@ -55,6 +54,51 @@ pub enum InterruptType {
     IntD = 0x1d,
     IntE = 0x1e,
     IntF = 0x1f,
+    Halt = 0x20,
+}
+#[repr(u8)]
+#[derive(Debug, Copy, Clone)]
+pub enum HexagonInterruptCause {
+    Reset = 0x000,
+    BiuPrecise = 0x001,
+    UnsuportedHvx64B = 0x002, /* qemu-specific */
+    DoubleExcept = 0x003,
+    Trap0 = 0x008,
+    Trap1 = 0x009,
+    FetchNoXpage = 0x011,
+    FetchNoUpage = 0x012,
+    InvalidPacketOrOpcode = 0x015,
+    NoCoprocEnable = 0x016,
+    NoCoproc2Enable = 0x018,
+    PRivUSerNOGInsn = 0x01a,
+    PrivUserNoSinsn = 0x01b,
+    RegWriteConflict = 0x01d,
+    PcNotAligned = 0x01e,
+    MisalignedLoad = 0x020,
+    MisalignedStore = 0x021,
+    PrivNoRead = 0x022,
+    PrivNoWrite = 0x023,
+    PrivNoUread = 0x024,
+    PrivNoUwrite = 0x025,
+    CoprocLdst = 0x026,
+    StackLimit = 0x027,
+    VwctrlWindowMiss = 0x029,
+    ImpreciseNmi = 0x043,
+    ImpreciseMultiTlbMatch = 0x044,
+    TlbmissxCauseNormal = 0x060,
+    TlbmissxCauseNextpage = 0x061,
+    TlbmissrwCauseRead = 0x070,
+    TlbmissrwCauseWrite = 0x071,
+    DebugSinglestep = 0x80,
+    FptrapCauseBadfloat = 0x0bf,
+    Int0 = 0x0c0,
+    Int1 = 0x0c1,
+    Int2OrVic0 = 0x0c2,
+    Int3OrVic1 = 0x0c3,
+    Int4OrVic2 = 0x0c4,
+    Int5OrVic3 = 0x0c5,
+    Int6 = 0x0c6,
+    Int7 = 0x0c7,
 }
 
 /// Trap instruction, see 11.9.3 Trap.
@@ -107,7 +151,7 @@ impl<T: CpuBackend> CallOtherCallback<T> for Trap0Handler {
         );
 
         Ok(PCodeStateChange::DelayedInterrupt(
-            InterruptType::Trap0 as i32,
+            HexagonInterruptType::Trap0 as i32,
         ))
     }
 }

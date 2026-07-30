@@ -132,7 +132,7 @@ impl EventControllerImpl for HexagonEventController {
 
             handle
                 .cpu
-                .write_register(HexagonRegister::Elr, pc)
+                .write_register(HexagonRegister::Elr, pc as u32)
                 .with_context(|| "couldn't write old pc to elr")?;
             handle
                 .cpu
