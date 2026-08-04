@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: BSD-2-Clause
-/// A property of memory with ergonomic handling of the Harvard/VonNeuman differences.
+/// A property of memory with ergonomic handling of the Harvard/Von Neuman differences.
 ///
-/// If the user does not care if the underlying architecture is VonNeuman or Harvard
+/// If the user does not care if the underlying architecture is Von Neuman or Harvard
 /// and their operation correlates to the code or data spaces, then they can use
 /// [`Self::data()`] or [`Self::code()`].
 ///
 /// If the user requires a unified memory space then they can use [`Self::von_neuman()`]
-/// to get an `Option` that will be `Some` if the space is indeed VonNeuman.
+/// to get an `Option` that will be `Some` if the space is indeed Von Neuman.
 /// Or the user can just as easily match on this enum.
 ///
 /// This should be a cheap value to obtain and store because the Harvard case obtains
@@ -26,7 +26,7 @@ impl<T> MemoryArchitecture<T> {
         }
     }
 
-    /// Get the `data` code storage, or just *the* storage in the VonNeuman case.
+    /// Get the `data` code storage, or just *the* storage in the Von Neuman case.
     pub fn data(self) -> T {
         match self {
             MemoryArchitecture::Harvard { code: _, data } => data,
@@ -34,7 +34,7 @@ impl<T> MemoryArchitecture<T> {
         }
     }
 
-    /// Get the `code` code storage, or just *the* storage in the VonNeuman case.
+    /// Get the `code` code storage, or just *the* storage in the Von Neuman case.
     pub fn code(self) -> T {
         match self {
             MemoryArchitecture::Harvard { code, data: _ } => code,

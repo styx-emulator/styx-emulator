@@ -158,8 +158,8 @@ pub enum PhysicalMemoryVariant {
 /// The [`MemoryBackend`] has three configurations (correlating to [`PhysicalMemoryVariant`]):
 ///
 /// 1. Harvard Flat Memory
-/// 2. VonNeumann Flat Memory
-/// 3. VonNeumann Region store
+/// 2. Von Neumann Flat Memory
+/// 3. Von Neumann Region store
 ///
 /// Flat memory variants do not have regions or memory permissions.
 /// Any `u64` address is valid and uses a giant allocated array to represent memory.
@@ -167,10 +167,10 @@ pub enum PhysicalMemoryVariant {
 /// of memory until it has been accessed.
 /// For this reason, avoid zeroing large sections of memory when using the Flat Memory.
 ///
-/// Harvard configuration splits code and data memory while VonNeumann has a unified
+/// Harvard configuration splits code and data memory while Von Neumann has a unified
 /// memory space.
 /// Read/write operations have `_code` and `_data` variants which will be identical
-/// in a VonNeumann configuration.
+/// in a Von Neumann configuration.
 /// [`MemoryBackend`]
 ///
 /// ## Concurrency
@@ -288,7 +288,7 @@ impl MemoryBackend {
     /// Add a new physical memory region with optional [`Space`].
     ///
     /// The `space` can be specified as `Some(Space)` so add to that space if Harvard type
-    /// or just add the region if VonNeuman. `None` will add the region to both [`Space::Code`]
+    /// or just add the region if Von Neuman. `None` will add the region to both [`Space::Code`]
     /// [`Space::Data`] if Harvard.
     pub fn add_region(
         &mut self,
