@@ -39,7 +39,7 @@ impl Mmu {
     /// Loads and reserves `*paddr` in data memory in memory for future [`Mmu::store_conditional_data()`].
     ///
     /// Use the `code`/`data` variant that is most appropriate.
-    /// For Von Neumann architectures, `data` vs `code` has no effect.
+    /// For von Neumann architectures, `data` vs `code` has no effect.
     ///
     /// Refer to the [module documentation](crate::memory#load-linkstore-conditional)
     /// for detailed information and gotchas.
@@ -56,7 +56,7 @@ impl Mmu {
     /// Loads and reserves `*paddr` in code memory in memory for future [`Mmu::store_conditional_code()`].
     ///
     /// Use the `code`/`data` variant that is most appropriate.
-    /// For Von Neumann architectures, `data` vs `code` has no effect.
+    /// For von Neumann architectures, `data` vs `code` has no effect.
     ///
     /// Refer to the [module documentation](crate::memory#load-linkstore-conditional)
     /// for detailed information and gotchas.
@@ -73,7 +73,7 @@ impl Mmu {
     /// Loads and reserves `*vaddr` in data memory in memory for future [`Mmu::virt_store_conditional_data()`].
     ///
     /// Use the `code`/`data` variant that is most appropriate.
-    /// For Von Neumann architectures, `data` vs `code` has no effect.
+    /// For von Neumann architectures, `data` vs `code` has no effect.
     ///
     /// Refer to the [module documentation](crate::memory#load-linkstore-conditional)
     /// for detailed information and gotchas.
@@ -93,7 +93,7 @@ impl Mmu {
     /// Loads and reserves `*vaddr` in code memory in memory for future [`Mmu::virt_store_conditional_code()`].
     ///
     /// Use the `code`/`data` variant that is most appropriate.
-    /// For Von Neumann architectures, `data` vs `code` has no effect.
+    /// For von Neumann architectures, `data` vs `code` has no effect.
     ///
     /// Refer to the [module documentation](crate::memory#load-linkstore-conditional)
     /// for detailed information and gotchas.
