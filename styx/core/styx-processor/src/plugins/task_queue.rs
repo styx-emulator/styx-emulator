@@ -1,16 +1,15 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use std::{
-    collections::VecDeque,
-    fmt::Debug,
-    sync::{mpsc, Arc, Mutex},
-};
+use std::collections::VecDeque;
+use std::fmt::Debug;
+use std::sync::{mpsc, Arc, Mutex};
 
 use log::trace;
 use styx_errors::UnknownError;
 
-use crate::core::ProcessorCore;
-
 use super::{Plugin, UninitPlugin};
+use crate::core::{ProcessorCore, VcpuCore};
+use crate::executor::time::GlobalDelta;
+use crate::processor::{PerVcpuSlice, Processor};
 
 pub struct TaskHandle<T> {
     recv: mpsc::Receiver<T>,
@@ -23,8 +22,23 @@ impl<T> TaskHandle<T> {
     }
 }
 
+type TaskFn = Box<dyn FnOnce(TaskContext) + Send>;
+pub struct TaskContext<'a> {
+    pub core: &'a mut ProcessorCore,
+    pub vcpus: &'a mut PerVcpuSlice<VcpuCore>,
+}
+impl<'a> From<&'a mut Processor> for TaskContext<'a> {
+    fn from(value: &'a mut Processor) -> Self {
+        TaskContext {
+            core: &mut value.core,
+            vcpus: &mut value.vcpus,
+        }
+    }
+}
+
+#[allow(dead_code)]
 struct Task {
-    function: Box<dyn FnOnce(&mut ProcessorCore) + Send>,
+    function: TaskFn,
 }
 
 /// Add tasks to the queue. Freely cloneable.
@@ -42,13 +56,15 @@ impl TaskQueueHandle {
     ///
     /// [`TaskHandle::join()`] allows you to get the returned value and block until the task is
     /// completed. However, the task will run and complete even if not joined.
+    ///
+    /// Tasks are run on vcpu 0.
     pub fn add_task<T: Send + 'static>(
         &self,
-        task: impl FnOnce(&mut ProcessorCore) -> T + Send + 'static,
+        task: impl FnOnce(TaskContext) -> T + Send + 'static,
     ) -> TaskHandle<T> {
         let (send, recv) = mpsc::channel();
-        let new_fn = move |core: &mut ProcessorCore| {
-            let res = task(core);
+        let new_fn = move |context: TaskContext| {
+            let res = task(context);
             // ok if send errors here, it just means the join handle was dropped
             let _ = send.send(res);
         };
@@ -68,10 +84,20 @@ impl Default for TaskQueueHandle {
     }
 }
 
-/// Plugin that allows for an asynchronous thread to add tasks to run during the tick phase on the
-/// mutable processor.
+/// Plugin that allows for asynchronous tasks to run on the mutable processor.
 ///
-/// See [TaskQueuePlugin::new()] and [TaskQueueHandle::add_task()].
+/// Since the processor is taken by `&mut` during execution, users cannot
+/// introspect or otherwise modify the processor until it is done executing.
+/// The exception to this are hooks and plugins that can be added and execute
+/// at different times in the processor lifecycle.
+///
+/// This plugin makes running code on a running processor easier by adding a
+/// task system that runs closures on the mutable processor during the tick
+/// phase. Tasks are queued via [`TaskQueueHandle::add_task()`] and dequeued in
+/// the plugin's tick. The [`TaskQueueHandle`] can be cloned freely so tasks can
+/// be added during processor execution.
+///
+/// See [`TaskQueuePlugin::new()`] and [`TaskQueueHandle::add_task()`].
 #[derive(Default)]
 pub struct TaskQueuePlugin {
     task_queue: TaskQueueHandle,
@@ -87,12 +113,18 @@ impl TaskQueuePlugin {
 }
 
 impl Plugin for TaskQueuePlugin {
-    fn tick(&mut self, proc: &mut ProcessorCore) -> Result<(), UnknownError> {
+    fn tick(
+        &mut self,
+        core: &mut ProcessorCore,
+        _delta: &GlobalDelta,
+        vcpus: &mut PerVcpuSlice<VcpuCore>,
+    ) -> Result<(), UnknownError> {
         trace!("exec task queue");
         let mut tasks = self.task_queue.tasks.lock().unwrap();
-        // run each task in queue
+        // run each task in queue on cpu 0
         while let Some(task) = tasks.pop_front() {
-            (task.function)(proc);
+            let context = TaskContext { core, vcpus };
+            (task.function)(context);
         }
         // drop tasks lock
         trace!("done exec task queue");
