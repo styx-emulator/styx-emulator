@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
-//! Machine definition for the Ppc4xx family.
+//! Run a PPC 4xx processor with debugger support.
 use clap::Parser;
+
 use styx_emulator::arch::ppc32::gdb_targets::Ppc4xxTargetDescription;
 use styx_emulator::core::util::logging::init_logging;
 use styx_emulator::plugins::gdb::{GdbExecutor, GdbPluginParams};

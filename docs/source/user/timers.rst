@@ -64,11 +64,28 @@ Tick-Based Implementation
 -------------------------
 
 The second approach is to update timers in the ``tick()`` function of a
-peripheral or event controller. This method is similar to the code hook approach
-but executes less frequently, usually once every 1000 instructions [#note1]_.
-At every ``tick()``, the Event Controller or Peripheral will write the CPU or
-Memory Mapped timer register with the current timer state. Then, the same system
-of code can trigger the timer IRQ as configured.
+peripheral or event controller.This method is similar to the code hook approach but executes timer logic less frequently,
+usually once every 1000 instructions [#note1]_.
+
+Operation
+^^^^^^^^^
+
+At every ``tick()``, the ``EventController`` or ``Peripheral`` will write the
+CPU or memory mapped timer register with the current timer state and latch the
+timer IRQ as configured.
+
+A ``Peripheral``'s ``tick()`` receives a ``PeripheralTickCtx`` which exposes
+shared physical memory through ``ctx.memory``, but no CPU registers and no
+per-vCPU MMU. Because of this, ``Peripheral`` can only write Memory Mapped timer
+registers, not CPU registers. Use hooks registered in ``Peripheral::init()`` if
+CPU state is needed.
+
+Instead of latching, a ``Peripheral`` returns the IRQs it wants raised as a
+``RaisedIrqs`` and the ``EventDistributor`` routes them to the appropriate
+``vCPU``.
+
+Timer Configuration
+^^^^^^^^^^^^^^^^^^^
 
 In order to configure the timer, this method may involve reading timer
 configuration registers periodically or creating a Memory Write hook on the
@@ -76,41 +93,58 @@ MMIO registers used to configure the timers. The ``tick()`` function reduces
 the performance penalties compared to the Code Hook method (though not entirely)
 while maintaining reasonably accurate emulated state.
 
-Critically, the ``tick()`` function supplies a ``Delta`` containing the number
-of instructions executed in the previous stride and the elapsed wall clock time.
-Note that ``delta.time`` is wall clock time (real-world duration), not any
-processor-specific or simulated time. The instruction count can be used to
+Time in Styx
+^^^^^^^^^^^^
+
+Critically, the ``tick()`` function supplies timing information for the
+previous stride.
+
+A ``Peripheral`` receives a ``GlobalDelta`` in ``ctx.delta``, where
+``simulated_time`` is the number of cycles the processor executed this round
+and ``wall_time`` is the elapsed wall clock time. An ``EventController``
+receives the per-vCPU ``Delta``, where ``count`` is the number of instructions
+executed and ``time`` is the elapsed wall clock time. Note that ``wall_time``
+and ``delta.time`` are wall clock time (real-world duration), not any
+processor-specific time. The cycle and instruction counts can be used to
 properly calculate the progress to the next timer trigger ensuring each timer
-interrupt latches after the same number of instructions.
+interrupt is raised after the same number of instructions.
 
-Optionally, this method can be used without writing to the register, if the
-target program doesn't read from the timer and only operates off of the IRQs.
+Optionally, this method can be used without writing to any timer registers,
+if the target program doesn't read from the timer and only operates off of the
+IRQs.
 
-**Pros:**
+
+Pros and Cons
+^^^^^^^^^^^^^
+
+Pros:
+"""""
 
 1. Hardware accuracy is maintained to a reasonable degree (registers are updated).
 2. Works with all timer implementations (memory-mapped registers, CPU registers).
 3. More performant than the code hook approach.
 
-**Cons:**
+
+Cons:
+"""""
 
 1. Performance cost from register/memory operations approximately every 1000 instructions.
 2. Target timer state not up to date between ticks.
 3. Requires scaling logic for tick-based implementation.
 
 
-**Examples:**
+Examples:
+^^^^^^^^^
 
 1. ``kinetis21`` / ``styx/processors/arm/styx-kinetis21-processor/src/systick.rs``
     1. Note: this implementation does not write to the actual register, it only triggers IRQs.
 
 .. [#note1]
-   The number of instructions between ``tick()`` is called the "stride
-   length". It is constant throughout emulation and statically defined in
-   the ``ExecutorImpl::get_stride_length()``. This value is 1000 for the
-   ``DefaultExecutor``. The exeception is the ``GdbExecutor`` which uses custom
-   stride lengths depending on if there are memory watch events. The stride
-   length for the ``GdbExecutor`` is configurable via ``GDBOptions``.
+   The number of instructions between ``tick()`` is called the "stride length".
+   This value is 1000 for the ``DefaultExecutor`` but can be modified using the
+   ``ConfigRequestedStrideLength`` configuration option. Custom executors like
+   the ``GdbExecutor`` may have different stride lengths, although they should
+   use the configured stride length on a best-effort basis.
 
 Memory Read Hook Implementation
 --------------------------------
@@ -120,7 +154,7 @@ target timer status and create a Memory Read Hook on the timer register for
 target operations. This method only works with timers that have memory-mapped
 registers. It offers better performance than writing to memory/registers on
 every ``tick()`` since updates occur only when the target actually reads the
-register. The timer IRQ can be latched at the appropiate time in the ``tick()``
+register. The timer IRQ can be raised at the appropiate time in the ``tick()``
 implementation.
 
 **Pros:**
@@ -140,7 +174,7 @@ Register Read Hook Implementation
 This approach adds a Register Read hook to the timer register. It is similar to
 the Memory Read Hook solution but relies upon the Register Read Hook, which is
 currently exclusive to the Pcode Backend. This method has similar advantages and
-disadvantages to the Memory Read Hook approach. The timer IRQ can be latched at
+disadvantages to the Memory Read Hook approach. The timer IRQ can be raised at
 the appropiate time in the ``tick()`` implementation.
 
 **Pros:**
@@ -183,7 +217,7 @@ Async Implementation
 
 In this approach we use the available async runtime to run a timer that is
 triggered after a duration. Once the async timer is triggered, a syncronization
-method is used (``AtomicBool``, channel, etc.) to latch the IRQ on the next
+method is used (``AtomicBool``, channel, etc.) to raise the IRQ on the next
 ``tick()``.
 
 This method is not recommended because IRQs will not be triggered
