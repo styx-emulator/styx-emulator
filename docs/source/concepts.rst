@@ -4,22 +4,31 @@
 Core Concepts
 #############
 .. mermaid::
-    :caption: High-level block diagram.
+    :caption: High-level block diagram of Styx components.
 
     graph TD
         subgraph emu [Emulator]
-            direction LR
             code(Guest Code)
             subgraph proc [Processor]
-                cpu(CPU Engine)
-                evctl(Event Controller)
+                direction LR
+                mem(MemoryBackend)
+                evdist(EventDistributor)
                 Peripherals
+                subgraph vcpu ["VcpuCore [0..N]"]
+                    mmu("MMU (tlb + phy mem ref)")
+                    backend("CpuBackend")
+                    time("VcpuTime")
+                    evctl("EventController")
+                end
             end
+            evdist --> evctl
+            mmu --> mem
             code --- proc
         end
         subgraph plugs [Plugins]
             styx-trace
             gdb-server
+            styx-debug-tools
         end
         subgraph fe [Front Ends]
             styx-bin
@@ -59,9 +68,12 @@ A physical processor, made up of 1 or more ``CPU``'s, ``Peripheral``'s, and ``De
 CPU
 ---
 
-An individual CPU processor core, containing 1 or more ``Peripheral``'s and ``Device``'s
+An individual CPU processor core, called a ``vCPU`` in ``Styx``, owning its own
+execution engine (``CpuBackend``), ``Mmu``, and ``EventController``
     * eg. the ``CPU`` that executes instructions on the ``STM32F746IE``
 
+The vCPU of a ``Processor`` share that ``Processor``'s physical memory
+(``MemoryBackend``) and ``Peripheral``'s.
 
 
 .. _concepts_peripheral:
@@ -70,7 +82,11 @@ Peripheral
 ----------
 
 An onboard peripheral like a ``Timer``, ``GPIO``, ``UART``, ``PCI-e`` or ``DAC`` etc. that can communicate to 0 or more ``Device``'s
-    * eg. the ``NVIC`` event controller running on the ``STM32F746IE``, or the ``UART`` controller etc.
+    * eg. the ``UART`` controller running on the ``STM32F746IE``
+
+``Peripheral``'s belong to the ``Processor``, not to any one ``vCPU``. They are
+owned by the processor-wide ``EventDistributor``, which routes the interrupts
+they raise to the ``EventController`` of the appropriate ``vCPU``.
 
 
 .. _concepts_device:
@@ -193,33 +209,17 @@ In general there are only a couple variants of hooks:
 * Register R/W hooks
 * PC-based hooks
 
-A Note on cleanliness
----------------------
-
-In ``Styx``, all hooks have a "normal" and "userdata" variant (at the moment). Due to
-Rust being a (notoriously) strongly-typed language, creating a super clean and
-ergonomic callback/hook system with asynchronous state is not the easiest thing to do
-well. Due to the ``Styx`` project being overly immature, getting user-facing features
-as opposed to a super clean developer API is the main concern, so we have settled
-with an API that exposes two flavors of each hook, with the knowledge that at some
-point in the future we'll have the time/capacity/need to go back and update it to
-a more modern `Extractor` style pattern or something.
-
-That being said, they get the job done, and are not that bad to work with, save for
-the extra ``userdata.downcast_ref::<TypeToCastTo>()`` that makes up the first line
-of all the userdata callbacks.
-
 Using Hooks
 -----------
 
-In terms of actually using the hooks, it requires only an immutable borrow the
-the ``CpuBackend`` in question, a ``Box`` of the hook function, and an ``Arc`` of
-the object to pass as user data to the callback.
+In terms of actually using the hooks, it requires only a mutable borrow of the
+``CpuBackend`` in question and the hook itself, built with one of the ``StyxHook``
+constructors.
 
 For implementing a ``Peripheral`` callback for example, you might want to setup
-a function to get called every time address ``0x04000000`` gets written to, and
+a hook to get called every time address ``0x04000000`` gets written to, and
 then call a method of a struct. Because Rust is Rust you can't directly do that
-(you need a proxy method), so the process looks like:
+(the hook has to own the struct), so the process looks like:
 
 .. code-block:: rust
 
@@ -233,44 +233,39 @@ then call a method of a struct. Because Rust is Rust you can't directly do that
         }
     }
 
-    // callback proxy function - must adhere to the callbackFn definition
-    // -- see next rust block
-    fn my_proxy_write_memory(cpu: &CpuBackend, address: u64, size: u32, data: &[u8], userdata: HookUserData) {
-        let my_struct = userdata.downcast_ref::<MyStruct>().unwrap();
-        println!("Hello from PC: @ {x}", cpu.pc());
+    // the hook itself, owning whatever state the callback needs
+    struct MyWriteHook(Arc<MyStruct>);
 
-        my_struct.my_callback(data.to_vec());
+    impl MemoryWriteHook for MyWriteHook {
+        fn call(
+            &mut self,
+            mut proc: CoreHandle,
+            address: u64,
+            size: u32,
+            data: &[u8],
+        ) -> Result<(), UnknownError> {
+            println!("Hello from PC: @ {:x}", proc.pc()?);
+
+            self.0.my_callback(data.to_vec());
+            Ok(())
+        }
     }
 
-    // in main setup of the Processor
-    fn register_hooks(cpu: &CpuBackend) {
-        cpu.mem_write_hook_data(0x04000000,
-                                0x04000004,
-                                Box::new(my_proxy_write_memory),
-                                Arc::new(MyStruct));
+    // in `Peripheral::init()`, where the peripheral is handed the building processor
+    fn register_hooks(cpu: &mut dyn CpuBackend, state: Arc<MyStruct>) -> Result<(), UnknownError> {
+        cpu.add_hook(StyxHook::memory_write(0x04000000..=0x04000004, MyWriteHook(state)))?;
+        Ok(())
     }
 
-The ``callbackFn`` type signatures in question (normal + userdata variant):
+The callback trait in question, and the blanket implementation that lets a plain
+function or closure be used in its place, i.e.:
 
 .. code-block:: rust
 
-    /// Userdata type passable to all callbacks accepting userdata.
-    pub type HookUserData = Arc<dyn Any + Sync + Send + 'static>;
+    /// This implements MemoryWriteHook
+    fn my_memory_write_hook(core_handle: CoreHandle, address: u64, size: u32, data: &[u8]) -> Result<(), UnknownError> {
+        /* ... */
+    }
 
-    /// Callback fn type for memory writes, arguments are:
-    /// - `&CpuBackend`
-    /// - `address: u64`
-    /// - `size: u32`
-    /// - `data: &[u8]`
-    pub type MemWriteCBType = Box<dyn FnMut(&CpuBackend, u64, u32, &[u8])>;
-
-    /// Callback fn type for memory writes, arguments are:
-    /// - `&CpuBackend`
-    /// - `address: u64`
-    /// - `size: u32`
-    /// - `data: &[u8]`
-    /// - `userdata`
-    pub type MemWriteDataCBType = Box<dyn FnMut(&CpuBackend, u64, u32, &[u8], HookUserData)>;
-
-Note that the ``CpuBackend`` is a handle to the currently executing emulated
-``CPU`` and is useful for grabbing internal state when you need it.
+Note that the ``CoreHandle`` is a handle to the currently executing emulated
+``vCPU`` and gives access to its ``CpuBackend``, ``Mmu``, and ``EventController``, useful for grabbing CPU state when you need it.

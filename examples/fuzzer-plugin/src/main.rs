@@ -166,6 +166,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     info!("Starting emulator");
 
+    // BEGIN-FUZZABLE-PROC
     let mut proc = ProcessorBuilder::default()
         .with_builder(Kinetis21Builder::default())
         .with_backend(Backend::Unicorn)
@@ -188,6 +189,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_loader(RawLoader)
         .with_target_program(get_firmware_path())
         .build()?;
+    // END-FUZZABLE-PROC
 
     proc.run(Forever)?;
 
