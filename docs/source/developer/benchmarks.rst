@@ -217,4 +217,3 @@ tweaking assembly to get a 5x speed up of a function level benchmark that might 
 even impact system performance when running actual binaries. With a solid benchmark
 in place, we can be confident that our fix has a meaningful improvement on
 performance.
-

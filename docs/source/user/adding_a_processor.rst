@@ -27,7 +27,7 @@ that the codebase already provides the "foundational support" for.
 In our terms, "foundational support" is:
 
 * the ISA is known by, and supported by ``styx``
-* the ``GdbArchSupport`` trait is implemented for your processor variant
+* the ``GdbTargetDescription`` trait is implemented for your processor variant
 * any of the ``CpuBackend``'s support executing instructions for your ISA
 
 Once the foundational support is present in ```styx``, then any contributor (along with their
@@ -124,10 +124,10 @@ The Complete Processor Checklist (ARM Example)
     :custom:
 
     1. [x] ``styx-cpu`` ISA support
-    2. [x] ``styx-cpu::GdbArchSupport`` ISA support
+    2. [x] ``styx-cpu::GdbTargetDescription`` ISA support
     3. [x] A ``CpuBackend`` supports your ISA
     4. [ ] Implement ``ProcessorImpl`` trait inside your new processor definition crate
-    5. [ ] Interrupt Controller (``EventController`` in ``styx``-terms) implemented
+    5. [ ] Interrupt Controller (``EventControllerImpl`` in ``styx``-terms) implemented
 
         We have implemented a couple common ARM interrupt controllers, namely
         support for ``ARM Cortex-M`` (``NVIC``), and some ``ARM Cortex-A/R`` (``GIC``).
@@ -141,10 +141,10 @@ The Complete Processor Checklist (ARM Example)
             + [ ] ``GICv3``
             + [ ] ``GICv4``
             + [ ] ``VIC`` (aka ``PrimeCell VIC``)
+    6. [ ] (optional) ``EventDistributor`` for multi-processor configurations.
 
-
-    6. [ ] Create new baseline End to End (E2E) tests in ``styx-integration-tests/tests``
-    7. [ ] Create behavior tests for the E2E test suite
+    7. [ ] Create new baseline End to End (E2E) tests in ``styx-integration-tests/tests``
+    8. [ ] Create behavior tests for the E2E test suite
 
         TBD integration + e2e test guide (see ``./styx-integration-tests`` in the interim)
 
@@ -157,7 +157,7 @@ The Complete Processor Checklist (ARM Example)
 
             + [ ] More as needed + peripherals are implemented
 
-    8. [ ] Implement peripherals (TBD peripherals + devices guide)
+    9. [ ] Implement peripherals (TBD peripherals + devices guide)
 
         This step is definitely the most arduous, and ill-defined of all the steps.
         In general you don't want to waste time emulating hardware you aren't going to need,

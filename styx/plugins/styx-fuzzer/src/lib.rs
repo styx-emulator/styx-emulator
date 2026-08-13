@@ -121,6 +121,7 @@ pub enum StyxFuzzerInputType {
 /// Fuzzer Configuration to use while fuzzing the target program
 #[derive(Derivative)]
 #[derivative(Debug)]
+// BEGIN-FUZZER-CONFIG
 pub struct StyxFuzzerConfig {
     /// Timeout for fuzzing executions
     pub timeout: Duration,
@@ -186,6 +187,7 @@ pub struct StyxFuzzerConfig {
     #[derivative(Debug = "ignore")]
     pub fuzz_func: Option<FuzzerFuncType>,
 }
+// END-FUZZER-CONFIG
 
 impl Default for StyxFuzzerConfig {
     fn default() -> Self {
