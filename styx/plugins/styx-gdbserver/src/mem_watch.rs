@@ -1,109 +1,192 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! Utilities used to support based watch points
 
-use std::collections::HashMap;
+use gdbstub::common::Tid;
+use std::collections::{HashMap, VecDeque};
 use styx_core::{
-    errors::{anyhow::anyhow, UnknownError},
-    hooks::HookToken,
+    core::VcpuCore,
+    errors::UnknownError,
+    hooks::{CoreHandle, HookToken, MemoryWriteHook},
+    processor::PerVcpuSlice,
     sync::sync::{Arc, Mutex},
 };
-use tracing::{trace, warn};
+use tracing::{debug, error, trace, warn};
+
+use crate::event_loop::index_to_tid;
 
 type MemHookAddress = u64;
 type MemHookValue = u64;
 
-/// Stores the addresses and values that the `gdb` client has
-/// requested the backend to watch for changes in.
+#[derive(Debug)]
+pub(crate) struct WatchpointHit {
+    pub(crate) address: MemHookAddress,
+    // Unused :/
+    #[allow(dead_code)]
+    value: MemHookValue,
+    pub(crate) tid: Tid,
+}
+
+/// Tracks the watchpoints requested by the `gdb` client.
+///
+/// This is the source of truth for addresses that are watched.
+/// [`tracked`](Self::tracked) holds one [`HookToken`] for per vCPU.
+/// [`add_write_watchpoint()`](Self::add_write_watchpoint) and [`remove_watchpoint`](Self::remove_watchpoint)
+/// install/remove those hooks across every vCPU.
 ///
 /// ### NOTE
 /// - The actual DSL-address-resolution occurs client-side,
 ///   and that only the final address is sent from the client
 ///   to the server, which then adds an entry here.
 /// - We currently only track write-memory events
-pub(crate) struct MemHookCache {
-    /// Addresses for which we have actually received callbacks
-    /// The entry is removed when its processed
-    pending: Arc<Mutex<HashMap<MemHookAddress, MemHookValue>>>,
+#[derive(Default)]
+pub(crate) struct Watchpoints {
+    /// Addresses and value written for which we have received a write callback
+    /// but not yet reported to the gdb client.
+    ///
+    /// Drained when stepping to handle watchpoint hits.
+    pending: Mutex<VecDeque<WatchpointHit>>,
 
-    /// The addresses for which we have installed hooks
-    tracked: Arc<Mutex<HashMap<MemHookAddress, HookToken>>>,
+    /// The watched addresses, each mapped to one [`HookToken`] per vCPU (in
+    /// vCPU order). Membership here defines what is watched.
+    tracked: Mutex<HashMap<MemHookAddress, Vec<HookToken>>>,
 }
 
-unsafe impl Send for MemHookCache {}
-unsafe impl Sync for MemHookCache {}
-
-impl MemHookCache {
-    /// create an empty cache
+impl Watchpoints {
+    /// Create an empty set of watchpoints.
     pub(crate) fn new() -> Self {
-        Self {
-            pending: Arc::new(Mutex::new(HashMap::new())),
-            tracked: Arc::new(Mutex::new(HashMap::new())),
+        Self::default()
+    }
+
+    /// Install a write watchpoint at `addr` by adding a memory write hook on every vCPU.
+    ///
+    /// Idempotent: if `addr` is already watched this returns `true` without
+    /// installing duplicate hooks. If a hook fails to install on some vCPU, the
+    /// hooks already installed on prior vCPUs are rolled back so no orphaned
+    /// hooks remain, and `false` is returned.
+    ///
+    /// Returns `true` on success, `false` otherwise.
+    pub(crate) fn add_write_watchpoint(
+        self: &Arc<Self>,
+        vcpus: &mut PerVcpuSlice<VcpuCore>,
+        addr: MemHookAddress,
+    ) -> bool {
+        let mut tracked = self.tracked.lock().unwrap();
+        if tracked.contains_key(&addr) {
+            return true;
         }
-    }
 
-    /// Removes the hook from internal tracking and returns the
-    /// corresponding [`HookToken`]
-    pub(crate) fn remove_hook(&self, addr: u64) -> Result<HookToken, UnknownError> {
-        if let Some(item) = self.tracked.lock().unwrap().remove(&addr) {
-            Ok(item)
-        } else {
-            Err(anyhow!("No watchpoint to remove for addr: `{addr:#08x}"))
+        let mut tokens = Vec::with_capacity(vcpus.len());
+        // index loop so we can re-borrow `vcpus` mutably for rollback below
+        for i in 0..vcpus.len() {
+            match vcpus[i].cpu.mem_write_virtual_hook(
+                addr,
+                addr,
+                Box::new(MemWrittenHook(self.clone(), index_to_tid(i))),
+            ) {
+                Ok(token) => tokens.push(token),
+                Err(error) => {
+                    warn!("Failed to add watchpoint for {addr:#x}: {error}");
+                    for (vcpu, token) in vcpus.iter_mut().zip(tokens) {
+                        if let Err(e) = vcpu.cpu.delete_hook(token) {
+                            error!("Failed to roll back watchpoint hook at {addr:#x}: {e}");
+                        }
+                    }
+                    return false;
+                }
+            }
         }
+
+        tracked.insert(addr, tokens);
+        true
     }
 
-    /// Does the addr have a hook installed?
-    pub(crate) fn tracked(&self, addr: MemHookAddress) -> bool {
-        self.tracked.lock().unwrap().contains_key(&addr)
+    /// Remove the watchpoint at `addr`.
+    ///
+    /// Deleting its hook on every vCPU and drops any pending hit for it.
+    ///
+    /// Returns `true` if a watchpoint was removed, `false` if `addr` was not
+    /// being watched.
+    pub(crate) fn remove_watchpoint(
+        &self,
+        vcpus: &mut PerVcpuSlice<VcpuCore>,
+        addr: MemHookAddress,
+    ) -> bool {
+        let Some(tokens) = self.tracked.lock().unwrap().remove(&addr) else {
+            return false;
+        };
+        self.pending.lock().unwrap().retain(|h| h.address != addr);
+        for (vcpu, token) in vcpus.iter_mut().zip(tokens) {
+            if let Err(e) = vcpu.cpu.delete_hook(token) {
+                error!("Failed to delete watchpoint hook at {addr:#x}: {e}");
+            }
+        }
+        true
     }
 
+    /// Are there any watchpoints?
+    pub(crate) fn any_watchpoints(&self) -> bool {
+        !self.tracked.lock().unwrap().is_empty()
+    }
+
+    /// Take one pending watchpoint hit, removing it from the pending set.
+    ///
+    /// `None` if no pending hits.
+    pub(crate) fn pop_hit(&self) -> Option<WatchpointHit> {
+        self.pending.lock().unwrap().pop_front()
+    }
+
+    /// How many addresses are being watched?
     pub(crate) fn tracked_len(&self) -> usize {
         self.tracked.lock().unwrap().len()
     }
 
-    /// We have installed a hook for this address
-    pub fn track(&self, addr: MemHookAddress, token: HookToken) {
-        if !self.tracked(addr) {
-            self.tracked.lock().unwrap().insert(addr, token);
-        }
+    /// How many hits are pending (received but not yet reported)?
+    pub(crate) fn pending_len(&self) -> usize {
+        self.pending.lock().unwrap().len()
     }
 
-    /// A callback was received
-    pub(crate) fn add(&self, addr: MemHookAddress, value: MemHookValue) {
-        if !self.tracked(addr) {
-            warn!(
-                "Received watchpoint callback for untracked address: {:#x}",
-                addr
-            );
+    /// Record a write callback for `addr`. Ignored and warn if `addr` is not watched.
+    fn record_write(&self, address: MemHookAddress, value: MemHookValue, tid: Tid) {
+        if !self.tracked.lock().unwrap().contains_key(&address) {
+            warn!("Received watchpoint callback for untracked address: 0x{address:#x} tid: {tid}");
             return;
         }
 
-        // if we already have a pending value for this address, overwrite it,
-        // else just set it
-        self.pending
-            .lock()
-            .unwrap()
-            .entry(addr)
-            .and_modify(|x| *x = value)
-            .or_insert(value);
-    }
+        let hit = WatchpointHit {
+            address,
+            value,
+            tid,
+        };
 
-    /// Return the address and remove it from the map
-    pub(crate) fn take(&self, addr: MemHookAddress) -> Option<MemHookAddress> {
-        if let Some(entry) = self.pending.lock().unwrap().remove_entry(&addr) {
-            return Some(entry.0);
-        }
-        None
+        self.pending.lock().unwrap().push_back(hit);
     }
+}
 
-    /// How many hooks are not yet processed?
-    pub(crate) fn pending_len(&self) -> usize {
-        self.pending.lock().unwrap().len()
+/// Memory write callback for watchpoint support.
+///
+/// Installed on every vCPU by [`Watchpoints::add_write_watchpoint()`]. When a watched address is
+/// written, the access is recorded so [`step`](crate::target_impl) can later
+/// report it to the gdb client.
+struct MemWrittenHook(Arc<Watchpoints>, Tid);
+impl MemoryWriteHook for MemWrittenHook {
+    fn call(
+        &mut self,
+        _proc: CoreHandle,
+        address: u64,
+        size: u32,
+        data: &[u8],
+    ) -> Result<(), UnknownError> {
+        let tid = self.1;
+        debug!("Got mem write event in tid {tid} for watchpoint size `{size}` @ {address:#08x?}");
+        let access = Access::from_target_write(address, size, data);
+        self.0.record_write(address, access.val, tid);
+        Ok(())
     }
 }
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub(crate) enum AccessKind {
-    // we currently only track write-memorys
+    // we currently only track write-memory
     #[allow(dead_code)]
     Read,
     Write,

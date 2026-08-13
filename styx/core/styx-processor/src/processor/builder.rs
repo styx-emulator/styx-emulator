@@ -1,32 +1,44 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! `ProcessorBuilder` logic and utilities
-use std::{borrow::Cow, sync::Arc};
+use std::borrow::Cow;
+use std::sync::Arc;
 
 use crate::loader::{Loader, LoaderHints, RawLoader};
 use log::{debug, info};
 use styx_cpu_type::Backend;
-use styx_errors::{anyhow::Context, UnknownError};
-use tokio::{net::TcpListener, runtime::Handle};
-use tonic::{service::RoutesBuilder, transport::Server};
-
-use crate::{
-    core::{
-        builder::{
-            BuildProcessorImplArgs, ProcessorBundle, ProcessorImpl, UnimplementedProcessorImpl,
-        },
-        ExceptionBehavior, ProcMeta, ProcessorCore,
-    },
-    cpu::CpuBackendExt,
-    event_controller::EventController,
-    executor::{DefaultExecutor, Executor, ExecutorImpl},
-    hooks::StyxHook,
-    memory::Mmu,
-    plugins::{collection::PluginsContainer, UninitPlugin},
-    processor::{config::Config, ProcessorConfig},
-    runtime::ProcessorRuntime,
-};
+use styx_errors::anyhow::{anyhow, Context};
+use styx_errors::UnknownError;
+use tokio::net::TcpListener;
+use tokio::runtime::Handle;
+use tonic::service::RoutesBuilder;
+use tonic::transport::Server;
 
 use super::{Processor, SyncProcessor};
+use crate::core::builder::{
+    BuildProcessorImplArgs, ProcessorImpl, UnimplementedProcessorImpl, VcpuBundle,
+};
+use crate::core::ProcessorBundle;
+use crate::core::{ExceptionBehavior, ProcMeta, ProcessorCore, VcpuCore};
+use crate::cpu::{CpuBackend, CpuBackendExt};
+use crate::event_controller::{EventController, EventControllerImpl, EventDistributor};
+use crate::executor::{
+    time::{ProcessorTime, VcpuTime},
+    CustomExecutor, DefaultExecutor, Executor, ExecutorKind, StrideExecutor,
+};
+use crate::hooks::StyxHook;
+use crate::memory::{Mmu, TlbImpl};
+use crate::plugins::collection::PluginsContainer;
+use crate::plugins::UninitPlugin;
+use crate::processor::{config::Config, PerVcpu, PerVcpuSlice, ProcessorConfig};
+use crate::runtime::ProcessorRuntime;
+
+/// Unpacked components of a [`VcpuBundle`], held pre-`Arc` so event controllers
+/// can be initialized before memory is shared.
+type VcpuParts = (
+    Box<dyn CpuBackend>,
+    Box<dyn TlbImpl>,
+    Box<dyn EventControllerImpl>,
+);
 
 /// A private wrapper type to mark the source of a `TargetProgram`
 #[derive(Debug)]
@@ -75,7 +87,7 @@ impl<'a> TargetProgramSource<'a> {
 ///
 /// ```
 pub struct ProcessorBuilder<'a> {
-    executor: Box<dyn ExecutorImpl>,
+    executor: ExecutorKind,
     runtime: ProcessorRuntime,
     plugins: PluginsContainer<Box<dyn UninitPlugin>>,
     port: IPCPort,
@@ -90,7 +102,7 @@ pub struct ProcessorBuilder<'a> {
 impl<'a> Default for ProcessorBuilder<'a> {
     fn default() -> Self {
         Self {
-            executor: Box::new(DefaultExecutor::default()),
+            executor: ExecutorKind::stride(DefaultExecutor::default()),
             runtime: ProcessorRuntime::default(),
             plugins: PluginsContainer::default(),
             port: IPCPort::default(),
@@ -144,22 +156,30 @@ impl<'a> ProcessorBuilder<'a> {
         self
     }
 
-    /// Specifies the [`ExecutorImpl`] to use for this [`Processor`].
+    /// Specifies the executor to use for this [`Processor`].
+    ///
+    /// Accepts any [`StrideExecutor`]. For [`CustomExecutor`] implementations, use
+    /// [`Self::with_custom_executor()`].
     ///
     /// This defaults to [`DefaultExecutor`], which is a sane default unless
     /// you want to do something specific (like fuzzing, debugging or something
     /// that is dependent on state outside of Styx-proper).
-    pub fn with_executor(mut self, executor: impl ExecutorImpl + 'static) -> Self {
-        self.executor = Box::new(executor);
+    pub fn with_executor(mut self, executor: impl StrideExecutor + 'static) -> Self {
+        self.executor = ExecutorKind::stride(executor);
         self
     }
 
-    /// Specifies the [`ExecutorImpl`] to use for this [`Processor`].
+    /// Specifies a [`CustomExecutor`] to use for this [`Processor`].
     ///
-    /// This method is the same as [`Self::with_executor()`] with the
-    /// benefit of being able to consume an executor already
-    /// wrapped in a [`Box`].
-    pub fn with_executor_box(mut self, executor: Box<dyn ExecutorImpl + 'static>) -> Self {
+    /// Custom executors take full control of the execution loop. Use this for
+    /// debuggers, fuzzers, and other tools that need to drive execution themselves.
+    pub fn with_custom_executor(mut self, executor: impl CustomExecutor + 'static) -> Self {
+        self.executor = ExecutorKind::custom(executor);
+        self
+    }
+
+    /// Specifies the executor to use for this [`Processor`] from a pre-built [`ExecutorKind`].
+    pub fn with_executor_kind(mut self, executor: ExecutorKind) -> Self {
         self.executor = executor;
         self
     }
@@ -344,22 +364,62 @@ impl<'a> ProcessorBuilder<'a> {
             .block_on(self.port.resolve())
             .with_context(|| "could not resolve the ipc port to build the processor")?;
 
-        let mut cpu = bundle.cpu;
         let mut memory = bundle.memory;
-        let tlb = bundle.tlb;
 
-        let mut event_controller_impl = bundle.event_controller;
-        event_controller_impl.init(cpu.as_mut(), &mut memory, &mut self.config)?;
-        let event_controller = EventController::new(event_controller_impl);
+        // Destructure vCPU bundles so we can init ECs before wrapping memory in Arc.
+        let mut vcpu_data: Vec<VcpuParts> = bundle
+            .vcpus
+            .into_iter()
+            .map(
+                |VcpuBundle {
+                     cpu,
+                     tlb,
+                     event_controller,
+                 }| (cpu, tlb, event_controller),
+            )
+            .collect();
 
-        let mmu = Mmu {
-            tlb,
-            memory: Arc::new(memory),
-        };
+        // Init each secondary EC before memory is moved into Arc.
+        for (cpu, _, ec_impl) in &mut vcpu_data {
+            ec_impl.init(cpu.as_mut(), &mut memory, &mut self.config)?;
+        }
+
+        let memory = Arc::new(memory);
+
+        // Build VCpuCores now that memory is wrapped in Arc.
+        let vcpus: Vec<VcpuCore> = vcpu_data
+            .into_iter()
+            .enumerate()
+            .map(|(vcpu_index, (cpu, tlb, ec_impl))| {
+                let mmu = Mmu {
+                    tlb,
+                    memory: Arc::clone(&memory),
+                };
+                let event_controller =
+                    EventController::new(ec_impl, vcpu_index.try_into().expect("too many vcpus"));
+                VcpuCore {
+                    cpu,
+                    mmu,
+                    event_controller,
+                    time: VcpuTime::default(),
+                }
+            })
+            .collect();
+
+        // Non-empty from here down: `ProcessorBundleBuilder::build()` rejects zero vcpus,
+        // but `ProcessorBundle` can also be built directly.
+        let mut vcpus = PerVcpu::collect(vcpus)
+            .ok_or_else(|| anyhow!("processor must have at least one vcpu"))?;
+
+        // Init the event distributor
+        debug!("initializing event distributor");
+        let mut primary_ec_impl = bundle.event_distributor;
+        primary_ec_impl.init(&mut vcpus, &memory, &mut self.config)?;
+        let primary_ec = EventDistributor::new(primary_ec_impl);
         let mut core = ProcessorCore {
-            cpu,
-            mmu,
-            event_controller,
+            memory: Arc::clone(&memory),
+            event_controller: primary_ec,
+            time: ProcessorTime::default(),
         };
 
         autobots_load_up(
@@ -368,17 +428,21 @@ impl<'a> ProcessorBuilder<'a> {
             self.target_program_source,
             &mut core,
             &self.config,
+            vcpus.first_mut(),
         )?;
 
         let mut peripherals = bundle.peripherals;
 
         for hook in self.hooks {
-            core.cpu
+            vcpus
+                .first_mut()
+                .cpu
                 .add_hook(hook)
                 .context("failed to add initial processor hooks")?;
         }
 
         let mut building_processor = BuildingProcessor {
+            vcpus: &mut vcpus,
             core: &mut core,
             runtime: &mut runtime,
             routes: Default::default(),
@@ -406,10 +470,8 @@ impl<'a> ProcessorBuilder<'a> {
         for peripheral in peripherals.iter_mut() {
             debug!("initializing peripheral {}", peripheral.name());
             peripheral.init(&mut building_processor)?;
-            peripheral.reset(
-                building_processor.core.cpu.as_mut(),
-                &mut building_processor.core.mmu,
-            )?;
+            let primary_vcpu = building_processor.vcpus.first_mut();
+            peripheral.reset(&mut primary_vcpu.mmu)?;
         }
 
         let ipc_port_number = ipc_resolved_port.port();
@@ -419,32 +481,31 @@ impl<'a> ProcessorBuilder<'a> {
             ipc_resolved_port,
         )?;
 
-        // transfer ownership of peripherals to event controller
+        // transfer ownership of peripherals to event distributor
         for peripheral in peripherals {
             core.event_controller.add_peripheral(peripheral)?;
         }
 
-        // initialize plugins, runtime, executor, etc.
-        let system = Processor {
+        Ok(Processor {
+            vcpus,
+            core,
             executor,
             runtime,
-            core,
             meta: ProcMeta {},
             plugins,
             port: ipc_port_number,
-        };
-
-        Ok(system)
+        })
     }
 }
 
-/// applies loader to core state
+/// Applies the loader to vCPU state (MMU + CPU registers).
 fn autobots_load_up(
     loader: Box<dyn Loader>,
     hints: LoaderHints,
     source: Option<TargetProgramSource>,
-    core: &mut ProcessorCore,
+    _core: &mut ProcessorCore,
     config: &Config,
+    vcpu: &mut VcpuCore,
 ) -> Result<(), UnknownError> {
     debug!("autobots_load_up loader: {loader:?} source: {source:?}");
 
@@ -455,25 +516,23 @@ fn autobots_load_up(
 
     let source_bytes = source.bytes()?;
 
-    // loader hints?
     let mut memory_desc = loader
         .load_bytes(source_bytes, hints, config)
         .context("Loader failed to load bytes")?;
 
-    // todo these should be more compatible
     let regions = memory_desc.take_memory_regions();
     debug!("got {} regions from loader", regions.len());
     for region in regions.into_iter() {
         debug!("loading region {region:X?}");
         let region_data = region.read_data(region.base(), region.size()).unwrap();
-        core.mmu.write_code(region.base(), &region_data)?;
+        vcpu.mmu.write_code(region.base(), &region_data)?;
     }
 
     for (register, value) in memory_desc.take_registers().into_iter() {
         // mildly sketchy but should mostly work out ok wrt converting
         match TryInto::<u32>::try_into(value) {
-            Ok(value_u32) => core.cpu.write_register(register, value_u32)?,
-            Err(_) => core.cpu.write_register(register, value)?,
+            Ok(value_u32) => vcpu.cpu.write_register(register, value_u32)?,
+            Err(_) => vcpu.cpu.write_register(register, value)?,
         }
     }
 
@@ -501,6 +560,13 @@ impl IPCConnection {
 }
 
 pub struct BuildingProcessor<'a> {
+    /// The vCPUs being initialised.
+    ///
+    /// Index 0 is the primary vCPU. Plugins and peripherals that need to
+    /// inspect or mutate per-CPU state (registers, hooks, MMU) should access
+    /// this in their init functions.
+    pub vcpus: &'a mut PerVcpuSlice<VcpuCore>,
+    /// Processor-level shared state (shared memory, event distributor).
     pub core: &'a mut ProcessorCore,
     pub runtime: &'a mut ProcessorRuntime,
     pub routes: RoutesBuilder,

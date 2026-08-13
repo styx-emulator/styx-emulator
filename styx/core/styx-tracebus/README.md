@@ -1,6 +1,6 @@
 # Styx Trace
 
-This library package implements a tracing facility for programattically eminating events during emulation. Like logging, but optimized on the qualities we care about:
+This library package implements a tracing facility for programmatically eminating events during emulation. Like logging, but optimized on the qualities we care about:
 
 - Don't slow down emulation
 - High volume / throughput (events per unit of time)
@@ -35,7 +35,7 @@ Adding new events is a 2-item process:
 
 For defining the event, there is a helper macro,  `styx_event`. All new events _must_ be the same size (in bytes) as the `BaseTraceEvent`. All new events _should_ be aligned by 4-byte boundaries.
 
-The macro takes care of implementing required traits, adding an event type  (`etype`) field, and adding an event number field `event_num` if the **numbered** feature is enabled _(enabled by default)_.
+The macro takes care of implementing required traits, adding an event type  (`etype`) field, and adding an event number field `event_num` if the **numbered** feature is enabled _(enabled by default)_ as well as the `vcpu_id` field.
 
 ```rust
 #[styx_event(etype=TraceEventType::MEM_READ)]

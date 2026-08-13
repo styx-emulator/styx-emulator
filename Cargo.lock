@@ -2237,6 +2237,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "gdb-multicore-ppc"
+version = "1.2.0"
+dependencies = [
+ "cc",
+ "goblin",
+ "styx-emulator",
+ "styx-integration-tests",
+ "styx-workspace-hack",
+]
+
+[[package]]
 name = "gdbmi"
 version = "0.0.2"
 source = "git+https://github.com/lockbox/gdb-client?branch=main#2bbdddcacc378d57e1fbc3fc0c86ad1ad72681e2"
@@ -6300,6 +6311,7 @@ dependencies = [
  "clap",
  "derivative",
  "gdbstub",
+ "itertools 0.14.0",
  "num-traits",
  "serde",
  "styx-core",
@@ -6784,7 +6796,6 @@ dependencies = [
  "styx-blackfin-processor",
  "styx-core",
  "styx-cyclonev-processor",
- "styx-event-controllers",
  "styx-hexagon-processor",
  "styx-kinetis21-processor",
  "styx-powerquicci-processor",

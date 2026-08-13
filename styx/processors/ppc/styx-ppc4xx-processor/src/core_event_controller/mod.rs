@@ -9,7 +9,9 @@ use std::sync::Arc;
 pub use event::*;
 use exception::*;
 use external_event_controller::ExternalEventController;
-use styx_core::event_controller::{ActivateIRQnError, Exception, OptionalFeatureError};
+use styx_core::event_controller::{
+    ActivateIRQnError, EventControllerImpl, Exception, ExceptionNumber, OptionalFeatureError,
+};
 use styx_core::prelude::*;
 use styx_core::processor::Config;
 use styx_core::{cpu::arch::ppc32::Ppc32Register, event_controller::InterruptExecuted};
@@ -75,22 +77,6 @@ impl CoreEventController {
         }
     }
 
-    // TODO add this back in
-    // /// Handle post-irq things
-    // fn post_irq_route_hook(&mut self) {
-    //     if let Some(evt) = self.interrupt_stack.pop() {
-    //         trace!(target: "interrupts", "{{\"type\": \"interrupts\", \"action\": \"complete\", \"event\": {}}}", evt);
-
-    //         if let Some(peripheral) = self.irq_to_peripheral(evt) {
-    //             if let Err(out) = peripheral.post_event_hook(evt) {
-    //                 warn!("Error during post-event hook for irq: {}, `{}`", evt, out);
-    //             }
-    //         }
-    //     } else {
-    //         warn!("interrupt stack out of sync.");
-    //     }
-    // }
-
     fn service_interrupt(
         &mut self,
         cpu: &mut dyn CpuBackend,
@@ -153,7 +139,6 @@ impl EventControllerImpl for CoreEventController {
         &mut self,
         cpu: &mut dyn CpuBackend,
         mmu: &mut Mmu,
-        _peripherals: &mut styx_core::event_controller::Peripherals,
     ) -> Result<InterruptExecuted, UnknownError> {
         let next_latched = self.exceptions.first_latched_and_enabled();
         // info!("CEC next: {next_latched:?}");

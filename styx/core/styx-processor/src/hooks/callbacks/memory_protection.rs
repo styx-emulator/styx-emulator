@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use styx_errors::UnknownError;
 
-use super::Resolution;
 // we can replace these with custom  in the future
 pub use super::MemFaultData;
-
-use crate::{hooks::CoreHandle, memory::MemoryPermissions};
+use super::Resolution;
+use crate::hooks::CoreHandle;
+use crate::memory::MemoryPermissions;
 
 /// Callback for a memory protection fault hook.
 ///

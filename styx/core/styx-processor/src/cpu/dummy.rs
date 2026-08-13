@@ -1,16 +1,13 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::{cpu::ExecutionReport, hooks::HookToken};
 use log::debug;
 use styx_cpu_type::arch::RegisterValue;
 use styx_errors::UnknownError;
 
-use crate::{
-    event_controller::EventController,
-    hooks::{AddHookError, DeleteHookError, Hookable, StyxHook},
-    memory::Mmu,
-};
-
 use super::CpuBackend;
+use crate::cpu::ExecutionReport;
+use crate::event_controller::EventController;
+use crate::hooks::{AddHookError, DeleteHookError, HookToken, Hookable, StyxHook};
+use crate::memory::Mmu;
 
 /// [CpuBackend] and [Hookable] for testing purposes.
 ///

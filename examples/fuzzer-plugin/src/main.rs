@@ -3,6 +3,7 @@ use std::any::Any;
 use std::net::TcpStream;
 use std::thread;
 use std::{env, time::Duration};
+use styx_emulator::core::core::VcpuCore;
 use styx_emulator::core::executor::Delta;
 use styx_emulator::core::util::logging::init_logging;
 use styx_emulator::cpu::arch::arm::ArmRegister;
@@ -43,15 +44,16 @@ fn get_firmware_path() -> String {
     }
 }
 
-fn pre_fuzzing_setup(proc: &mut ProcessorCore) {
-    let stop_emulation = |proc: CoreHandle| -> Result<(), UnknownError> {
-        proc.cpu.stop();
+fn pre_fuzzing_setup(core: &mut ProcessorCore, vcpus: &mut PerVcpuSlice<VcpuCore>) {
+    let stop_emulation = |handle: CoreHandle| -> Result<(), UnknownError> {
+        handle.cpu.stop();
         Ok(())
     };
 
-    let handle = proc
+    let handle = vcpus
+        .first_mut()
         .cpu
-        .code_hook(0xb58, 0xb58 + 1, Box::new(stop_emulation))
+        .add_hook(StyxHook::code(0xb58, stop_emulation))
         .unwrap();
 
     let sock_addr = String::from("127.0.0.1:16000");
@@ -76,12 +78,15 @@ fn pre_fuzzing_setup(proc: &mut ProcessorCore) {
         println!("recv: {data:?}");
         println!("client sending test data");
         client.send("0000\n".as_bytes().to_vec());
+        println!("data sent");
     });
 
+    println!("getting to pre-fuzz execution point");
     loop {
-        let execution_report = proc
+        let vcpu = vcpus.first_mut();
+        let execution_report = vcpu
             .cpu
-            .execute(&mut proc.mmu, &mut proc.event_controller, 1000)
+            .execute(&mut vcpu.mmu, &mut vcpu.event_controller, 1000)
             .unwrap();
         // something is broken or the host requested a stop
         if execution_report.exit_reason.fatal() {
@@ -91,48 +96,52 @@ fn pre_fuzzing_setup(proc: &mut ProcessorCore) {
             println!("Reached end of fuzz-case seed test");
             break;
         }
-        proc.event_controller
-            .tick(
-                proc.cpu.as_mut(),
-                &mut proc.mmu,
-                &Delta {
-                    time: Duration::from_nanos(1000),
-                    count: 1000,
-                },
-            )
+        let delta = Delta {
+            time: Duration::from_nanos(1000),
+            count: 1000,
+        };
+
+        let global_delta = GlobalDelta {
+            simulated_time: 1000,
+            wall_time: Duration::ZERO,
+        };
+        core.event_controller.tick(&global_delta, vcpus).unwrap();
+        let vcpu = vcpus.first_mut();
+        vcpu.event_controller
+            .tick(vcpu.cpu.as_mut(), &mut vcpu.mmu, &delta)
             .unwrap();
-        proc.event_controller
-            .next(proc.cpu.as_mut(), &mut proc.mmu)
+        vcpu.event_controller
+            .next(vcpu.cpu.as_mut(), &mut vcpu.mmu)
             .unwrap();
     }
 
-    proc.cpu.delete_hook(handle).unwrap();
+    vcpus[0].cpu.delete_hook(handle).unwrap();
     uart_client_handle.join().unwrap();
 }
 
-fn context_save(proc: &mut ProcessorCore) -> Arc<dyn Any + Send> {
+fn context_save(vcpu: &mut VcpuCore) -> Arc<dyn Any + Send> {
     Arc::new(SavedContext {
-        sp: proc.cpu.read_register::<u32>(ArmRegister::Sp).unwrap(),
-        lr: proc.cpu.read_register::<u32>(ArmRegister::Lr).unwrap(),
-        pc: proc.cpu.pc().unwrap() | 0x1,
+        sp: vcpu.cpu.read_register::<u32>(ArmRegister::Sp).unwrap(),
+        lr: vcpu.cpu.read_register::<u32>(ArmRegister::Lr).unwrap(),
+        pc: vcpu.cpu.pc().unwrap() | 0x1,
     })
 }
 
-fn context_restore(proc: &mut ProcessorCore, data: Arc<dyn Any + Send>) {
+fn context_restore(vcpu: &mut VcpuCore, data: Arc<dyn Any + Send>) {
     let data = data.downcast_ref::<SavedContext>().unwrap();
-    proc.cpu.write_register(ArmRegister::Sp, data.sp).unwrap();
-    proc.cpu.write_register(ArmRegister::Lr, data.lr).unwrap();
-    proc.cpu.set_pc(data.pc).unwrap();
+    vcpu.cpu.write_register(ArmRegister::Sp, data.sp).unwrap();
+    vcpu.cpu.write_register(ArmRegister::Lr, data.lr).unwrap();
+    vcpu.cpu.set_pc(data.pc).unwrap();
 }
 
 const INPUT_BUFFER_ADDR: u64 = 0x1fff011c;
 const MAX_INPUT_LEN: usize = 5;
 
-fn insert_input(proc: &mut ProcessorCore, data: &[u8]) -> bool {
+fn insert_input(vcpu: &mut VcpuCore, data: &[u8]) -> bool {
     if data.len() < MAX_INPUT_LEN {
-        proc.mmu.write_data(INPUT_BUFFER_ADDR, data).unwrap();
+        vcpu.mmu.write_data(INPUT_BUFFER_ADDR, data).unwrap();
     } else {
-        proc.mmu
+        vcpu.mmu
             .write_data(INPUT_BUFFER_ADDR, &data[..MAX_INPUT_LEN])
             .unwrap();
     }
@@ -160,7 +169,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut proc = ProcessorBuilder::default()
         .with_builder(Kinetis21Builder::default())
         .with_backend(Backend::Unicorn)
-        .with_executor(FuzzerExecutor::new(
+        .with_custom_executor(FuzzerExecutor::new(
             COVERAGE_MAP_SIZE,
             StyxFuzzerConfig {
                 timeout: Duration::from_secs(1),

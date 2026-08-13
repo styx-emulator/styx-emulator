@@ -27,13 +27,13 @@ use std::{any::Any, thread, time::Instant};
 use std::{fs, marker::PhantomData};
 use std::{path::PathBuf, time::Duration};
 use styx_core::plugins::Plugins;
+use styx_core::prelude::*;
 use styx_core::{
     cpu::ExecutionReport,
     tracebus::{
         BaseTraceEvent, IPCTracer, TraceProvider, TracerReader, TracerReaderOptions, STRACE,
     },
 };
-use styx_core::{executor::ExecutorImpl, prelude::*};
 use styx_sync::{
     cell::UnsafeCell,
     sync::{
@@ -197,7 +197,7 @@ impl Default for StyxFuzzerConfig {
             max_insns: 100_000,
             max_input_len: 0,
             input_hook: Box::new(|_, _| true),
-            setup: Box::new(|_| ()),
+            setup: Box::new(|_, _| ()),
             context_save: Box::new(|_| Arc::new(())),
             context_restore: Box::new(|_, _| ()),
             corpus_paths: Vec::new(),
@@ -211,18 +211,17 @@ impl Default for StyxFuzzerConfig {
 }
 
 // typedefs to appease clippy
-type AnyTpe = Arc<dyn Any + Send>;
-type InputCallbackType = Box<dyn Fn(&mut ProcessorCore, &[u8]) -> bool>;
-type SetupCallbackType = Box<dyn Fn(&mut ProcessorCore)>;
-type ContextSaveCallbackType = Box<dyn Fn(&mut ProcessorCore) -> AnyTpe>;
-type ContextRestoreCBType = Box<dyn Fn(&mut ProcessorCore, AnyTpe)>;
-type FuzzerFuncType =
-    Box<dyn Fn(&mut FuzzerExecutor, &mut ProcessorCore) -> Result<(), UnknownError>>;
+type AnyType = Arc<dyn Any + Send>;
+type InputCallbackType = Box<dyn Fn(&mut VcpuCore, &[u8]) -> bool>;
+type SetupCallbackType = Box<dyn Fn(&mut ProcessorCore, &mut PerVcpuSlice<VcpuCore>)>;
+type ContextSaveCallbackType = Box<dyn Fn(&mut VcpuCore) -> AnyType>;
+type ContextRestoreCBType = Box<dyn Fn(&mut VcpuCore, AnyType)>;
+type FuzzerFuncType = Box<dyn Fn(&mut FuzzerExecutor, &mut VcpuCore) -> Result<(), UnknownError>>;
 
 unsafe impl Send for StyxFuzzerConfig {}
 unsafe impl Sync for StyxFuzzerConfig {}
 
-/// The main fuzzer plugin
+/// Fuzzer plugin using libafl.
 ///
 /// In order to properly construct this plugin you must provide a
 /// size of the coverage map that the plugin can use to share with the
@@ -230,6 +229,8 @@ unsafe impl Sync for StyxFuzzerConfig {}
 ///
 /// The processor needs to have a StyxTracePlugin attached to it, with
 /// only block trace events enabled.
+///
+/// NOTE: the plugin only supports single vcpu targets.
 ///
 /// When run, the plugin will first call the user-provided `config.setup` function
 /// which is intended to be used to get emulation into the state where fuzzing can
@@ -241,7 +242,7 @@ unsafe impl Sync for StyxFuzzerConfig {}
 ///
 /// The user provides functions to save/restore emulation state between fuzzing
 /// runs, make these as small/fast as possible because they get called frequently.
-/// Same deal with the insert_input function
+/// Same deal with the insert_input function.
 ///
 /// Example usage:
 /// ```no_run
@@ -260,24 +261,24 @@ unsafe impl Sync for StyxFuzzerConfig {}
 ///
 /// const MAX_INPUT_LEN: usize = 5;
 ///
-/// let pre_fuzzing_setup = |proc: &mut ProcessorCore| {
+/// let pre_fuzzing_setup = |proc: &mut ProcessorCore, vcpu: &mut PerVcpuSlice<VcpuCore>| {
 ///     // do setup things
 /// };
-/// let context_save = |proc: &mut ProcessorCore| -> Arc<dyn Any + Send> {
+/// let context_save = |vcpu: &mut VcpuCore| -> Arc<dyn Any + Send> {
 ///     // save state
 ///     # Arc::new(())
 /// };
-/// let context_restore = |proc: &mut ProcessorCore, data: Arc<dyn Any + Send>| {
+/// let context_restore = |vcpu: &mut VcpuCore, data: Arc<dyn Any + Send>| {
 ///     // restore state
 /// };
-/// let insert_input = |proc: &mut ProcessorCore, data: &[u8]| -> bool {
+/// let insert_input = |vcpu: &mut VcpuCore, data: &[u8]| -> bool {
 ///     // insert input
 ///     # true
 /// };
 /// let mut proc = ProcessorBuilder::default()
 ///     .with_builder(Kinetis21Builder::default())
 ///     .with_backend(Backend::Unicorn)
-///     .with_executor(FuzzerExecutor::new(
+///     .with_custom_executor(FuzzerExecutor::new(
 ///         COVERAGE_MAP_SIZE,
 ///         StyxFuzzerConfig {
 ///             timeout: Duration::from_secs(1),
@@ -332,7 +333,7 @@ impl FuzzerExecutor<'static> {
     /// Performs initial, pre-fuzzing emulation up to a target address
     /// (if specified in the config) before performing a cpu context save
     /// to create a restore point for fuzzing
-    fn fuzzer_setup(&self, proc: &mut ProcessorCore) {
+    fn fuzzer_setup(&self, vcpu: &mut VcpuCore) -> Result<(), UnknownError> {
         let stop_emulation = |cpu: CoreHandle<'_>| {
             cpu.cpu.stop();
             Ok(())
@@ -340,11 +341,12 @@ impl FuzzerExecutor<'static> {
 
         // adds hooks to stop emulation if we hit any of the exit points specified in the config
         for exit in &self.config.exits {
-            debug!("adding exit hook at: [0x{:x},0x{:x})", *exit, *exit + 1);
-            proc.cpu
-                .code_hook(*exit, *exit + 1, Box::new(stop_emulation))
-                .unwrap();
+            debug!("adding exit hook at: 0x{:x}", *exit);
+            vcpu.cpu
+                .add_hook(StyxHook::code(*exit, stop_emulation))
+                .context("error adding exit hook")?;
         }
+        Ok(())
     }
 
     /// This function first clears any existing events from the ring buffer,
@@ -421,15 +423,15 @@ impl FuzzerExecutor<'static> {
     #[inline]
     fn harness_fn(
         &self,
-        proc: &mut ProcessorCore,
+        vcpu: &mut VcpuCore,
         input: &BytesInput,
         running: Arc<AtomicBool>,
         done_processing: Arc<AtomicBool>,
-        saved_context: AnyTpe,
+        saved_context: AnyType,
     ) -> ExitKind {
         // signal that we're about to start executing the target
         running.store(true, Ordering::Release);
-        if !(self.config.input_hook)(proc, input.bytes()) {
+        if !(self.config.input_hook)(vcpu, input.bytes()) {
             warn!("insert input failed");
             return ExitKind::Ok;
         }
@@ -438,14 +440,14 @@ impl FuzzerExecutor<'static> {
 
         let timeout = Instant::now() + self.config.timeout;
 
-        // run the target program until the timout is reached unless an error
+        // run the target program until the timeout is reached unless an error
         let mut total_insn_exec = 0;
         loop {
-            execution_report = proc
+            execution_report = vcpu
                 .cpu
                 .execute(
-                    &mut proc.mmu,
-                    &mut proc.event_controller,
+                    &mut vcpu.mmu,
+                    &mut vcpu.event_controller,
                     self.config.execution_stride,
                 )
                 .unwrap();
@@ -462,7 +464,7 @@ impl FuzzerExecutor<'static> {
             // check if we timed out on total insn count
             if total_insn_exec >= self.config.max_insns {
                 // user configurable option. depending on the target
-                // it is not usefule to trigger an objective on the
+                // it is not useful to trigger an objective on the
                 // total insn count and instead let it run until the
                 // time-based timeout is reached
                 if self.config.timeout_on_max_insns {
@@ -477,8 +479,8 @@ impl FuzzerExecutor<'static> {
                 break;
             }
 
-            proc.event_controller
-                .next(proc.cpu.as_mut(), &mut proc.mmu)
+            vcpu.event_controller
+                .next(vcpu.cpu.as_mut(), &mut vcpu.mmu)
                 .unwrap();
         }
 
@@ -501,7 +503,7 @@ impl FuzzerExecutor<'static> {
         running.store(false, Ordering::Release);
 
         // call the context restore now that the target is done running
-        (self.config.context_restore)(proc, saved_context);
+        (self.config.context_restore)(vcpu, saved_context);
 
         // wait until the processing task is done
         loop {
@@ -514,16 +516,21 @@ impl FuzzerExecutor<'static> {
     }
 
     /// the main fuzzing function
-    fn libafl_fuzz(&mut self, proc: &mut ProcessorCore) -> Result<(), UnknownError> {
+    fn libafl_fuzz(
+        &mut self,
+        core: &mut ProcessorCore,
+        vcpus: &mut PerVcpuSlice<VcpuCore>,
+    ) -> Result<(), UnknownError> {
         let branches = self.load_branches_from_file();
 
         // Setup the fuzzing context + runtime
         // - call the user provided function for pre-fuzzing setup
         // - perform initial fuzzer reachability setup
         // - save the context to restore to between emulation runs
-        self.config.setup.as_ref()(proc);
-        self.fuzzer_setup(proc);
-        let saved_cpu_context = (self.config.context_save)(proc);
+        self.config.setup.as_ref()(core, vcpus);
+        self.fuzzer_setup(&mut vcpus[0])
+            .context("during fuzzer setup")?;
+        let saved_cpu_context = (self.config.context_save)(&mut vcpus[0]);
 
         // initialize observers
         // - execution timing
@@ -591,11 +598,11 @@ impl FuzzerExecutor<'static> {
         assert!(done_processing.load(Ordering::Acquire));
 
         // this closure takes in an input and returns an ExitKind depending on the exit state of the emulation
-        // it also invokes the trace event reciever which updates the observed coverage map
+        // it also invokes the trace event receiver which updates the observed coverage map
         let mut harness = |input: &BytesInput| {
             // call the harness function
             self.harness_fn(
-                proc,
+                &mut vcpus[0],
                 input,
                 running.clone(),
                 done_processing.clone(),
@@ -646,31 +653,35 @@ impl FuzzerExecutor<'static> {
     }
 }
 
-impl ExecutorImpl for FuzzerExecutor<'static> {
-    fn emulation_setup(
+impl CustomExecutor for FuzzerExecutor<'static> {
+    fn execute(
         &mut self,
-        proc: &mut ProcessorCore,
+        vcpus: &mut PerVcpuSlice<VcpuCore>,
+        core: &mut ProcessorCore,
         _plugins: &mut Plugins,
-    ) -> Result<(), UnknownError> {
+        _constraints: &ExecutionConstraintConcrete,
+    ) -> Result<Vec<EmulationReport>, UnknownError> {
+        if vcpus.len() != 1 {
+            return Err(UnknownError::msg(
+                "styx fuzzer plugin only supports single vcpu targets",
+            ));
+        }
+        let vcpu = &mut vcpus[0];
         match self.config.fuzz_func {
             Some(_) => {
                 // if the user provided a custom fuzz function, we use that
                 let func = std::mem::take(&mut self.config.fuzz_func).unwrap();
-                func(self, proc)?;
+                func(self, vcpu)?;
 
                 // replace the fuzz function
                 self.config.fuzz_func = Some(func);
             }
             None => {
                 // otherwise we use the default fuzz executor function
-                self.libafl_fuzz(proc)?;
+                self.libafl_fuzz(core, vcpus)?;
             }
         }
 
-        Ok(())
-    }
-
-    fn valid_emulation_conditions(&mut self, _proc: &mut ProcessorCore) -> bool {
-        false
+        Ok(vec![])
     }
 }

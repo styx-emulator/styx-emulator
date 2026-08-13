@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: BSD-2-Clause
+use std::sync::{Arc, Mutex};
+
 use styx_core::hooks::{MemoryReadHook, MemoryWriteHook};
 use styx_core::prelude::*;
 use tracing::debug;
 
 use crate::core_event_controller::Event;
-use crate::ethernet::EthernetController;
+use crate::ethernet::EthernetControllerInner;
 
 const ETHERNET_BASE_ADDR: u64 = 0x81000000;
 
@@ -33,7 +35,9 @@ fn u32_from_be_word(data: &[u8], size: u32) -> u32 {
     u32::from_be_bytes(u32_data)
 }
 
-pub struct EthernetTxHook;
+pub struct EthernetTxHook {
+    pub inner: Arc<Mutex<EthernetControllerInner>>,
+}
 
 impl MemoryWriteHook for EthernetTxHook {
     /// hook callback for ethernet tx registers: TX_LEN, GIE, and TX_CTL
@@ -52,11 +56,7 @@ impl MemoryWriteHook for EthernetTxHook {
             data
         );
 
-        let ethernet_controller = proc
-            .event_controller
-            .peripherals
-            .get::<EthernetController>()
-            .unwrap();
+        let mut ethernet_controller = self.inner.lock().unwrap();
 
         let register_value: u32 = u32_from_be_word(data, size);
 
@@ -139,7 +139,9 @@ impl MemoryReadHook for EthernetTxHook {
     }
 }
 
-pub struct EthernetRxHook;
+pub struct EthernetRxHook {
+    pub inner: Arc<Mutex<EthernetControllerInner>>,
+}
 
 /// Memory write hook callback for the RX_CTL register
 impl MemoryWriteHook for EthernetRxHook {
@@ -158,11 +160,7 @@ impl MemoryWriteHook for EthernetRxHook {
             data
         );
 
-        let ethernet_controller = proc
-            .event_controller
-            .peripherals
-            .get::<EthernetController>()
-            .unwrap();
+        let mut ethernet_controller = self.inner.lock().unwrap();
 
         let register_value: u32 = u32_from_be_word(data, size);
 
@@ -211,11 +209,7 @@ impl MemoryReadHook for EthernetRxHook {
             data
         );
 
-        let ethernet_controller = proc
-            .event_controller
-            .peripherals
-            .get::<EthernetController>()
-            .unwrap();
+        let ethernet_controller = self.inner.lock().unwrap();
 
         if ethernet_controller.rx_data_available() {
             data[3] = 1;

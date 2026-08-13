@@ -6,12 +6,12 @@ use styx_core::{
     arch::hexagon::{register_fields::Ssr, HexagonRegister},
     cpu::{CpuBackend, CpuBackendExt},
     errors::UnknownError,
-    event_controller::{ActivateIRQnError, InterruptExecuted, Peripherals},
+    event_controller::{ActivateIRQnError, EventControllerImpl, InterruptExecuted},
     hooks::{CoreHandle, StyxHook},
     memory::{MemoryBackend, Mmu},
     prelude::{
         log::{info, trace},
-        Config, Context, EventControllerImpl, ExceptionNumber,
+        Config, Context, ExceptionNumber,
     },
     sync::styx_async::sync::broadcast,
 };
@@ -37,7 +37,6 @@ impl EventControllerImpl for HexagonEventController {
         &mut self,
         _cpu: &mut dyn CpuBackend,
         _mmu: &mut Mmu,
-        _peripherals: &mut Peripherals,
     ) -> Result<InterruptExecuted, UnknownError> {
         trace!("event controller next unimplemented");
         Ok(InterruptExecuted::NotExecuted)

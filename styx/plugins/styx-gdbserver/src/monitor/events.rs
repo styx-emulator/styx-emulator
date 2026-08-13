@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use std::fmt::Write;
 
-use styx_core::prelude::Context;
+use gdbstub::output;
+use styx_core::core::VcpuId;
 
 use super::common::*;
 
@@ -21,6 +22,9 @@ enum EventSubcommands {
     Latch {
         /// The event to latch.
         event: i32,
+        /// The vcpu to latch on.
+        #[arg(default_value_t = 0)]
+        vcpu: VcpuId,
     },
     /// List current peripherals installed in the event controller.
     Peripherals,
@@ -38,13 +42,30 @@ impl SubcommandRunnable for EventsCommand {
         GdbArchImpl::RegId: GdbArchIdSupportTrait,
     {
         match self.commands {
-            EventSubcommands::Peripherals => print_peripherals(target.proc, out),
+            EventSubcommands::Peripherals => print_peripherals(target.core, out),
             EventSubcommands::Info => {
-                print_peripherals(target.proc, out)?;
-                print_current_exception(target.proc, out)?;
+                print_peripherals(target.core, out)?;
+                print_current_exception_each(
+                    target.vcpus.iter_mut().map(|v| &mut v.event_controller),
+                    out,
+                );
                 Ok(())
             }
-            EventSubcommands::Latch { event } => latch(target.proc, out, event),
+            EventSubcommands::Latch { event, vcpu } => {
+                let target_vcpus = target.vcpus.len();
+                if vcpu as usize > target_vcpus {
+                    output!(
+                        out,
+                        "vcpu {vcpu} too large (target has {target_vcpus} vcpus)"
+                    );
+                    return Ok(());
+                }
+                latch(
+                    &mut target.vcpus[vcpu as usize].event_controller,
+                    out,
+                    event,
+                )
+            }
         }
     }
 }
@@ -68,11 +89,19 @@ fn print_peripherals(
     Ok(())
 }
 
-fn print_current_exception(
-    core: &mut ProcessorCore,
+fn print_current_exception_each<'a>(
+    ecs: impl Iterator<Item = &'a mut EventController>,
     out: &mut ConsoleOutput<'_>,
-) -> Result<(), UnknownError> {
-    let current = core.event_controller.inner.current_exception();
+) {
+    for (i, ec) in ecs.enumerate() {
+        output!(out, "vcpu {i}: ");
+        print_current_exception(ec, out);
+    }
+}
+
+/// "current exception: {e}"
+fn print_current_exception(ec: &mut EventController, out: &mut ConsoleOutput<'_>) {
+    let current = ec.current_exception();
     match current {
         Ok(e) => match e {
             Some(e) => outputln!(out, "current exception: {e}"),
@@ -90,16 +119,14 @@ fn print_current_exception(
             }
         },
     }
-
-    Ok(())
 }
 
 fn latch(
-    core: &mut ProcessorCore,
+    ec: &mut EventController,
     out: &mut ConsoleOutput<'_>,
     event: i32,
 ) -> Result<(), UnknownError> {
-    core.latch_event(event)
+    ec.latch(event)
         .with_context(|| format!("failed to latch event {event}"))?;
     outputln!(out, "event # {event} latched");
     Ok(())

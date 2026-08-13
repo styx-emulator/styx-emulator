@@ -2,6 +2,7 @@
 use std::fmt::Debug;
 
 use arbitrary_int::{u15, u4};
+use styx_core::event_controller::RaisedIrqs;
 use styx_core::prelude::*;
 use tap::Conv;
 use tracing::{trace, warn};
@@ -55,45 +56,52 @@ impl DmaState {
     }
 
     /// Triggers interrupt if enabled. Checks interrupt enabled bit.
-    fn trigger_interrupt(&mut self, mmu: &mut Mmu, ev: &mut dyn EventControllerImpl) {
+    ///
+    /// Pushes the raised core interrupt onto `raised` for the caller to route.
+    fn trigger_interrupt(&mut self, memory: &MemoryBackend, raised: &mut RaisedIrqs) {
         if self.config.interrupt_enabled() {
-            self.set_status_done(mmu, true);
-            self.system.latch_peripheral(mmu, ev, self.id)
+            self.set_status_done(memory, true);
+            if let Some(irq) = self.system.latch_peripheral(memory, self.id) {
+                raised.push(irq);
+            }
         }
     }
 
-    fn clear_interrupt(&mut self, mmu: &mut Mmu) {
-        self.set_status_done(mmu, false);
+    fn clear_interrupt(&mut self, memory: &MemoryBackend) {
+        self.set_status_done(memory, false);
         self.system.unlatch_peripheral(self.id);
     }
 
-    fn set_status_done(&mut self, mmu: &mut Mmu, done: bool) {
+    fn set_status_done(&mut self, memory: &MemoryBackend, done: bool) {
         self.status.set_done(done);
-        self.update_status(mmu);
+        self.update_status(memory);
     }
 
     /// Updates status memory mapped register
-    fn update_status(&self, mmu: &mut Mmu) {
+    fn update_status(&self, memory: &MemoryBackend) {
         self.debug_print_config("irq_status", &self.status);
         let data_bytes = self.status.conv::<u4>().value().to_le_bytes();
-        mmu.data()
+        memory
+            .data()
             .write(self.id.irq_status_register())
             .bytes(&data_bytes)
             .unwrap();
     }
 
-    fn set_x_current(&mut self, mmu: &mut Mmu, new_x_current: u16) {
+    fn set_x_current(&mut self, memory: &MemoryBackend, new_x_current: u16) {
         self.x_current = new_x_current;
-        mmu.data()
+        memory
+            .data()
             .write(self.id.x_current_register())
             .le()
             .value(new_x_current)
             .unwrap();
     }
 
-    fn set_y_current(&mut self, mmu: &mut Mmu, new_y_current: u16) {
+    fn set_y_current(&mut self, memory: &MemoryBackend, new_y_current: u16) {
         self.y_current = new_y_current;
-        mmu.data()
+        memory
+            .data()
             .write(self.id.y_current_register())
             .le()
             .value(new_y_current)
@@ -125,33 +133,33 @@ impl DmaState {
     ///
     /// This will decrement current counts by 1 and reset them to their reset count if they hit
     /// zero. Also triggers interrupt if a row/complete transfer is completed.
-    fn decrement_counts(&mut self, mmu: &mut Mmu, ev: &mut dyn EventControllerImpl) {
+    fn decrement_counts(&mut self, memory: &MemoryBackend, raised: &mut RaisedIrqs) {
         assert_eq!(
             self.config.mode(),
             config::Mode::TwoDimensional,
             "Linear mode not implemented."
         );
-        self.set_x_current(mmu, self.x_current - 1);
+        self.set_x_current(memory, self.x_current - 1);
         if self.x_current == 0 {
             self.x_current = self.x_count;
-            self.set_y_current(mmu, self.y_current - 1);
-            self.completed_row(mmu, ev);
+            self.set_y_current(memory, self.y_current - 1);
+            self.completed_row(memory, raised);
             if self.y_current == 0 {
                 self.y_current = self.y_count;
-                self.completed_transfer(mmu, ev)
+                self.completed_transfer(memory, raised)
             }
         }
     }
 
     /// Completed a full transfer.
-    fn completed_transfer(&mut self, mmu: &mut Mmu, ev: &mut dyn EventControllerImpl) {
+    fn completed_transfer(&mut self, memory: &MemoryBackend, raised: &mut RaisedIrqs) {
         trace!("dma {:?} completed transfer", self.id);
 
         match self.config.mode() {
-            config::Mode::Linear => self.trigger_interrupt(mmu, ev),
+            config::Mode::Linear => self.trigger_interrupt(memory, raised),
             config::Mode::TwoDimensional => match self.config.interrupt_timing() {
                 config::DataInterruptTimingSelect::InterruptAfterWholeBuffer => {
-                    self.trigger_interrupt(mmu, ev)
+                    self.trigger_interrupt(memory, raised)
                 }
                 config::DataInterruptTimingSelect::InterruptAfterRow => (),
             },
@@ -159,12 +167,12 @@ impl DmaState {
     }
 
     /// Completed a row, e.g. x_count hit zero.
-    fn completed_row(&mut self, mmu: &mut Mmu, ev: &mut dyn EventControllerImpl) {
+    fn completed_row(&mut self, memory: &MemoryBackend, raised: &mut RaisedIrqs) {
         trace!("dma {:?} completed row", self.id);
 
         if let config::DataInterruptTimingSelect::InterruptAfterRow = self.config.interrupt_timing()
         {
-            self.trigger_interrupt(mmu, ev)
+            self.trigger_interrupt(memory, raised)
         }
     }
 
@@ -173,8 +181,8 @@ impl DmaState {
     /// Note: Only supports 16-bit word length.
     pub(super) fn pipe_new_data(
         &mut self,
-        mmu: &mut Mmu,
-        ev: &mut dyn EventControllerImpl,
+        memory: &MemoryBackend,
+        raised: &mut RaisedIrqs,
         data: u8,
     ) {
         // ignore new data if we're not enabled
@@ -186,13 +194,14 @@ impl DmaState {
                 // we already have a byte! write and decrement current count.
                 self.internal_buffer.push(data);
 
-                mmu.data()
+                memory
+                    .data()
                     .write(self.current_address() as u64)
                     .bytes(&self.internal_buffer)
                     .unwrap();
 
                 self.internal_buffer.clear();
-                self.decrement_counts(mmu, ev);
+                self.decrement_counts(memory, raised);
             } else {
                 panic!("err");
             }
@@ -209,10 +218,10 @@ impl DmaState {
         self.config = dma_config;
     }
 
-    pub(super) fn set_x_count(&mut self, mmu: &mut Mmu, x_count: u16) {
+    pub(super) fn set_x_count(&mut self, memory: &MemoryBackend, x_count: u16) {
         self.debug_print_config("x_count", &x_count);
         self.x_count = x_count;
-        self.set_x_current(mmu, x_count);
+        self.set_x_current(memory, x_count);
     }
 
     pub(super) fn set_x_modify(&mut self, x_modify: u16) {
@@ -231,10 +240,10 @@ impl DmaState {
         self.y_modify = y_modify;
     }
 
-    pub(super) fn set_y_count(&mut self, mmu: &mut Mmu, y_count: u16) {
+    pub(super) fn set_y_count(&mut self, memory: &MemoryBackend, y_count: u16) {
         self.debug_print_config("y_count", &y_count);
         self.y_count = y_count;
-        self.set_y_current(mmu, y_count);
+        self.set_y_current(memory, y_count);
     }
 
     pub(super) fn mapping(&self) -> DmaPeripheralMapping {
@@ -246,12 +255,12 @@ impl DmaState {
     }
 
     /// A write to the status register. Write 1 clears the `done` and `error` bits.
-    pub(super) fn write_status(&mut self, mmu: &mut Mmu, status: u4) {
+    pub(super) fn write_status(&mut self, memory: &MemoryBackend, status: u4) {
         let written_status = config::IrqStatus::from(status);
 
         // `done` and `error` are W1C
         if written_status.done() {
-            self.clear_interrupt(mmu)
+            self.clear_interrupt(memory)
         }
         if written_status.error() {
             self.status.set_error(false);
@@ -262,6 +271,6 @@ impl DmaState {
             warn!("invalid write to descriptor fetch or run bit");
         }
 
-        self.update_status(mmu);
+        self.update_status(memory);
     }
 }

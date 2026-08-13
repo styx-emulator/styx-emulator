@@ -11,7 +11,7 @@
 //! will dramatically slow down the speed of the emulator.
 
 use crate::shadow_stack::{
-    install_hook, FrameId, FrameTransitionType, ShadowStack, ShadowStackHandle,
+    install_hooks, FrameId, FrameTransitionType, ShadowStack, ShadowStackHandle,
 };
 use std::collections::{HashMap, HashSet};
 use std::num::NonZeroU64;
@@ -44,7 +44,7 @@ impl LoopReport {
     }
 }
 
-pub type LoopCallback = Box<dyn FnMut(&LoopReport, &mut CoreHandle) + Send>;
+pub type LoopCallback = Box<dyn Fn(&LoopReport, &mut CoreHandle) + Send + Sync>;
 
 #[derive(Default)]
 pub struct LoopState {
@@ -130,11 +130,15 @@ struct DetectionBehavior {
 struct LoopDetector {
     handle: ShadowStackHandle,
     counters: LoopCounters,
-    on_detection: DetectionBehavior,
+    on_detection: Arc<DetectionBehavior>,
 }
 
 impl LoopDetector {
-    fn new(handle: ShadowStackHandle, threshold: u64, on_detection: DetectionBehavior) -> Self {
+    fn new(
+        handle: ShadowStackHandle,
+        threshold: u64,
+        on_detection: Arc<DetectionBehavior>,
+    ) -> Self {
         Self {
             handle,
             counters: LoopCounters::new(threshold),
@@ -150,18 +154,21 @@ impl LoopDetector {
         if let Some(level) = self.on_detection.log {
             log::log!(
                 level,
-                "LoopDetectionPlugin: loop @ {:#x} in frame {:#x} (call depth {}) reached {} iterations",
-                report.head_addr, report.frame_addr, report.stack_depth, report.iters
+                "LoopDetectionPlugin: vcpu {} loop @ {:#x} in frame {:#x} (call depth {}) reached {} iterations",
+                proc.vcpu_id(), report.head_addr, report.frame_addr, report.stack_depth, report.iters
             );
         }
-        if let Some(callback) = self.on_detection.callback.as_mut() {
+        if let Some(callback) = self.on_detection.callback.as_ref() {
             callback(report, proc);
         }
         if self.on_detection.halt {
             proc.cpu.stop();
         }
         if let Some(err_msg) = &self.on_detection.err {
-            return Err(anyhow!("LoopDetectionPlugin: {err_msg}"));
+            return Err(anyhow!(
+                "LoopDetectionPlugin: vcpu {}: {err_msg}",
+                proc.vcpu_id()
+            ));
         }
         Ok(())
     }
@@ -187,7 +194,7 @@ pub struct LoopDetectionPlugin {
     /// Number of iterations of the loop before it's reported
     /// Minimum threshold = 1
     threshold: NonZeroU64,
-    /// If true, stop emulation when loop is reported
+    /// If true, stop the reporting vcpu when loop is reported
     #[serde(default)]
     halt_on_report: bool,
     /// Invoked when loop is reported
@@ -199,8 +206,9 @@ pub struct LoopDetectionPlugin {
     /// If set, the hook fails with this error message when a loop is reported
     #[serde(default)]
     err_on_report: Option<String>,
+    /// One handle per vcpu, indexed by vcpu id
     #[serde(skip)]
-    shadow_stack: Option<ShadowStackHandle>,
+    shadow_stacks: Option<Vec<ShadowStackHandle>>,
 }
 
 impl Default for LoopDetectionPlugin {
@@ -211,7 +219,7 @@ impl Default for LoopDetectionPlugin {
             on_report: None,
             log_level: Some(Level::Info),
             err_on_report: None,
-            shadow_stack: None,
+            shadow_stacks: None,
         }
     }
 }
@@ -244,8 +252,8 @@ impl LoopDetectionPlugin {
         self
     }
 
-    pub fn with_shadow_stack(mut self, shadow_stack: ShadowStackHandle) -> Self {
-        self.shadow_stack = Some(shadow_stack);
+    pub fn with_shadow_stacks(mut self, shadow_stacks: Vec<ShadowStackHandle>) -> Self {
+        self.shadow_stacks = Some(shadow_stacks);
         self
     }
 }
@@ -261,30 +269,42 @@ impl UninitPlugin for LoopDetectionPlugin {
         mut self: Box<Self>,
         proc: &mut BuildingProcessor,
     ) -> Result<Box<dyn Plugin>, UnknownError> {
-        let handle = match self.shadow_stack.take() {
-            Some(handle) => {
-                if !handle.has_updater() {
+        let handles = match self.shadow_stacks.take() {
+            Some(handles) => {
+                if handles.len() != proc.vcpus.len() {
                     return Err(anyhow!(
-                        "LoopDetectionPlugin: the provided shadow stack does not have an updater.\
+                        "LoopDetectionPlugin: got {} shadow stacks for {} vcpus",
+                        handles.len(),
+                        proc.vcpus.len()
+                    ));
+                }
+                if handles.iter().any(|handle| !handle.has_updater()) {
+                    return Err(anyhow!(
+                        "LoopDetectionPlugin: a provided shadow stack does not have an updater.\
                         Add the ShadowStackPlugin before the LoopDetectionPlugin"
                     ));
                 }
-                handle
+                handles
             }
             None => {
-                let handle = ShadowStackHandle::new();
-                install_hook(proc, &handle)?;
-                handle
+                let handles: Vec<_> = (0..proc.vcpus.len())
+                    .map(|_| ShadowStackHandle::new())
+                    .collect();
+                install_hooks(proc, &handles)?;
+                handles
             }
         };
-        let behavior = DetectionBehavior {
+        // shared so a single user callback/halt/err covers every vcpu
+        let behavior = Arc::new(DetectionBehavior {
             halt: self.halt_on_report,
             callback: self.on_report.take(),
             log: self.log_level,
             err: self.err_on_report.take(),
-        };
-        let reader = LoopDetector::new(handle, self.threshold.get(), behavior);
-        proc.core.cpu.add_hook(StyxHook::block(reader))?;
+        });
+        for (vcpu, handle) in proc.vcpus.iter_mut().zip(handles) {
+            let reader = LoopDetector::new(handle, self.threshold.get(), behavior.clone());
+            vcpu.cpu.add_hook(StyxHook::block(reader))?;
+        }
         Ok(self)
     }
 }

@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use std::sync::atomic::{AtomicBool, Ordering};
-use styx_core::{
-    arch::{
-        ppc32::{gdb_targets::Ppc4xxTargetDescription, variants::Ppc405},
-        RegisterValue,
-    },
-    core::builder::BuildProcessorImplArgs,
-    prelude::*,
-};
+
+use styx_core::arch::ppc32::gdb_targets::Ppc4xxTargetDescription;
+use styx_core::arch::ppc32::variants::Ppc405;
+use styx_core::arch::RegisterValue;
+use styx_core::core::builder::BuildProcessorImplArgs;
+use styx_core::core::ProcessorBundleBuilder;
+use styx_core::event_controller::EventControllerImpl;
+use styx_core::prelude::*;
 use styx_plugins::gdb::StepIRQs;
 
 /// Dummy Event Controller impl that stores if `next()` was called.
@@ -17,7 +17,6 @@ impl EventControllerImpl for DidNextEventController {
         &mut self,
         _cpu: &mut dyn CpuBackend,
         _mmu: &mut Mmu,
-        _peripherals: &mut styx_core::event_controller::Peripherals,
     ) -> Result<styx_core::event_controller::InterruptExecuted, UnknownError> {
         self.0.store(true, Ordering::SeqCst);
         Ok(styx_core::event_controller::InterruptExecuted::NotExecuted)
@@ -60,7 +59,9 @@ impl EventControllerImpl for DidNextEventController {
     }
 }
 
-/// Dummy CPU implementation, just enough to "execute" instructions under a debugger.
+/// Dummy CPU implementation that is just enough to "execute" instructions under a debugger.
+///
+/// The true `DummyCpu` fails because read_register panics.
 #[derive(Debug)]
 struct DummyCpu;
 /// ArchitectureDef for DummyCPU, doesn't matter.
@@ -143,13 +144,12 @@ impl CpuBackend for DummyCpu {
 fn test_step_irqs() {
     let did_tick: &'static AtomicBool = Box::leak(Box::new(AtomicBool::new(false)));
     let proc = ProcessorBuilder::default().with_builder(move |_: &BuildProcessorImplArgs| {
-        let event_controller = DidNextEventController(did_tick);
-        let bundle = ProcessorBundle {
-            event_controller: Box::new(event_controller),
-            cpu: Box::new(DummyCpu),
-            ..Default::default()
-        };
-        Ok(bundle)
+        Ok(ProcessorBundleBuilder::new()
+            .with_vcpu(|v| {
+                v.with_cpu(DummyCpu)
+                    .with_event_controller(DidNextEventController(did_tick))
+            })
+            .build()?)
     });
 
     // small cpu epoch to make test fast

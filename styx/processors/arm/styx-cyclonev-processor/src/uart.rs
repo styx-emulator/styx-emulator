@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! Emulates Uart controller for the Cyclone V HPS.
 use hooks::UartMMRHook;
+use std::sync::{Arc, Mutex};
+use styx_core::event_controller::{PeripheralTickCtx, RaisedIrqs};
 use styx_core::prelude::*;
 use styx_cyclone_v_hps_sys::{uart0, Uart0, Uart1};
 use tokio::sync::broadcast;
-use tracing::{debug, trace, warn};
+use tracing::{debug, warn};
 
 // base UART type
 use super::altera_hps_sys::{IRQn_UART0_RX_TX_IRQn, IRQn_UART1_RX_TX_IRQn};
@@ -69,79 +71,74 @@ impl IntoUartImpl for UartPortBuilder {
             }
         };
 
-        Ok(Box::new(UartPortInner {
+        let inner = UartPortInner {
             interface_id: interface_id.clone(),
             base_address: base,
             tx_rx_irqn: irqn,
             inner_hal: UartHalLayer::new(base),
             miso_stream: miso_rx,
             mosi_stream: mosi_tx,
+        };
+        Ok(Box::new(SharedUartPort {
+            inner: Arc::new(Mutex::new(inner)),
         }))
     }
 }
 
-impl UartImpl for UartPortInner {
+/// Wrapper that holds shared UART port state behind `Arc<Mutex<>>` so that
+/// closure-based hooks can access it without going through `Peripherals`.
+pub struct SharedUartPort {
+    inner: Arc<Mutex<UartPortInner>>,
+}
+
+impl UartImpl for SharedUartPort {
     fn init(
         &mut self,
         proc: &mut styx_core::prelude::BuildingProcessor,
     ) -> Result<(), UnknownError> {
-        proc.core.cpu.mem_read_hook(
-            self.base_address,
-            self.base_address + std::mem::size_of::<uart0::RegisterBlock>() as u64,
+        let guard = self.inner.lock().unwrap();
+        let base_address = guard.base_address;
+        let interface_id = guard.interface_id.clone();
+        drop(guard);
+
+        let cpu = proc.vcpus[0].cpu.as_mut();
+        cpu.mem_read_hook(
+            base_address,
+            base_address + std::mem::size_of::<uart0::RegisterBlock>() as u64,
             Box::new(UartMMRHook::new(
-                self.base_address,
-                self.interface_id.clone(),
+                base_address,
+                interface_id.clone(),
+                self.inner.clone(),
             )),
         )?;
-        proc.core.cpu.mem_write_hook(
-            self.base_address,
-            self.base_address + std::mem::size_of::<uart0::RegisterBlock>() as u64,
+        cpu.mem_write_hook(
+            base_address,
+            base_address + std::mem::size_of::<uart0::RegisterBlock>() as u64,
             Box::new(UartMMRHook::new(
-                self.base_address,
-                self.interface_id.clone(),
+                base_address,
+                interface_id,
+                self.inner.clone(),
             )),
         )?;
-
-        Ok(())
-    }
-
-    fn pre_event_hook(
-        &mut self,
-        _cpu: &mut dyn styx_core::prelude::CpuBackend,
-        _mmu: &mut styx_core::prelude::Mmu,
-        _event_controller: &mut dyn styx_core::prelude::EventControllerImpl,
-    ) -> Result<(), UnknownError> {
-        Ok(())
-    }
-
-    fn post_event_hook(
-        &mut self,
-        _cpu: &mut dyn styx_core::prelude::CpuBackend,
-        _mmu: &mut styx_core::prelude::Mmu,
-        event_controller: &mut dyn styx_core::prelude::EventControllerImpl,
-    ) -> Result<(), UnknownError> {
-        trace!("UART{} got post_event_hook", self.interface_id,);
-
-        self.check_generate_receive_interrupt(event_controller);
-        self.check_generate_transmit_interrupt(event_controller);
 
         Ok(())
     }
 
     fn irqs(&self) -> Vec<ExceptionNumber> {
-        vec![self.tx_rx_irqn]
+        vec![self.inner.lock().unwrap().tx_rx_irqn]
     }
 
-    fn tick(
-        &mut self,
-        _cpu: &mut dyn styx_core::prelude::CpuBackend,
-        _mmu: &mut styx_core::prelude::Mmu,
-        event_controller: &mut dyn styx_core::prelude::EventControllerImpl,
-    ) -> Result<(), UnknownError> {
-        self.grab_bytes();
-        self.check_generate_receive_interrupt(event_controller);
+    fn tick(&mut self, _ctx: &PeripheralTickCtx<'_>) -> Result<RaisedIrqs, UnknownError> {
+        let mut inner = self.inner.lock().unwrap();
+        inner.grab_bytes();
 
-        Ok(())
+        let mut raised = RaisedIrqs::none();
+        let tx_rx_irqn = inner.tx_rx_irqn;
+        if inner.check_generate_receive_interrupt() || inner.check_generate_transmit_interrupt() {
+            raised.push(tx_rx_irqn);
+        }
+
+        Ok(raised)
     }
 }
 
@@ -158,7 +155,7 @@ impl UartPortInner {
     }
 
     /// checks uart mosi for bytes and gives to buffer
-    fn grab_bytes(&mut self) {
+    pub(crate) fn grab_bytes(&mut self) {
         loop {
             let res = self.mosi_stream.try_recv();
             match res {
@@ -176,7 +173,9 @@ impl UartPortInner {
         }
     }
 
-    fn check_generate_receive_interrupt(&mut self, event_controller: &mut dyn EventControllerImpl) {
+    /// Update the UART's interrupt state from the receive FIFO and
+    /// return `true` if an interrupt should be raised.
+    fn check_generate_receive_interrupt(&mut self) -> bool {
         // For FIFO mode, check the Receive FIFO Trigger Level.
         // FIXME: We should just be checking if we've reached the RX trigger level, but we can't
         // rely on that since we do not yet have a mechanism for generating character timeouts.
@@ -199,16 +198,15 @@ impl UartPortInner {
                 .int_rx_data_aval_and_char_timeout
                 .triggered()
             {
-                // now latch the event with the event controller
-                event_controller.latch(self.tx_rx_irqn).unwrap();
+                return true;
             }
         }
+        false
     }
 
-    fn check_generate_transmit_interrupt(
-        &mut self,
-        event_controller: &mut dyn EventControllerImpl,
-    ) {
+    /// Update the UART's interrupt state from the transmit FIFO and
+    /// return `true` if an interrupt should be raised.
+    fn check_generate_transmit_interrupt(&mut self) -> bool {
         // For FIFO mode, check the empty threshold.
         if self.inner_hal.fifo.tx_empty_threshold_reached() {
             // Set the interrupt so the guest can see which interrupt fired upon reading the
@@ -221,10 +219,10 @@ impl UartPortInner {
                 .int_tx_holding_empty
                 .triggered()
             {
-                // now latch the event with the event controller
-                event_controller.latch(self.tx_rx_irqn).unwrap();
+                return true;
             }
         }
+        false
     }
 }
 

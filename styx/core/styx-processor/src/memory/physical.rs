@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
+use std::ops::Range;
+
 use serde::Deserialize;
 use styx_errors::anyhow::anyhow;
+use styx_errors::UnknownError;
 use thiserror::Error;
 
-use super::{
-    atomic_word::CompareExchangeResult, region::RegionStore, MemoryArchitecture, MemoryPermissions,
-};
+use super::atomic_word::CompareExchangeResult;
+use super::region::RegionStore;
+use super::{MemoryArchitecture, MemoryPermissions};
 use crate::memory::memory_region::MemoryRegion;
-
-use styx_errors::UnknownError;
 
 #[derive(Error, Debug)]
 pub enum MemoryOperationError {
@@ -157,8 +158,8 @@ pub enum PhysicalMemoryVariant {
 /// The [`MemoryBackend`] has three configurations (correlating to [`PhysicalMemoryVariant`]):
 ///
 /// 1. Harvard Flat Memory
-/// 2. VonNeumann Flat Memory
-/// 3. VonNeumann Region store
+/// 2. Von Neumann Flat Memory
+/// 3. Von Neumann Region store
 ///
 /// Flat memory variants do not have regions or memory permissions.
 /// Any `u64` address is valid and uses a giant allocated array to represent memory.
@@ -166,10 +167,10 @@ pub enum PhysicalMemoryVariant {
 /// of memory until it has been accessed.
 /// For this reason, avoid zeroing large sections of memory when using the Flat Memory.
 ///
-/// Harvard configuration splits code and data memory while VonNeumann has a unified
+/// Harvard configuration splits code and data memory while Von Neumann has a unified
 /// memory space.
 /// Read/write operations have `_code` and `_data` variants which will be identical
-/// in a VonNeumann configuration.
+/// in a Von Neumann configuration.
 /// [`MemoryBackend`]
 ///
 /// ## Concurrency
@@ -216,6 +217,12 @@ impl MemoryBackend {
                 memory: RegionStore::empty(),
             },
         }
+    }
+
+    /// Returns the range made up of the min and max addresses supported
+    /// by the physical memory backend.
+    pub fn valid_memory_range(&self) -> MemoryArchitecture<Range<u64>> {
+        self.min_address().with(self.max_address(), |a, b| a..b)
     }
 
     /// Equivalent to [`MemoryBackend::new(PhysicalMemoryVariant::RegionStore)`]
@@ -281,7 +288,7 @@ impl MemoryBackend {
     /// Add a new physical memory region with optional [`Space`].
     ///
     /// The `space` can be specified as `Some(Space)` so add to that space if Harvard type
-    /// or just add the region if VonNeuman. `None` will add the region to both [`Space::Code`]
+    /// or just add the region if Von Neuman. `None` will add the region to both [`Space::Code`]
     /// [`Space::Data`] if Harvard.
     pub fn add_region(
         &mut self,
@@ -486,6 +493,7 @@ impl MemoryBackend {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct Data<'a>(&'a MemoryBackend);
 impl super::helpers::Readable for Data<'_> {
     type Error = MemoryOperationError;
@@ -502,6 +510,7 @@ impl super::helpers::Writable for Data<'_> {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct Code<'a>(&'a MemoryBackend);
 impl super::helpers::Readable for Code<'_> {
     type Error = MemoryOperationError;

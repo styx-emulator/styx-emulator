@@ -8,7 +8,7 @@ use styx_core::cpu::arch::arm::gdb_targets::{
 };
 use styx_core::cpu::arch::blackfin::gdb_targets::BlackfinDescription;
 use styx_core::cpu::arch::ppc32::gdb_targets::Mpc8xxTargetDescription;
-use styx_core::executor::DefaultExecutor;
+use styx_core::executor::{DefaultExecutor, ExecutorKind};
 use styx_core::grpc::args::Target;
 use styx_core::prelude::Forever;
 use styx_core::tracebus::STRACE_ENV_VAR;
@@ -45,28 +45,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         match args.target {
             Target::CycloneV => ProcessorFactory::create_processor_no_svc(
                 &args,
-                GdbExecutor::<ArmCoreDescription>::new(params)?,
+                ExecutorKind::custom(GdbExecutor::<ArmCoreDescription>::new(params)?),
             )?,
             Target::Kinetis21 => ProcessorFactory::create_processor_no_svc(
                 &args,
-                GdbExecutor::<Armv7emDescription>::new(params)?,
+                ExecutorKind::custom(GdbExecutor::<Armv7emDescription>::new(params)?),
             )?,
             Target::PowerQuicc => ProcessorFactory::create_processor_no_svc(
                 &args,
-                GdbExecutor::<Mpc8xxTargetDescription>::new(params)?,
+                ExecutorKind::custom(GdbExecutor::<Mpc8xxTargetDescription>::new(params)?),
             )?,
 
             Target::Stm32f107 => ProcessorFactory::create_processor_no_svc(
                 &args,
-                GdbExecutor::<ArmMProfileDescription>::new(params)?,
+                ExecutorKind::custom(GdbExecutor::<ArmMProfileDescription>::new(params)?),
             )?,
             Target::Blackfin512 => ProcessorFactory::create_processor_no_svc(
                 &args,
-                GdbExecutor::<BlackfinDescription>::new(params)?,
+                ExecutorKind::custom(GdbExecutor::<BlackfinDescription>::new(params)?),
             )?,
         }
     } else {
-        ProcessorFactory::create_processor_no_svc(&args, DefaultExecutor::default())?
+        ProcessorFactory::create_processor_no_svc(
+            &args,
+            ExecutorKind::stride(DefaultExecutor::default()),
+        )?
     };
 
     match proc_process.run(Forever) {

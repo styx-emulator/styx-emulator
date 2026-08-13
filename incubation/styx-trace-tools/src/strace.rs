@@ -219,7 +219,7 @@ fn main() {
             //  [u8; 24] {
             let mut f = File::open(filename).expect("no file found");
             let metadata = std::fs::metadata(filename).expect("unable to read metadata");
-            let mut buffer: [u8; 24] = [0; 24];
+            let mut buffer = [0u8; TRACE_EVENT_SIZE];
             // let mut buffer = vec![0; metadata.len() as usize];
             let nrecs = metadata.len() / 24;
             for _ in 0..nrecs {

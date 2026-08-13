@@ -1135,6 +1135,7 @@ mod tests {
         let event = MemReadEvent {
             event_num: 1,
             etype: TraceEventType::MEM_READ,
+            vcpu_id: 0,
             size_bytes: 4,
             pc: 0x0000_DEAD,
             address: 0x0000_FACE,

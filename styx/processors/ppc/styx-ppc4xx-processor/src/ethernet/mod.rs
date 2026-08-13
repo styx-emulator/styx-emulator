@@ -27,6 +27,7 @@ mod service;
 
 use service::EthernetControllerService;
 use styx_core::errors::UnknownError;
+use styx_core::event_controller::{PeripheralTickCtx, RaisedIrqs};
 use styx_core::grpc::io::ethernet::ethernet_port_server::EthernetPortServer;
 use styx_core::grpc::io::ethernet::EthernetPacket;
 use styx_core::prelude::*;
@@ -35,6 +36,7 @@ use crate::core_event_controller::Event;
 use derivative::Derivative;
 
 use std::collections::VecDeque;
+use std::sync::{Arc, Mutex};
 use tokio::sync::broadcast;
 
 mod hooks;
@@ -96,13 +98,19 @@ impl std::fmt::Display for Mac {
     }
 }
 
+/// Holds the internal state of the ethernet peripheral.
+///
+/// Peripheral state is no longer reachable from hooks via the event controller
+/// (peripherals moved to the processor-level event distributor), so this
+/// state is shared behind an `Arc<Mutex<_>>` ([`EthernetController`]) that both
+/// the peripheral and its register hooks hold a clone of.
 #[derive(Derivative)]
 #[derivative(Debug)]
-pub struct EthernetController {
+pub struct EthernetControllerInner {
     tx: broadcast::Sender<EthernetPacket>,
     rx_send: broadcast::Sender<EthernetPacket>,
     rx: broadcast::Receiver<EthernetPacket>,
-    /// structure to hold received packes
+    /// structure to hold received packets>
     rx_fifo: VecDeque<EthernetPacket>,
 
     /// holds the current Mac address of this interface
@@ -117,7 +125,7 @@ pub struct EthernetController {
     tx_len: usize,
 }
 
-impl EthernetController {
+impl EthernetControllerInner {
     /// true if data is available to be read
     pub fn rx_data_available(&self) -> bool {
         !self.rx_fifo.is_empty()
@@ -214,35 +222,64 @@ impl EthernetController {
     }
 }
 
+/// The ethernet peripheral.
+///
+/// Wraps [`EthernetControllerInner`] in a shared handle so the register
+/// hooks (registered during [`Peripheral::init`]) and the peripheral's
+/// [`Peripheral::tick`] operate on the same state.
+#[derive(Clone)]
+pub struct EthernetController {
+    inner: Arc<Mutex<EthernetControllerInner>>,
+}
+
+impl EthernetController {
+    pub fn new() -> Self {
+        Self {
+            inner: Arc::new(Mutex::new(EthernetControllerInner::new())),
+        }
+    }
+}
+
 impl Peripheral for EthernetController {
     fn init(&mut self, proc: &mut BuildingProcessor) -> Result<(), UnknownError> {
         // add memory read and write hooks for the TX and RX control/status register memory regions
-        proc.core.cpu.mem_write_hook(
+        proc.vcpus[0].cpu.mem_write_hook(
             ETHER_BASE_ADDR + TX_LEN_OFFSET,
             ETHER_BASE_ADDR + TX_CTL_OFFSET,
-            Box::new(hooks::EthernetTxHook),
+            Box::new(hooks::EthernetTxHook {
+                inner: self.inner.clone(),
+            }),
         )?;
-        proc.core.cpu.mem_write_hook(
+        proc.vcpus[0].cpu.mem_write_hook(
             ETHER_BASE_ADDR + RX_CTL_OFFSET,
             ETHER_BASE_ADDR + RX_CTL_OFFSET,
-            Box::new(hooks::EthernetRxHook),
+            Box::new(hooks::EthernetRxHook {
+                inner: self.inner.clone(),
+            }),
         )?;
-        proc.core.cpu.mem_read_hook(
+        proc.vcpus[0].cpu.mem_read_hook(
             ETHER_BASE_ADDR + RX_CTL_OFFSET,
             ETHER_BASE_ADDR + RX_CTL_OFFSET,
-            Box::new(hooks::EthernetRxHook),
+            Box::new(hooks::EthernetRxHook {
+                inner: self.inner.clone(),
+            }),
         )?;
-        proc.core.cpu.mem_read_hook(
+        proc.vcpus[0].cpu.mem_read_hook(
             ETHER_BASE_ADDR + TX_CTL_OFFSET,
             ETHER_BASE_ADDR + TX_CTL_OFFSET,
-            Box::new(hooks::EthernetTxHook),
+            Box::new(hooks::EthernetTxHook {
+                inner: self.inner.clone(),
+            }),
         )?;
 
         // create inner wrapper struct that implements the service
-        let service = EthernetPortServer::new(EthernetControllerService {
-            tx: self.tx.clone(),
-            rx: self.rx_send.clone(),
-        });
+        let service = {
+            let inner = self.inner.lock().unwrap();
+            EthernetPortServer::new(EthernetControllerService {
+                tx: inner.tx.clone(),
+                rx: inner.rx_send.clone(),
+            })
+        };
 
         proc.routes.add_service(service);
         Ok(())
@@ -256,25 +293,23 @@ impl Peripheral for EthernetController {
         "Ethernet Controller"
     }
 
-    fn tick(
-        &mut self,
-        _cpu: &mut dyn CpuBackend,
-        _mmu: &mut Mmu,
-        event_controller: &mut dyn EventControllerImpl,
-        _delta: &styx_core::prelude::Delta,
-    ) -> Result<(), UnknownError> {
-        self.grab_packets()?;
+    fn tick(&mut self, _ctx: &PeripheralTickCtx<'_>) -> Result<RaisedIrqs, UnknownError> {
+        let mut inner = self.inner.lock().unwrap();
+        inner.grab_packets()?;
 
         // both global interrupt and tx interrupt flags need to be set for an interrupt to be generated
-        if self.rx_data_available() && self.global_interrupts_enabled && self.tx_interrupts_enabled
+        let mut raised = RaisedIrqs::none();
+        if inner.rx_data_available()
+            && inner.global_interrupts_enabled
+            && inner.tx_interrupts_enabled
         {
-            event_controller.latch(Event::Ethernet.into()).unwrap();
+            raised.push(Event::Ethernet.into());
         }
-        Ok(())
+        Ok(raised)
     }
 
-    fn reset(&mut self, _cpu: &mut dyn CpuBackend, mmu: &mut Mmu) -> Result<(), UnknownError> {
-        self.reset_state(mmu)
+    fn reset(&mut self, mmu: &mut Mmu) -> Result<(), UnknownError> {
+        self.inner.lock().unwrap().reset_state(mmu)
     }
 }
 

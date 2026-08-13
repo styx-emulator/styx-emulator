@@ -3,12 +3,10 @@
 use tap::Conv;
 use thiserror::Error;
 
+use super::atomic_word::AtomicWord;
+use super::physical::AtomicMemoryOperationError;
+use super::{CompareExchangeError, MemoryOperation, MemoryType, Mmu, TlbTranslateError};
 use crate::cpu::CpuBackend;
-
-use super::{
-    atomic_word::AtomicWord, physical::AtomicMemoryOperationError, CompareExchangeError,
-    MemoryOperation, MemoryType, Mmu, TlbTranslateError,
-};
 
 /// Returned from a Load Linked call to enable a Store Conditional.
 ///
@@ -284,9 +282,8 @@ fn check_load(address: u64, size: usize) -> Result<Load, AtomicMemoryOperationEr
 
 #[cfg(test)]
 mod tests {
-    use crate::memory::helpers::{ReadExt, WriteExt};
-
     use super::*;
+    use crate::memory::helpers::{ReadExt, WriteExt};
 
     #[test]
     fn test_ll_sc() {

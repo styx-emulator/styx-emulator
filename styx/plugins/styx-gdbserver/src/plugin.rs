@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! Implementation of [`GdbExecutor`], used to debug styx processors with "remote" _gdb clients_.
 //!
-//! [`GdbExecutor`] is implemented as a [`ExecutorImpl`]
+//! [`GdbExecutor`] is implemented as a [`CustomExecutor`]
 //! and leverages the [`gdbstub`] crate. The plugin implements the
-//! [`ExecutorImpl`] trait because
+//! [`CustomExecutor`] trait because
 //! it will control execution of the styx emulator (ie: start and stop the cpu).
 //!
 //! ## Loading and using [`GdbExecutor`]
@@ -15,21 +15,17 @@
 //! ### Example
 //! The plugin will wait for a connection from gdb client on `tcp port 9999`.
 //!
-//! ```no_run
+//! ```ignore
 //! use styx_core::cpu::arch::arm::gdb_targets::Armv7emDescription as ArmGdb;
-//! use styx_core::cpu::arch::arm::ArmVariants;
-//! use styx_core::cpu::ArchEndian;
 //! use styx_core::loader::RawLoader;
-//! use styx_core::executor::Forever;
-//! use styx_emulator::processors::arm::kinetis21::Kinetis21Builder;
-//! use styx_gdbserver::{GdbExecutor, GdbPluginParams};
+//! use styx_core::executor::{Forever, ExecutorKind};
 //! use styx_core::processor::*;
-//! use styx_core::sync::sync::Arc;
+//! use styx_gdbserver::{GdbExecutor, GdbPluginParams};
 //!
 //! let executor = GdbExecutor::<ArmGdb>::new(GdbPluginParams::tcp("0.0.0.0", 9999, true)).unwrap();
 //! let mut proc = ProcessorBuilder::default()
 //!     .with_builder(Kinetis21Builder::default())
-//!     .with_executor(executor)
+//!     .with_executor_kind(ExecutorKind::custom(executor))
 //!     .with_loader(RawLoader)
 //!     .with_target_program(String::from("path to program"))
 //!     .build()
@@ -41,9 +37,13 @@ use crate::{event_loop, target_impl::TargetImpl, GDBOptions};
 use event_loop::WaitForConnection;
 use gdbstub::stub::{DisconnectReason, GdbStub};
 use std::marker::PhantomData;
+use std::time::Instant;
+use styx_core::core::{ProcessorCore, VcpuCore};
+use styx_core::executor::{CustomExecutor, ExecutionConstraintConcrete};
 use styx_core::plugins::Plugins;
 use styx_core::prelude::*;
-use styx_core::{executor::ExecutorImpl, sync::sync::Arc};
+use styx_core::processor::EmulationReport;
+use styx_core::sync::sync::Arc;
 use tracing::{error, info, warn};
 
 #[derive(Debug)]
@@ -99,9 +99,6 @@ where
     /// # use styx_core::cpu::arch::arm::gdb_targets::ArmMProfileDescription as ArmGdb;
     /// let plugin = GdbExecutor::<ArmGdb>::new(GdbPluginParams::uds("/tmp/gdb.x", true));
     /// ```
-    ///
-    /// ## Also See
-    /// Full example in [`plugin module docs`](self)
     pub fn new(params: event_loop::GdbPluginParams) -> Result<Self, UnknownError> {
         // get the gdb bind parameters, and bind
         if let Err(_e) = params.bind() {
@@ -128,30 +125,38 @@ where
         self
     }
 
-    /// Getter for the port assigned to the plugin assigned by the operating
-    /// system.
+    /// Getter for the port assigned by the operating system.
     ///
-    /// # Note
-    ///
-    /// When using a unix domain socket for the network bind address, this
-    /// will be `0`
+    /// When using a unix domain socket, this will be `0`.
     pub fn port(&self) -> u16 {
         self.port_in_use
     }
+}
 
-    pub fn run_gdb(&mut self, proc: &mut ProcessorCore) {
+impl<GdbArchImpl> CustomExecutor for GdbExecutor<GdbArchImpl>
+where
+    GdbArchImpl: gdbstub::arch::Arch + 'static + std::fmt::Debug,
+    GdbArchImpl::Registers: styx_core::cpu::arch::GdbRegistersHelper,
+    GdbArchImpl::RegId: super::GdbArchIdSupportTrait,
+{
+    fn execute(
+        &mut self,
+        vcpus: &mut PerVcpuSlice<VcpuCore>,
+        core: &mut ProcessorCore,
+        plugins: &mut Plugins,
+        _constraints: &ExecutionConstraintConcrete,
+    ) -> Result<Vec<EmulationReport>, UnknownError> {
         let options = self.options.clone();
         let params = self.params.clone();
-
         // create a single handle to emulation
-        let mut emu = TargetImpl::<GdbArchImpl>::new(proc, options);
+        let mut emu = TargetImpl::<GdbArchImpl>::new(vcpus, core, plugins, options);
 
         // run loop, only exit's on error
         loop {
             // now wait for client connection
             let cnx = params.wait_for_connection().unwrap();
             let stub = GdbStub::new(cnx);
-
+            emu.last_global_wall = Some(Instant::now());
             // run gdb stub with our connection, and custom event loop
             let exit_reason =
                 stub.run_blocking::<&event_loop::EmuGdbEventLoop<GdbArchImpl>>(&mut emu);
@@ -161,7 +166,7 @@ where
                 Ok(disconnect_reason) => match disconnect_reason {
                     // client disconnected, continue execution loop
                     DisconnectReason::Disconnect => {
-                        info!("Client has disconnected, waiting for next connection");
+                        info!("Client disconnected, waiting for next connection");
                     }
                     // target crashed, so handle and then exit loop
                     DisconnectReason::TargetExited(code) => {
@@ -191,25 +196,16 @@ where
                 }
             }
         }
-    }
-}
 
-impl<GdbArchImpl> ExecutorImpl for GdbExecutor<GdbArchImpl>
-where
-    GdbArchImpl: gdbstub::arch::Arch + 'static + std::fmt::Debug,
-    GdbArchImpl::Registers: styx_core::cpu::arch::GdbRegistersHelper,
-    GdbArchImpl::RegId: super::GdbArchIdSupportTrait,
-{
-    fn emulation_setup(
-        &mut self,
-        proc: &mut ProcessorCore,
-        _plugins: &mut Plugins,
-    ) -> Result<(), UnknownError> {
-        self.run_gdb(proc);
-        Ok(())
-    }
-
-    fn valid_emulation_conditions(&mut self, _proc: &mut ProcessorCore) -> bool {
-        false
+        let reports = (0..vcpus.len())
+            .map(|_| {
+                EmulationReport::new(
+                    styx_core::cpu::TargetExitReason::InstructionCountComplete,
+                    styx_core::processor::InstructionReport::default(),
+                    std::time::Duration::ZERO,
+                )
+            })
+            .collect();
+        Ok(reports)
     }
 }

@@ -42,7 +42,7 @@ pub trait ExecutionConstraint {
 }
 
 /// [Sized] type of [ExecutionConstraint].
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ExecutionConstraintConcrete {
     /// Upper bound on the number of instructions to execute, `None` means no limit.
     pub inst_count: Option<u64>,

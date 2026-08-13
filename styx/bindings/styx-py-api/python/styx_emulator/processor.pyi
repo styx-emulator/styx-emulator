@@ -219,6 +219,10 @@ class TargetExitReason(Enum):
     target platform. The string should detail what action caused
     this to occur
     """
+    OtherCoreExited = ...
+    r"""
+    This vCPU was stopped because another core exited fatally
+    """
     ProtectedMemoryFetch = ...
     r"""
     Target attempted to fetch memory that does not have any permissions

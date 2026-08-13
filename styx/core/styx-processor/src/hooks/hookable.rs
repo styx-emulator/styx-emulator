@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use std::{any::Any, sync::Arc};
+use std::any::Any;
+use std::sync::Arc;
 
 use static_assertions::assert_obj_safe;
 use styx_errors::UnknownError;
 use thiserror::Error;
 
+use super::callbacks::{CodeHook, ProtectionFaultHook};
 use super::{
-    callbacks::{CodeHook, ProtectionFaultHook},
     BlockHook, HookToken, InterruptHook, InvalidInstructionHook, MemoryReadHook,
     MemoryReadHookData, MemoryReadHookDataFn, MemoryWriteHook, MemoryWriteHookData,
     MemoryWriteHookDataFn, StyxHook, UnmappedFaultHook,
@@ -256,9 +257,8 @@ pub trait Hookable {
 
 #[cfg(test)]
 mod tests {
-    use crate::hooks::CoreHandle;
-
     use super::*;
+    use crate::hooks::CoreHandle;
 
     struct TestHookable;
     impl Hookable for TestHookable {

@@ -66,8 +66,8 @@
 //!         self: Box<Self>,
 //!         proc: &mut BuildingProcessor,
 //!     ) -> Result<Box<dyn Plugin>, UnknownError> {
-//!         // initialize plugin by adding our hook
-//!         proc.core.cpu.add_hook(StyxHook::unmapped_fault(
+//!         // initialize plugin by adding our hook to the first vCPU
+//!         proc.vcpus[0].cpu.add_hook(StyxHook::unmapped_fault(
 //!             ..,
 //!             HaltableHook { halt: self.halt },
 //!         ))?;
