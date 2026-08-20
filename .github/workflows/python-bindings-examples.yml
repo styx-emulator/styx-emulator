@@ -73,7 +73,7 @@ jobs:
         run: |
           . venv/bin/activate
           cd styx/bindings/styx-py-api
-          pip install . pytest
+          pip install . pytest keystone-engine
           just test
 
       - name: Clean

@@ -7,3 +7,4 @@ test:
     pytest examples/uart-integration-test/main.py
     python3 examples/uart-kinetis21/main.py
     python3 examples/simple-stm32f107/main.py
+    python3 examples/unicorn-replacement/main.py

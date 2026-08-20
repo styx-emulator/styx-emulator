@@ -22,6 +22,7 @@ benefit from the additions. Enjoy.
 11. [Fuzzer Plugin Example](#using-the-fuzzer-plugin)
 12. [Adding an External Cpu Backend](#adding-an-external-backend)
 13. [GDB Multi-vCPU (two-core PPC405)](#gdb-multicore-ppc)
+14. [Styx as a Replacement for Unicorn](#unicorn-replacement)
 
 .. _using-a-processor:
 
@@ -158,3 +159,14 @@ a tiny counter loop that has one per-core private counter and one shared
 counter in memory. Use it to explore `info threads`, per-core breakpoints, and
 watchpoints. See the example's own README for the full memory layout of the
 firmware/counters and interactive GDB session walkthrough.
+
+.. _unicorn-replacement:
+
+### Styx as a Replacement for Unicorn
+
+Path: `./unicorn-replacement`
+
+This example uses `Styx` purely as a CPU emulator, the way `Unicorn` is normally used. It
+assembles a few Thumb instructions with `keystone`, runs them on a `RawProcessor`, and traces
+the execution with instruction and interrupt hooks. The Python equivalent is in
+`styx/bindings/styx-py-api/examples/unicorn-replacement`.
