@@ -18,6 +18,7 @@ members = [
   "./examples/raw-processor",
   "./examples/styx-devices",
   "./examples/talking-to-peripherals",
+  "./examples/unicorn-replacement",
   "./examples/using-a-processor",
   "./examples/using-processor-hooks",
   "./examples/external-backend",
