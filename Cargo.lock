@@ -8289,6 +8289,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "unicorn-replacement"
+version = "1.2.0"
+dependencies = [
+ "keystone",
+ "styx-emulator",
+ "styx-workspace-hack",
+]
+
+[[package]]
 name = "unindent"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"

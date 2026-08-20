@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use crate::{
-    cpu::{Backend, Hook},
+    cpu::{ArchEndian, ArchVariant, Backend, Hook},
     executor::StyxExecutor,
     loader::Loader,
     plugin::Plugin,
@@ -12,6 +12,7 @@ use pyo3::{
 };
 use pyo3_stub_gen::derive::*;
 use styx_emulator::{
+    arch::ArchitectureDef,
     cpu::arch::ppc32::Ppc32Variants,
     prelude::anyhow,
     processors::{
@@ -22,13 +23,20 @@ use styx_emulator::{
         bfin::blackfin::BlackfinBuilder,
         ppc::{powerquicci::Mpc8xxBuilder, ppc4xx::PowerPC405Builder},
         superh::superh2a::SuperH2aBuilder,
+        RawProcessor,
     },
 };
 
 /// A builder for constructing a processor emulator
 #[gen_stub_pyclass]
 #[pyclass(unsendable, module = "processor")]
-pub struct ProcessorBuilder(styx_emulator::prelude::ProcessorBuilder<'static>);
+pub struct ProcessorBuilder {
+    builder: styx_emulator::prelude::ProcessorBuilder<'static>,
+    /// architecture variant, only used by [`Target::Raw`]
+    variant: Option<styx_emulator::prelude::ArchVariant>,
+    /// byte order, only used by [`Target::Raw`]
+    endian: Option<styx_emulator::prelude::ArchEndian>,
+}
 
 impl ProcessorBuilder {
     fn swapero(
@@ -37,9 +45,9 @@ impl ProcessorBuilder {
             styx_emulator::prelude::ProcessorBuilder,
         ) -> styx_emulator::prelude::ProcessorBuilder,
     ) {
-        let tmp = std::mem::take(&mut self.0);
+        let tmp = std::mem::take(&mut self.builder);
         let tmp = f(tmp);
-        self.0 = tmp;
+        self.builder = tmp;
     }
 }
 
@@ -50,7 +58,29 @@ impl ProcessorBuilder {
     #[allow(clippy::new_without_default)]
     #[new]
     pub fn new() -> Self {
-        Self(styx_emulator::prelude::ProcessorBuilder::default())
+        Self {
+            builder: styx_emulator::prelude::ProcessorBuilder::default(),
+            variant: None,
+            endian: None,
+        }
+    }
+
+    /// set the architecture variant of the new processor
+    ///
+    /// Only [`Target::Raw`] uses this, every other target has a fixed variant.
+    #[setter]
+    pub fn set_variant(&mut self, variant: ArchVariant) -> PyResult<()> {
+        self.variant = Some(variant.into());
+        Ok(())
+    }
+
+    /// set the byte order of the new processor
+    ///
+    /// Only [`Target::Raw`] uses this, every other target has a fixed byte order.
+    #[setter]
+    pub fn set_endian(&mut self, endian: ArchEndian) -> PyResult<()> {
+        self.endian = Some(endian.into());
+        Ok(())
     }
 
     /// set the path to the loader's input file
@@ -139,7 +169,7 @@ impl ProcessorBuilder {
 
     /// build the new processor and reset the builder
     pub fn build(&mut self, target: Target) -> PyResult<Processor> {
-        let builder = std::mem::take(&mut self.0);
+        let builder = std::mem::take(&mut self.builder);
         let builder = match target {
             Target::CycloneV => builder.with_builder(CycloneVBuilder::default()),
             Target::Mpc8xx => builder.with_builder(Mpc8xxBuilder::new(
@@ -152,7 +182,18 @@ impl ProcessorBuilder {
             Target::Stm32f405 => builder.with_builder(Stm32f405Builder::default()),
             Target::Bf512 => builder.with_builder(BlackfinBuilder::default()),
             Target::Raw => {
-                todo!("need cannot determine variant, arch, and endian here");
+                let variant = self
+                    .variant
+                    .take()
+                    .ok_or(anyhow!("a raw target needs a variant"))
+                    .map_err(super::convert_machine_err)?;
+                let endian = self
+                    .endian
+                    .take()
+                    .ok_or(anyhow!("a raw target needs an endian"))
+                    .map_err(super::convert_machine_err)?;
+                let arch = Box::<dyn ArchitectureDef>::from(variant).architecture();
+                builder.with_builder(RawProcessor::new(arch, variant, endian))
             }
             Target::SuperH2A => builder.with_builder(SuperH2aBuilder),
         };

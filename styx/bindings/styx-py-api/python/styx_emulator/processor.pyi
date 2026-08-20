@@ -92,6 +92,18 @@ class ProcessorBuilder:
         r"""
         create a new processor builder
         """
+    def set_variant(self, variant:ArmVariant | BlackfinVariant | Ppc32Variant | SuperHVariant | Mips64Variant) -> None:
+        r"""
+        set the architecture variant of the new processor
+
+        Only [`Target::Raw`] uses this, every other target has a fixed variant.
+        """
+    def set_endian(self, endian:ArchEndian) -> None:
+        r"""
+        set the byte order of the new processor
+
+        Only [`Target::Raw`] uses this, every other target has a fixed byte order.
+        """
     def set_target_program(self, pgm:str) -> None:
         r"""
         set the path to the loader's input file
