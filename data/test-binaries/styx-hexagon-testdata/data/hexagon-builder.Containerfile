@@ -18,7 +18,7 @@
 #
 # TODO add the mutiarch tcg tests
 
-FROM docker.io/library/debian:11-slim AS base
+FROM docker.io/library/debian:13-slim AS base
 
 ARG jobs=4
 
