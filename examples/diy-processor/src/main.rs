@@ -71,7 +71,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .add_hook(StyxHook::code(0x690C..=0x690D, log_signal))
         .build()?;
 
-    println!("initial PC=0x{:x}", proc.core.pc().unwrap());
+    println!("initial PC=0x{:x}", proc.vcpus[0].cpu.pc().unwrap());
     proc.run(Forever)?;
 
     Ok(())

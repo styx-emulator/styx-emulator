@@ -29,10 +29,10 @@ impl SubcommandRunnable for HooksCommand {
         GdbArchImpl::Registers: GdbRegistersHelper,
         GdbArchImpl::RegId: GdbArchIdSupportTrait,
     {
-        let mut s = format!("Mem Hooks: {}\n", target.mem_hook_cache.tracked_len());
+        let mut s = format!("Mem Hooks: {}\n", target.watchpoints.tracked_len());
         s.push_str(&format!(
             "Pending:   {}\n",
-            target.mem_hook_cache.pending_len()
+            target.watchpoints.pending_len()
         ));
         outputln!(out, "{}", s);
         Ok(())

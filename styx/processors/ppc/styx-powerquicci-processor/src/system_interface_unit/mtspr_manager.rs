@@ -4,6 +4,7 @@ use derive_more::Display;
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
 use styx_core::errors::UnknownError;
+use styx_core::sync::sync::{Arc, Mutex};
 use styx_core::{
     cpu::arch::ppc32::Ppc32Register,
     hooks::CoreHandle,
@@ -11,7 +12,7 @@ use styx_core::{
 };
 use tracing::{error, info, trace, warn};
 
-use crate::system_interface_unit::SystemInterfaceUnit;
+use crate::system_interface_unit::{set_immr_hooks, SystemInterfaceUnitInner};
 
 /// Manages the state if the internal effects / status of
 /// internal MTSPR SPR's
@@ -252,7 +253,10 @@ fn skip_cpu_insn(cpu: &mut dyn CpuBackend) {
     cpu.set_pc(next_pc).unwrap();
 }
 
-pub(crate) fn mtspr_proxy(proc: CoreHandle) -> Result<(), UnknownError> {
+pub(crate) fn mtspr_proxy(
+    proc: CoreHandle,
+    inner: &Arc<Mutex<SystemInterfaceUnitInner>>,
+) -> Result<(), UnknownError> {
     let pc = proc.cpu.pc().unwrap();
 
     // get insn @ pc
@@ -260,29 +264,23 @@ pub(crate) fn mtspr_proxy(proc: CoreHandle) -> Result<(), UnknownError> {
 
     // check if insn is mtspr
     if is_mtspr(insn_bytes) {
-        let siu = proc
-            .event_controller
-            .peripherals
-            .get::<SystemInterfaceUnit>()
-            .unwrap();
-
         let mtspr = MtsprInstruction::new(insn_bytes, proc.cpu).unwrap();
         trace!("MTSPR @ {:#x}: `{:?}`", pc, mtspr);
         match mtspr.spr {
             SprEnum::TBLw => {
                 trace!("executing {:?} impl", mtspr);
-                siu.mtspr_mgr.tblw = mtspr.value;
+                inner.lock().unwrap().mtspr_mgr.tblw = mtspr.value;
                 skip_cpu_insn(proc.cpu);
             }
             SprEnum::TBUw => {
                 trace!("executing {:?} impl", mtspr);
-                siu.mtspr_mgr.tbuw = mtspr.value;
+                inner.lock().unwrap().mtspr_mgr.tbuw = mtspr.value;
                 skip_cpu_insn(proc.cpu);
             }
             SprEnum::DEC => {
                 trace!("executing {:?} impl", mtspr);
                 error!("DEC = {:#x}", mtspr.value);
-                siu.mtspr_mgr.dec = mtspr.value;
+                inner.lock().unwrap().mtspr_mgr.dec = mtspr.value;
                 skip_cpu_insn(proc.cpu);
             }
             SprEnum::CTR | SprEnum::LR => {
@@ -290,7 +288,7 @@ pub(crate) fn mtspr_proxy(proc: CoreHandle) -> Result<(), UnknownError> {
             }
             SprEnum::IMMR => {
                 info!("mtspr IMMR, relocating to {:#x}", mtspr.value);
-                siu.set_immr_hooks(proc.cpu, mtspr.value as u64).unwrap();
+                set_immr_hooks(inner, proc.cpu, mtspr.value as u64).unwrap();
             }
             not_handled => {
                 // nothing to do for this variant

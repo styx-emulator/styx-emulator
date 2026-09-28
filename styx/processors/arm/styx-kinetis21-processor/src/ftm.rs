@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use std::mem::offset_of;
-use styx_core::errors::anyhow::anyhow;
+use std::sync::{Arc, Mutex};
+use styx_core::event_controller::{PeripheralTickCtx, RaisedIrqs};
+use styx_core::hooks::{MemoryReadHook, MemoryWriteHook};
 use styx_core::prelude::*;
 use tracing::trace;
 
@@ -40,27 +42,47 @@ impl FlexibleTimer {
         }
     }
 
-    fn register_hooks(&self, cpu: &mut dyn CpuBackend) -> Result<(), UnknownError> {
+    fn register_hooks(
+        timer: &Arc<Mutex<FlexibleTimer>>,
+        cpu: &mut dyn CpuBackend,
+    ) -> Result<(), UnknownError> {
+        let base_address = timer.lock().unwrap().base_address;
         let type_size = core::mem::size_of::<FTM_Type>() as u64;
 
         // blanket mem read hook
         cpu.mem_read_hook(
-            self.base_address as u64,
-            self.base_address as u64 + type_size,
-            Box::new(blanket_mem_read_hook),
+            base_address as u64,
+            base_address as u64 + type_size,
+            Box::new(BlanketMemReadHook {
+                timer: timer.clone(),
+            }),
         )?;
 
         // blanket mem write hook
         cpu.mem_write_hook(
-            self.base_address as u64,
-            self.base_address as u64 + type_size,
-            Box::new(blanket_mem_write_hook),
+            base_address as u64,
+            base_address as u64 + type_size,
+            Box::new(BlanketMemWriteHook {
+                timer: timer.clone(),
+            }),
         )?;
 
         // check if guest is enabling / disabling the timer
-        let ftm_sc = self.base_address as u64 + offset_of!(FTM_Type, SC) as u64;
-        cpu.mem_write_hook(ftm_sc, ftm_sc + 4, Box::new(ftm_sc_write_hook))?;
-        cpu.mem_read_hook(ftm_sc, ftm_sc + 4, Box::new(ftm_sc_read_hook))?;
+        let ftm_sc = base_address as u64 + offset_of!(FTM_Type, SC) as u64;
+        cpu.mem_write_hook(
+            ftm_sc,
+            ftm_sc + 4,
+            Box::new(FtmScWriteHook {
+                timer: timer.clone(),
+            }),
+        )?;
+        cpu.mem_read_hook(
+            ftm_sc,
+            ftm_sc + 4,
+            Box::new(FtmScReadHook {
+                timer: timer.clone(),
+            }),
+        )?;
 
         Ok(())
     }
@@ -71,37 +93,22 @@ impl Peripheral for FlexibleTimer {
         vec![self.irqn]
     }
 
-    fn post_event_hook(
-        &mut self,
-        _cpu: &mut dyn CpuBackend,
-        _mmu: &mut Mmu,
-        _event_controller: &mut dyn EventControllerImpl,
-        num: ExceptionNumber,
-    ) -> Result<(), UnknownError> {
-        trace!("Flexible timer {} IRQ{num}::post_event_hook", self.num);
-        self.interrupt_raised = false;
-        Ok(())
-    }
-
-    fn tick(
-        &mut self,
-        _cpu: &mut dyn CpuBackend,
-        _mmu: &mut Mmu,
-        event_controller: &mut dyn EventControllerImpl,
-        delta: &styx_core::executor::Delta,
-    ) -> Result<(), UnknownError> {
+    fn tick(&mut self, ctx: &PeripheralTickCtx<'_>) -> Result<RaisedIrqs, UnknownError> {
+        let mut raised = RaisedIrqs::none();
         // if the guest has enabled us
         if self.guest_enabled {
-            let _ = self.internal_counter.saturating_add(delta.count);
+            let _ = self
+                .internal_counter
+                .saturating_add(ctx.delta.simulated_time);
 
             if self.internal_counter >= self.timer_duration {
                 self.internal_counter = 0;
                 self.interrupt_raised = true;
-                event_controller.latch(self.irqn)?;
+                raised.push(self.irqn);
             }
         }
 
-        Ok(())
+        Ok(raised)
     }
 
     fn init(&mut self, _proc: &mut BuildingProcessor) -> Result<(), UnknownError> {
@@ -112,7 +119,7 @@ impl Peripheral for FlexibleTimer {
         "Flexible Timer"
     }
 
-    fn reset(&mut self, _cpu: &mut dyn CpuBackend, _mmu: &mut Mmu) -> Result<(), UnknownError> {
+    fn reset(&mut self, _mmu: &mut Mmu) -> Result<(), UnknownError> {
         self.running = false;
         self.guest_enabled = false;
         self.internal_counter = 0;
@@ -122,84 +129,41 @@ impl Peripheral for FlexibleTimer {
 }
 
 pub struct FtmController {
-    timers: Vec<FlexibleTimer>,
+    timers: Vec<Arc<Mutex<FlexibleTimer>>>,
 }
 
 impl FtmController {
     pub fn new() -> Self {
         Self {
             timers: vec![
-                FlexibleTimer::new(0, FTM0_BASE, IRQn_FTM0_IRQn),
-                FlexibleTimer::new(1, FTM1_BASE, IRQn_FTM1_IRQn),
-                FlexibleTimer::new(2, FTM2_BASE, IRQn_FTM2_IRQn),
-                FlexibleTimer::new(3, FTM3_BASE, IRQn_FTM3_IRQn),
+                Arc::new(Mutex::new(FlexibleTimer::new(0, FTM0_BASE, IRQn_FTM0_IRQn))),
+                Arc::new(Mutex::new(FlexibleTimer::new(1, FTM1_BASE, IRQn_FTM1_IRQn))),
+                Arc::new(Mutex::new(FlexibleTimer::new(2, FTM2_BASE, IRQn_FTM2_IRQn))),
+                Arc::new(Mutex::new(FlexibleTimer::new(3, FTM3_BASE, IRQn_FTM3_IRQn))),
             ],
         }
-    }
-
-    /// converts an address to the corresponding [`FlexibleTimer`]
-    pub fn address_to_timer(&mut self, address: u64) -> Result<&mut FlexibleTimer, UnknownError> {
-        let mut out = Err(anyhow!("invalid address"));
-        if address >= FTM0_BASE as u64 {
-            if address < FTM1_BASE as u64 {
-                out = Ok(&mut self.timers[0]);
-            } else if address < FTM2_BASE as u64 {
-                out = Ok(&mut self.timers[1]);
-            } else if address < FTM3_BASE as u64 {
-                out = Ok(&mut self.timers[2]);
-            } else if address <= (FTM3_BASE as u64 + core::mem::size_of::<FTM_Type>() as u64) {
-                out = Ok(&mut self.timers[3]);
-            }
-        }
-
-        out
-    }
-
-    /// Searches for a timer that owns the specific IRQn
-    fn irq_to_timer(&mut self, num: ExceptionNumber) -> Result<&mut FlexibleTimer, UnknownError> {
-        for timer in self.timers.iter_mut() {
-            if timer.irqs().contains(&num) {
-                return Ok(timer);
-            }
-        }
-
-        // no timer matched
-        Err(anyhow!("k21 ftm, no irq match"))
     }
 }
 
 impl Peripheral for FtmController {
     fn irqs(&self) -> Vec<ExceptionNumber> {
-        self.timers.iter().flat_map(|x| x.irqs()).collect()
+        self.timers
+            .iter()
+            .flat_map(|x| x.lock().unwrap().irqs())
+            .collect()
     }
 
-    fn post_event_hook(
-        &mut self,
-        cpu: &mut dyn CpuBackend,
-        mmu: &mut Mmu,
-        event_controller: &mut dyn EventControllerImpl,
-        num: ExceptionNumber,
-    ) -> Result<(), UnknownError> {
-        let timer = self.irq_to_timer(num)?;
-        timer.post_event_hook(cpu, mmu, event_controller, num)
-    }
-
-    fn tick(
-        &mut self,
-        cpu: &mut dyn CpuBackend,
-        mmu: &mut Mmu,
-        event_controller: &mut dyn EventControllerImpl,
-        delta: &styx_core::executor::Delta,
-    ) -> Result<(), UnknownError> {
-        for timer in self.timers.iter_mut() {
-            timer.tick(cpu, mmu, event_controller, delta)?;
+    fn tick(&mut self, ctx: &PeripheralTickCtx<'_>) -> Result<RaisedIrqs, UnknownError> {
+        let mut raised = RaisedIrqs::none();
+        for timer in self.timers.iter() {
+            raised.extend(timer.lock().unwrap().tick(ctx)?);
         }
-        Ok(())
+        Ok(raised)
     }
 
     fn init(&mut self, proc: &mut BuildingProcessor) -> Result<(), UnknownError> {
-        for timer in &mut self.timers {
-            timer.register_hooks(proc.core.cpu.as_mut())?;
+        for timer in &self.timers {
+            FlexibleTimer::register_hooks(timer, proc.vcpus[0].cpu.as_mut())?;
         }
 
         Ok(())
@@ -209,96 +173,102 @@ impl Peripheral for FtmController {
         "FTM Controller"
     }
 
-    fn reset(&mut self, cpu: &mut dyn CpuBackend, mmu: &mut Mmu) -> Result<(), UnknownError> {
-        for timer in self.timers.iter_mut() {
-            timer.reset(cpu, mmu)?;
+    fn reset(&mut self, mmu: &mut Mmu) -> Result<(), UnknownError> {
+        for timer in self.timers.iter() {
+            timer.lock().unwrap().reset(mmu)?;
         }
 
         Ok(())
     }
 }
 
-#[allow(dead_code)]
-fn blanket_mem_read_hook(
-    proc: CoreHandle,
-    address: u64,
-    _size: u32,
-    data: &mut [u8],
-) -> Result<(), UnknownError> {
-    let ftm_controller = proc
-        .event_controller
-        .peripherals
-        .get::<FtmController>()
-        .unwrap();
-    let ftm = ftm_controller.address_to_timer(address).unwrap();
-
-    trace!("(R) FTM{} @ [{:#08X}]: {:?}", ftm.num, address, data);
-    Ok(())
+struct BlanketMemReadHook {
+    timer: Arc<Mutex<FlexibleTimer>>,
 }
 
-#[allow(dead_code)]
-fn blanket_mem_write_hook(
-    proc: CoreHandle,
-    address: u64,
-    _size: u32,
-    data: &[u8],
-) -> Result<(), UnknownError> {
-    let ftm_controller = proc
-        .event_controller
-        .peripherals
-        .get::<FtmController>()
-        .unwrap();
-    let ftm = ftm_controller.address_to_timer(address).unwrap();
+impl MemoryReadHook for BlanketMemReadHook {
+    fn call(
+        &mut self,
+        _proc: CoreHandle,
+        address: u64,
+        _size: u32,
+        data: &mut [u8],
+    ) -> Result<(), UnknownError> {
+        let ftm = self.timer.lock().unwrap();
 
-    trace!("(W) FTM{} @ [{:#08X}]: {:?}", ftm.num, address, data);
-    Ok(())
+        trace!("(R) FTM{} @ [{:#08X}]: {:?}", ftm.num, address, data);
+        Ok(())
+    }
+}
+
+struct BlanketMemWriteHook {
+    timer: Arc<Mutex<FlexibleTimer>>,
+}
+
+impl MemoryWriteHook for BlanketMemWriteHook {
+    fn call(
+        &mut self,
+        _proc: CoreHandle,
+        address: u64,
+        _size: u32,
+        data: &[u8],
+    ) -> Result<(), UnknownError> {
+        let ftm = self.timer.lock().unwrap();
+
+        trace!("(W) FTM{} @ [{:#08X}]: {:?}", ftm.num, address, data);
+        Ok(())
+    }
 }
 
 /// checks the bitfield written to the FTM\[SC\]
-fn ftm_sc_write_hook(
-    proc: CoreHandle,
-    address: u64,
-    _size: u32,
-    data: &[u8],
-) -> Result<(), UnknownError> {
-    let ftm_controller = proc
-        .event_controller
-        .peripherals
-        .get::<FtmController>()
-        .unwrap();
-    let timer = ftm_controller.address_to_timer(address).unwrap();
-    let enabled = (data[0] & 0x40) > 0;
-    trace!("(W) FTM{} SC: {:?}", timer.num, data);
-
-    // propagate the enabled / disable
-    match enabled {
-        true => timer.guest_enabled = true,
-        false => timer.guest_enabled = false,
-    }
-
-    Ok(())
+struct FtmScWriteHook {
+    timer: Arc<Mutex<FlexibleTimer>>,
 }
 
-fn ftm_sc_read_hook(
-    proc: CoreHandle,
-    address: u64,
-    _size: u32,
-    data: &mut [u8],
-) -> Result<(), UnknownError> {
-    let ftm_controller = proc
-        .event_controller
-        .peripherals
-        .get::<FtmController>()
-        .unwrap();
-    let timer = ftm_controller.address_to_timer(address).unwrap();
+impl MemoryWriteHook for FtmScWriteHook {
+    fn call(
+        &mut self,
+        _proc: CoreHandle,
+        _address: u64,
+        _size: u32,
+        data: &[u8],
+    ) -> Result<(), UnknownError> {
+        let mut timer = self.timer.lock().unwrap();
+        let enabled = (data[0] & 0x40) > 0;
+        trace!("(W) FTM{} SC: {:?}", timer.num, data);
 
-    trace!("(R) FTM{} SC: {:?}", timer.num, data);
+        // propagate the enabled / disable
+        match enabled {
+            true => timer.guest_enabled = true,
+            false => timer.guest_enabled = false,
+        }
 
-    // enabled, set the overflow bit
-    if timer.running && timer.guest_enabled && timer.interrupt_raised {
-        data[0] |= 0x80;
-        proc.mmu.write_data(address, data).unwrap();
+        Ok(())
     }
+}
 
-    Ok(())
+struct FtmScReadHook {
+    timer: Arc<Mutex<FlexibleTimer>>,
+}
+
+impl MemoryReadHook for FtmScReadHook {
+    fn call(
+        &mut self,
+        proc: CoreHandle,
+        address: u64,
+        _size: u32,
+        data: &mut [u8],
+    ) -> Result<(), UnknownError> {
+        let timer = self.timer.lock().unwrap();
+
+        trace!("(R) FTM{} SC: {:?}", timer.num, data);
+
+        // enabled, set the overflow bit
+        if timer.running && timer.guest_enabled && timer.interrupt_raised {
+            data[0] |= 0x80;
+            proc.mmu.write_data(address, data).unwrap();
+        }
+
+        Ok(())
+    }
 }

@@ -433,8 +433,9 @@ impl PeripheralsContainer {
     }
 
     /// Writes the status register value for a [RoutingBank].
-    fn write_status_register(&self, mmu: &mut Mmu, bank: RoutingBank) {
-        mmu.data()
+    fn write_status_register(&self, memory: &MemoryBackend, bank: RoutingBank) {
+        memory
+            .data()
             .write(bank.status_register())
             .le()
             .u32(self.calculate_status_register(bank))
@@ -460,23 +461,27 @@ impl PeripheralsContainer {
     }
 
     /// Latch a peripheral interrupt, should be called from a peripheral (e.g. timer, uart, etc.)
+    ///
+    /// Returns the core interrupt [Event] (as an [ExceptionNumber]) that should be raised if the
+    /// peripheral interrupt is enabled, otherwise [None]. The caller is responsible for routing the
+    /// returned interrupt to the event controller.
     pub fn latch_peripheral(
         &mut self,
-        mmu: &mut Mmu,
-        ev: &mut dyn EventControllerImpl,
+        memory: &MemoryBackend,
         peripheral: impl Into<PeripheralId>,
-    ) {
+    ) -> Option<ExceptionNumber> {
         let id: PeripheralId = peripheral.into();
         let event = self.interrupts[id].latch();
 
-        self.write_status_register(mmu, id.routing_bank());
+        self.write_status_register(memory, id.routing_bank());
 
-        // Latch core interrupt if peripheral interrupt is enabled
+        // Raise core interrupt if peripheral interrupt is enabled
         if let Some(event) = event {
             trace!("peripheral {id:?} latched core interrupt {event:?}");
-            ev.latch(event.into()).unwrap()
+            Some(event.into())
         } else {
             trace!("peripheral {id:?} latched but was not enabled");
+            None
         }
     }
 
@@ -504,16 +509,17 @@ impl SicHandle {
     }
 
     /// Latch a peripheral interrupt.
+    ///
+    /// Returns the core interrupt [ExceptionNumber] to be raised if enabled, [None] otherwise.
     pub(crate) fn latch_peripheral(
         &self,
-        mmu: &mut Mmu,
-        ev: &mut dyn EventControllerImpl,
+        memory: &MemoryBackend,
         peripheral: impl Into<PeripheralId>,
-    ) {
+    ) -> Option<ExceptionNumber> {
         self.internal
             .lock()
             .unwrap()
-            .latch_peripheral(mmu, ev, peripheral)
+            .latch_peripheral(memory, peripheral)
     }
 
     /// Removes status bit from peripheral, should be executed when the interrupt handler "handles"

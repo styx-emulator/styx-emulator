@@ -3,6 +3,7 @@ use as_any::{AsAny, Downcast};
 use derivative::Derivative;
 use std::any::TypeId;
 use std::pin::Pin;
+use styx_core::event_controller::{PeripheralTickCtx, RaisedIrqs};
 use styx_core::grpc::io;
 use styx_core::grpc::io::spi::{
     Empty, MasterChipSelectPacket, MasterPacket, PortRequest, SlaveChipSelectPacket, SlavePacket,
@@ -37,46 +38,21 @@ pub trait SpiImpl: AsAny + Send {
         Ok(())
     }
 
-    /// Top half pre-event hook for peripherals to implement and
-    /// handle accordingly.
-    fn pre_event_hook(
-        &mut self,
-        _cpu: &mut dyn CpuBackend,
-        _mmu: &mut Mmu,
-        _event_controller: &mut dyn EventControllerImpl,
-    ) -> Result<(), UnknownError> {
-        Ok(())
-    }
-
-    /// Top half post-event hook for peripherals to implement and
-    /// handle accordingly.
-    ///
-    /// not sure if we need this?
-    fn post_event_hook(
-        &mut self,
-        _cpu: &mut dyn CpuBackend,
-        _mmu: &mut Mmu,
-        _event_controller: &mut dyn EventControllerImpl,
-    ) -> Result<(), UnknownError> {
-        Ok(())
-    }
-
-    /// Returns all of the IRQs that belong to this specific interface
+    /// Returns all of the IRQs that belong to this specific interface.
     fn irqs(&self) -> Vec<ExceptionNumber> {
         vec![]
     }
 
-    /// Called every tick for updates.
-    fn tick(
-        &mut self,
-        _cpu: &mut dyn CpuBackend,
-        _mmu: &mut Mmu,
-        _event_controller: &mut dyn EventControllerImpl,
-    ) -> Result<(), UnknownError> {
-        Ok(())
+    /// Called each emulation round to update peripheral state.
+    ///
+    /// Returns exception numbers for any interrupts the peripheral wants to
+    /// signal. CPU/memory interactions should use hooks registered during
+    /// [`SpiImpl::init()`].
+    fn tick(&mut self, _ctx: &PeripheralTickCtx<'_>) -> Result<RaisedIrqs, UnknownError> {
+        Ok(RaisedIrqs::none())
     }
 
-    fn reset(&mut self, _cpu: &mut dyn CpuBackend, _mmu: &mut Mmu) -> Result<(), UnknownError> {
+    fn reset(&mut self, _mmu: &mut Mmu) -> Result<(), UnknownError> {
         Ok(())
     }
 }
@@ -208,9 +184,9 @@ impl Peripheral for SPIController {
         Ok(())
     }
 
-    fn reset(&mut self, cpu: &mut dyn CpuBackend, mmu: &mut Mmu) -> Result<(), UnknownError> {
+    fn reset(&mut self, mmu: &mut Mmu) -> Result<(), UnknownError> {
         for spi in self.spi_ports.iter_mut() {
-            spi.inner.reset(cpu, mmu)?;
+            spi.inner.reset(mmu)?;
         }
 
         Ok(())
@@ -224,17 +200,12 @@ impl Peripheral for SPIController {
         "spi controller"
     }
 
-    fn tick(
-        &mut self,
-        cpu: &mut dyn CpuBackend,
-        mmu: &mut Mmu,
-        event_controller: &mut dyn EventControllerImpl,
-        _delta: &styx_core::executor::Delta,
-    ) -> Result<(), UnknownError> {
+    fn tick(&mut self, ctx: &PeripheralTickCtx<'_>) -> Result<RaisedIrqs, UnknownError> {
+        let mut raised = RaisedIrqs::none();
         for spi in self.spi_ports.iter_mut() {
-            spi.inner.tick(cpu, mmu, event_controller)?;
+            raised.extend(spi.inner.tick(ctx)?);
         }
-        Ok(())
+        Ok(raised)
     }
 }
 

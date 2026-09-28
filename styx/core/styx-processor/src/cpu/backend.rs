@@ -3,14 +3,15 @@ use std::fmt::Debug;
 
 use smallvec::SmallVec;
 use static_assertions::assert_obj_safe;
-use styx_cpu_type::{
-    arch::{backends::ArchRegister, ArchitectureDef, RegisterValue},
-    ArchEndian, TargetExitReason,
-};
+use styx_cpu_type::arch::backends::ArchRegister;
+use styx_cpu_type::arch::{ArchitectureDef, RegisterValue};
+use styx_cpu_type::{ArchEndian, TargetExitReason};
 use styx_errors::UnknownError;
 use thiserror::Error;
 
-use crate::{event_controller::EventController, hooks::Hookable, memory::Mmu};
+use crate::event_controller::EventController;
+use crate::hooks::Hookable;
+use crate::memory::Mmu;
 
 #[derive(Debug, Error)]
 pub enum ReadRegisterError {
@@ -271,12 +272,11 @@ pub trait CpuBackend: Debug + Hookable + Send {
     fn set_pc(&mut self, value: u64) -> Result<(), UnknownError>;
 
     /// Classifies instruction at `addr` into a generic class
-    #[allow(unused_variables)]
     fn classify_instruction(
         &mut self,
-        addr: u64,
-        mmu: &mut Mmu,
-        event_controller: &mut EventController,
+        _addr: u64,
+        _mmu: &mut Mmu,
+        _event_controller: &mut EventController,
     ) -> Option<InstructionInfo> {
         None
     }

@@ -1,0 +1,6 @@
+# Assembler build artifacts. The source of truth is firmware.S; it is assembled at
+# build time by ../build.rs and its `.text` bytes embedded into the crate. The
+# *.o/*.bin here only come from the Makefile's inspection targets. No object/binary
+# is committed.
+*.o
+*.bin

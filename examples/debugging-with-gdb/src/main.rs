@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
-//! Machine definition for the Ppc4xx family.
+//! Run a PPC 4xx processor with debugger support.
 use clap::Parser;
+
 use styx_emulator::arch::ppc32::gdb_targets::Ppc4xxTargetDescription;
 use styx_emulator::core::util::logging::init_logging;
 use styx_emulator::plugins::gdb::{GdbExecutor, GdbPluginParams};
@@ -54,7 +55,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // build the processor
     let mut proc_builder = ProcessorBuilder::default()
         .with_builder(PowerPC405Builder::default())
-        .with_executor(GdbExecutor::<Ppc4xxTargetDescription>::new(gdb_params)?)
+        .with_custom_executor(GdbExecutor::<Ppc4xxTargetDescription>::new(gdb_params)?)
         .with_loader(ParameterizedLoader::default()) // takes an input yaml
         .with_input_bytes(loader_yaml.as_bytes().into());
 

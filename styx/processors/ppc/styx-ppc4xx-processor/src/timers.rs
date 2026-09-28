@@ -45,16 +45,7 @@ const CPU_CLOCK_HZ: f64 = 400_000_000.;
 /// Timer clock speed in hertz.
 const TIMER_BASE_CLOCK_HZ: f64 = 1_666_666.;
 
-pub struct Timers {
-    inner: Arc<Mutex<TimersInner>>,
-}
-
-impl Timers {
-    pub fn new(cpu: &mut dyn CpuBackend) -> Self {
-        let inner = Arc::new(Mutex::new(TimersInner::new(cpu)));
-        Self { inner }
-    }
-}
+pub struct Timers;
 
 struct TimersInner {
     control: Register,
@@ -64,11 +55,12 @@ struct TimersInner {
 
 impl Peripheral for Timers {
     fn init(&mut self, proc: &mut BuildingProcessor) -> Result<(), UnknownError> {
-        let timers = self.inner.clone();
+        let cpu = proc.vcpus.first_mut().cpu.as_mut();
+        let timers = Arc::new(Mutex::new(TimersInner::new(cpu)?));
         let mut current_instruction = 0;
 
         log::debug!("timers initialized");
-        proc.core.cpu.code_hook(
+        proc.vcpus[0].cpu.code_hook(
             u64::MIN,
             u64::MAX,
             Box::new(move |proc: CoreHandle| {
@@ -94,12 +86,12 @@ impl Peripheral for Timers {
 }
 
 impl TimersInner {
-    fn new(cpu: &mut dyn CpuBackend) -> Self {
-        Self {
+    fn new(cpu: &mut dyn CpuBackend) -> Result<Self, UnknownError> {
+        Ok(Self {
             control: Register::new(Ppc32Register::Tcr, cpu),
             _status: Register::new(Ppc32Register::Tsr, cpu),
-            pit: ProgrammableInterruptTimer::new(cpu),
-        }
+            pit: ProgrammableInterruptTimer::new(cpu)?,
+        })
     }
 
     fn code_hook(&mut self, proc: &mut CoreHandle) {
@@ -144,15 +136,15 @@ struct ProgrammableInterruptTimer {
     enabled: bool,
 }
 impl ProgrammableInterruptTimer {
-    fn new(cpu: &mut dyn CpuBackend) -> Self {
+    fn new(cpu: &mut dyn CpuBackend) -> Result<Self, UnknownError> {
         let top = 100000u32;
-        cpu.write_register(Ppc32Register::Pit, top).unwrap();
+        cpu.write_register(Ppc32Register::Pit, top)?;
         let last_value = top;
-        Self {
+        Ok(Self {
             auto_reload: top,
             last_value,
             enabled: false,
-        }
+        })
     }
 
     fn update(&mut self, proc: &mut CoreHandle, timer_clocks: u32) {

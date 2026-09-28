@@ -91,11 +91,11 @@ fn main() -> Result<(), UnknownError> {
         // Hooks for pass/fail - pass is at #7 & fail at #8
         // Branch instructions are at data/test-binaries/arm/marvell-88f6281/testutils.inc
         debug!("Adding hooks");
-        proc.core
+        proc.vcpus[0]
             .cpu
             .add_hook(StyxHook::Code((0..7).into(), Box::new(pass)))
             .unwrap();
-        proc.core
+        proc.vcpus[0]
             .cpu
             .add_hook(StyxHook::Code((8..9).into(), Box::new(fail)))
             .unwrap();
@@ -142,11 +142,11 @@ mod test_machine {
             let code = result.bytes;
             let instruction_count = result.stat_count.into();
             debug!("INS Set: {:?}", code);
-            proc.core.mmu.write_code(0x1000, &code).unwrap();
-            let read_data = proc.core.mmu.code().read(0x1000).vec(code.len()).unwrap();
+            proc.memory().write_code(0x1000, &code).unwrap();
+            let read_data = proc.memory().code().read(0x1000).vec(code.len()).unwrap();
             assert_eq!(read_data, code);
             // we write to the program counter in ARM mode - our skeleton does do THUMB but we aren't doing that
-            proc.core
+            proc.vcpus[0]
                 .cpu
                 .write_register(ArmRegister::Pc, 0x1000u32)
                 .unwrap();
@@ -160,7 +160,7 @@ mod test_machine {
         // get memory
         fn read_memory(&mut self, addr: u64) -> u32 {
             let mut buf: [u8; 4] = [0; 4];
-            self.proc.core.mmu.read_data(addr, &mut buf).unwrap();
+            self.proc.memory().read_data(addr, &mut buf).unwrap();
             u32::from_le_bytes(buf)
         }
 
@@ -191,20 +191,16 @@ mod test_machine {
 
         // start with data written to memory
         let data = &[0xDE]; //==222
-        machine.proc.core.write_data(0x2000_0000, data).unwrap();
+        machine.proc.memory().write_data(0x2000_0000, data).unwrap();
 
         // filler data - we know that something went wrong if we get back 1s
-        machine
-            .proc
-            .core
+        machine.proc.vcpus[0]
             .cpu
             .write_register(ArmRegister::R1, 0xFFFFFFFFu32)
             .unwrap();
 
         // address of data written to a different register
-        machine
-            .proc
-            .core
+        machine.proc.vcpus[0]
             .cpu
             .write_register(ArmRegister::R3, 0x2000_0000u32)
             .unwrap();
@@ -224,17 +220,13 @@ mod test_machine {
         trace!("--------------------running-------------------");
         machine.run();
 
-        let value = machine
-            .proc
-            .core
+        let value = machine.proc.vcpus[0]
             .cpu
             .read_register::<u32>(ArmRegister::R3)
             .unwrap();
         trace!("Register 3: {:x}", value);
 
-        let value = machine
-            .proc
-            .core
+        let value = machine.proc.vcpus[0]
             .cpu
             .read_register::<u32>(ArmRegister::R1)
             .unwrap();
@@ -257,9 +249,7 @@ mod test_machine {
         trace!("--------------------running-------------------");
         machine.run();
 
-        let value = machine
-            .proc
-            .core
+        let value = machine.proc.vcpus[0]
             .cpu
             .read_register::<u32>(ArmRegister::R1)
             .unwrap();
@@ -268,9 +258,7 @@ mod test_machine {
 
         assert_eq!(value, 2);
 
-        let value = machine
-            .proc
-            .core
+        let value = machine.proc.vcpus[0]
             .cpu
             .read_register::<u32>(ArmRegister::R2)
             .unwrap();
@@ -290,17 +278,13 @@ mod test_machine {
         let mut machine = TestMachine::new_machine(instr);
 
         // filler data
-        machine
-            .proc
-            .core
+        machine.proc.vcpus[0]
             .cpu
             .write_register(ArmRegister::R1, 0xFFFFFFFFu32)
             .unwrap();
 
         // address of data written
-        machine
-            .proc
-            .core
+        machine.proc.vcpus[0]
             .cpu
             .write_register(ArmRegister::R3, 0x0000_1000u32)
             .unwrap();
@@ -309,9 +293,7 @@ mod test_machine {
         trace!("--------------------running-------------------");
         machine.run();
 
-        let value = machine
-            .proc
-            .core
+        let value = machine.proc.vcpus[0]
             .cpu
             .read_register::<u32>(ArmRegister::R1)
             .unwrap();
@@ -320,9 +302,7 @@ mod test_machine {
 
         assert_eq!(value, 0xE5931000);
 
-        let value = machine
-            .proc
-            .core
+        let value = machine.proc.vcpus[0]
             .cpu
             .read_register::<u32>(ArmRegister::R3)
             .unwrap();
@@ -341,9 +321,7 @@ mod test_machine {
         trace!("--------------------running-------------------");
         machine.run();
 
-        let value = machine
-            .proc
-            .core
+        let value = machine.proc.vcpus[0]
             .cpu
             .read_register::<u32>(ArmRegister::R3)
             .unwrap();

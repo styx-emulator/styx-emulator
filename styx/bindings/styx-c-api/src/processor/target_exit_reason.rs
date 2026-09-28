@@ -42,6 +42,8 @@ pub enum TargetExitReason {
     /// target platform. The string should detail what action caused
     /// this to occur
     InvalidStateFromTarget,
+    /// This vCPU was stopped because another core exited fatally
+    OtherCoreExited,
     /// Target attempted to fetch memory that does not have any permissions
     ProtectedMemoryFetch,
     /// Target attempted to read memory that does not have read permissions
@@ -97,6 +99,7 @@ impl From<styx::TargetExitReason> for TargetExitReason {
             styx::TargetExitReason::InvalidStateFromTarget(_) => {
                 TargetExitReason::InvalidStateFromTarget
             }
+            styx::TargetExitReason::OtherCoreExited => TargetExitReason::OtherCoreExited,
             styx::TargetExitReason::ProtectedMemoryFetch => TargetExitReason::ProtectedMemoryFetch,
             styx::TargetExitReason::ProtectedMemoryRead => TargetExitReason::ProtectedMemoryRead,
             styx::TargetExitReason::ProtectedMemoryWrite => TargetExitReason::ProtectedMemoryWrite,

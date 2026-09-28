@@ -2,11 +2,9 @@
 
 use styx_errors::UnknownError;
 
-use crate::memory::{
-    mmu::MemoryType,
-    tlb::{TlbProcessor, TlbTranslateResult},
-    MemoryOperation, TlbImpl, TlbTranslateError,
-};
+use crate::memory::mmu::MemoryType;
+use crate::memory::tlb::{TlbProcessor, TlbTranslateResult};
+use crate::memory::{MemoryOperation, TlbImpl, TlbTranslateError};
 
 /// TLB implementation that has no address translation.
 #[derive(Debug, Default)]

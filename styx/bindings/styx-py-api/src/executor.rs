@@ -8,7 +8,7 @@ use crate::util::module_system::ModuleSystem;
 
 #[gen_stub_pyclass]
 #[pyclass(subclass, module = "executor")]
-pub struct StyxExecutor(pub Mutex<Option<Box<dyn styx_emulator::core::executor::ExecutorImpl>>>);
+pub struct StyxExecutor(pub Mutex<Option<styx_emulator::core::executor::ExecutorKind>>);
 
 #[gen_stub_pyclass]
 #[pyclass(extends=StyxExecutor, module = "executor")]
@@ -21,9 +21,11 @@ impl DefaultExecutor {
     pub fn new() -> (DefaultExecutor, StyxExecutor) {
         (
             Self,
-            StyxExecutor(Mutex::new(Some(Box::new(
-                styx_emulator::core::executor::DefaultExecutor::default(),
-            )))),
+            StyxExecutor(Mutex::new(Some(
+                styx_emulator::core::executor::ExecutorKind::stride(
+                    styx_emulator::core::executor::DefaultExecutor::default(),
+                ),
+            ))),
         )
     }
 }

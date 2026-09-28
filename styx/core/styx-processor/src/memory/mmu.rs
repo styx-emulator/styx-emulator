@@ -1,20 +1,24 @@
 // SPDX-License-Identifier: BSD-2-Clause
+use std::fmt::Debug;
+use std::ops::Range;
+use std::sync::Arc;
+
+use itertools::Itertools;
+use styx_errors::anyhow::anyhow;
+use styx_errors::UnknownError;
+use thiserror::Error;
+
+use super::helpers::{Readable, Writable};
+use super::memory_region::{HasRegions, MemoryRegion};
+use super::physical::{MemoryBackend, PhysicalMemoryVariant};
 use super::{
-    helpers::{Readable, Writable},
-    memory_region::{HasRegions, MemoryRegion},
-    physical::{MemoryBackend, PhysicalMemoryVariant},
     CompareExchangeError, CompareExchangeResult, DummyTlb, MemoryArchitecture, MemoryOperation,
     MemoryOperationError, TlbImpl, TlbTranslateError,
 };
-use crate::{
-    cpu::CpuBackend,
-    event_controller::ExceptionNumber,
-    memory::{tlb::TlbProcessor, TlbTranslateResult},
-};
-use itertools::Itertools;
-use std::{fmt::Debug, ops::Range, sync::Arc};
-use styx_errors::{anyhow::anyhow, UnknownError};
-use thiserror::Error;
+use crate::cpu::CpuBackend;
+use crate::event_controller::ExceptionNumber;
+use crate::memory::tlb::TlbProcessor;
+use crate::memory::TlbTranslateResult;
 
 #[derive(Error, Debug)]
 pub enum MmuOpError {
@@ -142,9 +146,7 @@ impl Mmu {
     /// Returns the range made up of the min and max addresses supported
     /// by the physical memory backend.
     pub fn valid_memory_range(&self) -> MemoryArchitecture<Range<u64>> {
-        self.memory
-            .min_address()
-            .with(self.memory.max_address(), |a, b| a..b)
+        self.memory.valid_memory_range()
     }
 
     /// Translates a virtual address to a physical address.
@@ -715,7 +717,8 @@ impl HasRegions for Mmu {
 
 #[cfg(test)]
 mod tests {
-    use crate::memory::{helpers::*, Mmu};
+    use crate::memory::helpers::*;
+    use crate::memory::Mmu;
 
     #[test]
     fn test_simple() {

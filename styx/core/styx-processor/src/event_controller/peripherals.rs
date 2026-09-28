@@ -2,10 +2,8 @@
 use std::any::type_name;
 
 use rustc_hash::FxHashMap;
-use styx_errors::{
-    anyhow::{anyhow, Context},
-    UnknownError,
-};
+use styx_errors::anyhow::{anyhow, Context};
+use styx_errors::UnknownError;
 
 use super::{ExceptionNumber, Peripheral};
 

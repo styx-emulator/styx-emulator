@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use styx_cpu_type::arch::{backends::ArchRegister, CpuRegister, RegisterValueCompatible};
+use styx_cpu_type::arch::backends::ArchRegister;
+use styx_cpu_type::arch::{CpuRegister, RegisterValueCompatible};
 use styx_errors::anyhow::anyhow;
 
-use super::{
-    backend::{ReadRegisterError, WriteRegisterError},
-    CpuBackend,
-};
+use super::backend::{ReadRegisterError, WriteRegisterError};
+use super::CpuBackend;
 
 impl<T: ?Sized + CpuBackend> CpuBackendExt for T {
     fn read_register<V: RegisterValueCompatible>(

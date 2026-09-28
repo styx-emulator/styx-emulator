@@ -47,6 +47,7 @@ use getset::Getters;
 use std::collections::HashSet;
 use std::pin::Pin;
 use std::sync::Arc;
+use styx_core::event_controller::{EventControllerImpl, PeripheralTickCtx, RaisedIrqs};
 use styx_core::prelude::*;
 use styx_core::{errors::anyhow::anyhow, grpc::io, grpc::io::i2c::i2c_port_server::I2cPortServer};
 use thiserror::Error;
@@ -206,7 +207,8 @@ impl I2CPortInner {
     }
 
     /// Receive an ACK signal from a slave device.  Updates bus state.
-    pub fn recv_ack(&self, ev: &mut dyn EventControllerImpl) -> Result<(), UnknownError> {
+    pub fn recv_ack(&self) -> Result<RaisedIrqs, UnknownError> {
+        let mut raised = RaisedIrqs::none();
         let mut bus_state = self.i2c_bus_state.lock().unwrap();
         let mut inner = self.inner_hal.lock().unwrap();
 
@@ -225,7 +227,7 @@ impl I2CPortInner {
                 inner.sr1.set_addr(true.into());
                 // generate interrupt if ITEVFEN is set
                 if self.itevten {
-                    ev.latch(self.event_interrupt).unwrap();
+                    raised.push(self.event_interrupt);
                 }
             }
             I2CBusState::Write => {
@@ -234,7 +236,7 @@ impl I2CPortInner {
 
                 // generate interrupt if ITEVFEN and ITBUFEN are set
                 if self.itevten && self.itbufen {
-                    ev.latch(self.event_interrupt)?;
+                    raised.push(self.event_interrupt);
                 }
             }
             _ => {
@@ -242,11 +244,12 @@ impl I2CPortInner {
                 debug!("\tACK ignored, peripheral is in Read or Idle mode.");
             }
         };
-        Ok(())
+        Ok(raised)
     }
 
     /// Receive data from a slave device.
-    pub fn recv_data(&self, ev: &mut dyn EventControllerImpl, data: u8) {
+    pub fn recv_data(&self, data: u8) -> RaisedIrqs {
+        let mut raised = RaisedIrqs::none();
         let mut inner = self.inner_hal.lock().unwrap();
 
         inner.dr.set_dr(data);
@@ -254,8 +257,9 @@ impl I2CPortInner {
 
         // generate interrupt if ITEVFEN and ITBUFEN are set
         if self.itevten && self.itbufen {
-            ev.latch(self.event_interrupt).unwrap();
+            raised.push(self.event_interrupt);
         }
+        raised
     }
 
     /// Called after data register is read, sends an ACK signal on the bus.
@@ -268,42 +272,6 @@ impl I2CPortInner {
             .unwrap();
     }
 
-    /// sets up the required memory hooks
-    fn register_hooks(&self, cpu: &mut dyn CpuBackend) -> Result<(), UnknownError> {
-        cpu.add_hook(StyxHook::memory_write(
-            self.base_addr + I2C_CR1_OFFSET,
-            hooks::i2c_cr1_w_hook,
-        ))?;
-        cpu.add_hook(StyxHook::memory_write(
-            self.base_addr + I2C_CR2_OFFSET,
-            hooks::i2c_cr2_w_hook,
-        ))?;
-        cpu.add_hook(StyxHook::memory_write(
-            self.base_addr + I2C_DR_OFFSET,
-            hooks::i2c_dr_w_hook,
-        ))?;
-
-        cpu.add_hook(StyxHook::memory_read(
-            self.base_addr + I2C_CR1_OFFSET,
-            hooks::i2c_cr1_r_hook,
-        ))?;
-        cpu.add_hook(StyxHook::memory_read(
-            self.base_addr + I2C_DR_OFFSET,
-            hooks::i2c_dr_r_hook,
-        ))?;
-
-        cpu.add_hook(StyxHook::memory_read(
-            self.base_addr + I2C_SR1_OFFSET,
-            hooks::i2c_sr1_r_hook,
-        ))?;
-        cpu.add_hook(StyxHook::memory_read(
-            self.base_addr + I2C_SR2_OFFSET,
-            hooks::i2c_sr2_r_hook,
-        ))?;
-
-        Ok(())
-    }
-
     fn reset(&mut self) -> Result<(), UnknownError> {
         self.inner_hal.lock().unwrap().reset();
 
@@ -314,17 +282,13 @@ impl I2CPortInner {
         vec![self.event_interrupt, self.error_interrupt]
     }
 
-    fn tick(
-        &mut self,
-        _cpu: &mut dyn CpuBackend,
-        _mmu: &mut Mmu,
-        event_controller: &mut dyn EventControllerImpl,
-    ) -> Result<(), UnknownError> {
+    fn tick(&mut self, _ctx: &PeripheralTickCtx<'_>) -> Result<RaisedIrqs, UnknownError> {
+        let mut raised = RaisedIrqs::none();
         match self.incoming.try_recv() {
             Ok(msg) => match msg {
-                MessageType::Data(data) => self.recv_data(event_controller, data),
+                MessageType::Data(data) => raised.extend(self.recv_data(data)),
                 MessageType::Signal(sig) => match sig {
-                    Sig::Ack => self.recv_ack(event_controller)?,
+                    Sig::Ack => raised.extend(self.recv_ack()?),
                     _ => return Err(anyhow!(format!("unknown signal recevied {sig:?}"))),
                 },
             },
@@ -336,18 +300,16 @@ impl I2CPortInner {
             },
         }
 
-        Ok(())
+        Ok(raised)
     }
 }
 
 pub struct I2CController {
-    pub(crate) i2cs: Vec<I2CPortInner>,
+    pub(crate) i2cs: Vec<Arc<Mutex<I2CPortInner>>>,
 }
 
 const I2C1_BASE_ADDR: u64 = 0x4000_5400;
 const I2C2_BASE_ADDR: u64 = 0x4000_5800;
-
-const I2C1_END_ADDR: u64 = 0x4000_57FF;
 
 const I2C1_EVENT_IRQ: ExceptionNumber = 31;
 const I2C1_ERR_IRQ: ExceptionNumber = 32;
@@ -358,8 +320,18 @@ impl I2CController {
     pub fn new() -> Self {
         Self {
             i2cs: vec![
-                I2CPortInner::new(0, I2C1_BASE_ADDR, I2C1_EVENT_IRQ, I2C1_ERR_IRQ),
-                I2CPortInner::new(1, I2C2_BASE_ADDR, I2C2_EVENT_IRQ, I2C2_ERR_IRQ),
+                Arc::new(Mutex::new(I2CPortInner::new(
+                    0,
+                    I2C1_BASE_ADDR,
+                    I2C1_EVENT_IRQ,
+                    I2C1_ERR_IRQ,
+                ))),
+                Arc::new(Mutex::new(I2CPortInner::new(
+                    1,
+                    I2C2_BASE_ADDR,
+                    I2C2_EVENT_IRQ,
+                    I2C2_ERR_IRQ,
+                ))),
             ],
         }
     }
@@ -368,14 +340,45 @@ impl I2CController {
 impl Peripheral for I2CController {
     fn init(&mut self, proc: &mut BuildingProcessor) -> Result<(), UnknownError> {
         // register port hooks
-        for i2c in self.i2cs.iter_mut() {
-            i2c.register_hooks(proc.core.cpu.as_mut())?;
+        for vcpu in proc.vcpus.iter_mut() {
+            let cpu = vcpu.cpu.as_mut();
+            for i2c in self.i2cs.iter() {
+                let base_addr = i2c.lock().unwrap().base_addr;
+                cpu.add_hook(StyxHook::memory_write(
+                    base_addr + I2C_CR1_OFFSET,
+                    hooks::I2cCr1WHook { inner: i2c.clone() },
+                ))?;
+                cpu.add_hook(StyxHook::memory_write(
+                    base_addr + I2C_CR2_OFFSET,
+                    hooks::I2cCr2WHook { inner: i2c.clone() },
+                ))?;
+                cpu.add_hook(StyxHook::memory_write(
+                    base_addr + I2C_DR_OFFSET,
+                    hooks::I2cDrWHook { inner: i2c.clone() },
+                ))?;
+                cpu.add_hook(StyxHook::memory_read(
+                    base_addr + I2C_CR1_OFFSET,
+                    hooks::I2cCr1RHook { inner: i2c.clone() },
+                ))?;
+                cpu.add_hook(StyxHook::memory_read(
+                    base_addr + I2C_DR_OFFSET,
+                    hooks::I2cDrRHook { inner: i2c.clone() },
+                ))?;
+                cpu.add_hook(StyxHook::memory_read(
+                    base_addr + I2C_SR1_OFFSET,
+                    hooks::I2cSr1RHook { inner: i2c.clone() },
+                ))?;
+                cpu.add_hook(StyxHook::memory_read(
+                    base_addr + I2C_SR2_OFFSET,
+                    hooks::I2cSr2RHook { inner: i2c.clone() },
+                ))?;
+            }
         }
 
         let async_i2cs = self
             .i2cs
-            .iter_mut()
-            .map(I2CPortAsync::from_inner)
+            .iter()
+            .map(|i2c| I2CPortAsync::from_inner(&mut i2c.lock().unwrap()))
             .collect::<Result<Vec<_>, UnknownError>>()?;
 
         // create inner wrapper struct that implements the service
@@ -387,29 +390,27 @@ impl Peripheral for I2CController {
     }
 
     /// Calls `reset_state` for each child i2c port
-    fn reset(&mut self, _cpu: &mut dyn CpuBackend, _mmu: &mut Mmu) -> Result<(), UnknownError> {
-        for i2c in self.i2cs.iter_mut() {
-            i2c.reset()?;
+    fn reset(&mut self, _mmu: &mut Mmu) -> Result<(), UnknownError> {
+        for i2c in self.i2cs.iter() {
+            i2c.lock().unwrap().reset()?;
         }
 
         Ok(())
     }
 
     fn irqs(&self) -> Vec<ExceptionNumber> {
-        self.i2cs.iter().flat_map(|x| x.irqs()).collect()
+        self.i2cs
+            .iter()
+            .flat_map(|x| x.lock().unwrap().irqs())
+            .collect()
     }
 
-    fn tick(
-        &mut self,
-        cpu: &mut dyn CpuBackend,
-        mmu: &mut Mmu,
-        event_controller: &mut dyn EventControllerImpl,
-        _delta: &styx_core::prelude::Delta,
-    ) -> Result<(), UnknownError> {
-        for port in self.i2cs.iter_mut() {
-            port.tick(cpu, mmu, event_controller)?;
+    fn tick(&mut self, ctx: &PeripheralTickCtx<'_>) -> Result<RaisedIrqs, UnknownError> {
+        let mut raised = RaisedIrqs::none();
+        for port in self.i2cs.iter() {
+            raised.extend(port.lock().unwrap().tick(ctx)?);
         }
-        Ok(())
+        Ok(raised)
     }
 
     fn name(&self) -> &str {
@@ -521,15 +522,6 @@ impl From<I2CData> for io::i2c::I2cPacket {
                 MessageType::Signal(s) => Some(io::i2c::i2c_packet::Contents::Sig(s.into())),
             },
         }
-    }
-}
-
-/// Determines which I2C interface an address belongs to
-pub fn address_to_i2c_n(address: u64) -> usize {
-    if address <= I2C1_END_ADDR {
-        0
-    } else {
-        1
     }
 }
 

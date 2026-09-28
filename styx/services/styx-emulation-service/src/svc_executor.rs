@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use styx_core::cpu::ExecutionReport;
+use styx_core::core::VcpuCore;
+use styx_core::executor::{default_emulation_setup, StrideExecutor};
+use styx_core::plugins::Plugins;
+use styx_core::prelude::*;
 use styx_core::sync::sync::Condvar;
-use styx_core::{executor::ExecutorImpl, prelude::*};
 
 /// A processor is either started or paused.
 #[derive(PartialEq, Eq, Clone, Copy, Debug, Default)]
@@ -11,9 +13,12 @@ pub enum ProcessorState {
     Stopped,
 }
 
-/// [ExecutorImpl] providing asynchronous start/pause functionality.
+/// [`StrideExecutor`] providing asynchronous start/pause functionality.
 ///
-/// Emulation is blocked until the desired_state is set to be running.
+/// Emulation is blocked until the desired_state is set to be running. Blocking
+/// happens once at emulation startup (so the processor waits for the first
+/// [`ServiceExecutorHandle::set`] call) and again between strides via the
+/// executor's `tick`.
 pub struct ServiceExecutor {
     desired_state: Arc<(Mutex<ProcessorState>, Condvar)>,
 }
@@ -53,14 +58,27 @@ impl ServiceExecutor {
     }
 }
 
-impl ExecutorImpl for ServiceExecutor {
-    fn emulate(
+impl StrideExecutor for ServiceExecutor {
+    fn tick(
         &mut self,
-        proc: &mut ProcessorCore,
-        insns: u64,
-    ) -> Result<ExecutionReport, UnknownError> {
+        _delta: &GlobalDelta,
+        _vcpus: &mut PerVcpuSlice<VcpuCore>,
+    ) -> Result<(), UnknownError> {
         self.block_until_runnable();
-        proc.cpu
-            .execute(&mut proc.mmu, &mut proc.event_controller, insns)
+        Ok(())
+    }
+
+    fn emulation_setup(
+        &mut self,
+        vcpus: &mut PerVcpuSlice<VcpuCore>,
+        core: &mut ProcessorCore,
+        plugins: &mut Plugins,
+    ) -> Result<(), UnknownError> {
+        // Mirror the default [`StrideExecutor::emulation_setup`] so the
+        // normal start lifecycle still fires, then block waiting for the
+        // service to request a transition to `Running`.
+        default_emulation_setup(vcpus, core, plugins)?;
+        self.block_until_runnable();
+        Ok(())
     }
 }

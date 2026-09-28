@@ -9,13 +9,11 @@ use styx_errors::UnknownError;
 use styx_processor::{
     core::{
         builder::{BuildProcessorImplArgs, ProcessorImpl},
-        ExceptionBehavior, ProcessorBundle,
+        ExceptionBehavior, ProcessorBundle, ProcessorBundleBuilder,
     },
     cpu::{CpuBackend, CpuBackendExt},
     hooks::{CoreHandle, MemFaultData, StyxHook},
-    memory::{
-        helpers::WriteExt, memory_region::MemoryRegion, DummyTlb, MemoryBackend, MemoryPermissions,
-    },
+    memory::{helpers::WriteExt, memory_region::MemoryRegion, MemoryBackend, MemoryPermissions},
     processor::{Processor, ProcessorBuilder},
 };
 
@@ -40,15 +38,12 @@ impl ProcessorImpl for CustomBuilder {
             _ => return Err(BackendNotSupported(args.backend).into()),
         };
         let mut memory = MemoryBackend::new_region_store();
-        let tlb = DummyTlb::new();
         memory.add_memory_region(MemoryRegion::new(0, 0x1000, MemoryPermissions::all())?)?;
 
-        Ok(ProcessorBundle {
-            cpu,
-            memory,
-            tlb,
-            ..Default::default()
-        })
+        Ok(ProcessorBundleBuilder::new()
+            .with_memory(memory)
+            .with_vcpu(|b| b.with_cpu_box(cpu))
+            .build()?)
     }
 }
 fn construct_cpu(
@@ -65,8 +60,8 @@ fn construct_cpu(
         .build()?;
 
     // code at 0x100 because unicorn gets fussy if we start at 0
-    proc.core.mmu.code().write(0x100).bytes(program_bytes)?;
-    proc.core.cpu.set_pc(0x101)?; // 1 bit to set thumb mode
+    proc.memory().code().write(0x100).bytes(program_bytes)?;
+    proc.vcpus[0].cpu.set_pc(0x101)?; // 1 bit to set thumb mode
     Ok(proc)
 }
 
@@ -81,10 +76,10 @@ fn construct_cpu(
 //     // ldr r0, [r0, #0]
 //     let program_bytes = [0x00, 0x68];
 //     let mut proc = construct_cpu(backend, ExceptionBehavior::TargetHandle, &program_bytes)?;
-//     proc.core.cpu.write_register(ArmRegister::R0, 0x1000u32)?;
+//     proc.vcpus[0].cpu.write_register(ArmRegister::R0, 0x1000u32)?;
 
 //     let count: &'static AtomicU32 = Box::leak(Box::new(AtomicU32::new(0)));
-//     proc.core.cpu.add_hook(StyxHook::unmapped_fault(
+//     proc.vcpus[0].cpu.add_hook(StyxHook::unmapped_fault(
 //         0x1000..=0x2000,
 //         |core: CoreHandle, _, _, _: MemFaultData| {
 //             core.mmu.add_memory_region(MemoryRegion::new(
@@ -115,8 +110,10 @@ fn test_pause_unmapped(backend: Backend) -> Result<(), UnknownError> {
     // ldr r0, [r0, #0]
     let program_bytes = [0x00, 0x68];
     let mut proc = construct_cpu(backend, ExceptionBehavior::Pause, &program_bytes)?;
-    proc.core.cpu.write_register(ArmRegister::R0, 0x1000u32)?;
-    let cpu = &mut proc.core.cpu;
+    proc.vcpus[0]
+        .cpu
+        .write_register(ArmRegister::R0, 0x1000u32)?;
+    let cpu = &mut proc.vcpus[0].cpu;
 
     cpu.add_hook(StyxHook::unmapped_fault(
         0x1000..=0x2000,
@@ -141,11 +138,11 @@ fn test_panic_unmapped(backend: Backend) {
     // ldr r0, [r0, #0]
     let program_bytes = [0x00, 0x68];
     let mut proc = construct_cpu(backend, ExceptionBehavior::Panic, &program_bytes).unwrap();
-    proc.core
+    proc.vcpus[0]
         .cpu
         .write_register(ArmRegister::R0, 0x1000u32)
         .unwrap();
-    let cpu = &mut proc.core.cpu;
+    let cpu = &mut proc.vcpus[0].cpu;
     cpu.add_hook(StyxHook::unmapped_fault(
         0x1000,
         |_: CoreHandle, _, _, _: MemFaultData| {
@@ -167,7 +164,7 @@ fn test_pause_invalid_instruction(backend: Backend) -> Result<(), UnknownError> 
     // paradoxically defines it with a userop.
     let program_bytes = [0xff, 0xff];
     let mut proc = construct_cpu(backend, ExceptionBehavior::Pause, &program_bytes)?;
-    let cpu = &mut proc.core.cpu;
+    let cpu = &mut proc.vcpus[0].cpu;
 
     cpu.add_hook(StyxHook::invalid_instruction(|_: CoreHandle| {
         panic!("should not have triggered handler");
@@ -191,11 +188,11 @@ fn test_panic_invalid_instruction(backend: Backend) {
     // paradoxically defines it with a userop.
     let program_bytes = [0xff, 0xff];
     let mut proc = construct_cpu(backend, ExceptionBehavior::Panic, &program_bytes).unwrap();
-    proc.core
+    proc.vcpus[0]
         .cpu
         .write_register(ArmRegister::R0, 0x1000u32)
         .unwrap();
-    let cpu = &mut proc.core.cpu;
+    let cpu = &mut proc.vcpus[0].cpu;
 
     cpu.add_hook(StyxHook::invalid_instruction(|_: CoreHandle| {
         panic!("should not have triggered handler");
@@ -213,9 +210,11 @@ fn test_pause_unmapped_fetch(backend: Backend) -> Result<(), UnknownError> {
     // ldr r0, [r0, #0]
     let program_bytes = [0x00, 0x68];
     let mut proc = construct_cpu(backend, ExceptionBehavior::Pause, &program_bytes)?;
-    proc.core.cpu.write_register(ArmRegister::R0, 0x1000u32)?;
-    let cpu = &mut proc.core.cpu;
-    let mmu = &mut proc.core.mmu;
+    proc.vcpus[0]
+        .cpu
+        .write_register(ArmRegister::R0, 0x1000u32)?;
+    let vcpu = &mut proc.vcpus[0];
+    let styx_processor::core::VcpuCore { cpu, mmu, .. } = vcpu;
 
     cpu.set_pc(0xFFE)?;
     // arm thumb nop

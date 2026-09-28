@@ -35,41 +35,44 @@ pub mod cpu {
 }
 
 pub mod prelude {
-    pub use super::core::{ProcessorBundle, ProcessorCore};
-    pub use super::cpu::{
-        arch::backends::*,
-        arch::{u1, u20, u4, u40, u80, TryNewIntError},
-        Arch, ArchEndian, Backend, BackendNotSupported, TargetExitReason,
-    };
+    // Errors
     pub use super::errors::anyhow::anyhow;
     pub use super::errors::anyhow::Context;
     pub use super::errors::{
         anyhow, styx_cpu::*, styx_grpc::ApplicationError, styx_loader::StyxLoaderError,
         styx_memory::*, styx_processor::ProcessorBuilderError, StyxMachineError, UnknownError,
     };
+
+    // Processor, core stuff
+    pub use super::core::{ProcessorBundle, ProcessorCore, VcpuCore, VcpuId};
+    pub use super::cpu::{
+        arch::backends::*,
+        arch::{u1, u20, u4, u40, u80, TryNewIntError},
+        Arch, ArchEndian, Backend, BackendNotSupported, CpuBackend, CpuBackendExt, DummyBackend,
+        ReadRegisterError, TargetExitReason, WriteRegisterError,
+    };
     pub use super::event_controller::{
-        EventController, EventControllerImpl, ExceptionNumber, Peripheral,
+        EventController, EventDistributor, ExceptionNumber, Peripheral, SingleVcpuEventDistributor,
     };
     pub use super::executor::{
-        DefaultExecutor, Delta, ExecutionConstraintConcrete, ExecutorImpl, Forever,
+        time::GlobalDelta, CustomExecutor, DefaultExecutor, Delta, ExecutionConstraintConcrete,
+        ExecutorKind, Forever,
     };
-    pub use super::grpc::{self, ToArgVec, Validator};
-    pub use super::loader::*;
-    pub use super::macros::*;
     pub use super::memory::{
         MemoryBackend, MemoryOperation, MemoryOperationError, MemoryPermissions, MemoryRegionSize,
         MemoryType, Mmu, MmuOpError,
     };
+
+    pub use super::grpc::{self, ToArgVec, Validator};
+    pub use super::loader::*;
+    pub use super::macros::*;
     pub use super::plugins::{Plugin, UninitPlugin};
     pub use super::processor::*;
     pub use super::runtime::ProcessorRuntime;
     pub use super::sync::*;
     pub use super::tracebus::*;
     pub use super::util::*;
-    pub use styx_processor::cpu::{
-        classify_block_terminator, BlockTerminator, ControlFlowType, CpuBackend, CpuBackendExt,
-        DummyBackend, InstructionClass, InstructionInfo, ReadRegisterError, WriteRegisterError,
-    };
+    pub use styx_processor::cpu::{classify_block_terminator, BlockTerminator, ControlFlowType};
     pub use styx_processor::hooks::{
         AddressRange, BlockHook, CoreHandle, Hookable, MemFaultData, StyxHook,
     };

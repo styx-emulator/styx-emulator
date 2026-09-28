@@ -111,11 +111,9 @@
 use binary_heap_plus::{BinaryHeap, MinComparator};
 use num_derive::{FromPrimitive, ToPrimitive};
 use num_traits::FromPrimitive;
-use styx_core::{
-    arch::arm::ArmRegister,
-    event_controller::{ActivateIRQnError, InterruptExecuted},
-    prelude::*,
-};
+use styx_core::arch::arm::ArmRegister;
+use styx_core::event_controller::{ActivateIRQnError, EventControllerImpl, InterruptExecuted};
+use styx_core::prelude::*;
 use thiserror::Error;
 use tracing::{debug, error, trace};
 
@@ -395,8 +393,7 @@ impl EventControllerImpl for Gic {
         &mut self,
         cpu: &mut dyn CpuBackend,
         mmu: &mut Mmu,
-        _peripherals: &mut styx_core::event_controller::Peripherals,
-    ) -> Result<styx_core::event_controller::InterruptExecuted, UnknownError> {
+    ) -> Result<InterruptExecuted, UnknownError> {
         // peek to see if there are events to execute
         let event = self.latched_events.peek();
 
@@ -454,11 +451,11 @@ impl EventControllerImpl for Gic {
 
     fn init(
         &mut self,
-        _cpu: &mut dyn CpuBackend,
+        cpu: &mut dyn CpuBackend,
         _mmu: &mut MemoryBackend,
         _config: &mut Config,
     ) -> Result<(), UnknownError> {
-        Ok(())
+        self.register_hooks(cpu)
     }
 }
 
@@ -589,16 +586,6 @@ fn gic_icdsgir_write_callback(
         .bytes(&[0u8; 4])
         .unwrap();
     Ok(())
-}
-
-impl Peripheral for Gic {
-    fn init(&mut self, proc: &mut BuildingProcessor) -> Result<(), UnknownError> {
-        self.register_hooks(proc.core.cpu.as_mut())
-    }
-
-    fn name(&self) -> &str {
-        "Gic Peripheral"
-    }
 }
 
 impl Gic {

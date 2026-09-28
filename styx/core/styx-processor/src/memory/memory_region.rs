@@ -5,13 +5,10 @@ use std::num::NonZeroUsize;
 use std::ops::Range;
 use std::sync::Arc;
 
-use crate::memory::{AddRegionError, MemoryOperation, MemoryOperationError, MemoryPermissions};
-
+use getset::CopyGetters;
 use itertools::Itertools;
 use styx_errors::anyhow::{anyhow, Context};
 use styx_errors::UnknownError;
-
-use getset::CopyGetters;
 use tap::Conv;
 use thiserror::Error;
 use zstd::{decode_all, encode_all};
@@ -19,6 +16,7 @@ use zstd::{decode_all, encode_all};
 use super::atomic_word::AtomicWord;
 use super::physical::{AtomicMemoryOperationError, CompareExchangeError};
 use super::{CompareExchangeResult, UnmappedMemoryError};
+use crate::memory::{AddRegionError, MemoryOperation, MemoryOperationError, MemoryPermissions};
 
 #[derive(Debug, Error)]
 #[error("region not 0x{expected_alignment:X} aligned (base: 0x{base:X}, size: 0x{size:X})")]
@@ -961,13 +959,11 @@ impl<'a, T> MemoryRegionsWithFormat<'a, T> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
-    use crate::memory::helpers::{ReadExt, WriteExt};
-    use crate::memory::MemoryOperation;
-    use crate::memory::MemoryPermissions as Perms;
-
     use test_case::test_case;
+
+    use super::*;
+    use crate::memory::helpers::{ReadExt, WriteExt};
+    use crate::memory::{MemoryOperation, MemoryPermissions as Perms};
 
     #[test_case(0, 8, (0, 8, 0))]
     #[test_case(4, 4, (4, 0, 0))]

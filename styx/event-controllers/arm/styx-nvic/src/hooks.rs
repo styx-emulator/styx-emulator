@@ -186,8 +186,6 @@ pub fn return_from_exception(proc: CoreHandle) -> Result<(), UnknownError> {
         returning_irqn,
     );
 
-    proc.event_controller.finish_interrupt(proc.cpu, proc.mmu);
-
     debug!(
         "Returning from exception IRQ_{returning_irqn} -> 0x{:08x}",
         proc.cpu.pc().unwrap()

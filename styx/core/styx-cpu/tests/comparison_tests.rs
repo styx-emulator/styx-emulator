@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! Compares the behaviour of Pcode and Unicorn backends to make sure we maintain
 //! parity between the two.
+//!
+//! Only tests single vcpu systems.
 #![cfg(feature = "unicorn-backend")]
 use std::{
     collections::{BTreeMap, HashMap},
@@ -20,13 +22,12 @@ use styx_errors::UnknownError;
 use styx_processor::{
     core::{
         builder::{BuildProcessorImplArgs, ProcessorImpl},
-        ProcessorBundle,
+        ProcessorBundle, ProcessorBundleBuilder,
     },
     cpu::{CpuBackend, CpuBackendExt},
-    event_controller::DummyEventController,
     executor::Forever,
-    hooks::{CoreHandle, Hookable, MemFaultData, Resolution, StyxHook},
-    memory::{memory_region::MemoryRegion, DummyTlb, MemoryBackend, MemoryPermissions},
+    hooks::{AddHookError, CoreHandle, HookToken, MemFaultData, Resolution, StyxHook},
+    memory::{memory_region::MemoryRegion, MemoryBackend, MemoryPermissions},
     processor::{Processor, ProcessorBuilder},
 };
 
@@ -44,18 +45,14 @@ fn test_abrupt_stop() {
         |machine, snapshot| {
             let snapshot = snapshot.initial_snapshot(machine);
             machine
-                .proc
-                .core
-                .cpu
-                .code_hook(
-                    machine.start_address,
-                    machine.start_address,
+                .add_hook(StyxHook::code(
+                    machine.start_address..=machine.start_address,
                     // change some state in the code hook to catch if one backend executes
-                    Box::new(|proc: CoreHandle| {
+                    |proc: CoreHandle| {
                         proc.cpu.write_register(ArmRegister::R7, 0x1337u32).unwrap();
                         Ok(())
-                    }),
-                )
+                    },
+                ))
                 .unwrap();
             machine.proc.run(1).unwrap();
 
@@ -76,22 +73,21 @@ fn test_stop_request() {
         |machine, snapshot| {
             let snapshot = snapshot.initial_snapshot(machine);
             machine
-                .proc
-                .core
-                .cpu
-                .code_hook(
-                    machine.start_address,
-                    machine.start_address,
-                    Box::new(|proc: CoreHandle| {
+                .add_hook(StyxHook::code(
+                    machine.start_address..=machine.start_address,
+                    |proc: CoreHandle| {
                         proc.cpu.stop();
                         Ok(())
-                    }),
-                )
+                    },
+                ))
                 .unwrap();
 
             machine.proc.run(Forever).unwrap();
             let snapshot = snapshot.snapshot("After running", machine);
-            assert_eq!(machine.proc.core.cpu.pc().unwrap(), machine.start_address);
+            assert_eq!(
+                machine.proc.vcpus[0].cpu.pc().unwrap(),
+                machine.start_address
+            );
             snapshot.push("The answer", 42)
         },
     )
@@ -110,18 +106,14 @@ fn test_read_memory_write_empty() {
             let snapshot = snapshot.initial_snapshot(machine);
 
             let mut buf = [];
-            machine
-                .proc
-                .core
+            machine.proc.vcpus[0]
                 .mmu
                 .read_data(machine.start_address, &mut buf)
                 .unwrap();
 
             let snapshot = snapshot.snapshot("After read", machine);
 
-            machine
-                .proc
-                .core
+            machine.proc.vcpus[0]
                 .mmu
                 .write_data(machine.start_address, &buf)
                 .unwrap();
@@ -141,9 +133,7 @@ fn test_compare_simple_no_run() {
     compare_two(
         &mut machines,
         Box::new(|machine| {
-            machine
-                .proc
-                .core
+            machine.proc.vcpus[0]
                 .cpu
                 .write_register(ArmRegister::R0, 0x1337u32)
                 .unwrap()
@@ -152,9 +142,7 @@ fn test_compare_simple_no_run() {
     compare_two(
         &mut machines,
         Box::new(|machine| {
-            machine
-                .proc
-                .core
+            machine.proc.vcpus[0]
                 .cpu
                 .write_register(ArmRegister::Pc, 0x4000u32)
                 .unwrap()
@@ -163,9 +151,7 @@ fn test_compare_simple_no_run() {
     compare_two(
         &mut machines,
         Box::new(|machine| {
-            machine
-                .proc
-                .core
+            machine.proc.vcpus[0]
                 .mmu
                 .write_code(machine.start_address, &[0xCA, 0xFE, 0xBA, 0xBE])
                 .unwrap()
@@ -174,9 +160,7 @@ fn test_compare_simple_no_run() {
     compare_two(
         &mut machines,
         Box::new(|machine| {
-            machine
-                .proc
-                .core
+            machine.proc.vcpus[0]
                 .cpu
                 .write_register(ArmRegister::Sp, 0x400000u32)
                 .unwrap()
@@ -226,13 +210,9 @@ fn test_compare_simple_code_hook() {
             let hook_data_result = hook_data.clone();
 
             machine
-                .proc
-                .core
-                .cpu
-                .code_hook(
-                    machine.start_address + 2,
-                    machine.start_address + 2,
-                    Box::new(move |proc: CoreHandle| {
+                .add_hook(StyxHook::code(
+                    (machine.start_address + 2)..=(machine.start_address + 2),
+                    move |proc: CoreHandle| {
                         // R0 will be overridden by the current instruction
                         proc.cpu.write_register(ArmRegister::R0, 0xFFu32).unwrap();
                         assert_eq!(proc.cpu.read_register::<u32>(ArmRegister::R1).unwrap(), 0);
@@ -241,8 +221,8 @@ fn test_compare_simple_code_hook() {
                         // panics if hook data has already been written to
                         hook_data.set(machine_state).unwrap();
                         Ok(())
-                    }),
-                )
+                    },
+                ))
                 .unwrap();
 
             machine.run();
@@ -271,11 +251,9 @@ fn test_compare_simple_code_hook_blah() {
             let hook_data_result = hook_data.clone();
 
             machine
-                .proc
-                .code_hook(
-                    machine.start_address + 2,
-                    machine.start_address + 2,
-                    Box::new(move |proc: CoreHandle| {
+                .add_hook(StyxHook::code(
+                    (machine.start_address + 2)..=(machine.start_address + 2),
+                    move |proc: CoreHandle| {
                         // R0 will be overridden by the current instruction
                         proc.cpu.write_register(ArmRegister::R0, 0xFFu32).unwrap();
                         assert_eq!(proc.cpu.read_register::<u32>(ArmRegister::R1).unwrap(), 0);
@@ -284,8 +262,8 @@ fn test_compare_simple_code_hook_blah() {
                         // panics if hook data has already been written to
                         hook_data.set(machine_state).unwrap();
                         Ok(())
-                    }),
-                )
+                    },
+                ))
                 .unwrap();
 
             machine.run();
@@ -317,16 +295,15 @@ fn test_compare_simple_interrupt_hook() {
             let hook_data_result = hook_data.clone();
 
             machine
-                .proc
-                .intr_hook(
+                .add_hook(StyxHook::interrupt(
                     // Purposefully do not check irqn because we know unicorn has incorrect values
-                    Box::new(move |backend: CoreHandle, _irqn| {
+                    move |backend: CoreHandle, _irqn| {
                         let machine_state = MachineState::from_backend(backend);
                         // panics if hook data has already been written to
                         hook_data.set(machine_state).unwrap();
                         Ok(())
-                    }),
-                )
+                    },
+                ))
                 .unwrap();
 
             machine.run();
@@ -353,9 +330,7 @@ fn test_compare_read_memory_hook_args() {
     compare_two(
         &mut machines,
         Box::new(|machine| {
-            machine
-                .proc
-                .core
+            machine.proc.vcpus[0]
                 .mmu
                 .write_data(0x00, &(1u8..100u8).collect::<Vec<_>>())
                 .unwrap();
@@ -370,26 +345,20 @@ fn test_compare_read_memory_hook_args() {
 
             let hook_data2 = hook_data.clone();
             machine
-                .proc
-                .mem_read_hook(
-                    0x0000,
-                    0x0100,
-                    Box::new(
-                        move |_backend: CoreHandle, address, size, data: &mut [u8]| {
-                            println!(
-                                "memory read: address={address:x}, size={size}, data={data:?}"
-                            );
-                            // mutate read data
-                            data[0] = 0xFF;
+                .add_hook(StyxHook::memory_read(
+                    0x0000..=0x0100,
+                    move |_backend: CoreHandle, address, size, data: &mut [u8]| {
+                        println!("memory read: address={address:x}, size={size}, data={data:?}");
+                        // mutate read data
+                        data[0] = 0xFF;
 
-                            // panics if hook data has already been written to
-                            hook_data2
-                                .set((address, size, data.to_vec()))
-                                .expect("Hook data has already been written to.");
-                            Ok(())
-                        },
-                    ),
-                )
+                        // panics if hook data has already been written to
+                        hook_data2
+                            .set((address, size, data.to_vec()))
+                            .expect("Hook data has already been written to.");
+                        Ok(())
+                    },
+                ))
                 .unwrap();
 
             machine.run();
@@ -422,9 +391,7 @@ fn test_compare_simple_read_memory_hook() {
     compare_two(
         &mut machines,
         Box::new(|machine| {
-            machine
-                .proc
-                .core
+            machine.proc.vcpus[0]
                 .mmu
                 .write_data(0x00, &(1u8..100u8).collect::<Vec<_>>())
                 .unwrap();
@@ -439,28 +406,24 @@ fn test_compare_simple_read_memory_hook() {
 
             let hook_data2 = hook_data.clone();
             let hook_token = machine
-                .proc
-                .mem_read_hook(
-                    0x0000,
-                    0x0100,
-                    Box::new(
-                        move |backend: CoreHandle, _address, _size, data: &mut [u8]| {
-                            // mutate read data
-                            data[0] = 0xFF;
+                .add_hook(StyxHook::memory_read(
+                    0x0000..=0x0100,
+                    move |backend: CoreHandle, _address, _size, data: &mut [u8]| {
+                        // mutate read data
+                        data[0] = 0xFF;
 
-                            let machine_state = MachineState::from_backend(backend);
-                            // panics if hook data has already been written to
-                            hook_data2
-                                .set(machine_state)
-                                .expect("Hook data has already been written to.");
-                            Ok(())
-                        },
-                    ),
-                )
+                        let machine_state = MachineState::from_backend(backend);
+                        // panics if hook data has already been written to
+                        hook_data2
+                            .set(machine_state)
+                            .expect("Hook data has already been written to.");
+                        Ok(())
+                    },
+                ))
                 .unwrap();
 
             machine.proc.run(2).unwrap();
-            machine.proc.core.cpu.delete_hook(hook_token).unwrap();
+            machine.proc.vcpus[0].cpu.delete_hook(hook_token).unwrap();
             hook_data.get().unwrap().clone()
         }),
     );
@@ -473,27 +436,23 @@ fn test_compare_simple_read_memory_hook() {
 
             let hook_data2 = hook_data.clone();
             let hook_token = machine
-                .proc
-                .mem_read_hook(
-                    0x0000,
-                    0x0100,
-                    Box::new(
-                        move |backend: CoreHandle, _address, _size, data: &mut [u8]| {
-                            // mutate read data
-                            data[0] = 0xFF;
+                .add_hook(StyxHook::memory_read(
+                    0x0000..=0x0100,
+                    move |backend: CoreHandle, _address, _size, data: &mut [u8]| {
+                        // mutate read data
+                        data[0] = 0xFF;
 
-                            let machine_state = MachineState::from_backend(backend);
-                            // panics if hook data has already been written to
-                            hook_data2.set(machine_state).unwrap();
+                        let machine_state = MachineState::from_backend(backend);
+                        // panics if hook data has already been written to
+                        hook_data2.set(machine_state).unwrap();
 
-                            Ok(())
-                        },
-                    ),
-                )
+                        Ok(())
+                    },
+                ))
                 .unwrap();
 
             machine.proc.run(1).unwrap();
-            machine.proc.core.cpu.delete_hook(hook_token).unwrap();
+            machine.proc.vcpus[0].cpu.delete_hook(hook_token).unwrap();
             hook_data.get().unwrap().clone()
         }),
     );
@@ -524,11 +483,9 @@ fn test_compare_simple_write_memory_hook() {
 
             let hook_data2 = hook_data.clone();
             let hook_token = machine
-                .proc
-                .mem_write_hook(
-                    0x0000,
-                    0x0100,
-                    Box::new(move |backend: CoreHandle, _address, size, data: &[u8]| {
+                .add_hook(StyxHook::memory_write(
+                    0x0000..=0x0100,
+                    move |backend: CoreHandle, _address, size, data: &[u8]| {
                         assert_eq!(size, 4);
                         assert_eq!(&data[0..size as usize], &0xDEu32.to_le_bytes());
                         let machine_state = MachineState::from_backend(backend);
@@ -537,12 +494,12 @@ fn test_compare_simple_write_memory_hook() {
                             .set(machine_state)
                             .expect("Hook data has already been written to.");
                         Ok(())
-                    }),
-                )
+                    },
+                ))
                 .unwrap();
 
             machine.proc.run(3).unwrap();
-            machine.proc.core.cpu.delete_hook(hook_token).unwrap();
+            machine.proc.vcpus[0].cpu.delete_hook(hook_token).unwrap();
             hook_data.get().unwrap().clone()
         }),
     );
@@ -555,11 +512,9 @@ fn test_compare_simple_write_memory_hook() {
 
             let hook_data2 = hook_data.clone();
             let hook_token = machine
-                .proc
-                .mem_write_hook(
-                    0x0000,
-                    0x0100,
-                    Box::new(move |backend: CoreHandle, _address, size, data: &[u8]| {
+                .add_hook(StyxHook::memory_write(
+                    0x0000..=0x0100,
+                    move |backend: CoreHandle, _address, size, data: &[u8]| {
                         // mutate read data
                         assert_eq!(size, 4);
                         assert_eq!(&data[0..size as usize], &0xAAu32.to_le_bytes());
@@ -568,12 +523,12 @@ fn test_compare_simple_write_memory_hook() {
                         // panics if hook data has already been written to
                         hook_data2.set(machine_state).unwrap();
                         Ok(())
-                    }),
-                )
+                    },
+                ))
                 .unwrap();
 
             machine.proc.run(2).unwrap();
-            machine.proc.core.cpu.delete_hook(hook_token).unwrap();
+            machine.proc.vcpus[0].cpu.delete_hook(hook_token).unwrap();
             hook_data.get().unwrap().clone()
         }),
     );
@@ -598,9 +553,7 @@ fn test_invalid_insn_hooks() {
 
             let invalid_instruction_address = machine.start_address + 4;
             // write invalid data 2 instructions in
-            machine
-                .proc
-                .core
+            machine.proc.vcpus[0]
                 .mmu
                 .write_data(invalid_instruction_address, &[0xff, 0xff, 0xff, 0xff])
                 .unwrap();
@@ -616,12 +569,7 @@ fn test_invalid_insn_hooks() {
                 Ok(Resolution::NotFixed)
             };
 
-            let token1 = machine
-                .proc
-                .core
-                .cpu
-                .add_hook(StyxHook::InvalidInstruction(Box::new(cb)))
-                .unwrap();
+            let token1 = machine.add_hook(StyxHook::invalid_instruction(cb)).unwrap();
 
             // asserts we get an insn decode error
             // reasoning:
@@ -631,22 +579,20 @@ fn test_invalid_insn_hooks() {
             // where we put the bad data
             assert_eq!(
                 invalid_instruction_address,
-                machine.proc.core.cpu.pc().unwrap()
+                machine.proc.vcpus[0].cpu.pc().unwrap()
             );
             let snapshot = snapshot.snapshot(
                 "after running machine and hitting invalid instruction",
                 machine,
             );
 
-            let r4_val = machine
-                .proc
-                .core
+            let r4_val = machine.proc.vcpus[0]
                 .cpu
                 .read_register::<u32>(ArmRegister::R4)
                 .unwrap();
             assert_eq!(r4_val, 3, "cb failed");
 
-            machine.proc.core.cpu.delete_hook(token1).unwrap();
+            machine.proc.vcpus[0].cpu.delete_hook(token1).unwrap();
 
             snapshot
         },
@@ -670,9 +616,7 @@ fn test_invalid_insn_hook_fix() {
 
             let invalid_instruction_address = machine.start_address + 2;
             // write invalid data 2 instructions in
-            machine
-                .proc
-                .core
+            machine.proc.vcpus[0]
                 .mmu
                 .write_data(invalid_instruction_address, &[0xff, 0xff, 0xff, 0xff])
                 .unwrap();
@@ -692,14 +636,14 @@ fn test_invalid_insn_hook_fix() {
                 Ok(Resolution::Fixed)
             };
 
-            let token1 = machine
-                .proc
-                .add_hook(StyxHook::InvalidInstruction(Box::new(cb)))
-                .unwrap();
+            let token1 = machine.add_hook(StyxHook::invalid_instruction(cb)).unwrap();
 
             // asserts we completed all our instructions
             machine.run_with_exit_reason(TargetExitReason::InstructionCountComplete);
-            assert_eq!(machine.proc.core.pc().unwrap(), machine.start_address + 8);
+            assert_eq!(
+                machine.proc.vcpus[0].cpu.pc().unwrap(),
+                machine.start_address + 8
+            );
 
             let snapshot = snapshot.snapshot(
                 "after running machine and hitting invalid instruction",
@@ -707,9 +651,7 @@ fn test_invalid_insn_hook_fix() {
             );
 
             assert_eq!(
-                machine
-                    .proc
-                    .core
+                machine.proc.vcpus[0]
                     .cpu
                     .read_register::<u32>(ArmRegister::R4)
                     .unwrap(),
@@ -717,9 +659,7 @@ fn test_invalid_insn_hook_fix() {
                 "cb failed"
             );
             assert_ne!(
-                machine
-                    .proc
-                    .core
+                machine.proc.vcpus[0]
                     .cpu
                     .read_register::<u32>(ArmRegister::R2)
                     .unwrap(),
@@ -727,9 +667,7 @@ fn test_invalid_insn_hook_fix() {
                 "invalid instruction overwrite failed"
             );
             assert_eq!(
-                machine
-                    .proc
-                    .core
+                machine.proc.vcpus[0]
                     .cpu
                     .read_register::<u32>(ArmRegister::R3)
                     .unwrap(),
@@ -737,7 +675,7 @@ fn test_invalid_insn_hook_fix() {
                 "continue after fix invalid instruction failed"
             );
 
-            machine.proc.core.cpu.delete_hook(token1).unwrap();
+            machine.proc.vcpus[0].cpu.delete_hook(token1).unwrap();
 
             snapshot
         },
@@ -769,8 +707,7 @@ fn test_unmapped_read_hooks() {
 
             // insert hooks and collect tokens for removal later
             let token1 = machine
-                .proc
-                .unmapped_fault_hook(0, u64::MAX, Box::new(cb))
+                .add_hook(StyxHook::unmapped_fault(0..=u64::MAX, cb))
                 .unwrap();
 
             // both callback return `false`, so emulation should also exit
@@ -778,7 +715,7 @@ fn test_unmapped_read_hooks() {
             machine.run_with_exit_reason(TargetExitReason::UnmappedMemoryRead);
             let snapshot = snapshot.snapshot("After execution", machine);
 
-            let end_pc = machine.proc.core.pc().unwrap();
+            let end_pc = machine.proc.vcpus[0].cpu.pc().unwrap();
 
             // basic assertions are correct
             assert_eq!(
@@ -788,9 +725,7 @@ fn test_unmapped_read_hooks() {
             );
             assert_eq!(
                 0x9999,
-                machine
-                    .proc
-                    .core
+                machine.proc.vcpus[0]
                     .cpu
                     .read_register::<u32>(ArmRegister::R1)
                     .unwrap(),
@@ -800,9 +735,7 @@ fn test_unmapped_read_hooks() {
             // assertions to test that the hooks we successfully called
             assert_eq!(
                 1,
-                machine
-                    .proc
-                    .core
+                machine.proc.vcpus[0]
                     .cpu
                     .read_register::<u32>(ArmRegister::R2)
                     .unwrap(),
@@ -810,7 +743,7 @@ fn test_unmapped_read_hooks() {
             );
 
             // removal of hooks is correct
-            machine.proc.core.cpu.delete_hook(token1).unwrap();
+            machine.proc.vcpus[0].cpu.delete_hook(token1).unwrap();
 
             snapshot
         },
@@ -842,8 +775,7 @@ fn test_unmapped_write_hooks() {
 
             // insert hooks and collect tokens for removal later
             let token1 = machine
-                .proc
-                .unmapped_fault_hook(0, u64::MAX, Box::new(cb))
+                .add_hook(StyxHook::unmapped_fault(0..=u64::MAX, cb))
                 .unwrap();
 
             // both callback return `false`, so emulation should also exit
@@ -851,7 +783,7 @@ fn test_unmapped_write_hooks() {
             machine.run_with_exit_reason(TargetExitReason::UnmappedMemoryWrite);
             let snapshot = snapshot.snapshot("After execution", machine);
 
-            let end_pc = machine.proc.core.pc().unwrap();
+            let end_pc = machine.proc.vcpus[0].cpu.pc().unwrap();
 
             // basic assertions are correct
             assert_eq!(
@@ -861,9 +793,7 @@ fn test_unmapped_write_hooks() {
             );
             assert_eq!(
                 0x9999,
-                machine
-                    .proc
-                    .core
+                machine.proc.vcpus[0]
                     .cpu
                     .read_register::<u32>(ArmRegister::R1)
                     .unwrap(),
@@ -873,9 +803,7 @@ fn test_unmapped_write_hooks() {
             // assertions to test that the hooks we successfully called
             assert_eq!(
                 1,
-                machine
-                    .proc
-                    .core
+                machine.proc.vcpus[0]
                     .cpu
                     .read_register::<u32>(ArmRegister::R2)
                     .unwrap(),
@@ -883,7 +811,7 @@ fn test_unmapped_write_hooks() {
             );
 
             // removal of hooks is correct
-            machine.proc.core.cpu.delete_hook(token1).unwrap();
+            machine.proc.vcpus[0].cpu.delete_hook(token1).unwrap();
 
             snapshot
         },
@@ -970,7 +898,7 @@ fn test_unmapped_write_hooks() {
 //             );
 
 //             // removal of hooks is correct
-//             machine.proc.core.cpu.delete_hook(token1).unwrap();
+//             machine.proc.vcpus[0].cpu.delete_hook(token1).unwrap();
 
 //             snapshot
 //         },
@@ -1046,7 +974,7 @@ fn test_unmapped_write_hooks() {
 //                 "normal hook was not called"
 //             );
 //             let mut buf = [0u8; 4];
-//             machine.proc.core.mmu.read_data(0x0000, &mut buf).unwrap();
+//             machine.proc.vcpus[0].mmu.read_data(0x0000, &mut buf).unwrap();
 //             assert_eq!(
 //                 &0x1337u32.to_le_bytes(),
 //                 &buf,
@@ -1054,7 +982,7 @@ fn test_unmapped_write_hooks() {
 //             );
 
 //             // removal of hooks is correct
-//             machine.proc.core.cpu.delete_hook(token1).unwrap();
+//             machine.proc.vcpus[0].cpu.delete_hook(token1).unwrap();
 
 //             snapshot
 //         },
@@ -1093,17 +1021,12 @@ fn test_bb_hooks() {
                 }
             };
 
-            machine
-                .proc
-                .add_hook(StyxHook::Block(Box::new(cb)))
-                .unwrap();
+            machine.add_hook(StyxHook::block(cb)).unwrap();
             machine.run();
             let snapshot = snapshot.snapshot("After execution", machine);
 
             assert_eq!(
-                machine
-                    .proc
-                    .core
+                machine.proc.vcpus[0]
                     .cpu
                     .read_register::<u32>(ArmRegister::R2)
                     .unwrap(),
@@ -1134,9 +1057,7 @@ fn test_arm_thumb_mode_switch() {
         "mov r1, #0x1009; bx r1;",
         |machine, snapshot| {
             let snapshot = snapshot.initial_snapshot(machine);
-            machine
-                .proc
-                .core
+            machine.proc.vcpus[0]
                 .mmu
                 .write_data(machine.start_address + 8, &[0x0D, 0x22])
                 .unwrap(); // movs r2, #13
@@ -1145,18 +1066,14 @@ fn test_arm_thumb_mode_switch() {
             machine.run_instructions(3);
 
             assert_eq!(
-                machine
-                    .proc
-                    .core
+                machine.proc.vcpus[0]
                     .cpu
                     .read_register::<u32>(ArmRegister::R1)
                     .unwrap(),
                 0x1009
             );
             assert_eq!(
-                machine
-                    .proc
-                    .core
+                machine.proc.vcpus[0]
                     .cpu
                     .read_register::<u32>(ArmRegister::R2)
                     .unwrap(),
@@ -1210,7 +1127,7 @@ impl MachineState {
 
 /// Returns a full [`MachineState`] snapshot from the given machine.
 fn full_compare(machine: &mut TestMachine) -> MachineState {
-    let backend = &mut machine.proc.core;
+    let backend = &mut machine.proc.vcpus[0];
 
     MachineState::from_backend(CoreHandle::new(
         backend.cpu.as_mut(),
@@ -1280,23 +1197,18 @@ impl ProcessorImpl for TestProcessor {
             0x1000,
             MemoryPermissions::all(),
         )?)?;
-        let tlb = DummyTlb::new();
 
-        Ok(ProcessorBundle {
-            cpu,
-            memory,
-            tlb,
-            event_controller: Box::new(DummyEventController::default()),
-            peripherals: vec![],
-            loader_hints: HashMap::default(),
-        })
+        Ok(ProcessorBundleBuilder::new()
+            .with_memory(memory)
+            .with_vcpu(|b| b.with_cpu_box(cpu))
+            .build()?)
     }
 }
 
 /// Base address where assembled instructions are loaded in every test.
 const START_ADDRESS: u64 = 0x1000;
 
-/// Test fixture wrapping a [`Processor`] with assembled instructions loaded
+/// Test fixture wrapping a single vcpu [`Processor`] with assembled instructions loaded
 /// at [`START_ADDRESS`].
 struct TestMachine {
     proc: Processor,
@@ -1316,15 +1228,17 @@ impl TestMachine {
         let instruction_count = asm.stat_count;
 
         // Write generated instructions to memory
-        backend.core.mmu.write_code(START_ADDRESS, &code).unwrap();
+        backend.vcpus[0]
+            .mmu
+            .write_code(START_ADDRESS, &code)
+            .unwrap();
         // Start execution at our instructions
         let offset = if configuration.keystone_mode == keystone_engine::Mode::THUMB {
             1
         } else {
             0
         };
-        backend
-            .core
+        backend.vcpus[0]
             .cpu
             .write_register(ArmRegister::Pc, START_ADDRESS as u32 + offset)
             .unwrap();
@@ -1332,11 +1246,10 @@ impl TestMachine {
         // get pc
         assert_eq!(
             START_ADDRESS,
-            backend.core.pc().unwrap(),
+            backend.vcpus[0].cpu.pc().unwrap(),
             "pc is not correct"
         );
-        let pc_val = backend
-            .core
+        let pc_val = backend.vcpus[0]
             .cpu
             .read_register::<u32>(ArmRegister::Pc)
             .unwrap();
@@ -1397,6 +1310,11 @@ impl TestMachine {
     fn run_raw(&mut self, expected_exit_reason: TargetExitReason, num_instructions: u64) {
         let exit_report = self.proc.run(num_instructions).unwrap();
         assert_eq!(exit_report.exit_reason, expected_exit_reason);
+    }
+
+    /// Helper to add hook to vcpu0.
+    fn add_hook(&mut self, hook: StyxHook) -> Result<HookToken, AddHookError> {
+        self.proc.vcpus[0].cpu.add_hook(hook)
     }
 }
 /// Creates a Unicorn and Pcode machine pair with the default configuration.
@@ -1468,12 +1386,13 @@ impl<T, N> Snapshot<T, N> {
         message: impl Into<Box<str>>,
         machine: &mut TestMachine,
     ) -> Snapshot<MachineState, Self> {
+        let vcpu = &mut machine.proc.vcpus[0];
         self.push(
             message,
             MachineState::from_backend(CoreHandle::new(
-                machine.proc.core.cpu.as_mut(),
-                &mut machine.proc.core.mmu,
-                &mut machine.proc.core.event_controller,
+                vcpu.cpu.as_mut(),
+                &mut vcpu.mmu,
+                &mut vcpu.event_controller,
             )),
         )
     }
