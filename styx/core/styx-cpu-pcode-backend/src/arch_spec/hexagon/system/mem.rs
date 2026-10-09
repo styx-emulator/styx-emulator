@@ -1,19 +1,30 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
-use std::str::FromStr;
+use std::{
+    cell::RefCell,
+    collections::BTreeMap,
+    rc::Rc,
+    str::FromStr,
+    sync::{Arc, Mutex},
+};
 
 use log::info;
-use styx_errors::anyhow::Context;
+use styx_errors::{anyhow::Context, UnknownError};
 use styx_pcode::{
     pcode::{SpaceName, VarnodeData},
     sla::SlaUserOps,
 };
 use styx_pcode_translator::sla::HexagonUserOps;
-use styx_processor::{cpu::CpuBackend, event_controller::EventController, memory::Mmu};
+use styx_processor::{
+    cpu::CpuBackend,
+    event_controller::EventController,
+    memory::{AtomicMmuOpError, Load, Mmu, StoreConditionalResult, TlbTranslateError},
+};
 
 use crate::{
     arch_spec::ArchSpecBuilder,
     call_other::{CallOtherCallback, CallOtherCpu, CallOtherHandleError},
+    memory::sized_value::SizedValue,
     HexagonPcodeBackend, PCodeStateChange,
 };
 
@@ -87,15 +98,75 @@ impl<T: CpuBackend> CallOtherCallback<T> for MemHandler {
     }
 }
 
+#[derive(Debug)]
+struct MemLoadlinkedHandler {
+    llsc_map: Arc<Mutex<BTreeMap<u64, Load>>>,
+    size: usize,
+}
+
+impl<T: CpuBackend + 'static> CallOtherCallback<T> for MemLoadlinkedHandler {
+    fn handle(
+        &mut self,
+        cpu: &mut dyn CallOtherCpu<T>,
+        mmu: &mut Mmu,
+        _ev: &mut EventController,
+        inputs: &[VarnodeData],
+        output: Option<&VarnodeData>,
+    ) -> Result<PCodeStateChange, CallOtherHandleError> {
+        // First input is address. Output is the value
+        // WARN: NOTE: TODO: Need to makes sure this works with page faulting.
+        let addr = u64::from(
+            cpu.read(&inputs[0])
+                .with_context(|| "couldn't get address to load-linked from")?
+                .to_u64()
+                .with_context(|| "couldn't convert load link address to u64")?,
+        );
+        info!("size of load linked is {:?} pc {:x?}", self.size, cpu.pc());
+
+        match mmu.virt_load_linked_data(addr, self.size, cpu) {
+            Ok(load_value) => {
+                let mut llsc = self.llsc_map.lock().expect("couldn't lock llsc map");
+
+                // Now write to output varnode
+                let sized_value_write =
+                    SizedValue::from_le_bytes(&load_value.data()).resize(self.size as u8);
+                let output = output.with_context(|| "expected an output varnode for load link")?;
+
+                // Make sure the value we're writing is the same size the output
+                assert_eq!(sized_value_write.size() as usize, output.size as usize);
+                info!(
+                    "load value is {:x?}, sized value is {:x?}",
+                    &load_value, sized_value_write
+                );
+
+                cpu.write(output, sized_value_write)
+                    .with_context(|| "couldn't write load link to output register")?;
+
+                // Keep it in the LLSC list
+                llsc.insert(addr, load_value);
+
+                Ok(PCodeStateChange::Fallthrough)
+            }
+            // This should handle page faults.
+            Err(AtomicMmuOpError::TlbTranslateError(TlbTranslateError::Exception(exc))) => {
+                Ok(PCodeStateChange::Exception(exc as i32))
+            }
+            Err(e) => Err(CallOtherHandleError::Other(e.into())),
+        }
+    }
+}
+
 // NOTE: there is no locking right now, as Styx only supports singlecore.
 // FIXME: multicore.
 //
 // Both the slaspec implementations will need to be reworked when we
 // get multicore, since we will then need a global lock across cores
 #[derive(Debug)]
-struct MemLockedHandler {}
+struct MemLockedHandler {
+    llsc_map: Arc<Mutex<BTreeMap<u64, Load>>>,
+}
 
-impl<T: CpuBackend> CallOtherCallback<T> for MemLockedHandler {
+impl<T: CpuBackend + 'static> CallOtherCallback<T> for MemLockedHandler {
     fn handle(
         &mut self,
         cpu: &mut dyn CallOtherCpu<T>,
@@ -125,15 +196,44 @@ impl<T: CpuBackend> CallOtherCallback<T> for MemLockedHandler {
             .to_u64()
             .with_context(|| "couldn't convert Rd write value to u64")?;
 
-        match rt_val.size() {
-            4 => mmu.write_u32_le_virt_data(rs_val, rt_u64 as u32, cpu),
-            8 => mmu.write_u64_le_virt_data(rs_val, rt_u64, cpu),
-            _ => unreachable!("invalid mem_locked size: rt_val is not 4 bytes or 8 bytes"),
-        }
-        .with_context(|| "couldn't write Rt to *Rs")?;
+        // Look up load information for store conditional
 
+        // Predicate result of our operation
+        let mut llsc_map = self.llsc_map.lock().expect("couldn't lock LLSC map");
+        let store_result = match llsc_map.remove(&rs_val) {
+            Some(load) => {
+                info!(
+                    "pc {:x?} load {load:x?} virt {:x} bytes {:x?}",
+                    cpu.pc(),
+                    rs_val,
+                    &(rt_u64 as u32).to_le_bytes()
+                );
+                let res = match rt_val.size() {
+                    4 => mmu.virt_store_conditional_data(
+                        rs_val,
+                        load,
+                        &(rt_u64 as u32).to_le_bytes(),
+                        cpu,
+                    ),
+                    8 => mmu.virt_store_conditional_data(rs_val, load, &rt_u64.to_le_bytes(), cpu),
+                    _ => unreachable!("invalid mem_locked size: rt_val is not 4 bytes or 8 bytes"),
+                }
+                .with_context(|| "couldn't write Rt to *Rs")?;
+
+                info!("res {res:?}");
+
+                match res {
+                    StoreConditionalResult::Success => true,
+                    StoreConditionalResult::Failure => false,
+                }
+            }
+            // There was no previous load conditional that occurred on this thread.
+            None => false,
+        };
+
+        info!("store conditional result {store_result}");
         let pd = output.with_context(|| "couldn't unwrap predicate output of mem_locked store")?;
-        cpu.write(pd, 1u32.into())
+        cpu.write(pd, (store_result as u8).into())
             .with_context(|| "couldn't write Pd in mem_locked store")?;
 
         Ok(PCodeStateChange::Fallthrough)
@@ -147,11 +247,44 @@ pub fn add_mem_callothers<S: SlaUserOps<UserOps: FromStr>>(
         .add_handler_other_sla(HexagonUserOps::MemwPhys, MemHandler {})
         .unwrap();
 
+    let llsc_map = Arc::new(Mutex::new(BTreeMap::new()));
+
+    // Load linked
     spec.call_other_manager
-        .add_handler_other_sla(HexagonUserOps::MemwLocked, MemLockedHandler {})
+        .add_handler_other_sla(
+            HexagonUserOps::MemwLoadlinked,
+            MemLoadlinkedHandler {
+                llsc_map: llsc_map.clone(),
+                size: 4,
+            },
+        )
+        .unwrap();
+    spec.call_other_manager
+        .add_handler_other_sla(
+            HexagonUserOps::MemdLoadlinked,
+            MemLoadlinkedHandler {
+                llsc_map: llsc_map.clone(),
+                size: 8,
+            },
+        )
+        .unwrap();
+
+    // Store conditional
+    spec.call_other_manager
+        .add_handler_other_sla(
+            HexagonUserOps::MemwLocked,
+            MemLockedHandler {
+                llsc_map: llsc_map.clone(),
+            },
+        )
         .unwrap();
 
     spec.call_other_manager
-        .add_handler_other_sla(HexagonUserOps::MemdLocked, MemLockedHandler {})
+        .add_handler_other_sla(
+            HexagonUserOps::MemdLocked,
+            MemLockedHandler {
+                llsc_map: llsc_map.clone(),
+            },
+        )
         .unwrap();
 }

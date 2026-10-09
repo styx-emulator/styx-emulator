@@ -46,6 +46,18 @@ pub enum Iclass {
     Alu32_3 = 0b1111,
 }
 
+#[derive(Debug)]
+#[allow(unused)]
+pub enum SlotInfo {
+    Slots0,
+    Slots1,
+    Slots2,
+    Slots3,
+    Slots01,
+    Slots23,
+    Slots0123,
+}
+
 /// Information about the instruction class for each sub-instruction of a duplex instruction.
 ///
 /// This information is available in section 10.2, and specifically table 10-2.

@@ -16,6 +16,7 @@ pub mod tests;
 
 use pkt_semantics::NewReg;
 use styx_pcode_translator::sla::{self, HexagonUserOps};
+pub use system::interrupt::{HexagonInterruptCause, HexagonInterruptType};
 
 // Adapted from PPC
 pub fn build() -> ArchSpecBuilder<sla::Hexagon, HexagonPcodeBackend> {
@@ -37,6 +38,8 @@ pub fn build() -> ArchSpecBuilder<sla::Hexagon, HexagonPcodeBackend> {
     system::mem::add_mem_callothers(&mut spec);
     system::arith::add_arith_callothers(&mut spec);
     system::thread::add_thread_callothers(&mut spec);
+    system::lock::add_lock_callothers(&mut spec);
+    system::reschedule::add_reschedule(&mut spec);
 
     regpairs::add_vector_register_pair_handlers(&mut spec);
 
