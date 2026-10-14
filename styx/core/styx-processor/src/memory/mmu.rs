@@ -40,6 +40,7 @@ impl From<TlbTranslateError> for MmuOpError {
 }
 
 /// A memory operation is either on Code or Data. Allows representing Harvard memory architectures.
+#[derive(Debug, Copy, Clone)]
 pub enum MemoryType {
     Data,
     Code,

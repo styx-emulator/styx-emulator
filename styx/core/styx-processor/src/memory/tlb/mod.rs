@@ -97,4 +97,12 @@ pub trait TlbImpl: Send {
     ///
     /// The implementation decides how to interpret the idx value.
     fn invalidate(&mut self, idx: usize) -> Result<(), UnknownError>;
+
+    /// Search the TLB for an entry based on the given flags. Return the value in Some if
+    /// it exists.
+    ///
+    /// This isn't need for anything other than Hexagon, so we return None and stub this out by default.
+    fn tlb_search(&self, _input: u64, _flags: u32) -> Option<u64> {
+        None
+    }
 }
