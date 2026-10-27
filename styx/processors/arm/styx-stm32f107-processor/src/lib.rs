@@ -62,7 +62,7 @@ impl ProcessorImpl for Stm32f107Builder {
         let mut memory = MemoryBackend::new_region_store();
         let tlb = DummyTlb::new();
         // nvic event controller
-        let event_controller = Nvic::default();
+        let event_controller = Nvic::without_fp_extension();
 
         setup_address_space(&mut memory)?;
         set_hooks(cpu.as_mut())?;
