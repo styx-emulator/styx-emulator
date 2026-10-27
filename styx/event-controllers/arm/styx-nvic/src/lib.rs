@@ -124,6 +124,8 @@ mod consts {
     pub const CEC_MAX_EVENTS: usize = 256;
 
     pub const VTOR_ADDR: u64 = 0xE000_ED08;
+
+    pub const CONTROL_SPSEL: u32 = 1 << 1;
     pub const AIRCR_ADDR: u64 = 0xE000_ED0C;
     pub const FPCCR_ADDR: u64 = 0xE000_EF34;
     pub const CCR_ADDR: u64 = 0xE000_ED14;
@@ -480,6 +482,15 @@ impl EventControllerImpl for Nvic {
         // to be restored upon ISR exit
         self.push_stack(cpu, mmu);
 
+        // Handlers run on the main stack. Clearing CONTROL.SPSEL before the
+        // IPSR write (while still in Thread mode) switches the CPU's active
+        // stack to it.
+        let control = cpu
+            .read_register::<u32>(ArmRegister::Control)
+            .map_err(UnknownError::from)?;
+        cpu.write_register(ArmRegister::Control, control & !CONTROL_SPSEL)
+            .map_err(UnknownError::from)?;
+
         // writes the irq number into the IPSR register
         cpu.write_register(ArmRegister::Ipsr, (irqn + 16) as u32)
             .map_err(UnknownError::from)?;
@@ -798,8 +809,13 @@ impl Nvic {
 
     /// saves context state
     fn push_stack(&self, cpu: &mut dyn CpuBackend, mmu: &mut Mmu) {
-        let flags = self.flags.lock().unwrap();
+        let mut flags = self.flags.lock().unwrap();
         let current_mode = self.cpu_mode.read().unwrap();
+
+        if *current_mode == CPUMode::Thread {
+            flags.ctl_spsel =
+                cpu.read_register::<u32>(ArmRegister::Control).unwrap() & CONTROL_SPSEL != 0;
+        }
 
         let mut framesize: u32 = 0x20;
         let mut force_align = flags.ccr_stkalign;
@@ -879,6 +895,9 @@ impl Nvic {
             }
         } else if *current_mode == CPUMode::Handler {
             cpu.write_register(ArmRegister::Lr, 0xFFFF_FFF1_u32)
+                .unwrap();
+        } else if flags.ctl_spsel {
+            cpu.write_register(ArmRegister::Lr, 0xFFFF_FFFD_u32)
                 .unwrap();
         } else {
             cpu.write_register(ArmRegister::Lr, 0xFFFF_FFF9_u32)
