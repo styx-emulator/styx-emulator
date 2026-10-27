@@ -357,6 +357,20 @@ impl Default for Nvic {
     }
 }
 
+impl Nvic {
+    /// An NVIC for a core without the floating-point extension (e.g.
+    /// Cortex-M0 or Cortex-M3), which always stacks basic frames.
+    pub fn without_fp_extension() -> Self {
+        let nvic = Self::default();
+        {
+            let mut flags = nvic.flags.lock().unwrap();
+            flags.has_fp_ext = false;
+            flags.ctl_fpca = false;
+        }
+        nvic
+    }
+}
+
 impl EventControllerImpl for Nvic {
     fn next(
         &mut self,
