@@ -284,7 +284,11 @@ pub trait CpuBackend: Debug + Hookable + Send {
     /// Handle an event. Can be derived from an interrupt number.
     /// The EventController could use this to do "CPU-specific" things
     /// during the interrupt (eg. wake up a thread)>
-    fn handle_event(&mut self, mmu: &mut Mmu, number: ExceptionNumber) -> Result<(), UnknownError> {
+    fn handle_event(
+        &mut self,
+        _mmu: &mut Mmu,
+        _number: ExceptionNumber,
+    ) -> Result<(), UnknownError> {
         Ok(())
     }
 }

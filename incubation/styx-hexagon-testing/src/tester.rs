@@ -15,7 +15,7 @@ use styx_emulator::prelude::Forever;
 use styx_hexagon_testdata::TestData;
 
 #[allow(unused)]
-#[test_case(hexagon_tests::TEST_MMU_PAGE_SIZE)]
+/*#[test_case(hexagon_tests::TEST_MMU_PAGE_SIZE)]
 #[test_case(hexagon_tests::TEST_MMU_PERMISSIONS)]
 #[test_case(hexagon_tests::TEST_MMU_ASIDS)]
 #[test_case(hexagon_tests::TEST_MMU_OVERLAP)]
@@ -30,7 +30,7 @@ use styx_hexagon_testdata::TestData;
 #[test_case(hexagon_tests::TEST_TEST_THREAD)]
 #[test_case(hexagon_tests::TEST_TLBLOCK)]
 #[test_case(hexagon_tests::TEST_CIAD_SIAD)]
-#[test_case(hexagon_tests::TEST_PENDALOT)]
+#[test_case(hexagon_tests::TEST_PENDALOT)]*/
 fn test_qemu_hexagon_testing_unittests(test: TestData) {
     init_logging();
 

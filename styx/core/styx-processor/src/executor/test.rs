@@ -402,16 +402,8 @@ impl EventDistributorImpl for CapturingPrimaryEc {
 
     fn init(
         &mut self,
-        _cpu: &mut dyn crate::cpu::CpuBackend,
-        _mmu: &mut MemoryBackend,
-    ) -> Result<(), UnknownError> {
-        Ok(())
-    }
-
-    fn init(
-        &mut self,
-        _cpu: &mut dyn crate::cpu::CpuBackend,
-        _mmu: &mut MemoryBackend,
+        _cpu: &mut PerVcpuSlice<VcpuCore>,
+        _mmu: &Arc<MemoryBackend>,
         _config: &mut Config,
     ) -> Result<(), UnknownError> {
         Ok(())

@@ -3,9 +3,9 @@
 
 mod build_with;
 mod enum_mirror;
+mod peripheral_shared_state;
 mod processor_config;
 mod styx_manifest;
-mod peripheral_shared_state;
 
 use proc_macro::TokenStream;
 use quote::{format_ident, quote, ToTokens};

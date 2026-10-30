@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use log::{debug, trace};
 use styx_cpu_type::arch::{
-    backends::{ArchRegister, BasicArchRegister, GlobalArchRegister},
+    backends::{ArchRegister, BasicArchRegister},
     hexagon::{GlobalHexagonRegister, HexagonRegister},
 };
 use styx_errors::anyhow::anyhow;
@@ -422,7 +422,7 @@ impl RegpairHandler {
             _ => unreachable!(),
         }
     }
-    fn get_global_pairs_from_archregister(
+    /*fn get_global_pairs_from_archregister(
         register: ArchRegister,
     ) -> Option<(GlobalHexagonRegister, GlobalHexagonRegister)> {
         // WARN: this assumes the registers are defined contiguously
@@ -432,7 +432,7 @@ impl RegpairHandler {
             }
             _ => unreachable!(),
         }
-    }
+    }*/
 }
 
 #[derive(Debug, Default)]

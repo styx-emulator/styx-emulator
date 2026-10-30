@@ -15,7 +15,7 @@ use log::{info, trace};
 pub use peripheral::{DummyPeripheral, Peripheral, PeripheralTickCtx, RaisedIrqs};
 pub use peripherals::Peripherals;
 pub use single_vcpu_ec::SingleVcpuEventDistributor;
-use smallvec::{Drain, SmallVec};
+use smallvec::SmallVec;
 use static_assertions::assert_obj_safe;
 use styx_errors::anyhow::Context;
 use styx_errors::UnknownError;

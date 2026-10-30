@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use std::{any::Any, sync::Arc};
+use std::any::Any;
 
 use styx_cpu_type::Arch;
 use styx_errors::UnknownError;

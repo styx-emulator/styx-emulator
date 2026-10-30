@@ -231,7 +231,7 @@ pub struct Stid {
     prio: u8,
 }
 
-#[bitfield(u32)]
+#[bitfield(u32, debug)]
 pub struct ModeCtl {
     #[bits(0..=15, rw)]
     enable_mask: u16,

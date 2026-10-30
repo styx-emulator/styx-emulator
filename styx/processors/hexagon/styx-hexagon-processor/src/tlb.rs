@@ -41,11 +41,7 @@ struct Pte {
 
 pub struct HexagonTlb;
 
-impl HexagonTlb {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
+impl HexagonTlb {}
 
 impl TlbImpl for HexagonTlb {
     fn enable_data_address_translation(&mut self) -> Result<(), UnknownError> {

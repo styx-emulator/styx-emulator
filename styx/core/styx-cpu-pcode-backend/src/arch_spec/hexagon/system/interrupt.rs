@@ -69,6 +69,7 @@ pub enum HexagonInterruptType {
 
 #[repr(u8)]
 #[derive(Debug, Copy, Clone)]
+#[allow(unused)]
 pub enum HexagonInterruptCause {
     Reset = 0x000,
     BiuPrecise = 0x001,

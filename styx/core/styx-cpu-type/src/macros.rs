@@ -311,22 +311,23 @@ macro_rules! create_global_register_enums {
                 /// Emits the [`CpuRegister`] struct corresponding to
                 /// the current value of `self`
                 pub fn register(&self) -> CpuRegister {
-                    match self {
+                    match *self {
                         $(Self::$reg_name => CpuRegister {
                             name: stringify!([<$reg_name:upper>]),
                             bit_size: NonZeroUsize::new($size).expect("Register size must be non-zero"),
                             reg_enum: (*self).into(),
                             register_value: self.register_value_enum(),
                         },)*
-			_ => unreachable!(),
+
+			// _ => unreachable!()
                     }
                 }
 
                 /// Returns the register value enum for the current register
+		#[allow(unreachable_code)]
                 pub const fn register_value_enum(&self) -> RegisterValue {
-                    match self {
+                    match *self {
                         $(Self::$reg_name => RegisterValue::from_bit_size($size),)*
-			_ => unreachable!(),
                     }
                 }
 

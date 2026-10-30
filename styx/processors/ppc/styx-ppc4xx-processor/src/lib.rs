@@ -28,65 +28,6 @@ use uart::NewUartPortInner;
 /// The processor fetches and executes this instruction first.
 const INITIAL_PC: u64 = 0xFFFFFFFC;
 
-/// Routes peripheral IRQs to the single vCPU's secondary event controller.
-struct Ppc4xxPrimaryEventController;
-
-impl PrimaryEventControllerImpl for Ppc4xxPrimaryEventController {
-    fn latch(&mut self, _event: ExceptionNumber) -> Result<(), ActivateIRQnError> {
-        Ok(())
-    }
-
-    fn init(
-        &mut self,
-        _cpu: &mut dyn CpuBackend,
-        _mmu: &mut MemoryBackend,
-    ) -> Result<(), UnknownError> {
-        Ok(())
-    }
-
-    fn tick(
-        &mut self,
-        _delta: &GlobalDelta,
-        pending_irqs: &[ExceptionNumber],
-        vcpus: &mut [VCpuCore],
-    ) -> Result<(), UnknownError> {
-        for &irq in pending_irqs {
-            vcpus[0].event_controller.latch(irq)?;
-        }
-        Ok(())
-    }
-}
-
-/// Routes peripheral IRQs to the single vCPU's secondary event controller.
-struct Ppc4xxPrimaryEventController;
-
-impl PrimaryEventControllerImpl for Ppc4xxPrimaryEventController {
-    fn latch(&mut self, _event: ExceptionNumber) -> Result<(), ActivateIRQnError> {
-        Ok(())
-    }
-
-    fn init(
-        &mut self,
-        _cpu: &mut dyn CpuBackend,
-        _mmu: &mut MemoryBackend,
-	_config: &mut Config,
-    ) -> Result<(), UnknownError> {
-        Ok(())
-    }
-
-    fn tick(
-        &mut self,
-        _delta: &GlobalDelta,
-        pending_irqs: &[ExceptionNumber],
-        vcpus: &mut [VCpuCore],
-    ) -> Result<(), UnknownError> {
-        for &irq in pending_irqs {
-            vcpus[0].event_controller.latch(irq)?;
-        }
-        Ok(())
-    }
-}
-
 #[derive(Default)]
 pub struct PowerPC405Builder {}
 
@@ -143,7 +84,10 @@ impl ProcessorImpl for PowerPC405Builder {
 
         let cec = CoreEventController::new(cpu.as_mut(), args.runtime.clone());
 
-        let timers = Timers;
+        // Construct peripherals while the cpu is still available.
+        // Timers specifically initialize registers.
+        // TODO: this should probably be in the peripheral init.
+        let timers = Timers::new(cpu.as_mut());
         let uart = UartController::new(vec![UartInterface::new("0".into(), NewUartPortInner)]);
         let ethernet = EthernetController::new();
 

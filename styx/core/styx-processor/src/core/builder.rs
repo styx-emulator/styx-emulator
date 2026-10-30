@@ -17,14 +17,20 @@ use tokio::runtime::Handle;
 use super::ProcessorBundle;
 
 pub trait CpuBackendBuilding: CpuBackend + CpuBuilding {}
+
 impl<T: CpuBackend + CpuBuilding> CpuBackendBuilding for T {}
 
 impl CpuBackendBuilding for dyn CpuBackend {}
-impl Into<Box<dyn CpuBackendBuilding>> for Box<dyn CpuBackend> {
+impl From<Box<dyn CpuBackend>> for Box<dyn CpuBackendBuilding> {
+    fn from(value: Box<dyn CpuBackend>) -> Self {
+        value.into()
+    }
+}
+/*impl Into<Box<dyn CpuBackendBuilding>> for Box<dyn CpuBackend> {
     fn into(self) -> Box<dyn CpuBackendBuilding> {
         self.into()
     }
-}
+}*/
 
 /// Per-vCPU uninitialized components.
 pub struct VcpuBundle {

@@ -467,13 +467,5 @@ mod tests {
             HexagonRegister::Lr,
             HexagonRegister::from_str("lr").unwrap()
         );
-        assert_eq!(
-            HexagonRegister::SysCfg,
-            HexagonRegister::from_str("Syscfg").unwrap()
-        );
-        assert_eq!(
-            HexagonRegister::SysCfg,
-            HexagonRegister::from_str("syscfg").unwrap()
-        );
     }
 }
