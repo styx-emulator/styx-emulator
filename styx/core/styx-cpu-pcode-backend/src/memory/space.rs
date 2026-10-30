@@ -7,7 +7,7 @@ use enum_dispatch::enum_dispatch;
 use log::{info, trace};
 use std::{ops::Range, sync::Arc};
 use styx_cpu_type::arch::RegisterValue;
-use styx_pcode::pcode::{SpaceId, SpaceInfo, SpaceName, VarnodeData};
+use styx_pcode::pcode::{SpaceId, SpaceInfo};
 use styx_processor::{cpu::GlobalRegisterStore, memory::MmuOpError};
 use thiserror::Error;
 

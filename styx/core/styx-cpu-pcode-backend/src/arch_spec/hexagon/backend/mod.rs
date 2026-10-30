@@ -1,5 +1,10 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
+// Only used by decode attributes test, so adding this will remove the "unused import" error
+#[cfg(test)]
+pub use decode_attribs::BitPattern;
+use decode_info::{PktLoopParseBits, SlotInfo};
+
 use crate::arch_spec::hexagon::system::interrupt::HexagonInterruptType;
 use anyhow::anyhow;
 pub use decode_info::{GeneralHexagonInstruction, Iclass};
@@ -10,7 +15,7 @@ use smallvec::{smallvec, SmallVec};
 use std::{borrow::Cow, collections::BTreeMap, ops::Range, sync::Arc};
 use styx_cpu_type::{
     arch::{
-        backends::{ArchRegister, ArchVariant, BasicArchRegister, GlobalArchRegister},
+        backends::{ArchRegister, ArchVariant, BasicArchRegister},
         hexagon::{
             register_fields::{ModeCtl, Ssr},
             GlobalHexagonRegister, HexagonRegister,
@@ -62,6 +67,7 @@ use crate::{
 use crate::{PCodeStateChange, DEFAULT_REG_ALLOCATION};
 use derive_more::Debug;
 
+mod decode_attribs;
 mod decode_info;
 mod execution_helper;
 mod saved_context_opts;
@@ -129,6 +135,7 @@ enum HexagonFetchDecodeInfo {
 struct HexagonFetchDecodeData {
     total_bytes_consumed: u64,
     ordering: SmallVec<[usize; MAX_PACKET_SIZE]>,
+    load_store_slot_info: SmallVec<[Option<usize>; 4]>,
 }
 
 #[derive(Default)]
@@ -391,6 +398,8 @@ impl BackendHelper<HexagonExecuteSingleInfo, Vec<Pcode>> for HexagonPcodeBackend
                 ev,
                 &mut execution_regs_written,
                 fetch_decode_data.total_bytes_consumed,
+                Some(i),
+                &fetch_decode_data.load_store_slot_info,
             )? {
                 Ok(HexagonSingleInstructionAction::DelayedInterrupt(irqn)) => {
                     delayed_irqn = Some(irqn);
@@ -421,6 +430,7 @@ impl BackendHelper<HexagonExecuteSingleInfo, Vec<Pcode>> for HexagonPcodeBackend
         // We should only flush regs based on executed pcodes.
         trace!("end of packet, flushing registers...");
         let regs_flush_pcodes = Self::flush_regs_pcode(&execution_regs_written);
+        let load_store_info_flush: SmallVec<[Option<usize>; 4]> = smallvec![None, None, None, None];
 
         // NOTE: to my knowledge, this won't ever cause an interrupt??
         match self.execute_single_instr(
@@ -429,6 +439,8 @@ impl BackendHelper<HexagonExecuteSingleInfo, Vec<Pcode>> for HexagonPcodeBackend
             ev,
             &mut execution_regs_written,
             fetch_decode_data.total_bytes_consumed,
+            None,
+            &load_store_info_flush,
         )? {
             // Only handle if there was actually an IRQ request
             Ok(HexagonSingleInstructionAction::DelayedInterrupt(irqn)) => {
@@ -693,6 +705,7 @@ impl CpuBackend for HexagonPcodeBackend {
 
 impl HexagonPcodeBackend {
     /// Return the number of hardware threads
+    #[allow(unused)]
     pub(crate) fn num_hthreads(&self) -> u32 {
         self.num_hthreads
     }
@@ -843,6 +856,9 @@ impl HexagonPcodeBackend {
         ev: &mut EventController,
         execution_regs_written: &mut SmallVec<[VarnodeData; DEFAULT_REG_ALLOCATION]>,
         _bytes_consumed: u64,
+        order: Option<usize>,
+        // Used for handling page faulting
+        load_store_slot_info: &SmallVec<[Option<usize>; 4]>,
     ) -> Result<Result<HexagonSingleInstructionAction, TargetExitReason>, UnknownError> {
         // execute
         let mut i = 0;
@@ -894,9 +910,13 @@ impl HexagonPcodeBackend {
                     // Don't increment PC, jump to next instruction
                 }
                 PCodeStateChange::Exception(irqn) => {
-                    // exception occurred
-                    // we should interrupt hook and rerun instruction
-                    HookManager::trigger_interrupt_hook(self, mmu, ev, irqn)?;
+                    trace!("load_store_slot_info is {load_store_slot_info:?} order is {order:?}");
+                    let slot = load_store_slot_info[order.expect("could not get load/store order")]
+                        .expect("load/store instruction does not have a slot!");
+                    error!("exception: slot is {slot}");
+
+                    self.handle_tlb_miss(mmu, ev, irqn, Some(slot))?;
+
                     return Ok(Ok(HexagonSingleInstructionAction::Rerun));
                     // Don't increment PC
                 }
@@ -978,6 +998,10 @@ impl HexagonPcodeBackend {
         let mut dotnew_total_insns = 0;
         let mut dotnew_regs_written = vec![];
         let mut all_regs_written = vec![];
+
+        // Collect the instruction PCs. The PCs will be accessed when calculating slots
+        // for loads/stores.
+        let mut instruction_pcs: SmallVec<[u32; 4]> = smallvec![];
 
         // See table 2-1 for mapping Lr => R31. Used for tracking register outputs.
         let last_general_register = self
@@ -1146,6 +1170,8 @@ impl HexagonPcodeBackend {
                 // A packet with 5 operations (eg. op1, nop, immext, duplex1, duplex2) will skip the
                 // last instruction with the empty duplex pcode operations added here.
                 full_pcodes.push(pcodes);
+                // If a duplex, the "first" and "second" duplex should be the same.
+                instruction_pcs.push(pc)
             }
 
             // End common postfetch
@@ -1258,9 +1284,84 @@ impl HexagonPcodeBackend {
 
         self.execution_helper = Some(execution_helper);
 
+        // Try to find the load/store instructions and their slots.
+        // This is important for page faulting.
+        //
+        // Algorithm: loop through each instruction. If it's a
+        // load/store, then we get its slot info. If the slot info is
+        // explicitly 0 for the first instruction, then we are done.
+        //
+        // If the slot info is 1, then we are not done and check the
+        // next instruction.
+        //
+        // TODO: Just make sure this works with packet reordering.
+        let mut load_store_slot_info: SmallVec<[Option<usize>; 4]> = smallvec![];
+        let mut current_slot = None;
+        for (i, ins) in full_pcodes.iter().enumerate() {
+            let mut this_slot_info = None;
+            for pcode in ins.iter() {
+                if matches!(pcode.opcode, Opcode::Load | Opcode::Store) {
+                    trace!("instruction {i}/{} is a load/store", full_pcodes.len());
+                    // Slot determination: figure out if the instruction has any "special" slot
+                    // metadata.
+
+                    // Used to determine duplex. The second duplex instruction will
+                    // be 2 away (instead of 4 away) from the previous instruction
+                    let is_second_duplex = if i > 0 {
+                        (instruction_pcs[i] - instruction_pcs[i - 1]) == 2
+                    } else {
+                        false
+                    };
+
+                    let pc_read = if is_second_duplex {
+                        instruction_pcs[i] - 2
+                    } else {
+                        instruction_pcs[i]
+                    };
+                    let ins = GeneralHexagonInstruction::new_with_raw_value(
+                        mmu.read_u32_le_virt_code(pc_read as u64, self)?,
+                    );
+
+                    match decode_attribs::loadstore_slot(ins.raw_value()) {
+                        Some(SlotInfo::Slots0) => {
+                            this_slot_info = Some(0);
+                            trace!("slot0 this_slot_info");
+                        }
+                        Some(SlotInfo::Slots1 | SlotInfo::Slots01) => {
+                            let new_slot_num = match current_slot {
+                                Some(slot) => slot - 1,
+                                // Load/store always starts with slot 1
+                                None => 1,
+                            };
+
+                            current_slot = Some(new_slot_num);
+                            trace!("slots1/slots01 current slot is {current_slot:?} new_slot_num {new_slot_num}");
+
+                            // Flip slot if duplex insert
+                            // TODO change when we sequence duplexes properly
+                            match ins.parse() {
+                                PktLoopParseBits::Duplex => {
+                                    trace!("reversing duplex");
+                                    this_slot_info = Some(1 - new_slot_num)
+                                }
+                                _ => this_slot_info = current_slot,
+                            }
+                        }
+                        _ => unreachable!("a load/store instruction does not have a slot"),
+                    }
+
+                    // We are done finding the slot for this instruction,
+                    // we can move on to the next.
+                    break;
+                }
+            }
+            load_store_slot_info.push(this_slot_info);
+        }
+
         let info = HexagonFetchDecodeData {
             total_bytes_consumed,
             ordering: ordering.clone(),
+            load_store_slot_info,
         };
 
         // Cache before we return, and indicate that the result is cached.

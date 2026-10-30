@@ -52,7 +52,6 @@ use styx_errors::UnknownError;
 
 use crate::core::{ProcessorCore, VcpuCore};
 use crate::event_controller::EventDistributor;
-use crate::hooks::CoreHandle;
 use crate::plugins::collection::Plugins;
 use crate::processor::{EmulationReport, InstructionReport, PerVcpuSlice};
 
@@ -237,7 +236,7 @@ impl RunnerState {
         &mut self,
         vcpus: &mut [VcpuCore],
         idx: usize,
-        primary_ev: &mut EventDistributor,
+        _primary_ev: &mut EventDistributor,
     ) -> Result<StrideResult, UnknownError> {
         let (report, emulate_time) = vcpus[idx].execute_and_time(self.state.stride)?;
         vcpus[idx]

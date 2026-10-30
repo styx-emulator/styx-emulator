@@ -2,19 +2,10 @@
 
 use derive_more::Debug;
 use log::{info, trace};
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex, RwLock},
-};
+use std::sync::{Arc, RwLock};
 
-use styx_cpu_type::{
-    arch::{backends::GlobalArchRegister, RegisterValue, RegisterValueCompatible},
-    ArchEndian,
-};
-use styx_errors::{
-    anyhow::{anyhow, Context},
-    UnknownError,
-};
+use styx_cpu_type::{arch::RegisterValue, ArchEndian};
+use styx_errors::UnknownError;
 
 use super::{CpuBackend, ReadRegisterError, WriteRegisterError};
 

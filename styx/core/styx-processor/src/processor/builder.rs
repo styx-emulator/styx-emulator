@@ -2,11 +2,9 @@
 //! `ProcessorBuilder` logic and utilities
 use std::borrow::Cow;
 use std::sync::{Arc, RwLock};
-use std::collections::HashMap;
 
 use crate::loader::{Loader, LoaderHints, RawLoader};
 use log::{debug, info};
-use styx_cpu_type::arch::backends::{ArchRegister, GlobalArchRegister};
 use styx_cpu_type::Backend;
 use styx_errors::anyhow::{anyhow, Context};
 use styx_errors::UnknownError;
@@ -21,7 +19,7 @@ use crate::core::builder::{
 };
 use crate::core::ProcessorBundle;
 use crate::core::{ExceptionBehavior, ProcMeta, ProcessorCore, VcpuCore};
-use crate::cpu::{CpuBackend, CpuBackendExt, CpuBuilding, GlobalRegisterStore};
+use crate::cpu::{CpuBackendExt, GlobalRegisterStore};
 use crate::event_controller::{EventController, EventControllerImpl, EventDistributor};
 use crate::executor::{
     time::{ProcessorTime, VcpuTime},
@@ -415,7 +413,7 @@ impl<'a> ProcessorBuilder<'a> {
         let memory = Arc::new(memory);
 
         // Build VcpuCores now that memory is wrapped in Arc.
-        let mut vcpus: Vec<VcpuCore> = vcpu_data
+        let vcpus: Vec<VcpuCore> = vcpu_data
             .into_iter()
             .enumerate()
             .map(|(vcpu_index, (cpu, tlb, ec_impl))| {

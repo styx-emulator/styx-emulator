@@ -3,9 +3,7 @@
 use std::str::FromStr;
 
 use log::{info, trace};
-use styx_cpu_type::arch::hexagon::{
-    register_fields::Syscfg, GlobalHexagonRegister, HexagonRegister,
-};
+use styx_cpu_type::arch::hexagon::{register_fields::Syscfg, GlobalHexagonRegister};
 use styx_errors::anyhow::Context;
 use styx_pcode::{pcode::VarnodeData, sla::SlaUserOps};
 use styx_pcode_translator::sla::HexagonUserOps;
