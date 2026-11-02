@@ -36,10 +36,6 @@ jobs:
         toolchain: stable
         components: ''
 
-    - uses: Swatinem/rust-cache@v2
-      with:
-        cache-bin: "false"
-
     - name: Run cargo-udeps
       shell: bash
       run: |

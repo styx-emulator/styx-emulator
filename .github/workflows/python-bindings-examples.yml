@@ -51,10 +51,6 @@ jobs:
           toolchain: stable
           components: ""
 
-      - uses: Swatinem/rust-cache@v2
-        with:
-          cache-bin: "false"
-
       - name: Enter Virtual Environment
         run: |
           python3 -m virtualenv venv

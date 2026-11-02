@@ -48,10 +48,6 @@ jobs:
         toolchain: stable
         components: ''
 
-    - uses: Swatinem/rust-cache@v2
-      with:
-        cache-bin: "false"
-
     - name: Test
       shell: bash
       run: |

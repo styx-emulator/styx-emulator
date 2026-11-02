@@ -24,10 +24,6 @@ jobs:
     - name: Checkout source code
       uses: actions/checkout@v4
 
-    - uses: Swatinem/rust-cache@v2
-      with:
-        cache-bin: "false"
-
     - name: run doc tests
       shell: bash
       run: |
@@ -51,10 +47,6 @@ jobs:
     - name: Checkout source code
       uses: actions/checkout@v4
 
-    - uses: Swatinem/rust-cache@v2
-      with:
-        cache-bin: "false"
-
     - name: cargo test bindings
       shell: bash
       run: |
@@ -77,10 +69,6 @@ jobs:
     steps:
     - name: Checkout source code
       uses: actions/checkout@v4
-
-    - uses: Swatinem/rust-cache@v2
-      with:
-        cache-bin: "false"
 
     - name: Test
       shell: bash
