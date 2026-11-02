@@ -22,10 +22,6 @@ jobs:
     steps:
     - name: Checkout source code
       uses: actions/checkout@v4
-    - uses: Swatinem/rust-cache@v2
-      with:
-        cache-bin: "false"
-
     - name: Run base lints
       shell: bash
       run: |
@@ -38,10 +34,6 @@ jobs:
     steps:
     - name: Checkout source code
       uses: actions/checkout@v4
-    - uses: Swatinem/rust-cache@v2
-      with:
-        cache-bin: "false"
-
     - name: taplo toml format check
       shell: bash
       run: |
@@ -54,10 +46,6 @@ jobs:
     steps:
     - name: Checkout source code
       uses: actions/checkout@v4
-    - uses: Swatinem/rust-cache@v2
-      with:
-        cache-bin: "false"
-
     - name: rustfmt
       shell: bash
       run: |
@@ -70,10 +58,6 @@ jobs:
     steps:
     - name: Checkout source code
       uses: actions/checkout@v4
-    - uses: Swatinem/rust-cache@v2
-      with:
-        cache-bin: "false"
-
     - name: cargo clippy
       shell: bash
       run: |
@@ -92,10 +76,6 @@ jobs:
     steps:
     - name: Checkout source code
       uses: actions/checkout@v4
-    - uses: Swatinem/rust-cache@v2
-      with:
-        cache-bin: "false"
-
     - name: Lint RustDocs
       shell: bash
       run: |
@@ -113,10 +93,6 @@ jobs:
     steps:
     - name: Checkout source code
       uses: actions/checkout@v4
-    - uses: Swatinem/rust-cache@v2
-      with:
-        cache-bin: "false"
-
     - name: Lint workspace-hack
       shell: bash
       run: |
@@ -134,10 +110,6 @@ jobs:
     steps:
     - name: Checkout source code
       uses: actions/checkout@v4
-    - uses: Swatinem/rust-cache@v2
-      with:
-        cache-bin: "false"
-
     - name: License check
       shell: bash
       run: |
@@ -154,10 +126,6 @@ jobs:
     steps:
     - name: Checkout source code
       uses: actions/checkout@v4
-    - uses: Swatinem/rust-cache@v2
-      with:
-        cache-bin: "false"
-
     - name: nogpl check
       shell: bash
       run: |
