@@ -22,14 +22,14 @@ jobs:
     steps:
     - name: Checkout source code
       uses: actions/checkout@v4
-    - uses: Swatinem/rust-cache@v2
-      with:
-        cache-bin: "false"
-
+    - name: Check runner tooling
+      shell: bash
+      run: |
+        pre-commit --version
+        git --version
     - name: Run base lints
       shell: bash
       run: |
-        sudo apt-get install -y pre-commit
         SKIP=clippy,fmt,cargo-check,license-check,fmt-toml pre-commit run -a
 
   toml-check:
@@ -38,14 +38,14 @@ jobs:
     steps:
     - name: Checkout source code
       uses: actions/checkout@v4
-    - uses: Swatinem/rust-cache@v2
-      with:
-        cache-bin: "false"
-
+    - name: Check runner tooling
+      shell: bash
+      run: |
+        pre-commit --version
+        taplo --version
     - name: taplo toml format check
       shell: bash
       run: |
-        sudo apt-get install -y pre-commit
         pre-commit run -a fmt-toml
 
   rust-fmt:
@@ -54,14 +54,14 @@ jobs:
     steps:
     - name: Checkout source code
       uses: actions/checkout@v4
-    - uses: Swatinem/rust-cache@v2
-      with:
-        cache-bin: "false"
-
+    - name: Check runner tooling
+      shell: bash
+      run: |
+        pre-commit --version
+        cargo fmt --version
     - name: rustfmt
       shell: bash
       run: |
-        sudo apt-get install -y pre-commit
         pre-commit run -a fmt
 
   cargo-clippy:
@@ -70,14 +70,15 @@ jobs:
     steps:
     - name: Checkout source code
       uses: actions/checkout@v4
-    - uses: Swatinem/rust-cache@v2
-      with:
-        cache-bin: "false"
-
+    - name: Check runner tooling
+      shell: bash
+      run: |
+        pre-commit --version
+        cargo clippy --version
+        sccache --version
     - name: cargo clippy
       shell: bash
       run: |
-        sudo apt-get install -y pre-commit
         pre-commit run -a clippy
 
     - name: clean
@@ -92,10 +93,12 @@ jobs:
     steps:
     - name: Checkout source code
       uses: actions/checkout@v4
-    - uses: Swatinem/rust-cache@v2
-      with:
-        cache-bin: "false"
-
+    - name: Check runner tooling
+      shell: bash
+      run: |
+        rustc --version
+        sccache --version
+        just --version
     - name: Lint RustDocs
       shell: bash
       run: |
@@ -113,10 +116,12 @@ jobs:
     steps:
     - name: Checkout source code
       uses: actions/checkout@v4
-    - uses: Swatinem/rust-cache@v2
-      with:
-        cache-bin: "false"
-
+    - name: Check runner tooling
+      shell: bash
+      run: |
+        rustc --version
+        sccache --version
+        cargo hakari --version
     - name: Lint workspace-hack
       shell: bash
       run: |
@@ -134,10 +139,11 @@ jobs:
     steps:
     - name: Checkout source code
       uses: actions/checkout@v4
-    - uses: Swatinem/rust-cache@v2
-      with:
-        cache-bin: "false"
-
+    - name: Check runner tooling
+      shell: bash
+      run: |
+        rustc --version
+        sccache --version
     - name: License check
       shell: bash
       run: |
@@ -154,14 +160,15 @@ jobs:
     steps:
     - name: Checkout source code
       uses: actions/checkout@v4
-    - uses: Swatinem/rust-cache@v2
-      with:
-        cache-bin: "false"
-
+    - name: Check runner tooling
+      shell: bash
+      run: |
+        rustc --version
+        cargo deny --version
+        just --version
     - name: nogpl check
       shell: bash
       run: |
-        cargo install cargo-deny@0.18.4 --locked
         just nogpl-check
 
     - name: clean

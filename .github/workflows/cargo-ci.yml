@@ -24,9 +24,13 @@ jobs:
     - name: Checkout source code
       uses: actions/checkout@v4
 
-    - uses: Swatinem/rust-cache@v2
-      with:
-        cache-bin: "false"
+    - name: Check runner tooling
+      shell: bash
+      run: |
+        rustc --version
+        sccache --version
+        just --version
+        protoc --version
 
     - name: run doc tests
       shell: bash
@@ -51,9 +55,14 @@ jobs:
     - name: Checkout source code
       uses: actions/checkout@v4
 
-    - uses: Swatinem/rust-cache@v2
-      with:
-        cache-bin: "false"
+    - name: Check runner tooling
+      shell: bash
+      run: |
+        rustc --version
+        sccache --version
+        cargo nextest --version
+        just --version
+        protoc --version
 
     - name: cargo test bindings
       shell: bash
@@ -78,16 +87,20 @@ jobs:
     - name: Checkout source code
       uses: actions/checkout@v4
 
-    - uses: Swatinem/rust-cache@v2
-      with:
-        cache-bin: "false"
+    - name: Check runner tooling
+      shell: bash
+      run: |
+        rustc --version
+        sccache --version
+        cargo nextest --version
+        just --version
+        protoc --version
+        dtc --version
+        docker version
 
     - name: Test
       shell: bash
       run: |
-        sudo apt-get -y update
-        sudo apt-get install -y \
-          device-tree-compiler
         just cargo-test --profile ci
 
     # Useful for checking if lock files were not committed after change

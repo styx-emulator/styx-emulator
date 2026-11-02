@@ -26,39 +26,19 @@ jobs:
     - name: Checkout source code
       uses: actions/checkout@v4
 
-    - name: Install prerequisites
+    - name: Check runner tooling
       shell: bash
       run: |
-        sudo apt-get -y update
-        sudo apt-get install -y \
-           clang \
-           g++ \
-           pkg-config \
-           cmake \
-           curl \
-           git \
-           python3-dev \
-           python3-virtualenv \
-           python3-pip \
-           gdb-multiarch \
-           libclang-dev \
-           protobuf-compiler \
-           wget
-
-    - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@v1
-      with:
-        toolchain: stable
-        components: ''
-
-    - uses: Swatinem/rust-cache@v2
-      with:
-        cache-bin: "false"
+        rustc --version
+        sccache --version
+        just --version
+        maturin --version
+        uv --version
 
     - name: Enter Virtual Environment
       shell: bash
       run: |
-        python3 -m virtualenv venv
+        uv venv venv
         . venv/bin/activate
 
     - name: Build

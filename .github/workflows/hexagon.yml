@@ -25,32 +25,14 @@ jobs:
     - name: Checkout source code
       uses: actions/checkout@v4
 
-    - name: Install prerequisites
+    - name: Check runner tooling
       shell: bash
       run: |
-        sudo apt-get -y update
-        sudo apt-get install -y \
-           clang \
-           g++ \
-           pkg-config \
-           cmake \
-           curl \
-           git \
-           gdb-multiarch \
-           libclang-dev \
-           ninja-build \
-           wget \
-           cmake
-
-    - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@v1
-      with:
-        toolchain: stable
-        components: ''
-
-    - uses: Swatinem/rust-cache@v2
-      with:
-        cache-bin: "false"
+        rustc --version
+        sccache --version
+        cargo nextest --version
+        just --version
+        docker version
 
     - name: Test
       shell: bash

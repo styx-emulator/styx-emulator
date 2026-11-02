@@ -27,53 +27,33 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v4
 
-      - name: Install prerequisites
+      - name: Check runner tooling
         run: |
-          sudo apt-get -y update
-          sudo apt-get install -y \
-             clang \
-             g++ \
-             pkg-config \
-             cmake \
-             curl \
-             git \
-             python3-dev \
-             python3-virtualenv \
-             python3-pip \
-             gdb-multiarch \
-             libclang-dev \
-             protobuf-compiler \
-             wget
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@v1
-        with:
-          toolchain: stable
-          components: ""
-
-      - uses: Swatinem/rust-cache@v2
-        with:
-          cache-bin: "false"
+          rustc --version
+          sccache --version
+          just --version
+          uv --version
+          ruff --version
+          python3 --version
 
       - name: Enter Virtual Environment
         run: |
-          python3 -m virtualenv venv
+          uv venv venv
           . venv/bin/activate
 
       - name: Lint Examples
         run: |
           . venv/bin/activate
           cd styx/bindings/styx-py-api
-          # ruff 16.0 added many more lints that we currently fail.
-          # see #213
-          pip install ruff==0.15.22
+          # ruff comes from the runner VM, pinned to 0.15.22 because newer
+          # releases add lints that we currently fail. see #213
           just lint-ci
 
       - name: Test
         run: |
           . venv/bin/activate
           cd styx/bindings/styx-py-api
-          pip install . pytest keystone-engine
+          uv pip install . pytest keystone-engine
           just test
 
       - name: Clean
