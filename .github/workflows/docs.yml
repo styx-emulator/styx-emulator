@@ -28,6 +28,13 @@ jobs:
     - name: Checkout source code
       uses: actions/checkout@v4
 
+    - name: Check runner tooling
+      shell: bash
+      run: |
+        python3 --version
+        python3 -m virtualenv --version
+        just --version
+
     - name: Site deps
       shell: bash
       run: |
