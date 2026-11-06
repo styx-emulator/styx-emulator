@@ -8,8 +8,8 @@ mod registers;
 pub mod variants;
 mod xregisters;
 
-pub use registers::{Msp430Register, SpecialMsp430Register};
-pub use xregisters::{Msp430XRegister, SpecialMsp430XRegister};
+pub use registers::{GlobalMsp430Register, Msp430Register, SpecialMsp430Register};
+pub use xregisters::{GlobalMsp430XRegister, Msp430XRegister, SpecialMsp430XRegister};
 
 // for enum dispatch
 use variants::*;

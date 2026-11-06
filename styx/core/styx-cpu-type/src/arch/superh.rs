@@ -7,7 +7,7 @@ use enum_dispatch::enum_dispatch;
 pub mod gdb_targets;
 mod registers;
 pub mod variants;
-pub use registers::{SpecialSuperHRegister, SuperHRegister};
+pub use registers::{GlobalSuperHRegister, SpecialSuperHRegister, SuperHRegister};
 
 // for enum dispatch
 use variants::*;

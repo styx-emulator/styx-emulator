@@ -7,8 +7,13 @@ use super::{
     },
     HexagonRegister,
 };
-use crate::arch::{Arch, ArchitectureDef, ArchitectureVariant, CpuRegister, CpuRegisterBank};
+use crate::arch::{
+    backends::GlobalArchRegister, hexagon::GlobalHexagonRegister, Arch, ArchitectureDef,
+    ArchitectureVariant, CpuRegister, CpuRegisterBank,
+};
 use derive_more::Display;
+use log::info;
+use strum::IntoEnumIterator;
 use styx_sync::lazy_static;
 
 lazy_static! {
@@ -43,38 +48,38 @@ lazy_static! {
         HexagonRegister::S11S10.register(),
         HexagonRegister::S13S12.register(),
         HexagonRegister::S15S14.register(),
-        HexagonRegister::S17S16.register(),
-        HexagonRegister::S19S18.register(),
-        HexagonRegister::S21S20.register(),
-        HexagonRegister::S23S22.register(),
-        HexagonRegister::S25S24.register(),
-        HexagonRegister::S27S26.register(),
-        HexagonRegister::S29S28.register(),
-        HexagonRegister::Pcycle.register(),
-        HexagonRegister::S33S32.register(),
-        HexagonRegister::S35S34.register(),
-        HexagonRegister::S37S36.register(),
-        HexagonRegister::S39S38.register(),
-        HexagonRegister::S41S40.register(),
-        HexagonRegister::S43S42.register(),
-        HexagonRegister::S45S44.register(),
-        HexagonRegister::S47S46.register(),
-        HexagonRegister::S49S48.register(),
-        HexagonRegister::S51S50.register(),
-        HexagonRegister::S53S52.register(),
-        HexagonRegister::S55S54.register(),
-        HexagonRegister::Timer.register(),
-        HexagonRegister::S59S58.register(),
-        HexagonRegister::S61S60.register(),
-        HexagonRegister::S63S62.register(),
-        HexagonRegister::S65S64.register(),
-        HexagonRegister::S67S66.register(),
-        HexagonRegister::S69S68.register(),
-        HexagonRegister::S71S70.register(),
-        HexagonRegister::S73S72.register(),
-        HexagonRegister::S75S74.register(),
-        HexagonRegister::S77S76.register(),
-        HexagonRegister::S79S78.register(),
+        GlobalHexagonRegister::S17S16.register(),
+        GlobalHexagonRegister::S19S18.register(),
+        GlobalHexagonRegister::S21S20.register(),
+        GlobalHexagonRegister::S23S22.register(),
+        GlobalHexagonRegister::S25S24.register(),
+        GlobalHexagonRegister::S27S26.register(),
+        GlobalHexagonRegister::S29S28.register(),
+        GlobalHexagonRegister::Pcycle.register(),
+        GlobalHexagonRegister::S33S32.register(),
+        GlobalHexagonRegister::S35S34.register(),
+        GlobalHexagonRegister::S37S36.register(),
+        GlobalHexagonRegister::S39S38.register(),
+        GlobalHexagonRegister::S41S40.register(),
+        GlobalHexagonRegister::S43S42.register(),
+        GlobalHexagonRegister::S45S44.register(),
+        GlobalHexagonRegister::S47S46.register(),
+        GlobalHexagonRegister::S49S48.register(),
+        GlobalHexagonRegister::S51S50.register(),
+        GlobalHexagonRegister::S53S52.register(),
+        GlobalHexagonRegister::S55S54.register(),
+        GlobalHexagonRegister::Timer.register(),
+        GlobalHexagonRegister::S59S58.register(),
+        GlobalHexagonRegister::S61S60.register(),
+        GlobalHexagonRegister::S63S62.register(),
+        GlobalHexagonRegister::S65S64.register(),
+        GlobalHexagonRegister::S67S66.register(),
+        GlobalHexagonRegister::S69S68.register(),
+        GlobalHexagonRegister::S71S70.register(),
+        GlobalHexagonRegister::S73S72.register(),
+        GlobalHexagonRegister::S75S74.register(),
+        GlobalHexagonRegister::S77S76.register(),
+        GlobalHexagonRegister::S79S78.register(),
         HexagonRegister::G1G0.register(),
         HexagonRegister::G3G2.register(),
         HexagonRegister::G5G4.register(),
@@ -151,6 +156,27 @@ impl CpuRegisterBank for HexagonGeneralRegistersWithHvx {
         regs.extend_from_slice(HEXAGON_DEST_PREDICATES.as_slice());
         regs.extend_from_slice(HEXAGON_REGPAIRS.as_slice());
         regs
+    }
+
+    fn global_registers(&self) -> Vec<GlobalArchRegister> {
+        info!("hexagon global registers requested");
+        let mut regs = vec![];
+        for i in GlobalHexagonRegister::iter() {
+            regs.push(i.into())
+        }
+        regs
+    }
+    /// Total size of a global register space. Must remove regpairs.
+    fn global_registers_size(&self) -> usize {
+        let mut sz = 0;
+        for i in GlobalHexagonRegister::iter() {
+            // We do not want regpairs (64 bit regs), so only 32 bit registers.
+            sz += match i.register_value_enum() {
+                crate::arch::RegisterValue::u32(_) => 4,
+                _ => 0,
+            };
+        }
+        sz
     }
 }
 

@@ -53,7 +53,7 @@ macro_rules! create_basic_register_enums {
                             bit_size: NonZeroUsize::new($size).expect("Register size must be non-zero"),
                             reg_enum: (*self).into(),
                             register_value: self.register_value_enum(),
-                        }),+
+                        },)+
                     }
                 }
 
@@ -271,5 +271,82 @@ macro_rules! create_special_register_enums {
 
 }
 
-// people in this crate are allowed to use this macro
+macro_rules! create_global_register_enums {
+    ($enum_name:ident $(, ($reg_name:ident, $size:expr_2021))* $(,)?) => {
+        ::paste::paste! {
+            #[derive(Debug,
+                     PartialEq,
+                     Eq,
+                     Clone,
+                     Copy,
+                     Hash,
+                     PartialOrd,
+                     Ord,
+                     ::derive_more::Display,
+                     ::num_derive::FromPrimitive,
+                     ::num_derive::ToPrimitive,
+                     ::strum_macros::EnumString,
+                     ::strum_macros::EnumIter,
+                     ::strum_macros::IntoStaticStr)]
+            #[strum(ascii_case_insensitive)]
+            pub enum [<Global $enum_name Register>] {
+                $($reg_name),*
+            }
+
+            impl From<[<Global $enum_name Register>]> for crate::arch::backends::ArchRegister {
+                fn from(reg: [<Global $enum_name Register>]) -> Self {
+                    crate::arch::backends::ArchRegister::Global(
+                        crate::arch::backends::GlobalArchRegister::[<$enum_name>](reg),
+                    )
+                }
+            }
+
+            impl From<[<Global $enum_name Register>]> for crate::arch::backends::GlobalArchRegister {
+                fn from(reg: [<Global $enum_name Register>]) -> Self {
+                    crate::arch::backends::GlobalArchRegister::[<$enum_name>](reg)
+                }
+            }
+
+            impl [<Global $enum_name Register>] {
+                /// Emits the [`CpuRegister`] struct corresponding to
+                /// the current value of `self`
+                pub fn register(&self) -> CpuRegister {
+                    match self {
+                        $(Self::$reg_name => CpuRegister {
+                            name: stringify!([<$reg_name:upper>]),
+                            bit_size: NonZeroUsize::new($size).expect("Register size must be non-zero"),
+                            reg_enum: (*self).into(),
+                            register_value: self.register_value_enum(),
+                        },)*
+			_ => unreachable!(),
+                    }
+                }
+
+                /// Returns the register value enum for the current register
+                pub const fn register_value_enum(&self) -> RegisterValue {
+                    match self {
+                        $(Self::$reg_name => RegisterValue::from_bit_size($size),)*
+			_ => unreachable!(),
+                    }
+                }
+
+                /// Get all possible register enums
+                pub fn all() -> Vec<Self> {
+                    vec![$(Self::$reg_name),*]
+                }
+
+                /// Get the value by name
+                pub fn from_name(name: &str) -> Option<Self> {
+                    match name {
+                        $(stringify!($reg_name) => Some(Self::$reg_name),)*
+                        _ => None,
+                    }
+                }
+            }
+        }
+    };
+}
+
+// people in this crate are allowed to use these macros
+pub(crate) use create_global_register_enums;
 pub(crate) use create_special_register_enums;

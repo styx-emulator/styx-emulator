@@ -3,7 +3,7 @@ use log::debug;
 use styx_cpu_type::arch::RegisterValue;
 use styx_errors::UnknownError;
 
-use super::CpuBackend;
+use super::{CpuBackend, CpuBuilding};
 use crate::cpu::ExecutionReport;
 use crate::event_controller::EventController;
 use crate::hooks::{AddHookError, DeleteHookError, HookToken, Hookable, StyxHook};
@@ -16,6 +16,7 @@ use crate::memory::Mmu;
 #[derive(Default, Debug)]
 pub struct DummyBackend;
 
+impl CpuBuilding for DummyBackend {}
 impl CpuBackend for DummyBackend {
     fn read_register_raw(
         &mut self,

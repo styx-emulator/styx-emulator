@@ -5,6 +5,7 @@ use std::num::NonZeroUsize;
 use crate::{
     arch::{CpuRegister, RegisterValue},
     macros::create_basic_register_enums,
+    macros::create_global_register_enums,
     macros::create_special_register_enums,
 };
 
@@ -282,3 +283,4 @@ create_basic_register_enums!(
 );
 
 create_special_register_enums!(Aarch64);
+create_global_register_enums!(Aarch64);

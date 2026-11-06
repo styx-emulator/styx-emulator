@@ -5,7 +5,7 @@ use std::time::Duration;
 use styx_errors::UnknownError;
 
 use crate::{
-    core::ProcessorCore,
+    core::{ProcessorCore, VcpuCore},
     cpu::DummyBackend,
     event_controller::{
         EventController, EventControllerImpl, EventDistributor, EventDistributorImpl,
@@ -397,6 +397,23 @@ impl EventDistributorImpl for CapturingPrimaryEc {
             .lock()
             .unwrap()
             .extend_from_slice(pending_irqs);
+        Ok(())
+    }
+
+    fn init(
+        &mut self,
+        _cpu: &mut dyn crate::cpu::CpuBackend,
+        _mmu: &mut MemoryBackend,
+    ) -> Result<(), UnknownError> {
+        Ok(())
+    }
+
+    fn init(
+        &mut self,
+        _cpu: &mut dyn crate::cpu::CpuBackend,
+        _mmu: &mut MemoryBackend,
+        _config: &mut Config,
+    ) -> Result<(), UnknownError> {
         Ok(())
     }
 }

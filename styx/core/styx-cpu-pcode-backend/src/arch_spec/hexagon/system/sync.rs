@@ -3,7 +3,7 @@
 use std::str::FromStr;
 
 use log::{info, trace};
-use styx_cpu_type::arch::hexagon::{register_fields::Syscfg, HexagonRegister};
+use styx_cpu_type::arch::hexagon::{register_fields::Syscfg, GlobalHexagonRegister};
 use styx_errors::anyhow::Context;
 use styx_pcode::{pcode::VarnodeData, sla::SlaUserOps};
 use styx_pcode_translator::sla::HexagonUserOps;
@@ -39,7 +39,7 @@ impl<T: CpuBackend> CallOtherCallback<T> for IsyncHandler {
         _output: Option<&VarnodeData>,
     ) -> Result<PCodeStateChange, CallOtherHandleError> {
         let syscfg = Syscfg::new_with_raw_value(
-            cpu.read_register::<u32>(HexagonRegister::SysCfg)
+            cpu.read_register::<u32>(GlobalHexagonRegister::SysCfg)
                 .with_context(|| "couldn't read syscfg")?,
         );
 

@@ -2,7 +2,7 @@
 //! Generic top level container for ARM registers.
 use crate::{
     arch::{CpuRegister, RegisterValue},
-    macros::create_special_register_enums,
+    macros::*,
 };
 use std::num::NonZeroUsize;
 
@@ -75,3 +75,4 @@ crate::macros::create_basic_register_enums!(
 );
 
 create_special_register_enums!(Blackfin);
+create_global_register_enums!(Blackfin);

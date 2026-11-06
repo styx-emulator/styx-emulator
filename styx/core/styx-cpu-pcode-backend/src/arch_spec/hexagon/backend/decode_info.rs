@@ -46,6 +46,18 @@ pub enum Iclass {
     Alu32_3 = 0b1111,
 }
 
+#[derive(Debug)]
+#[allow(unused)]
+pub enum SlotInfo {
+    Slots0,
+    Slots1,
+    Slots2,
+    Slots3,
+    Slots01,
+    Slots23,
+    Slots0123,
+}
+
 /// Information about the instruction class for each sub-instruction of a duplex instruction.
 ///
 /// This information is available in section 10.2, and specifically table 10-2.
@@ -89,50 +101,44 @@ impl HardwareLoopStatus {
         lc1: u32,
         parse_now: PktLoopParseBits,
         parse_next: PktLoopParseBits,
-    ) -> Option<Self> {
+    ) -> Self {
         // check for hardware loop
         // check if lc0/lc1 is greater than 1, since
         // a hwloop terminates when lc0/lc1 == 1
         // so it will never get set to zero after the hwloop executes
         trace!("hwloop help: lc0 {lc0} lc1 {lc1}");
 
-        if lc0 > 1 || lc1 > 1 {
-            // last in loop 1
-            Some(
-                if parse_now == PktLoopParseBits::NotEndOfPacket1
-                    && parse_next == PktLoopParseBits::NotEndOfPacket2
-                {
-                    trace!("hwloop help: last in loop 1");
-                    Self::LastInLoop1
-                }
-                // last in loop 0
-                else if parse_now == PktLoopParseBits::NotEndOfPacket2
-                    && (parse_next == PktLoopParseBits::NotEndOfPacket1
+        // last in loop 1
+        if parse_now == PktLoopParseBits::NotEndOfPacket1
+            && parse_next == PktLoopParseBits::NotEndOfPacket2
+        {
+            trace!("hwloop help: last in loop 1");
+            Self::LastInLoop1
+        }
+        // last in loop 0
+        else if parse_now == PktLoopParseBits::NotEndOfPacket2
+            && (parse_next == PktLoopParseBits::NotEndOfPacket1
                     || parse_next == PktLoopParseBits::EndOfPacket
                     // Is this undocumented? the assembler will happily make endloop0
                     // spit out a duplex as last instruction, but
                     // this case isn't covered in the manual AFAICT.
                     // Endloop1 and 01 are fine since they must be padded with at least 2 nops.
                     || parse_next == PktLoopParseBits::Duplex)
-                {
-                    trace!("hwloop help: last in loop 0");
-                    Self::LastInLoop0
-                }
-                // last in loop 0 and 1
-                else if parse_now == PktLoopParseBits::NotEndOfPacket2
-                    && parse_next == PktLoopParseBits::NotEndOfPacket2
-                {
-                    trace!("hwloop help: last in loop 0 and loop 1");
-                    Self::LastInBothLoops
-                }
-                // not last pkt in loop
-                else {
-                    trace!("hwloop help: not the last packet in a hwloop");
-                    Self::NotLastInLoop
-                },
-            )
-        } else {
-            None
+        {
+            trace!("hwloop help: last in loop 0");
+            Self::LastInLoop0
+        }
+        // last in loop 0 and 1
+        else if parse_now == PktLoopParseBits::NotEndOfPacket2
+            && parse_next == PktLoopParseBits::NotEndOfPacket2
+        {
+            trace!("hwloop help: last in loop 0 and loop 1");
+            Self::LastInBothLoops
+        }
+        // not last pkt in loop
+        else {
+            trace!("hwloop help: not the last packet in a hwloop");
+            Self::NotLastInLoop
         }
     }
 }

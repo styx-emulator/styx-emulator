@@ -71,6 +71,7 @@
 //! ```
 #![allow(rustdoc::private_intra_doc_links)]
 pub use arbitrary_int::{u1, u20, u4, u40, u80, TryNewError as TryNewIntError};
+use backends::GlobalArchRegister;
 use derive_more::Display;
 use enum_as_inner::EnumAsInner;
 use enum_dispatch::enum_dispatch;
@@ -94,7 +95,10 @@ pub mod superh;
 // by anything consuming this), but also for `enum_dispatch`, it needs
 // the items implementing the [`Architecture`] placeholder trait to be
 // explicitly in-scope.
-use aarch64::{variants::*, Aarch64MetaVariants, Aarch64Register, SpecialAarch64Register};
+use aarch64::{
+    variants::*, Aarch64MetaVariants, Aarch64Register, GlobalAarch64Register,
+    SpecialAarch64Register,
+};
 use arm::{variants::*, ArmMetaVariants, ArmRegister, SpecialArmRegister};
 use blackfin::{variants::*, BlackfinMetaVariants, BlackfinRegister, SpecialBlackfinRegister};
 use hexagon::{variants::*, HexagonMetaVariants, HexagonRegister, SpecialHexagonRegister};
@@ -831,7 +835,17 @@ impl Arch {
 
 /// Provides meta-enums for all cpu backends to consume from
 pub mod backends {
-    use super::*;
+    use super::{
+        arm::GlobalArmRegister,
+        blackfin::GlobalBlackfinRegister,
+        hexagon::GlobalHexagonRegister,
+        mips32::GlobalMips32Register,
+        mips64::GlobalMips64Register,
+        msp430::{GlobalMsp430Register, GlobalMsp430XRegister},
+        ppc32::GlobalPpc32Register,
+        superh::GlobalSuperHRegister,
+        *,
+    };
 
     /// The top-level register enum that all backends accept.
     ///
@@ -900,9 +914,41 @@ pub mod backends {
     }
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Display, PartialOrd, Ord, Hash)]
+    pub enum GlobalArchRegister {
+        Aarch64(GlobalAarch64Register),
+        Arm(GlobalArmRegister),
+        Ppc32(GlobalPpc32Register),
+        Mips32(GlobalMips32Register),
+        Mips64(GlobalMips64Register),
+        Hexagon(GlobalHexagonRegister),
+        Blackfin(GlobalBlackfinRegister),
+        SuperH(GlobalSuperHRegister),
+        Msp430(GlobalMsp430Register),
+        Msp430X(GlobalMsp430XRegister),
+    }
+
+    impl GlobalArchRegister {
+        pub const fn register_value_enum(&self) -> RegisterValue {
+            match self {
+                GlobalArchRegister::Aarch64(reg) => reg.register_value_enum(),
+                GlobalArchRegister::Arm(reg) => reg.register_value_enum(),
+                GlobalArchRegister::Ppc32(reg) => reg.register_value_enum(),
+                GlobalArchRegister::Mips32(reg) => reg.register_value_enum(),
+                GlobalArchRegister::Mips64(reg) => reg.register_value_enum(),
+                GlobalArchRegister::Blackfin(reg) => reg.register_value_enum(),
+                GlobalArchRegister::SuperH(reg) => reg.register_value_enum(),
+                GlobalArchRegister::Msp430(reg) => reg.register_value_enum(),
+                GlobalArchRegister::Msp430X(reg) => reg.register_value_enum(),
+                GlobalArchRegister::Hexagon(reg) => reg.register_value_enum(),
+            }
+        }
+    }
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Display, PartialOrd, Ord, Hash)]
     pub enum ArchRegister {
         Basic(BasicArchRegister),
         Special(SpecialArchRegister),
+        Global(GlobalArchRegister),
     }
 
     impl ArchRegister {
@@ -910,6 +956,7 @@ pub mod backends {
             match self {
                 ArchRegister::Basic(reg) => reg.register_value_enum(),
                 ArchRegister::Special(reg) => reg.register_value_enum(),
+                ArchRegister::Global(reg) => reg.register_value_enum(),
             }
         }
     }
@@ -923,6 +970,12 @@ pub mod backends {
     impl From<BasicArchRegister> for ArchRegister {
         fn from(value: BasicArchRegister) -> Self {
             Self::Basic(value)
+        }
+    }
+
+    impl From<GlobalArchRegister> for ArchRegister {
+        fn from(value: GlobalArchRegister) -> Self {
+            Self::Global(value)
         }
     }
 
@@ -1262,6 +1315,16 @@ pub trait CpuRegisterBank {
     /// Get the complete listing of [`CpuRegister`] for this specific
     /// [`ArchitectureVariant`]/[`ArchitectureDef`].
     fn registers(&self) -> Vec<CpuRegister>;
+    /// Get all the global registers of this architecture.
+    /// [`ArchitectureVariant`]/[`ArchitectureDef`].
+    /// Global registers are shared across hardware threads.
+    fn global_registers(&self) -> Vec<GlobalArchRegister> {
+        vec![]
+    }
+    /// How big is a global register bank in bytes?
+    fn global_registers_size(&self) -> usize {
+        0
+    }
     /// Get the metadata about what the `pc` register is on this
     /// specific variant
     fn pc(&self) -> CpuRegister;

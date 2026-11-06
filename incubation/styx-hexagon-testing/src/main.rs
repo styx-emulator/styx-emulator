@@ -70,7 +70,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     });
 
     info!("Starting emulator");
-    proc.run(Forever)?;
+    proc.run_multi(Forever)?;
 
     Ok(())
 }

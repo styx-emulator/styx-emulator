@@ -4,10 +4,7 @@ use styx_emulator::{
     cpu::{arch::hexagon::HexagonRegister, CpuBackendExt},
     errors::UnknownError,
     hooks::{CoreHandle, StyxHook},
-    prelude::{
-        log::{info, trace},
-        Processor, WriteExt,
-    },
+    prelude::{log::trace, Processor, WriteExt},
     processors::hexagon::hexagon::{HexagonConfigTable, HexagonProcessorConfig, QTimerConfig},
 };
 
@@ -18,9 +15,10 @@ pub struct S22 {}
 
 impl HexagonDevice for S22 {
     fn proc_config(&self) -> Result<HexagonProcessorConfig, UnknownError> {
-        info!("S22 processor config");
+        trace!("S22 processor config");
 
         Ok(HexagonProcessorConfig {
+            hardware_threads: 1, // 8,
             config_table: [
                 (HexagonConfigTable::L2TCM, 0x540),
                 (HexagonConfigTable::L2EcomemSize, 0x800),

@@ -10,6 +10,7 @@ mod registers;
 pub mod variants;
 
 pub use registers::Aarch64Register;
+pub use registers::GlobalAarch64Register;
 pub use registers::SpecialAarch64Register;
 
 // for enum dispatch

@@ -147,6 +147,7 @@ lazy_static::lazy_static! {
 }
 
 create_special_register_enums!(Ppc32, SprRegister);
+create_global_register_enums!(Ppc32);
 
 /// PowerPC SpecialRegister
 ///

@@ -6,7 +6,7 @@ pub mod gdb_targets;
 mod registers;
 pub mod variants;
 
-pub use registers::{Mips32Register, SpecialMips32Register};
+pub use registers::{GlobalMips32Register, Mips32Register, SpecialMips32Register};
 
 use tap::Conv;
 // for enum dispatch

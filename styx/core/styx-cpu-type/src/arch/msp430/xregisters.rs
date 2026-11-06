@@ -46,3 +46,4 @@ lazy_static::lazy_static! {
 }
 
 create_special_register_enums!(Msp430X);
+create_global_register_enums!(Msp430X);

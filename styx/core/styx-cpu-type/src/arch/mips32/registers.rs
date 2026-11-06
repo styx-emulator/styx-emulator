@@ -180,3 +180,4 @@ lazy_static::lazy_static! {
 }
 
 create_special_register_enums!(Mips32);
+create_global_register_enums!(Mips32);

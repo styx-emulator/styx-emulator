@@ -6,7 +6,8 @@ pub mod gdb_targets;
 mod registers;
 pub mod variants;
 pub use registers::{
-    Ppc32Register, SpecialPpc32Register, SpecialPpc32RegisterValues, SprRegister, SprRegisterValue,
+    GlobalPpc32Register, Ppc32Register, SpecialPpc32Register, SpecialPpc32RegisterValues,
+    SprRegister, SprRegisterValue,
 };
 
 // for enum dispatch

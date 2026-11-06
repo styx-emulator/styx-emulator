@@ -42,7 +42,7 @@ pub use conditional::ConditionalExecutor;
 pub use custom_executor::CustomExecutor;
 pub use default::DefaultExecutor;
 pub use execution_constraint::{ExecutionConstraint, ExecutionConstraintConcrete, Forever};
-use log::trace;
+use log::{info, trace, warn};
 pub use single_step::SingleStepExecutor;
 use std::time::Instant;
 pub use stride_executor::StrideExecutor;
@@ -51,6 +51,7 @@ use styx_errors::anyhow::{anyhow, Context};
 use styx_errors::UnknownError;
 
 use crate::core::{ProcessorCore, VcpuCore};
+use crate::event_controller::EventDistributor;
 use crate::plugins::collection::Plugins;
 use crate::processor::{EmulationReport, InstructionReport, PerVcpuSlice};
 
@@ -222,7 +223,7 @@ pub fn default_emulation_teardown(
     Ok(())
 }
 
-/// Per-vCPU execution bookkeeping, separate from VCpuCore borrow.
+/// Per-vCPU execution bookkeeping, separate from VcpuCore borrow.
 struct RunnerState {
     state: EmulationRunState,
     /// Determines when we should stop execution.
@@ -231,9 +232,15 @@ struct RunnerState {
 
 impl RunnerState {
     /// Execute a stride with a vcpu and updates internal state. Inspect the StrideResult to get optional exit reason.
-    fn single_stride(&mut self, vcpu: &mut VcpuCore) -> Result<StrideResult, UnknownError> {
-        let (report, emulate_time) = vcpu.execute_and_time(self.state.stride)?;
-        vcpu.time
+    fn single_stride(
+        &mut self,
+        vcpus: &mut [VcpuCore],
+        idx: usize,
+        _primary_ev: &mut EventDistributor,
+    ) -> Result<StrideResult, UnknownError> {
+        let (report, emulate_time) = vcpus[idx].execute_and_time(self.state.stride)?;
+        vcpus[idx]
+            .time
             .record_stride(&report, self.state.stride, emulate_time);
         let instruction_report =
             InstructionReport::from_execution_report(&report, self.state.stride);
@@ -252,7 +259,7 @@ impl RunnerState {
             });
         }
 
-        post_stride_processing(vcpu, &delta)?;
+        post_stride_processing(vcpus, idx, &delta)?;
 
         let insn_exit = self
             .state
@@ -294,7 +301,8 @@ fn run_round_robin(
                 // I.e. InstructionCountComplete OR ExecutionTimeComplete
                 return Err(anyhow!("vcpu exited nonfatal before others"));
             }
-            let result = runner.single_stride(&mut vcpus[vcpu_idx])?;
+            // The primary event controller is passed in
+            let result = runner.single_stride(vcpus, vcpu_idx, &mut core.event_distributor)?;
             *report = result.exit_reason;
         }
 
@@ -346,11 +354,34 @@ fn run_round_robin(
 /// Processes pending interrupts, ticks the per-vCPU event controller, checks
 /// for ISR completion, and runs plugin tickers. System-level peripheral
 /// ticking happens separately in [`run_round_robin`].
-pub fn post_stride_processing(vcpu: &mut VcpuCore, delta: &Delta) -> Result<(), UnknownError> {
-    vcpu.event_controller
-        .next(vcpu.cpu.as_mut(), &mut vcpu.mmu)?;
-    vcpu.event_controller
-        .tick(vcpu.cpu.as_mut(), &mut vcpu.mmu, delta)?;
+pub fn post_stride_processing(
+    vcpus: &mut [VcpuCore],
+    idx: usize,
+    delta: &Delta,
+) -> Result<(), UnknownError> {
+    vcpus[idx]
+        .event_controller
+        .next(vcpus[idx].cpu.as_mut(), &mut vcpus[idx].mmu)?;
+    vcpus[idx]
+        .event_controller
+        .tick(vcpus[idx].cpu.as_mut(), &mut vcpus[idx].mmu, delta)?;
+
+    // Get the "latch_to" IRQs to the primary event controller (clears the latched IRQs as well)
+    let vcpu_irqs = vcpus[idx].event_controller.vcpu_irqs()?;
+    info!("getting vcpu irqs");
+    for (core, irq) in vcpu_irqs {
+        info!("htid {core} irq {irq}");
+        if core < vcpus.len() {
+            vcpus[core].event_controller.execute(
+                irq,
+                vcpus[core].cpu.as_mut(),
+                &mut vcpus[core].mmu,
+            )?;
+        } else {
+            warn!("core event is out of bounds");
+        }
+    }
+
     Ok(())
 }
 

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
+use crate::cpu::CpuBuilding;
 use crate::event_controller::DummyEventController;
-use crate::memory::{DummyTlb, TlbImpl};
+use crate::memory::{DummyTlb, MemoryBackend, TlbImpl};
 use crate::processor::BuildingProcessor;
 use crate::{
     core::ExceptionBehavior,
@@ -15,10 +16,20 @@ use tokio::runtime::Handle;
 
 use super::ProcessorBundle;
 
+pub trait CpuBackendBuilding: CpuBackend + CpuBuilding {}
+impl<T: CpuBackend + CpuBuilding> CpuBackendBuilding for T {}
+
+impl CpuBackendBuilding for dyn CpuBackend {}
+impl Into<Box<dyn CpuBackendBuilding>> for Box<dyn CpuBackend> {
+    fn into(self) -> Box<dyn CpuBackendBuilding> {
+        self.into()
+    }
+}
+
 /// Per-vCPU uninitialized components.
 pub struct VcpuBundle {
     /// Uninitialized [`CpuBackend`] implementation.
-    pub cpu: Box<dyn CpuBackend>,
+    pub cpu: Box<dyn CpuBackendBuilding>,
     /// Processor TLB.
     pub tlb: Box<dyn TlbImpl>,
     /// Uninitialized per-vCPU [`EventControllerImpl`] implementation.
@@ -48,7 +59,7 @@ impl VcpuBundle {
 ///
 /// Constructed via [`VcpuBundle::builder()`] or [`super::processor_bundle::ProcessorBundleBuilder::with_vcpu()`].
 pub struct VcpuBundleBuilder {
-    cpu: Box<dyn CpuBackend>,
+    cpu: Box<dyn CpuBackendBuilding>,
     tlb: Box<dyn TlbImpl>,
     event_controller: Box<dyn EventControllerImpl>,
 }
@@ -70,17 +81,16 @@ impl VcpuBundleBuilder {
     }
 
     /// Set the [`CpuBackend`] for this vCPU.
-    ///
     /// This boxes the [`CpuBackend`]. Use [`Self::with_cpu_box()`]
     /// if you have an already box'd object.
-    pub fn with_cpu(mut self, cpu: impl CpuBackend + 'static) -> Self {
+    pub fn with_cpu(mut self, cpu: impl CpuBuilding + CpuBackend + 'static) -> Self {
         self.cpu = Box::new(cpu);
         self
     }
 
     /// See [`Self::with_cpu()`]; accepts an already-boxed backend.
-    pub fn with_cpu_box(mut self, cpu: Box<dyn CpuBackend>) -> Self {
-        self.cpu = cpu;
+    pub fn with_cpu_box(mut self, cpu: impl Into<Box<dyn CpuBackendBuilding>>) -> Self {
+        self.cpu = cpu.into();
         self
     }
 
@@ -148,6 +158,15 @@ pub struct BuildProcessorImplArgs<'a> {
 /// Refer to documentation of the [ProcessorBundle] fields for more information.
 pub trait ProcessorImpl {
     fn build(&self, args: &BuildProcessorImplArgs) -> Result<ProcessorBundle, UnknownError>;
+    /// called after global registers and other shared state is set up across processors.
+    fn post_shared_state_setup(
+        &self,
+        _cpu: &mut dyn CpuBackend,
+        _mmu: &mut MemoryBackend,
+        _config: &mut Config,
+    ) -> Result<(), UnknownError> {
+        Ok(())
+    }
     /// called after the build method, but before the processor is started
     fn init(&self, _proc: &mut BuildingProcessor) -> Result<(), UnknownError> {
         Ok(())

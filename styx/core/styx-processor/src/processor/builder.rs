@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! `ProcessorBuilder` logic and utilities
 use std::borrow::Cow;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 use crate::loader::{Loader, LoaderHints, RawLoader};
 use log::{debug, info};
@@ -15,11 +15,11 @@ use tonic::transport::Server;
 
 use super::{Processor, SyncProcessor};
 use crate::core::builder::{
-    BuildProcessorImplArgs, ProcessorImpl, UnimplementedProcessorImpl, VcpuBundle,
+    BuildProcessorImplArgs, CpuBackendBuilding, ProcessorImpl, UnimplementedProcessorImpl, VcpuBundle
 };
 use crate::core::ProcessorBundle;
 use crate::core::{ExceptionBehavior, ProcMeta, ProcessorCore, VcpuCore};
-use crate::cpu::{CpuBackend, CpuBackendExt};
+use crate::cpu::{CpuBackendExt, GlobalRegisterStore};
 use crate::event_controller::{EventController, EventControllerImpl, EventDistributor};
 use crate::executor::{
     time::{ProcessorTime, VcpuTime},
@@ -32,10 +32,10 @@ use crate::plugins::UninitPlugin;
 use crate::processor::{config::Config, PerVcpu, PerVcpuSlice, ProcessorConfig};
 use crate::runtime::ProcessorRuntime;
 
-/// Unpacked components of a [`VcpuBundle`], held pre-`Arc` so event controllers
-/// can be initialized before memory is shared.
-type VcpuParts = (
-    Box<dyn CpuBackend>,
+ /// Unpacked components of a [`VcpuBundle`], held pre-`Arc` so ECs can be initialised
+ /// before memory is shared.
+ type VcpuParts = (
+    Box<dyn CpuBackendBuilding>,
     Box<dyn TlbImpl>,
     Box<dyn EventControllerImpl>,
 );
@@ -357,7 +357,7 @@ impl<'a> ProcessorBuilder<'a> {
         bundle: ProcessorBundle,
         builder: Box<dyn ProcessorImpl>,
     ) -> Result<Processor, UnknownError> {
-        let mut runtime = self.runtime;
+	let mut runtime = self.runtime;
 
         let ipc_resolved_port = runtime
             .handle()
@@ -379,14 +379,40 @@ impl<'a> ProcessorBuilder<'a> {
             )
             .collect();
 
+	// Determine whether we have global registers. If so, initialize a store for them and
+	// share the register store with each Vcpu. 
+	let global_registers_size = vcpu_data[0].0.architecture().registers().global_registers_size();
+        info!("got global register size: {global_registers_size:x}");
+	if global_registers_size > 0 {
+	    let backing_store = {
+		let mut tmp : Box<dyn GlobalRegisterStore>  = Box::new(RwLock::new(Vec::new()));
+		// Fill in backing store.
+		tmp.initialize(global_registers_size)?;
+
+		// Move to Arc
+		Arc::new(tmp)
+	    };
+
+	    // Put the backing store in each vcpu.
+	    // This does nothing if the backing store does not handle global registers.
+	    for (vcpu, _, _ ) in &mut vcpu_data {
+		vcpu.add_global_registers(backing_store.clone())?;
+	    }
+	}
+	
+	
+        if let Some((cpu, _, _)) = vcpu_data.first_mut() {
+	    builder.post_shared_state_setup(cpu.as_mut(), &mut memory, &mut self.config)?;
+	}
+
         // Init each secondary EC before memory is moved into Arc.
         for (cpu, _, ec_impl) in &mut vcpu_data {
             ec_impl.init(cpu.as_mut(), &mut memory, &mut self.config)?;
         }
-
+ 
         let memory = Arc::new(memory);
 
-        // Build VCpuCores now that memory is wrapped in Arc.
+        // Build VcpuCores now that memory is wrapped in Arc.
         let vcpus: Vec<VcpuCore> = vcpu_data
             .into_iter()
             .enumerate()
@@ -415,10 +441,10 @@ impl<'a> ProcessorBuilder<'a> {
         debug!("initializing event distributor");
         let mut primary_ec_impl = bundle.event_distributor;
         primary_ec_impl.init(&mut vcpus, &memory, &mut self.config)?;
-        let primary_ec = EventDistributor::new(primary_ec_impl);
+        let primary_ed = EventDistributor::new(primary_ec_impl);
         let mut core = ProcessorCore {
             memory: Arc::clone(&memory),
-            event_distributor: primary_ec,
+            event_distributor: primary_ed,
             time: ProcessorTime::default(),
         };
 
@@ -441,7 +467,7 @@ impl<'a> ProcessorBuilder<'a> {
                 .context("failed to add initial processor hooks")?;
         }
 
-        let mut building_processor = BuildingProcessor {
+	let mut building_processor = BuildingProcessor {
             vcpus: &mut vcpus,
             core: &mut core,
             runtime: &mut runtime,

@@ -9,8 +9,8 @@ pub mod gdb_targets;
 mod registers;
 pub mod variants;
 pub use registers::{
-    arm_coproc_registers, ArmRegister, CoProc, CoProcessor, CoProcessorValue, SpecialArmRegister,
-    SpecialArmRegisterValues,
+    arm_coproc_registers, ArmRegister, CoProc, CoProcessor, CoProcessorValue, GlobalArmRegister,
+    SpecialArmRegister, SpecialArmRegisterValues,
 };
 
 // for enum dispatch

@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use log::trace;
-use styx_cpu_type::{arch::hexagon::HexagonRegister, TargetExitReason};
+use styx_cpu_type::{
+    arch::hexagon::{GlobalHexagonRegister, HexagonRegister},
+    TargetExitReason,
+};
 use styx_processor::{
     cpu::{CpuBackend, CpuBackendExt},
     hooks::{CoreHandle, Hookable, StyxHook},
@@ -56,7 +59,7 @@ fn test_ciad() {
 "#,
     );
 
-    cpu.write_register(HexagonRegister::Iad, IAD_INITIAL)
+    cpu.write_register(GlobalHexagonRegister::Ipendad, IPENDAD_INITIAL)
         .unwrap();
     cpu.write_register(HexagonRegister::R10, MASK).unwrap();
 
@@ -66,7 +69,9 @@ fn test_ciad() {
         TargetExitReason::InstructionCountComplete
     );
 
-    let iad = cpu.read_register::<u32>(HexagonRegister::Iad).unwrap();
+    let ipendad = cpu
+        .read_register::<u32>(GlobalHexagonRegister::Ipendad)
+        .unwrap();
 
     assert_eq!(iad, RESULT);
 }
@@ -91,7 +96,7 @@ fn test_cswi() {
 "#,
     );
 
-    cpu.write_register(HexagonRegister::Ipend, IPEND_INITIAL)
+    cpu.write_register(GlobalHexagonRegister::Ipendad, IPENDAD_INITIAL)
         .unwrap();
     cpu.write_register(HexagonRegister::R10, MASK).unwrap();
 
@@ -101,7 +106,9 @@ fn test_cswi() {
         TargetExitReason::InstructionCountComplete
     );
 
-    let ipend = cpu.read_register::<u32>(HexagonRegister::Ipend).unwrap();
+    let ipendad = cpu
+        .read_register::<u32>(GlobalHexagonRegister::Ipendad)
+        .unwrap();
 
     assert_eq!(ipend, RESULT);
 }
