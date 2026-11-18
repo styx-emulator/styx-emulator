@@ -167,7 +167,13 @@ rustup component add rust-analyzer --toolchain stable
 then install just and run the setup task
 
 ```bash
-cargo install just && just setup
+dnf install just
+# or
+get install just
+# or
+cargo install just
+
+just setup
 ```
 
 This will install a virtualenv at `./venv`. This will also install the `cargo`
