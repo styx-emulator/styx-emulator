@@ -158,7 +158,7 @@ python-deps: mk-venv
     {{ py-path }} -m pip install -r requirements.txt
 
 rust-deps:
-    cargo install --force --locked cargo-nextest@0.9.35 cargo-llvm-cov@0.6.16 cargo-valgrind@2.2.1 taplo-cli@0.9.3 cargo-hakari@0.9.35 just@1.38.0 git-cliff@2.7.0
+    cargo install --force --locked cargo-nextest@0.9.35 cargo-llvm-cov@0.6.16 cargo-valgrind@2.2.1 taplo-cli@0.9.3 cargo-hakari@0.9.35 git-cliff@2.7.0
 
 container-setup: mk-venv rust-fetch
 
