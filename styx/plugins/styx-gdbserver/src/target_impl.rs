@@ -176,6 +176,8 @@ where
     /// hook tokens and the set of watched addresses; see [`Watchpoints`].
     pub(crate) watchpoints: Arc<Watchpoints>,
     options: GDBOptions,
+    /// Instructions per epoch, from the processor's `ConfigRequestedStrideLength`.
+    cpu_epoch: u64,
     /// VcpuTime stored after last tick.
     last_tick_time: Vec<VcpuTime>,
     /// Wall time across all vCPUs at the last *global* (processor-wide)
@@ -202,6 +204,7 @@ where
         core: &'a mut ProcessorCore,
         plugins: &'a mut Plugins,
         options: GDBOptions,
+        cpu_epoch: u64,
     ) -> Self {
         trace!("Creating TargetImpl");
         let reg_size = vcpus[0].cpu.architecture().core_register_size();
@@ -215,6 +218,7 @@ where
             breakpoint_state: Arc::new(BreakpointManager::default()),
             watchpoints: Arc::new(Watchpoints::new()),
             options,
+            cpu_epoch,
             last_tick_time: vec![VcpuTime::default(); num_vcpus],
             last_global_wall: None,
             current_vcpu: None,
@@ -328,7 +332,7 @@ where
     ) -> Result<RunEvent, UnknownError> {
         let num_vcpus = self.vcpus.len();
         let should_step_irqs = self.options.step_irqs == StepIRQs::Enabled;
-        let cpu_epoch = self.options.cpu_epoch;
+        let cpu_epoch = self.cpu_epoch;
 
         // If any thread has a step action, the entire round runs in single-step
         // so non-stepped threads advance one instruction alongside. Resume
