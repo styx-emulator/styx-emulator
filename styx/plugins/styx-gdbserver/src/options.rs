@@ -1,8 +1,5 @@
 // SPDX-License-Identifier: BSD-2-Clause
 
-/// How many instructions to segment "epoch"'s with by default.
-const CPU_EPOCH_SIZE_DEFAULT: u64 = 1024;
-
 /// Toggle the tick and IRQ handling during debugger steps.
 ///
 /// See [`GDBOptions::step_irqs`] for more information.
@@ -14,7 +11,7 @@ pub enum StepIRQs {
 }
 
 /// Modify the GDB Server's behavior.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct GDBOptions {
     /// Toggles IRQs during GDB Step.
     ///
@@ -22,20 +19,10 @@ pub struct GDBOptions {
     /// The default setting of [StepIRQs::Disabled] will not tick peripherals or call
     /// the secondary event controller's tick method.
     /// Setting this to [StepIRQs::Enabled] will enable these during stepping.
-    /// The frequency of ticking is set by [`GDBOptions::cpu_epoch`].
+    /// The frequency of ticking is set by the processor's
+    /// [`ConfigRequestedStrideLength`](styx_core::processor::core_configs::ConfigRequestedStrideLength),
+    /// which is also how many instructions run before execution pauses to handle IRQs and
+    /// GDB input. A larger stride means faster execution but slower to activate IRQs and tick
+    /// peripherals.
     pub step_irqs: StepIRQs,
-    /// How many instructions to run before pausing execution to handle IRQs and GDB input.
-    ///
-    /// The default is `1024`.
-    /// The general tradeoff is larger epoch means faster execution but slower to activate IRQs
-    /// and tick peripherals.
-    pub cpu_epoch: u64,
-}
-impl Default for GDBOptions {
-    fn default() -> Self {
-        GDBOptions {
-            step_irqs: StepIRQs::default(),
-            cpu_epoch: CPU_EPOCH_SIZE_DEFAULT,
-        }
-    }
 }

@@ -5,6 +5,7 @@
 //! breakpoints, watchpoints). [`nexti`] covers stepping over a call.
 use gdb_multicore_ppc::{DualPpc405Builder, SinglePpc405Builder};
 use styx_emulator::arch::ppc32::gdb_targets::Ppc4xxTargetDescription;
+use styx_emulator::core::processor::core_configs::ConfigRequestedStrideLength;
 use styx_emulator::plugins::gdb::{GDBOptions, StepIRQs};
 use styx_emulator::prelude::*;
 use styx_integration_tests::gdb_harness::GdbHarness;
@@ -15,8 +16,10 @@ const INSTRUCTION_SIZE: u64 = 4;
 /// GDB options shared by every harness in this file.
 const GDB_OPTIONS: GDBOptions = GDBOptions {
     step_irqs: StepIRQs::Disabled,
-    cpu_epoch: 1024,
 };
+
+/// Instructions per epoch, set on every processor built in this file.
+const STRIDE_LENGTH: u64 = 1024;
 
 /// Path to the object file holding the firmware's symbols, assembled from
 /// `firmware/firmware.S` at build time by `build.rs` (see `FIRMWARE_OBJ_FILE`).
@@ -31,6 +34,9 @@ fn read_u32(h: &GdbHarness, addr: u64) -> u32 {
 }
 
 fn harness(builder: ProcessorBuilder) -> GdbHarness {
+    let builder = builder.register_config(ConfigRequestedStrideLength {
+        preferred_stride_length: STRIDE_LENGTH,
+    });
     GdbHarness::from_processor_builder_options::<Ppc4xxTargetDescription>(builder, GDB_OPTIONS)
 }
 

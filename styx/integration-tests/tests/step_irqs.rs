@@ -8,6 +8,7 @@ use styx_core::core::builder::BuildProcessorImplArgs;
 use styx_core::core::ProcessorBundleBuilder;
 use styx_core::event_controller::EventControllerImpl;
 use styx_core::prelude::*;
+use styx_core::processor::core_configs::ConfigRequestedStrideLength;
 use styx_plugins::gdb::StepIRQs;
 
 /// Dummy Event Controller impl that stores if `next()` was called.
@@ -143,25 +144,28 @@ impl CpuBackend for DummyCpu {
 /// Test the [StepIRQs] options in [GDBOption] (activate IRQs on step).
 #[test]
 fn test_step_irqs() {
-    let did_tick: &'static AtomicBool = Box::leak(Box::new(AtomicBool::new(false)));
-    let proc = ProcessorBuilder::default().with_builder(move |_: &BuildProcessorImplArgs| {
-        Ok(ProcessorBundleBuilder::new()
-            .with_vcpu(|v| {
-                v.with_cpu(DummyCpu)
-                    .with_event_controller(DidNextEventController(did_tick))
-            })
-            .build()?)
-    });
-
     // small cpu epoch to make test fast
     const CPU_EPOCH: u64 = 10;
+    let did_tick: &'static AtomicBool = Box::leak(Box::new(AtomicBool::new(false)));
+    let proc = ProcessorBuilder::default()
+        .register_config(ConfigRequestedStrideLength {
+            preferred_stride_length: CPU_EPOCH,
+        })
+        .with_builder(move |_: &BuildProcessorImplArgs| {
+            Ok(ProcessorBundleBuilder::new()
+                .with_vcpu(|v| {
+                    v.with_cpu(DummyCpu)
+                        .with_event_controller(DidNextEventController(did_tick))
+                })
+                .build()?)
+        });
+
     let harness = ::styx_integration_tests::gdb_harness::GdbHarness::from_processor_builder_options::<
         Ppc4xxTargetDescription,
     >(
         proc,
         styx_plugins::gdb::GDBOptions {
             step_irqs: StepIRQs::Enabled,
-            cpu_epoch: CPU_EPOCH,
         },
     );
 
