@@ -141,16 +141,17 @@ impl TimerContainer {
     }
 
     /// Timer count was completed. Called from timers peripheral.
+    ///
+    /// Returns the core interrupt to raise if the timer interrupt is enabled, [None] otherwise.
     pub fn timer_went_off(
-        &mut self,
-        mmu: &mut Mmu,
-        ev: &mut dyn EventControllerImpl,
+        &self,
+        memory: &MemoryBackend,
         enabled_timer: TimerId,
-    ) {
+    ) -> Option<ExceptionNumber> {
         let mut timer = self.timers[enabled_timer].lock().unwrap();
         timer.interrupt_status = true;
         trace!("timer {enabled_timer:?} triggered, latching peripheral");
-        self.system.latch_peripheral(mmu, ev, enabled_timer);
+        self.system.latch_peripheral(memory, enabled_timer)
     }
 
     pub fn new(system: SicHandle) -> Self {

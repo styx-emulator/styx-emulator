@@ -82,7 +82,10 @@ pub fn styx_event(args: TokenStream, item: TokenStream) -> TokenStream {
             #[doc="Event type"]
             pub etype: TraceEventType,
 
-            #(#input_struct_fields),*
+            #(#input_struct_fields),*,
+
+            #[doc="Vcpu id"]
+            pub vcpu_id: u16,
         }
 
         impl From<BaseTraceEvent> for #input_struct_name {
@@ -101,7 +104,6 @@ pub fn styx_event(args: TokenStream, item: TokenStream) -> TokenStream {
                 }
             }
         }
-
     })
 }
 
@@ -177,13 +179,11 @@ pub fn derive_traceable(item: TokenStream) -> TokenStream {
     let event_name = parse_macro_input!(item as DeriveInput).ident;
     quote! {
         impl Traceable for #event_name {
-
             /// Get the event type
             #[inline(always)]
             fn event_type(&self) -> TraceEventType {
                 self.etype
             }
-
 
             /// Get the event number for the event
             #[inline(always)]
@@ -196,7 +196,6 @@ pub fn derive_traceable(item: TokenStream) -> TokenStream {
             fn json(&self) -> String {
                 serde_json::to_string(&self).unwrap()
             }
-
 
             /// Convert to text - but really just the derived `Debug` impl
             #[inline(always)]

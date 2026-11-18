@@ -2,44 +2,60 @@
 //! Controls I/O and event processing between with the gdb client and target processor.
 //!
 //! [`EmuGdbEventLoop`] implements
-//! [the blocking event loop trait](https://docs.rs/gdbstub/0.6.6/gdbstub/stub/run_blocking/trait.BlockingEventLoop.html)
+//! [the blocking event loop trait](https://docs.rs/gdbstub/0.7.3/gdbstub/stub/run_blocking/trait.BlockingEventLoop.html)
 //! from gdbstub. It's created and used by the [GdbExecutor](crate::plugin::GdbExecutor).
 use crate::target_impl::TargetImpl;
-use gdbstub::common::Signal;
+use gdbstub::common::{Signal, Tid};
 use gdbstub::conn::Connection;
 use gdbstub::conn::ConnectionExt;
 use gdbstub::stub::run_blocking;
-use gdbstub::stub::SingleThreadStopReason;
+use gdbstub::stub::MultiThreadStopReason;
 use gdbstub::target::ext::breakpoints::WatchKind;
 use gdbstub::target::Target;
 use num_traits::FromPrimitive;
 use std::convert::Infallible;
 use std::marker::PhantomData;
 use std::{net::TcpListener, os::unix::net::UnixListener};
+use styx_core::core::VcpuId;
 use styx_core::cpu::TargetExitReason;
 use styx_core::sync::sync::{Arc, Mutex};
+use tap::TryConv;
 use tracing::debug;
+
+/// Convert a 0-based vCPU index to a GDB Tid (1-indexed).
+pub(crate) fn index_to_tid(index: usize) -> Tid {
+    Tid::new(index + 1).unwrap()
+}
+
+/// Convert a GDB Tid (1-indexed) to a 0-based vCPU index.
+pub(crate) fn tid_to_index(tid: Tid) -> usize {
+    (tid.get() - 1)
+        .try_conv::<VcpuId>()
+        .expect("too many vcpus") as usize
+}
 
 /// The variants enumerated here are the specific event that caused target
 /// emulation to stop, for reasons related to debugging
 #[derive(Debug, Clone)]
 pub enum Event {
     /// the emulator hit a break point (`gdb break`)
-    Break,
+    Break(Tid),
     /// A step was just executed
-    DoneStep,
+    DoneStep(Tid),
     /// Target Exit status propagated from the inner `CpuEngine`
     Exited(Result<TargetExitReason, TargetExitReason>),
     /// the emulator was halted for some programmatic reason
-    #[allow(dead_code)] // Not currently supported
+    /// Not currently supported.
+    #[allow(dead_code)]
     Halted,
     /// something in styx has called Processor::cpu_stop()
-    StyxStoppedCpu,
+    StyxStoppedCpu(Tid),
     /// the emulator hit a _read_ watch point (`gdb rwatch`)
-    #[allow(dead_code)] // currently only track `WatchWrite` events
-    WatchRead(u64),
+    /// Currently only track `WatchWrite` events.
+    #[allow(dead_code)]
+    WatchRead { tid: Tid, addr: u64 },
     /// the emulator hit a _write_ watch point (`gdb watch`)
-    WatchWrite(u64),
+    WatchWrite { tid: Tid, addr: u64 },
 }
 
 /// Variants which allow matching some [Event] or incoming gdb client data
@@ -56,7 +72,7 @@ pub enum RunEvent {
 /// the complexity of managing the generic types will get much easier,
 /// currently the event loop must be generic over the target architecture
 /// implementation because the concept of a `target` in [`gdbstub`] is generic
-/// over the target implmentation.
+/// over the target implementation.
 pub(crate) enum EmuGdbEventLoop<GdbArchImpl> {
     /// Workaround for type specifiers in enums
     /// <https://github.com/rust-lang/rust/issues/32739#issuecomment-627765543>
@@ -64,7 +80,7 @@ pub(crate) enum EmuGdbEventLoop<GdbArchImpl> {
 }
 
 /// Implements
-/// [the blocking event loop trait](https://docs.rs/gdbstub/0.6.6/gdbstub/stub/run_blocking/trait.BlockingEventLoop.html)
+/// [the blocking event loop trait](https://docs.rs/gdbstub/0.7.3/gdbstub/stub/run_blocking/trait.BlockingEventLoop.html)
 /// from gdbstub, for
 /// - [TargetImpl]
 /// - [Connection](GdbSerialConn)
@@ -76,18 +92,17 @@ where
 {
     type Target = TargetImpl<'a, GdbArchImpl>;
     type Connection = GdbSerialConn;
-    type StopReason = SingleThreadStopReason<GdbArchImpl::Usize>;
+    type StopReason = MultiThreadStopReason<GdbArchImpl::Usize>;
 
-    /// Block waiting for the Cpu to stop.
-    /// called by gdbstubs [run_blocking], we are here for the lifetime of
-    /// the gdb client connection, either waiting for user commands or waiting
-    /// for the processor to stop for some reason (finished a step, killed,
-    /// stopped because of a watch point, etc.)
+    /// Block waiting for the Cpu to stop. Called by gdbstubs [run_blocking], we
+    /// are here for the lifetime  of the gdb client connection, either waiting
+    /// for user commands or waiting for the processor to stop for some reason
+    /// (finished a step, killed, stopped because of a watch point, etc.)
     fn wait_for_stop_reason(
         target: &mut Self::Target,
         conn: &mut Self::Connection,
     ) -> Result<
-        run_blocking::Event<SingleThreadStopReason<GdbArchImpl::Usize>>,
+        run_blocking::Event<MultiThreadStopReason<GdbArchImpl::Usize>>,
         run_blocking::WaitForStopReasonError<
             <Self::Target as Target>::Error,
             <Self::Connection as Connection>::Error,
@@ -95,17 +110,19 @@ where
     > {
         let poll_incoming_data = || {
             // gdbstub takes ownership of the underlying connection, so the `borrow_conn`
-            // method is used to borrow the underlying connection back from the stub to
-            // check for incoming data.
-            let val = conn.peek().map(|b| b.is_some()).unwrap_or(true);
-
-            if val {
+            // method is used to borrow the underlying connection back from the stub
+            // to check for incoming data.
+            debug!("attempting to poll data");
+            let found_data = conn.peek().map(|b| b.is_some()).unwrap_or(true);
+            if found_data {
                 debug!("peek found data");
             }
-            val
+            found_data
         };
 
-        match target.resume(poll_incoming_data) {
+        match target.resume(poll_incoming_data).map_err(|e| {
+            run_blocking::WaitForStopReasonError::Target(e.to_string().leak() as &'static str)
+        })? {
             // handle + propagate the client event
             RunEvent::IncomingData => {
                 debug!("event loop handling incoming data");
@@ -114,39 +131,49 @@ where
                     .map_err(run_blocking::WaitForStopReasonError::Connection)?;
                 Ok(run_blocking::Event::IncomingData(byte))
             }
-
             // handle + propagate the target event
             RunEvent::Event(event) => {
                 // translate emulator stop reason into GDB stop reason
-                let stop_reason: SingleThreadStopReason<GdbArchImpl::Usize> = match event {
-                    Event::DoneStep => SingleThreadStopReason::DoneStep,
-                    Event::Halted => SingleThreadStopReason::Terminated(Signal::SIGSTOP),
-                    Event::Break => SingleThreadStopReason::SwBreak(()),
+                let stop_reason: MultiThreadStopReason<GdbArchImpl::Usize> = match event {
+                    // Deliberately not using MultiThreadStopReason::DoneStep here:
+                    // MultiThreadStopReason::DoneStep is an alias to SigTrap anyway,
+                    // and the MultiThreadStopReason::DoneStep shortcut loses the
+                    // thread id causing the gdb client to forget which thread stepped.
+                    //
+                    // See more information on this gdbstub issue:
+                    // <`https://github.com/daniel5151/gdbstub/issues/196`>
+                    Event::DoneStep(tid) => MultiThreadStopReason::SignalWithThread {
+                        tid,
+                        signal: Signal::SIGTRAP,
+                    },
+                    Event::Halted => MultiThreadStopReason::Terminated(Signal::SIGSTOP),
+                    Event::Break(tid) => MultiThreadStopReason::SwBreak(tid),
                     // map styx host stopping cpu to sigint
-                    Event::StyxStoppedCpu => SingleThreadStopReason::Signal(Signal::SIGINT),
-                    Event::WatchWrite(addr) => SingleThreadStopReason::Watch {
-                        tid: (),
+                    Event::StyxStoppedCpu(tid) => MultiThreadStopReason::SignalWithThread {
+                        tid,
+                        signal: Signal::SIGINT,
+                    },
+                    Event::WatchWrite { tid, addr } => MultiThreadStopReason::Watch {
+                        tid,
                         kind: WatchKind::Write,
                         addr: FromPrimitive::from_u64(addr).unwrap(),
                     },
-                    Event::WatchRead(addr) => SingleThreadStopReason::Watch {
-                        tid: (),
+                    Event::WatchRead { tid, addr } => MultiThreadStopReason::Watch {
+                        tid,
                         kind: WatchKind::Read,
                         addr: FromPrimitive::from_u64(addr).unwrap(),
                     },
-                    Event::Exited(exit_reason) => {
+                    Event::Exited(exit_reason) => match exit_reason {
                         // TODO: at some point it would be nice to propagate the
                         // target exit information, for now just send exit 0 or 1
                         // if there was a success or not
                         // TODO: i think gdb has default errno like BusError
                         // etc. that we can translate our TargetExitReason into,
                         // similar to how gdb-sim does.
-                        match exit_reason {
-                            Ok(reason) => SingleThreadStopReason::Signal(reason.into()),
-                            // XXX on `Generic FFI failure` we need to handle that and exit
-                            Err(reason) => SingleThreadStopReason::Signal(reason.into()),
-                        }
-                    }
+                        Ok(reason) => MultiThreadStopReason::Signal(reason.into()),
+                        // XXX on `Generic FFI failure` we need to handle that and exit
+                        Err(reason) => MultiThreadStopReason::Signal(reason.into()),
+                    },
                 };
                 Ok(run_blocking::Event::TargetStopped(stop_reason))
             }
@@ -155,12 +182,14 @@ where
 
     fn on_interrupt(
         _target: &mut Self::Target,
-    ) -> Result<Option<SingleThreadStopReason<GdbArchImpl::Usize>>, <Self::Target as Target>::Error>
+    ) -> Result<Option<MultiThreadStopReason<GdbArchImpl::Usize>>, <Self::Target as Target>::Error>
     {
-        // todo: this is not getting called
-        tracing::info!("Stopping the cpu (Ctrl-C)");
-        _target.target_cpu().stop();
-        Ok(Some(SingleThreadStopReason::Signal(Signal::SIGINT)))
+        // TODO: this is not getting called
+        tracing::info!("Stopping all vCPUs (Ctrl-C)");
+        for vcpu in _target.vcpus.iter_mut() {
+            vcpu.cpu.stop();
+        }
+        Ok(Some(MultiThreadStopReason::Signal(Signal::SIGINT)))
     }
 }
 

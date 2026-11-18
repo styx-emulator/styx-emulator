@@ -82,7 +82,7 @@ pub enum TargetExitReason {
     /// Generic triple fault, the interrupt / exception handler
     /// faulted 3 deep, on the target platform a triple fault is
     /// fatal. The string should detail the 3-level faults that
-    /// occured
+    /// occurred.
     TripleFault(String),
     /// Target performed an unaligned memory fetch
     UnalignedMemoryFetch,
@@ -96,6 +96,8 @@ pub enum TargetExitReason {
     UnmappedMemoryRead,
     /// Target performed an unmapped memory read
     UnmappedMemoryWrite,
+    /// This vCPU was stopped because another core exited fatally
+    OtherCoreExited,
 }
 
 impl TargetExitReason {
@@ -126,7 +128,8 @@ impl From<TargetExitReason> for gdbstub::common::Signal {
             Tgt::BusError => Signal::SIGBUS,
             Tgt::ExecutionTimeoutComplete
             | Tgt::InstructionCountComplete
-            | Tgt::HostStopRequest => unreachable!(),
+            | Tgt::HostStopRequest
+            | Tgt::OtherCoreExited => unreachable!(),
             Tgt::IllegalInstruction | Tgt::InstructionDecodeError => Signal::SIGILL,
             Tgt::UnmappedMemoryFetch
             | Tgt::UnmappedMemoryRead

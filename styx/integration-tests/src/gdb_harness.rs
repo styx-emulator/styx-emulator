@@ -2,22 +2,22 @@
 //! Testing harness for the gdb plugin and `gdb-multiarch`
 //!
 use std::collections::HashMap;
+use std::fmt::Write;
+use std::num::ParseIntError;
 use std::process::Stdio;
 use std::thread::JoinHandle;
 
 use gdbmi::breakpoint::Breakpoint;
 use gdbmi::raw::ResultResponse;
-use gdbmi::status::{Status, StopReason, Stopped};
+pub use gdbmi::status::{Status, StopReason, Stopped};
 use gdbmi::{Gdb, TimeoutError};
-use std::fmt::Write;
-use std::num::ParseIntError;
-use styx_core::prelude::*;
-use styx_plugins::gdb::{build_gdb, GDBOptions, GdbExecutor, GdbPluginParams};
-
 use thiserror::Error;
 use tokio::process::{Child, Command};
 use tokio::runtime::Runtime;
 use tracing::{debug, error, trace};
+
+use styx_core::prelude::*;
+use styx_plugins::gdb::{build_gdb, GDBOptions, GdbExecutor, GdbPluginParams};
 
 pub fn decode_hex(s: &str) -> Result<Vec<u8>, ParseIntError> {
     (0..s.len())
@@ -477,6 +477,63 @@ impl BlockingGdbClient {
         Ok(register_map)
     }
 
+    /// Select the GDB thread (1-indexed; thread `i+1` is vCPU `i`).
+    pub fn select_thread(&self, tid: i64) -> Result<(), GdbHarnessError> {
+        let inner = self.inner.clone();
+        let resp: ResultResponse = self
+            .runtime
+            .block_on(async { inner.raw_cmd(&format!("-thread-select {tid}")).await })?
+            .expect_result()?;
+        resp.expect_msg_is("done")?;
+        Ok(())
+    }
+
+    /// List the GDB thread ids (one per vCPU).
+    pub fn list_threads(&self) -> Result<Vec<i64>, GdbHarnessError> {
+        let inner = self.inner.clone();
+        let resp: ResultResponse = self
+            .runtime
+            .block_on(async { inner.raw_cmd("-thread-info").await })?
+            .expect_result()?;
+        resp.expect_msg_is("done")?;
+
+        let ids: Vec<i64> = resp
+            .expect_payload()?
+            .remove_expect("threads")?
+            .expect_list()?
+            .iter()
+            .map(|t| {
+                t.clone()
+                    .expect_dict()
+                    .unwrap()
+                    .remove_expect("id")
+                    .unwrap()
+                    .expect_string()
+                    .unwrap()
+                    .parse::<i64>()
+                    .unwrap()
+            })
+            .collect();
+        Ok(ids)
+    }
+
+    /// The currently selected/stopped GDB thread id.
+    pub fn current_thread(&self) -> Result<i64, GdbHarnessError> {
+        let inner = self.inner.clone();
+        let resp: ResultResponse = self
+            .runtime
+            .block_on(async { inner.raw_cmd("-thread-info").await })?
+            .expect_result()?;
+        resp.expect_msg_is("done")?;
+
+        let current = resp
+            .expect_payload()?
+            .remove_expect("current-thread-id")?
+            .expect_string()?
+            .parse::<i64>()?;
+        Ok(current)
+    }
+
     pub fn quit(&self) -> Result<(), GdbHarnessError> {
         let inner = self.inner.clone();
         let _dont_care = self
@@ -609,6 +666,33 @@ impl BlockingGdbClient {
 
         Ok(())
     }
+
+    /// Load symbols from an object/ELF file, placing its `.text` at `text_addr`.
+    pub fn add_symbol_file(&self, path: &str, text_addr: u64) -> Result<(), GdbHarnessError> {
+        let inner = self.inner.clone();
+        self.runtime.block_on(async {
+            inner
+                .raw_console_cmd(&format!("add-symbol-file {path} 0x{text_addr:x}"))
+                .await
+        })?;
+        Ok(())
+    }
+
+    /// Issue `set scheduler-locking <mode>` to the gdb client (e.g. `"off"`,
+    /// `"on"`, `"step"`).
+    ///
+    /// NOTE: Styx's gdbserver accepts this command but does **not** honor it.
+    /// See [`set_scheduler_locking`](GdbHarness::set_scheduler_locking).
+    pub fn set_scheduler_locking(&self, mode: SchedulerLockingMode) -> Result<(), GdbHarnessError> {
+        let mode_gdb_option = mode.gdb_string();
+        let inner = self.inner.clone();
+        self.runtime.block_on(async {
+            inner
+                .raw_console_cmd(&format!("set scheduler-locking {mode_gdb_option}"))
+                .await
+        })?;
+        Ok(())
+    }
 }
 
 /// Default timeout for sending a GDB command to the client.
@@ -628,13 +712,11 @@ impl GdbHarness {
         let arch = arch.into();
         let params = params();
         let port = params.port_in_use.clone();
-        // create gdb plugin with port 0
-        let gdb_plugin = build_gdb(arch, params).unwrap();
+        let gdb_executor = build_gdb(arch, params).unwrap();
 
-        // get assigned port (doesn't happen until processor starts) todo
         let port = *port.lock().unwrap();
 
-        Self::from_foo(builder, gdb_plugin, port)
+        Self::from_foo(builder, gdb_executor, port)
     }
 
     pub fn from_processor_builder_options<GdbSupport>(
@@ -646,15 +728,13 @@ impl GdbHarness {
         GdbSupport::Registers: styx_core::cpu::arch::GdbRegistersHelper,
         GdbSupport::RegId: styx_core::cpu::arch::GdbArchIdSupportTrait,
     {
-        // create gdb plugin with port 0
         let gdb_plugin = GdbExecutor::<GdbSupport>::new(params())
             .unwrap()
             .with_options(options);
 
-        // get assigned port (doesn't happen until processor starts) todo
         let port = gdb_plugin.port();
 
-        Self::from_foo(builder, Box::new(gdb_plugin), port)
+        Self::from_foo(builder, ExecutorKind::custom(gdb_plugin), port)
     }
 
     pub fn from_processor_builder<GdbSupport>(builder: ProcessorBuilder) -> Self
@@ -663,32 +743,24 @@ impl GdbHarness {
         GdbSupport::Registers: styx_core::cpu::arch::GdbRegistersHelper,
         GdbSupport::RegId: styx_core::cpu::arch::GdbArchIdSupportTrait,
     {
-        // create gdb plugin with port 0
         let gdb_plugin = GdbExecutor::<GdbSupport>::new(params()).unwrap();
 
-        // get assigned port (doesn't happen until processor starts) todo
         let port = gdb_plugin.port();
 
-        Self::from_foo(builder, Box::new(gdb_plugin), port)
+        Self::from_foo(builder, ExecutorKind::custom(gdb_plugin), port)
     }
 
-    pub fn from_foo(
-        builder: ProcessorBuilder,
-        gdb_plugin: Box<dyn ExecutorImpl>,
-        port: u16,
-    ) -> Self {
+    pub fn from_foo(builder: ProcessorBuilder, gdb_plugin: ExecutorKind, port: u16) -> Self {
         let mut processor = builder
-            // .with_executor()
-            .with_executor_box(gdb_plugin)
+            .with_executor_kind(gdb_plugin)
             .with_ipc_port(0)
             .build()
             .unwrap();
 
-        // spawn the processor in a blocking thread
         let runtime = Runtime::new().unwrap();
-        let endian = processor.core.cpu.endian();
+        let endian = processor.vcpus[0].cpu.endian();
         let proc_handle = std::thread::spawn(move || {
-            processor.run(Forever).unwrap();
+            processor.run_multi(Forever).unwrap();
         });
 
         // create gdb process
@@ -706,6 +778,18 @@ impl GdbHarness {
 
     pub fn list_registers(&self) -> Result<HashMap<String, u64>, GdbHarnessError> {
         self.gdb_client.get_registers()
+    }
+
+    pub fn list_threads(&self) -> Result<Vec<i64>, GdbHarnessError> {
+        self.gdb_client.list_threads()
+    }
+
+    pub fn select_thread(&self, tid: i64) -> Result<(), GdbHarnessError> {
+        self.gdb_client.select_thread(tid)
+    }
+
+    pub fn current_thread(&self) -> Result<i64, GdbHarnessError> {
+        self.gdb_client.current_thread()
     }
 
     pub fn set_register(&self, register: String, value: u64) -> Result<(), GdbHarnessError> {
@@ -776,5 +860,44 @@ impl GdbHarness {
 
     pub fn exec_interrupt(&self) -> Result<(), GdbHarnessError> {
         self.gdb_client.exec_interrupt()
+    }
+
+    /// Load symbols from an object/ELF file with its `.text` at `text_addr`.
+    pub fn add_symbol_file(&self, path: &str, text_addr: u64) -> Result<(), GdbHarnessError> {
+        self.gdb_client.add_symbol_file(path, text_addr)
+    }
+
+    /// Issue `set scheduler-locking <mode>` to the gdb client (e.g. `"off"`,
+    /// `"on"`, `"step"`).
+    ///
+    /// NOTE: Styx's gdbserver accepts this command but does **not** honor it.
+    /// See [`set_scheduler_locking`](GdbHarness::set_scheduler_locking).
+    pub fn set_scheduler_locking(&self, mode: SchedulerLockingMode) -> Result<(), GdbHarnessError> {
+        self.gdb_client.set_scheduler_locking(mode)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Default)]
+pub enum SchedulerLockingMode {
+    /// No locking, any thread may run at any time.
+    On,
+    /// Only the current thread runs when resumed.
+    Off,
+    /// Acts as "on" when stepping and "off" otherwise.
+    Step,
+    /// Acts as "on" in replay mode and "off" otherwise.
+    #[default]
+    Replay,
+}
+
+impl SchedulerLockingMode {
+    /// Mode string given to `set scheduler-locking`.
+    pub fn gdb_string(self) -> &'static str {
+        match self {
+            SchedulerLockingMode::On => "on",
+            SchedulerLockingMode::Off => "off",
+            SchedulerLockingMode::Step => "step",
+            SchedulerLockingMode::Replay => "replay",
+        }
     }
 }

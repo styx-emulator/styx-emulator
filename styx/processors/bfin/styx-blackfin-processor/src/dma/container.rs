@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: BSD-2-Clause
+use styx_core::event_controller::RaisedIrqs;
 use styx_core::prelude::*;
 
 use super::{id::DmaId, state::DmaState, DmaPeripheralMapping};
@@ -20,14 +21,14 @@ impl DmaContainer {
     /// Pass incoming data from peripherals to be handled by the chip's dma channels.
     pub(super) fn pipe_new_data(
         &mut self,
-        mmu: &mut Mmu,
-        ev: &mut dyn EventControllerImpl,
+        memory: &MemoryBackend,
+        raised: &mut RaisedIrqs,
         peripheral: DmaPeripheralMapping,
         data: u8,
     ) {
         // send data to proper dma channel
         let state = self.state_from_peripheral_mapping(peripheral);
-        state.pipe_new_data(mmu, ev, data)
+        state.pipe_new_data(memory, raised, data)
     }
 
     fn state_from_peripheral_mapping(&mut self, p: DmaPeripheralMapping) -> &mut DmaState {

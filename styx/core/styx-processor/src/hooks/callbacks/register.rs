@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use styx_cpu_type::arch::{backends::ArchRegister, RegisterValue};
+use styx_cpu_type::arch::backends::ArchRegister;
+use styx_cpu_type::arch::RegisterValue;
 use styx_errors::UnknownError;
 
 use crate::hooks::CoreHandle;

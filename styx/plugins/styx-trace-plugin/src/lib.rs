@@ -65,12 +65,13 @@ impl std::default::Default for StyxTracePlugin {
 }
 
 // builds and emits a basic block trace event
-fn block_trace(_proc: CoreHandle, address: u64, size: u32) -> Result<(), UnknownError> {
+fn block_trace(proc: CoreHandle, address: u64, size: u32) -> Result<(), UnknownError> {
     let mut evt = BlockTraceEvent::new();
 
     // set the correct pc
     evt.pc = address as u32;
     evt.size = size;
+    evt.vcpu_id = proc.vcpu_id();
 
     // emit the event
     strace!(evt);
@@ -84,17 +85,19 @@ fn pc_trace(proc: CoreHandle) -> Result<(), UnknownError> {
 
     // set the correct pc
     evt.pc = proc.cpu.pc()? as u32;
+    evt.vcpu_id = proc.vcpu_id();
 
     // read the instruction
     if let Ok(value) = proc.mmu.code().read(evt.pc).le().u32() {
         // if there is no error loading the insn bytes, then emit an event
         // (if there is an error then the target is about to error bc
-        // its attempting to exeucte a bad address)
+        // its attempting to execute a bad address)
         //
         // Note that this does not check for decode error, this event
         // can be used to assert that decode errors are properly being
         // found
         evt.insn = value;
+        evt.vcpu_id = proc.vcpu_id();
 
         // emit the event
         strace!(evt);
@@ -113,6 +116,7 @@ fn mem_write_trace(
 
     evt.pc = proc.cpu.pc()? as u32;
     evt.address = address as u32;
+    evt.vcpu_id = proc.vcpu_id();
 
     // need to break it up into multiple events if its an 8 byte operation
     // *courtesy of unicorn*
@@ -162,6 +166,7 @@ fn mem_read_trace(
 
     evt.pc = proc.cpu.pc()? as u32;
     evt.address = address as u32;
+    evt.vcpu_id = proc.vcpu_id();
 
     // need to break it up into multiple events if its an 8 byte operation
     // *courtesy of unicorn*
@@ -281,7 +286,7 @@ impl UninitPlugin for StyxTracePlugin {
         proc: &mut BuildingProcessor,
     ) -> Result<Box<dyn Plugin>, UnknownError> {
         self.prepare_env()?;
-        self.register_hooks(proc.core.cpu.as_mut())?;
+        self.register_hooks(proc.vcpus[0].cpu.as_mut())?;
         Ok(self)
     }
 }

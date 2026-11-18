@@ -24,8 +24,9 @@ mod common {
     pub(super) use styx_core::{
         arch::{GdbArchIdSupportTrait, GdbRegistersHelper},
         core::ProcessorCore,
-        errors::anyhow::anyhow,
+        errors::anyhow::{anyhow, Context},
         errors::UnknownError,
+        event_controller::EventController,
     };
 }
 use common::*;

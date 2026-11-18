@@ -4,10 +4,10 @@
 // scripted creation, when the implementation finishes this
 // will be removed.
 use std::mem::offset_of;
+use std::sync::{Arc, Mutex};
 use styx_core::hooks::MemoryReadHook;
 use styx_core::hooks::MemoryWriteHook;
 use styx_core::prelude::*;
-use styx_peripherals::uart::UartController;
 use tracing::{debug, error};
 
 use styx_mk21f12_sys::UART_Type;
@@ -15,9 +15,15 @@ use styx_mk21f12_sys::UART_Type;
 use super::inner::*;
 use super::UartPortInner;
 
-pub struct UartC2Hook(pub String);
-pub struct UartS1Hook(pub String);
-pub struct UartDHook(pub String);
+pub struct UartC2Hook {
+    pub inner: Arc<Mutex<UartPortInner>>,
+}
+pub struct UartS1Hook {
+    pub inner: Arc<Mutex<UartPortInner>>,
+}
+pub struct UartDHook {
+    pub inner: Arc<Mutex<UartPortInner>>,
+}
 
 impl MemoryWriteHook for UartC2Hook {
     fn call(
@@ -31,12 +37,8 @@ impl MemoryWriteHook for UartC2Hook {
             error!("Write to C2 of improper size: {}", size);
         }
 
-        let uart_controller = proc
-            .event_controller
-            .peripherals
-            .get::<UartController>()
-            .unwrap();
-        let uart_port = uart_controller.get::<UartPortInner>(&self.0).unwrap();
+        let mut guard = self.inner.lock().unwrap();
+        let uart_port = &mut *guard;
         let uart_inner = &mut uart_port.inner_hal;
 
         uart_inner.c2 = C2::from(data[0]);
@@ -69,7 +71,7 @@ impl MemoryWriteHook for UartC2Hook {
 impl MemoryWriteHook for UartS1Hook {
     fn call(
         &mut self,
-        proc: CoreHandle,
+        _proc: CoreHandle,
         _address: u64,
         size: u32,
         data: &[u8],
@@ -78,12 +80,8 @@ impl MemoryWriteHook for UartS1Hook {
             error!("Write to S1 of improper size: {}", size);
         }
 
-        let uart_controller = proc
-            .event_controller
-            .peripherals
-            .get::<UartController>()
-            .unwrap();
-        let uart_port = uart_controller.get::<UartPortInner>(&self.0).unwrap();
+        let mut guard = self.inner.lock().unwrap();
+        let uart_port = &mut *guard;
         let uart_inner = &mut uart_port.inner_hal;
 
         uart_inner.s1 = S1::from(data[0]);
@@ -109,12 +107,8 @@ impl MemoryReadHook for UartS1Hook {
             error!("Read from S1 of improper size: {}", size);
         }
 
-        let uart_controller = proc
-            .event_controller
-            .peripherals
-            .get::<UartController>()
-            .unwrap();
-        let uart_port = uart_controller.get::<UartPortInner>(&self.0).unwrap();
+        let mut guard = self.inner.lock().unwrap();
+        let uart_port = &mut *guard;
 
         let has_data = uart_port.rx_valid();
 
@@ -154,12 +148,8 @@ impl MemoryWriteHook for UartDHook {
             error!("Write to D of improper size: {}", size);
         }
 
-        let uart_controller = proc
-            .event_controller
-            .peripherals
-            .get::<UartController>()
-            .unwrap();
-        let uart_port = uart_controller.get::<UartPortInner>(&self.0).unwrap();
+        let mut guard = self.inner.lock().unwrap();
+        let uart_port = &mut *guard;
 
         debug!(
             "Guest wrote to UART{} D: {:?} from: {:#08x}",
@@ -189,7 +179,7 @@ impl MemoryWriteHook for UartDHook {
 impl MemoryReadHook for UartDHook {
     fn call(
         &mut self,
-        proc: CoreHandle,
+        _proc: CoreHandle,
         _address: u64,
         size: u32,
         data: &mut [u8],
@@ -198,12 +188,8 @@ impl MemoryReadHook for UartDHook {
             error!("Read from D of improper size: {}", size);
         }
 
-        let uart_controller = proc
-            .event_controller
-            .peripherals
-            .get::<UartController>()
-            .unwrap();
-        let uart_port = uart_controller.get::<UartPortInner>(&self.0).unwrap();
+        let mut guard = self.inner.lock().unwrap();
+        let uart_port = &mut *guard;
 
         debug!("Guest read from UART{} D", uart_port.interface_id);
 

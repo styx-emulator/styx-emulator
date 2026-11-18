@@ -2,11 +2,12 @@
 //! Emulates Uart controller for the STM32F405.
 use inner::{Port, UartPortInner};
 use paste::paste;
+use std::sync::{Arc, Mutex};
 use styx_core::{
     hooks::{MemoryReadHook, MemoryWriteHook},
     prelude::*,
 };
-use styx_peripherals::uart::{UartController, UartInterface};
+use styx_peripherals::uart::UartInterface;
 use styx_stm32f405_sys::{
     uart4, uart5, usart1, usart2, usart3, usart6, Uart4, Uart5, Usart1, Usart2, Usart3, Usart6,
 };
@@ -164,7 +165,9 @@ macro_rules! call_hooks {
     };
 }
 
-struct InnerHook(String);
+struct InnerHook {
+    inner: Arc<Mutex<UartPortInner>>,
+}
 
 impl MemoryReadHook for InnerHook {
     fn call(
@@ -174,11 +177,8 @@ impl MemoryReadHook for InnerHook {
         size: u32,
         data: &mut [u8],
     ) -> Result<(), UnknownError> {
-        let controller = proc
-            .event_controller
-            .peripherals
-            .get_expect::<UartController>()?;
-        let port = controller.try_get::<UartPortInner>(&self.0)?;
+        let mut guard = self.inner.lock().unwrap();
+        let port = &mut *guard;
         let cpu = proc.cpu;
         let ev = proc.event_controller.inner.as_mut();
         call_hooks!(r, cpu, ev, address, size, data, port);
@@ -194,11 +194,8 @@ impl MemoryWriteHook for InnerHook {
         size: u32,
         data: &[u8],
     ) -> Result<(), UnknownError> {
-        let controller = proc
-            .event_controller
-            .peripherals
-            .get_expect::<UartController>()?;
-        let port = controller.try_get::<UartPortInner>(&self.0)?;
+        let mut guard = self.inner.lock().unwrap();
+        let port = &mut *guard;
         let cpu = proc.cpu;
         let ev = proc.event_controller.inner.as_mut();
         call_hooks!(w, cpu, ev, address, size, data, port);
@@ -207,22 +204,28 @@ impl MemoryWriteHook for InnerHook {
     }
 }
 
-impl UartPortInner {
-    /// Connects all the MMIO registers belonging to the [`UartPortInner`]
-    /// to the actual backend.
-    fn register_mmio_hooks(&self, cpu: &mut dyn CpuBackend) -> Result<(), UnknownError> {
-        let start = self.base_address() as u64;
-        let end = self.base_address() as u64 + std::mem::size_of::<usart1::RegisterBlock>() as u64;
-        let range = start..=end;
-        cpu.add_hook(StyxHook::memory_write(
-            range.clone(),
-            InnerHook(self.interface_id.clone()),
-        ))?;
-        cpu.add_hook(StyxHook::memory_read(
-            range,
-            InnerHook(self.interface_id.clone()),
-        ))?;
+/// Connects all the MMIO registers belonging to the [`UartPortInner`]
+/// to the actual backend.
+pub(super) fn register_mmio_hooks(
+    inner: &Arc<Mutex<UartPortInner>>,
+    base_address: u32,
+    cpu: &mut dyn CpuBackend,
+) -> Result<(), UnknownError> {
+    let start = base_address as u64;
+    let end = base_address as u64 + std::mem::size_of::<usart1::RegisterBlock>() as u64;
+    let range = start..=end;
+    cpu.add_hook(StyxHook::memory_write(
+        range.clone(),
+        InnerHook {
+            inner: inner.clone(),
+        },
+    ))?;
+    cpu.add_hook(StyxHook::memory_read(
+        range,
+        InnerHook {
+            inner: inner.clone(),
+        },
+    ))?;
 
-        Ok(())
-    }
+    Ok(())
 }

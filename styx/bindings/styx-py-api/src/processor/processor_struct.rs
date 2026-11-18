@@ -76,44 +76,44 @@ impl Processor {
             styx_emulator::core::cpu::arch::RegisterValue::u8(_) => {
                 let value: u8 = value.try_into()?;
                 self.0
-                    .access(move |core| core.cpu.write_register(reg, value))
+                    .access(move |context| context.vcpus[0].cpu.write_register(reg, value))
             }
             styx_emulator::core::cpu::arch::RegisterValue::u16(_) => {
                 let value: u16 = value.try_into()?;
                 self.0
-                    .access(move |core| core.cpu.write_register(reg, value))
+                    .access(move |context| context.vcpus[0].cpu.write_register(reg, value))
             }
             styx_emulator::core::cpu::arch::RegisterValue::u20(_) => {
                 let value: u32 = value.try_into()?;
                 let value: u20 = u20::try_new(value).unwrap();
                 self.0
-                    .access(move |core| core.cpu.write_register(reg, value))
+                    .access(move |context| context.vcpus[0].cpu.write_register(reg, value))
             }
             styx_emulator::core::cpu::arch::RegisterValue::u32(_) => {
                 let value: u32 = value.try_into()?;
                 self.0
-                    .access(move |core| core.cpu.write_register(reg, value))
+                    .access(move |context| context.vcpus[0].cpu.write_register(reg, value))
             }
             styx_emulator::core::cpu::arch::RegisterValue::u40(_) => {
                 let value: u64 = value.try_into()?;
                 let value: u40 = u40::try_new(value).unwrap();
                 self.0
-                    .access(move |core| core.cpu.write_register(reg, value))
+                    .access(move |context| context.vcpus[0].cpu.write_register(reg, value))
             }
             styx_emulator::core::cpu::arch::RegisterValue::u64(_) => {
                 let value: u64 = value.try_into()?;
                 self.0
-                    .access(move |core| core.cpu.write_register(reg, value))
+                    .access(move |context| context.vcpus[0].cpu.write_register(reg, value))
             }
             styx_emulator::core::cpu::arch::RegisterValue::u80(_) => {
                 let value: u80 = u80::try_new(value).unwrap();
                 self.0
-                    .access(move |core| core.cpu.write_register(reg, value))
+                    .access(move |context| context.vcpus[0].cpu.write_register(reg, value))
             }
             styx_emulator::core::cpu::arch::RegisterValue::u128(_) => {
                 let value: u128 = value;
                 self.0
-                    .access(move |core| core.cpu.write_register(reg, value))
+                    .access(move |context| context.vcpus[0].cpu.write_register(reg, value))
             }
             styx_emulator::core::cpu::arch::RegisterValue::ArmSpecial(_) => {
                 Err(WriteRegisterError::Other(anyhow!(
@@ -134,8 +134,8 @@ impl Processor {
     pub fn read_register(&self, reg: crate::cpu::Register) -> PyResult<u128> {
         let reg: styx_emulator::prelude::ArchRegister = reg.into();
 
-        let result = self.0.access(move |core| {
-            let proc = &mut core.cpu;
+        let result = self.0.access(move |context| {
+            let proc = &mut context.vcpus[0].cpu;
             match reg.register_value_enum() {
                 styx_emulator::core::cpu::arch::RegisterValue::u8(_) => {
                     proc.read_register::<u8>(reg).map(u128::from)
@@ -182,7 +182,7 @@ impl Processor {
     pub fn write_code(&self, addr: u64, bytes: Bound<PyBytes>) -> PyResult<()> {
         let bytes = bytes.as_bytes().to_vec();
         self.0
-            .access(move |core| core.mmu.write_code(addr, &bytes))
+            .access(move |context| context.vcpus[0].mmu.write_code(addr, &bytes))
             .map_err(super::convert_machine_err)?;
         Ok(())
     }
@@ -190,7 +190,7 @@ impl Processor {
     pub fn write_data(&self, addr: u64, bytes: Bound<PyBytes>) -> PyResult<()> {
         let bytes = bytes.as_bytes().to_vec();
         self.0
-            .access(move |core| core.mmu.write_data(addr, &bytes))
+            .access(move |context| context.vcpus[0].mmu.write_data(addr, &bytes))
             .map_err(super::convert_machine_err)?;
         Ok(())
     }
@@ -204,7 +204,7 @@ impl Processor {
     ) -> PyResult<Bound<'py, PyBytes>> {
         let memory = self
             .0
-            .access(move |core| core.mmu.code().read(base).vec(size))
+            .access(move |context| context.vcpus[0].mmu.code().read(base).vec(size))
             .map_err(super::convert_machine_err)?;
         Ok(PyBytes::new(py, memory.as_slice()))
     }
@@ -218,7 +218,7 @@ impl Processor {
     ) -> PyResult<Bound<'py, PyBytes>> {
         let memory = self
             .0
-            .access(move |core| core.mmu.data().read(base).vec(size))
+            .access(move |context| context.vcpus[0].mmu.data().read(base).vec(size))
             .map_err(super::convert_machine_err)?;
         Ok(PyBytes::new(py, memory.as_slice()))
     }

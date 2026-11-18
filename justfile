@@ -14,7 +14,8 @@ alias bench := cargo-bench
 alias rs-doctest := cargo-doc-test
 
 # hardcode path to the python interpreter
-py-path := "./venv/bin/python3"
+venv-bin-path := "./venv/bin"
+py-path := venv-bin-path + "/python3"
 
 # List of crates, checks if the sub-directory contains Cargo.toml
 GENERATED_CRATES := `find ./styx/generated -mindepth 1 -maxdepth 1 -type d -name "styx*" -exec test -e "{}/Cargo.toml" \; -print -prune | xargs -n1 basename`
@@ -136,9 +137,13 @@ rust-docs: rust-docs-inner
     @echo "The Rust API docs are located at ./target/doc/index.html"
 
 docs:
-    @echo  "Making docs"
-    #!/usr/bin/env -S bash -e
-    . venv/bin/activate && sphinx-build -b html -jauto docs/source/ docs/build/
+    @echo "Making docs"
+    {{ py-path }} -m sphinx -b html -jauto docs/source/ docs/build/
+
+# Host docs on webserver that refreshes on updates.
+host-docs PORT="8000":
+    @echo "Hosting docs"
+    {{ venv-bin-path }}/sphinx-autobuild -b html -jauto --port {{ PORT }} docs/source/ docs/build/
 
 cargo-test-deps:
     cargo build -p workspace-service
@@ -153,7 +158,7 @@ python-deps: mk-venv
     {{ py-path }} -m pip install -r requirements.txt
 
 rust-deps:
-    cargo install --force --locked cargo-nextest@0.9.35 cargo-llvm-cov@0.6.16 cargo-valgrind@2.2.1 taplo-cli@0.9.3 cargo-hakari@0.9.35 just@1.38.0 git-cliff@2.7.0
+    cargo install --force --locked cargo-nextest@0.9.35 cargo-llvm-cov@0.6.16 cargo-valgrind@2.2.1 taplo-cli@0.9.3 cargo-hakari@0.9.35 git-cliff@2.7.0
 
 container-setup: mk-venv rust-fetch
 

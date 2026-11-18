@@ -117,7 +117,8 @@ Other Parameters in Processor
 
 ``backend`` corresponds to the ``Backend`` struct.
 
-``executor`` refers to the ``ExecutorImpl``.
+``executor`` refers to the ``ExecutorKind``, which wraps either a
+``StrideExecutor`` or a ``CustomExecutor``.
 
 ``program`` is a ``ParameterizedLoader`` input to provide firmware files,
 initial registers, and memory regions.

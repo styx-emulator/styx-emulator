@@ -214,9 +214,9 @@ mod test {
             let instruction_count = asm.stat_count.into();
 
             // Write generated instructions to memory
-            proc.core.mmu.write_code(0x4000, &code).unwrap();
+            proc.vcpus[0].mmu.write_code(0x4000, &code).unwrap();
             // Start thumb execution at our instructions
-            proc.core
+            proc.vcpus[0]
                 .cpu
                 .write_register(ArmRegister::Pc, 0x4001u32)
                 .unwrap();
@@ -247,7 +247,7 @@ mod test {
         /// Read a word of memory
         fn read_memory(&mut self, addr: u64) -> u32 {
             let mut buf: [u8; 4] = [0; 4];
-            self.proc.core.mmu.read_data(addr, &mut buf).unwrap();
+            self.proc.vcpus[0].mmu.read_data(addr, &mut buf).unwrap();
             u32::from_le_bytes(buf)
         }
     }
@@ -261,23 +261,17 @@ mod test {
         let instr = "str r1, [r0]; ldr r1, [r0]; ldr r2, [r3]".to_owned();
         let mut machine = TestMachine::new(instr);
 
-        machine
-            .proc
-            .core
+        machine.proc.vcpus[0]
             .cpu
             .write_register(ArmRegister::R0, 0x2202_0000u32)
             .unwrap();
 
-        machine
-            .proc
-            .core
+        machine.proc.vcpus[0]
             .cpu
             .write_register(ArmRegister::R1, 0xFFFFFFFFu32)
             .unwrap();
 
-        machine
-            .proc
-            .core
+        machine.proc.vcpus[0]
             .cpu
             .write_register(ArmRegister::R3, 0x2000_1000u32)
             .unwrap();
@@ -287,17 +281,13 @@ mod test {
 
         machine.run();
 
-        let value = machine
-            .proc
-            .core
+        let value = machine.proc.vcpus[0]
             .cpu
             .read_register::<u32>(ArmRegister::R2)
             .unwrap();
         assert_eq!(value, 1);
 
-        let value = machine
-            .proc
-            .core
+        let value = machine.proc.vcpus[0]
             .cpu
             .read_register::<u32>(ArmRegister::R1)
             .unwrap();
@@ -313,71 +303,51 @@ mod test {
             "str r1, [r0]; ldr r5, [r4]; ldr r7, [r6]; ldr r9, [r8]; ldr r11, [r10]".to_owned();
         let mut machine = TestMachine::new(instr);
 
-        machine
-            .proc
-            .core
+        machine.proc.vcpus[0]
             .cpu
             .write_register(ArmRegister::R0, 0x2000_1000u32)
             .unwrap();
 
-        machine
-            .proc
-            .core
+        machine.proc.vcpus[0]
             .cpu
             .write_register(ArmRegister::R1, 0b1011u32)
             .unwrap();
 
-        machine
-            .proc
-            .core
+        machine.proc.vcpus[0]
             .cpu
             .write_register(ArmRegister::R4, 0x2202_0000u32)
             .unwrap();
-        machine
-            .proc
-            .core
+        machine.proc.vcpus[0]
             .cpu
             .write_register(ArmRegister::R6, 0x2202_0004u32)
             .unwrap();
-        machine
-            .proc
-            .core
+        machine.proc.vcpus[0]
             .cpu
             .write_register(ArmRegister::R8, 0x2202_0008u32)
             .unwrap();
-        machine
-            .proc
-            .core
+        machine.proc.vcpus[0]
             .cpu
             .write_register(ArmRegister::R10, 0x2202_000Cu32)
             .unwrap();
 
         machine.run();
 
-        let value = machine
-            .proc
-            .core
+        let value = machine.proc.vcpus[0]
             .cpu
             .read_register::<u32>(ArmRegister::R5)
             .unwrap();
         assert_eq!(value, 1);
-        let value = machine
-            .proc
-            .core
+        let value = machine.proc.vcpus[0]
             .cpu
             .read_register::<u32>(ArmRegister::R7)
             .unwrap();
         assert_eq!(value, 1);
-        let value = machine
-            .proc
-            .core
+        let value = machine.proc.vcpus[0]
             .cpu
             .read_register::<u32>(ArmRegister::R9)
             .unwrap();
         assert_eq!(value, 0);
-        let value = machine
-            .proc
-            .core
+        let value = machine.proc.vcpus[0]
             .cpu
             .read_register::<u32>(ArmRegister::R11)
             .unwrap();

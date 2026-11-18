@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BSD-2-Clause
+use std::sync::{Arc, Mutex};
 use styx_core::{
     hooks::{MemoryReadHook, MemoryWriteHook},
     prelude::*,
 };
 use styx_cyclone_v_hps_sys::uart0;
-use styx_peripherals::uart::UartController;
 use tracing::{debug, error, trace};
 
 use super::{
@@ -67,8 +67,9 @@ use super::{
 ///           that contains the baud rate divisor for the UART.
 ///         - This register may only be accessed when the DLAB bit 7 of the LCR Register is set to 1.
 fn uart_port_rbr_thr_dll_w_hook(
+    inner: &Mutex<UartPortInner>,
     id: &String,
-    proc: CoreHandle,
+    _proc: CoreHandle,
     _address: u64,
     size: u32,
     data: &[u8],
@@ -87,13 +88,7 @@ fn uart_port_rbr_thr_dll_w_hook(
             .unwrap_or_else(|_| panic!("unable to convert {data:?} into u32")),
     );
 
-    let port = proc
-        .event_controller
-        .peripherals
-        .get::<UartController>()
-        .unwrap()
-        .get::<UartPortInner>(id)
-        .unwrap();
+    let mut port = inner.lock().unwrap();
 
     // If we are in the dlab state, this write is setting the divisor latch register value, dll,
     // involved in setting the baud rate. Otherwise, the write is setting Transmit Holding Register
@@ -147,8 +142,9 @@ fn uart_port_rbr_thr_dll_w_hook(
 ///           that contains the baud rate divisor for the UART.
 ///         - This register may only be accessed when the DLAB bit 7 of the LCR Register is set to 1.
 fn uart_port_rbr_thr_dll_r_hook(
+    inner: &Mutex<UartPortInner>,
     id: &String,
-    proc: CoreHandle,
+    _proc: CoreHandle,
     _address: u64,
     size: u32,
     data: &mut [u8],
@@ -167,13 +163,7 @@ fn uart_port_rbr_thr_dll_r_hook(
             .unwrap_or_else(|_| panic!("unable to convert {data:?} into u32")),
     );
 
-    let port = proc
-        .event_controller
-        .peripherals
-        .get::<UartController>()
-        .unwrap()
-        .get::<UartPortInner>(id)
-        .unwrap();
+    let mut port = inner.lock().unwrap();
 
     // If we are in the dlab state, this read is for the divisor latch register value, dll.
     // Otherwise, the rbr value is being accessed.
@@ -196,7 +186,14 @@ fn uart_port_rbr_thr_dll_r_hook(
 }
 
 /// Guest write to ier_dlh - Interrupt Enable and Divisor Latch High
-fn uart_port_ier_dlh_w_hook(id: &String, proc: CoreHandle, _address: u64, size: u32, data: &[u8]) {
+fn uart_port_ier_dlh_w_hook(
+    inner: &Mutex<UartPortInner>,
+    id: &String,
+    mut proc: CoreHandle,
+    _address: u64,
+    size: u32,
+    data: &[u8],
+) {
     if size != 4 {
         error!(
             "UART{}: Guest write to ier_dlh of improper size: {}",
@@ -214,13 +211,7 @@ fn uart_port_ier_dlh_w_hook(id: &String, proc: CoreHandle, _address: u64, size: 
     let mut do_interrupt = None;
 
     {
-        let port = proc
-            .event_controller
-            .peripherals
-            .get::<UartController>()
-            .unwrap()
-            .get::<UartPortInner>(id)
-            .unwrap();
+        let mut port = inner.lock().unwrap();
 
         // If we are in the dlab state, this write is setting the divisor latch register value, dlh,
         // involved in setting the baud rate. Otherwise, the interrupt enable register is being
@@ -249,7 +240,7 @@ fn uart_port_ier_dlh_w_hook(id: &String, proc: CoreHandle, _address: u64, size: 
     }
 
     if let Some(i) = do_interrupt {
-        proc.event_controller.latch(i).unwrap();
+        proc.latch_event(i).unwrap();
     }
 
     trace!("UART{}: Guest write to ier_dlh: {:#x}", id, data);
@@ -257,8 +248,9 @@ fn uart_port_ier_dlh_w_hook(id: &String, proc: CoreHandle, _address: u64, size: 
 
 /// Guest read from ier_dlh - Interrupt Enable and Divisor Latch High
 fn uart_port_ier_dlh_r_hook(
+    inner: &Mutex<UartPortInner>,
     id: &String,
-    proc: CoreHandle,
+    _proc: CoreHandle,
     _address: u64,
     size: u32,
     data: &mut [u8],
@@ -277,13 +269,7 @@ fn uart_port_ier_dlh_r_hook(
             .unwrap_or_else(|_| panic!("unable to convert {data:?} into u32")),
     );
 
-    let port = proc
-        .event_controller
-        .peripherals
-        .get::<UartController>()
-        .unwrap()
-        .get::<UartPortInner>(id)
-        .unwrap();
+    let port = inner.lock().unwrap();
 
     // If we are in the dlab state, this read is for the divisor latch register value, dlh.
     // Otherwise, the interrupt enable register is being accessed.
@@ -307,7 +293,14 @@ fn uart_port_ier_dlh_r_hook(
 // iir & fcr - These registers share the same offset in the register bank. This is possible since
 // iir is read-only and fcr is write-only.
 /// FIFO Control (when written) - fcr
-fn uart_port_iir_w_hook(id: &String, proc: CoreHandle, _address: u64, size: u32, data: &[u8]) {
+fn uart_port_iir_w_hook(
+    inner: &Mutex<UartPortInner>,
+    id: &String,
+    _proc: CoreHandle,
+    _address: u64,
+    size: u32,
+    data: &[u8],
+) {
     if size != 4 {
         error!("UART{}: Guest write to fcr of improper size: {}", id, size);
     }
@@ -319,13 +312,7 @@ fn uart_port_iir_w_hook(id: &String, proc: CoreHandle, _address: u64, size: u32,
             .unwrap_or_else(|_| panic!("unable to convert {data:?} into u32")),
     );
 
-    let port = proc
-        .event_controller
-        .peripherals
-        .get::<UartController>()
-        .unwrap()
-        .get::<UartPortInner>(id)
-        .unwrap();
+    let mut port = inner.lock().unwrap();
 
     port.inner_hal.shadow_regs.fcr_val = data;
     update_fifo_state(&mut port.inner_hal, data);
@@ -333,18 +320,19 @@ fn uart_port_iir_w_hook(id: &String, proc: CoreHandle, _address: u64, size: u32,
 }
 
 /// Interrupt Identity Register (when read) - iir
-fn uart_port_iir_r_hook(id: &String, proc: CoreHandle, _address: u64, size: u32, data: &mut [u8]) {
+fn uart_port_iir_r_hook(
+    inner: &Mutex<UartPortInner>,
+    id: &String,
+    _proc: CoreHandle,
+    _address: u64,
+    size: u32,
+    data: &mut [u8],
+) {
     if size != 4 {
         error!("UART{}: Guest read from iir of improper size: {}", id, size);
     }
 
-    let port = proc
-        .event_controller
-        .peripherals
-        .get::<UartController>()
-        .unwrap()
-        .get::<UartPortInner>(id)
-        .unwrap();
+    let mut port = inner.lock().unwrap();
 
     // Generate an iir value.
     let iir = generate_iir(&mut port.inner_hal);
@@ -355,7 +343,14 @@ fn uart_port_iir_r_hook(id: &String, proc: CoreHandle, _address: u64, size: u32,
 }
 
 /// Guest write to lcr - Line Control Register (When Written)
-fn uart_port_lcr_w_hook(id: &String, proc: CoreHandle, _address: u64, size: u32, data: &[u8]) {
+fn uart_port_lcr_w_hook(
+    inner: &Mutex<UartPortInner>,
+    id: &String,
+    _proc: CoreHandle,
+    _address: u64,
+    size: u32,
+    data: &[u8],
+) {
     if size != 4 {
         error!("UART{}: Guest write to lcr of improper size: {}", id, size);
     }
@@ -367,20 +362,21 @@ fn uart_port_lcr_w_hook(id: &String, proc: CoreHandle, _address: u64, size: u32,
             .unwrap_or_else(|_| panic!("unable to convert {data:?} into u32")),
     );
 
-    let port = proc
-        .event_controller
-        .peripherals
-        .get::<UartController>()
-        .unwrap()
-        .get::<UartPortInner>(id)
-        .unwrap();
+    let mut port = inner.lock().unwrap();
 
     store_dlab_state(&mut port.inner_hal, data);
     trace!("UART{}: Guest write to lcr: {:#x}", id, data);
 }
 
 /// Guest write to mcr - Modem Control Register
-fn uart_port_mcr_w_hook(id: &String, proc: CoreHandle, _address: u64, size: u32, data: &[u8]) {
+fn uart_port_mcr_w_hook(
+    inner: &Mutex<UartPortInner>,
+    id: &String,
+    _proc: CoreHandle,
+    _address: u64,
+    size: u32,
+    data: &[u8],
+) {
     if size != 4 {
         error!("UART{}: Guest write to mcr of improper size: {}", id, size);
     }
@@ -392,13 +388,7 @@ fn uart_port_mcr_w_hook(id: &String, proc: CoreHandle, _address: u64, size: u32,
             .unwrap_or_else(|_| panic!("unable to convert {data:?} into u32")),
     );
 
-    let port = proc
-        .event_controller
-        .peripherals
-        .get::<UartController>()
-        .unwrap()
-        .get::<UartPortInner>(id)
-        .unwrap();
+    let mut port = inner.lock().unwrap();
 
     store_mcr_state(&mut port.inner_hal, data);
     port.inner_hal.shadow_regs.fcr_val = data;
@@ -407,18 +397,19 @@ fn uart_port_mcr_w_hook(id: &String, proc: CoreHandle, _address: u64, size: u32,
 }
 
 /// Guest read from lsr - Line Status Register
-fn uart_port_lsr_r_hook(id: &String, proc: CoreHandle, _address: u64, size: u32, data: &mut [u8]) {
+fn uart_port_lsr_r_hook(
+    inner: &Mutex<UartPortInner>,
+    id: &String,
+    _proc: CoreHandle,
+    _address: u64,
+    size: u32,
+    data: &mut [u8],
+) {
     if size != 4 {
         error!("UART{}: Guest read from lsr of improper size: {}", id, size);
     }
 
-    let port = proc
-        .event_controller
-        .peripherals
-        .get::<UartController>()
-        .unwrap()
-        .get::<UartPortInner>(id)
-        .unwrap();
+    let mut port = inner.lock().unwrap();
 
     // Generate an lsr value.
     let lsr = generate_lsr(&mut port.inner_hal);
@@ -433,18 +424,19 @@ fn uart_port_lsr_r_hook(id: &String, proc: CoreHandle, _address: u64, size: u32,
 }
 
 /// Guest read from msr - Modem Status Register
-fn uart_port_msr_r_hook(id: &String, proc: CoreHandle, _address: u64, size: u32, data: &mut [u8]) {
+fn uart_port_msr_r_hook(
+    inner: &Mutex<UartPortInner>,
+    id: &String,
+    _proc: CoreHandle,
+    _address: u64,
+    size: u32,
+    data: &mut [u8],
+) {
     if size != 4 {
         error!("UART{}: Guest read from msr of improper size: {}", id, size);
     }
 
-    let port = proc
-        .event_controller
-        .peripherals
-        .get::<UartController>()
-        .unwrap()
-        .get::<UartPortInner>(id)
-        .unwrap();
+    let mut port = inner.lock().unwrap();
 
     // Generate a msr value.
     let client_connected = port.inner_hal.client_connected();
@@ -460,7 +452,14 @@ fn uart_port_msr_r_hook(id: &String, proc: CoreHandle, _address: u64, size: u32,
 }
 
 /// Guest read from srbr - Shadow Receive Buffer Register
-fn uart_port_srbr_r_hook(id: &String, proc: CoreHandle, _address: u64, size: u32, data: &mut [u8]) {
+fn uart_port_srbr_r_hook(
+    inner: &Mutex<UartPortInner>,
+    id: &String,
+    _proc: CoreHandle,
+    _address: u64,
+    size: u32,
+    data: &mut [u8],
+) {
     if size != 4 {
         error!(
             "UART{}: Guest read from srbr of improper size: {}",
@@ -468,13 +467,7 @@ fn uart_port_srbr_r_hook(id: &String, proc: CoreHandle, _address: u64, size: u32
         );
     }
 
-    let port = proc
-        .event_controller
-        .peripherals
-        .get::<UartController>()
-        .unwrap()
-        .get::<UartPortInner>(id)
-        .unwrap();
+    let mut port = inner.lock().unwrap();
 
     // rbr read - retrieve a received byte for the guest.
     let rbr = port.inner_hal.fifo.rx_get() as u32;
@@ -486,7 +479,14 @@ fn uart_port_srbr_r_hook(id: &String, proc: CoreHandle, _address: u64, size: u32
 }
 
 /// Guest write to sthr - Shadow Transmit Buffer Register
-fn uart_port_sthr_w_hook(id: &String, proc: CoreHandle, _address: u64, size: u32, data: &[u8]) {
+fn uart_port_sthr_w_hook(
+    inner: &Mutex<UartPortInner>,
+    id: &String,
+    _proc: CoreHandle,
+    _address: u64,
+    size: u32,
+    data: &[u8],
+) {
     if size != 4 {
         error!("UART{}: Guest write to sthr of improper size: {}", id, size);
     }
@@ -498,13 +498,7 @@ fn uart_port_sthr_w_hook(id: &String, proc: CoreHandle, _address: u64, size: u32
             .unwrap_or_else(|_| panic!("unable to convert {data:?} into u32")),
     );
 
-    let port = proc
-        .event_controller
-        .peripherals
-        .get::<UartController>()
-        .unwrap()
-        .get::<UartPortInner>(id)
-        .unwrap();
+    let mut port = inner.lock().unwrap();
 
     // shadow thr write - send the transmitted byte.
 
@@ -528,18 +522,19 @@ fn uart_port_sthr_w_hook(id: &String, proc: CoreHandle, _address: u64, size: u32
 }
 
 /// Guest read from usr - UART Status Register
-fn uart_port_usr_r_hook(id: &String, proc: CoreHandle, _address: u64, size: u32, data: &mut [u8]) {
+fn uart_port_usr_r_hook(
+    inner: &Mutex<UartPortInner>,
+    id: &String,
+    _proc: CoreHandle,
+    _address: u64,
+    size: u32,
+    data: &mut [u8],
+) {
     if size != 4 {
         error!("UART{}: Guest read from usr of improper size: {}", id, size);
     }
 
-    let port = proc
-        .event_controller
-        .peripherals
-        .get::<UartController>()
-        .unwrap()
-        .get::<UartPortInner>(id)
-        .unwrap();
+    let mut port = inner.lock().unwrap();
 
     // Generate a usr value.
     let usr = generate_usr(&mut port.inner_hal);
@@ -552,18 +547,19 @@ fn uart_port_usr_r_hook(id: &String, proc: CoreHandle, _address: u64, size: u32,
 /// Guest read from tfl - Transmit FIFO Level
 /// - tfl (bits 7:0)
 ///     - This indicates the number of data entries in the transmit FIFO.
-fn uart_port_tfl_r_hook(id: &String, proc: CoreHandle, _address: u64, size: u32, data: &mut [u8]) {
+fn uart_port_tfl_r_hook(
+    inner: &Mutex<UartPortInner>,
+    id: &String,
+    _proc: CoreHandle,
+    _address: u64,
+    size: u32,
+    data: &mut [u8],
+) {
     if size != 4 {
         error!("UART{}: Guest read from tfl of improper size: {}", id, size);
     }
 
-    let port = proc
-        .event_controller
-        .peripherals
-        .get::<UartController>()
-        .unwrap()
-        .get::<UartPortInner>(id)
-        .unwrap();
+    let port = inner.lock().unwrap();
 
     let tfl = port.inner_hal.fifo.size as u32;
     data[0..4].copy_from_slice(&tfl.to_le_bytes()[..]);
@@ -574,18 +570,19 @@ fn uart_port_tfl_r_hook(id: &String, proc: CoreHandle, _address: u64, size: u32,
 /// Guest read from rfl - Receive FIFO Level Guest write
 /// - rfl (bits 7:0)
 ///     - This indicates the number of data entries in the receive FIFO.
-fn uart_port_rfl_r_hook(id: &String, proc: CoreHandle, _address: u64, size: u32, data: &mut [u8]) {
+fn uart_port_rfl_r_hook(
+    inner: &Mutex<UartPortInner>,
+    id: &String,
+    _proc: CoreHandle,
+    _address: u64,
+    size: u32,
+    data: &mut [u8],
+) {
     if size != 4 {
         error!("UART{}: Guest read from rfl of improper size: {}", id, size);
     }
 
-    let port = proc
-        .event_controller
-        .peripherals
-        .get::<UartController>()
-        .unwrap()
-        .get::<UartPortInner>(id)
-        .unwrap();
+    let mut port = inner.lock().unwrap();
 
     let rfl = std::cmp::min(port.inner_hal.fifo.rx_len(), port.inner_hal.fifo.size) as u32;
     data[0..4].copy_from_slice(&rfl.to_le_bytes()[..]);
@@ -594,7 +591,14 @@ fn uart_port_rfl_r_hook(id: &String, proc: CoreHandle, _address: u64, size: u32,
 }
 
 /// Guest write to srr - Software Reset Register
-fn uart_port_srr_w_hook(id: &String, proc: CoreHandle, _address: u64, size: u32, data: &[u8]) {
+fn uart_port_srr_w_hook(
+    inner: &Mutex<UartPortInner>,
+    id: &String,
+    proc: CoreHandle,
+    _address: u64,
+    size: u32,
+    data: &[u8],
+) {
     if size != 4 {
         error!("UART{}: Guest write to srr of improper size: {}", id, size);
     }
@@ -606,13 +610,7 @@ fn uart_port_srr_w_hook(id: &String, proc: CoreHandle, _address: u64, size: u32,
             .unwrap_or_else(|_| panic!("unable to convert {data:?} into u32")),
     );
 
-    let port = proc
-        .event_controller
-        .peripherals
-        .get::<UartController>()
-        .unwrap()
-        .get::<UartPortInner>(id)
-        .unwrap();
+    let mut port = inner.lock().unwrap();
 
     // # Safety
     //
@@ -966,13 +964,15 @@ const UART_SRR_OFFSET: u64 = uart0::Srr::offset();
 pub struct UartMMRHook {
     base_addr: u64,
     id: String,
+    inner: Arc<Mutex<UartPortInner>>,
 }
 
 impl UartMMRHook {
-    pub fn new(base: u64, id: String) -> Self {
+    pub fn new(base: u64, id: String, inner: Arc<Mutex<UartPortInner>>) -> Self {
         Self {
             base_addr: base,
             id,
+            inner,
         }
     }
 
@@ -1005,19 +1005,20 @@ impl MemoryReadHook for UartMMRHook {
     ) -> Result<(), UnknownError> {
         // this should never underflow, but if it does we want it to panic because something is wrong
         let offset = address - self.base_addr;
+        let inner = &*self.inner;
 
         match offset {
             UART_THR_DLL_OFFSET => {
-                uart_port_rbr_thr_dll_r_hook(&self.id, proc, address, size, data)
+                uart_port_rbr_thr_dll_r_hook(inner, &self.id, proc, address, size, data)
             }
-            UART_DLH_OFFSET => uart_port_ier_dlh_r_hook(&self.id, proc, address, size, data),
-            UART_IIR_OFFSET => uart_port_iir_r_hook(&self.id, proc, address, size, data),
-            UART_LSR_OFFSET => uart_port_lsr_r_hook(&self.id, proc, address, size, data),
-            UART_MSR_OFFSET => uart_port_msr_r_hook(&self.id, proc, address, size, data),
-            UART_SRBR_OFFSET => uart_port_srbr_r_hook(&self.id, proc, address, size, data),
-            UART_USR_OFFSET => uart_port_usr_r_hook(&self.id, proc, address, size, data),
-            UART_TFL_OFFSET => uart_port_tfl_r_hook(&self.id, proc, address, size, data),
-            UART_RFL_OFFSET => uart_port_rfl_r_hook(&self.id, proc, address, size, data),
+            UART_DLH_OFFSET => uart_port_ier_dlh_r_hook(inner, &self.id, proc, address, size, data),
+            UART_IIR_OFFSET => uart_port_iir_r_hook(inner, &self.id, proc, address, size, data),
+            UART_LSR_OFFSET => uart_port_lsr_r_hook(inner, &self.id, proc, address, size, data),
+            UART_MSR_OFFSET => uart_port_msr_r_hook(inner, &self.id, proc, address, size, data),
+            UART_SRBR_OFFSET => uart_port_srbr_r_hook(inner, &self.id, proc, address, size, data),
+            UART_USR_OFFSET => uart_port_usr_r_hook(inner, &self.id, proc, address, size, data),
+            UART_TFL_OFFSET => uart_port_tfl_r_hook(inner, &self.id, proc, address, size, data),
+            UART_RFL_OFFSET => uart_port_rfl_r_hook(inner, &self.id, proc, address, size, data),
             _ => self.log_unhandled_read(address, size),
         }
 
@@ -1035,17 +1036,18 @@ impl MemoryWriteHook for UartMMRHook {
     ) -> Result<(), UnknownError> {
         // this should never underflow, but if it does we want it to panic because something is wrong
         let offset = address - self.base_addr;
+        let inner = &*self.inner;
 
         match offset {
             UART_THR_DLL_OFFSET => {
-                uart_port_rbr_thr_dll_w_hook(&self.id, proc, address, size, data)
+                uart_port_rbr_thr_dll_w_hook(inner, &self.id, proc, address, size, data)
             }
-            UART_DLH_OFFSET => uart_port_ier_dlh_w_hook(&self.id, proc, address, size, data),
-            UART_IIR_OFFSET => uart_port_iir_w_hook(&self.id, proc, address, size, data),
-            UART_LCR_OFFSET => uart_port_lcr_w_hook(&self.id, proc, address, size, data),
-            UART_MCR_OFFSET => uart_port_mcr_w_hook(&self.id, proc, address, size, data),
-            UART_STHR_OFFSET => uart_port_sthr_w_hook(&self.id, proc, address, size, data),
-            UART_SRR_OFFSET => uart_port_srr_w_hook(&self.id, proc, address, size, data),
+            UART_DLH_OFFSET => uart_port_ier_dlh_w_hook(inner, &self.id, proc, address, size, data),
+            UART_IIR_OFFSET => uart_port_iir_w_hook(inner, &self.id, proc, address, size, data),
+            UART_LCR_OFFSET => uart_port_lcr_w_hook(inner, &self.id, proc, address, size, data),
+            UART_MCR_OFFSET => uart_port_mcr_w_hook(inner, &self.id, proc, address, size, data),
+            UART_STHR_OFFSET => uart_port_sthr_w_hook(inner, &self.id, proc, address, size, data),
+            UART_SRR_OFFSET => uart_port_srr_w_hook(inner, &self.id, proc, address, size, data),
             _ => self.log_unhandled_write(address, size),
         }
 

@@ -4,7 +4,9 @@
 use hooks::{UartC2Hook, UartDHook, UartS1Hook};
 use std::collections::VecDeque;
 use std::mem::offset_of;
+use std::sync::{Arc, Mutex};
 use styx_core::errors::UnknownError;
+use styx_core::event_controller::{PeripheralTickCtx, RaisedIrqs};
 use styx_core::memory::Mmu;
 use styx_core::prelude::{CpuBackend, ExceptionNumber};
 
@@ -101,17 +103,28 @@ impl IntoUartImpl for UartPortBuilder {
         miso_rx: broadcast::Sender<u8>,
         interface_id: String,
     ) -> Result<Box<dyn UartImpl>, UnknownError> {
-        Ok(Box::new(UartPortInner {
-            interface_id,
-            base_address: self.base_address,
-            error_irqn: self.error_irqn,
-            tx_rx_irqn: self.tx_rx_irqn,
-            inner_hal: UartHalLayer::default(),
-            rx_fifo: VecDeque::default(),
-            miso_stream: miso_rx,
-            mosi_stream: mosi_tx,
+        Ok(Box::new(UartPort {
+            inner: Arc::new(Mutex::new(UartPortInner {
+                interface_id,
+                base_address: self.base_address,
+                error_irqn: self.error_irqn,
+                tx_rx_irqn: self.tx_rx_irqn,
+                inner_hal: UartHalLayer::default(),
+                rx_fifo: VecDeque::default(),
+                miso_stream: miso_rx,
+                mosi_stream: mosi_tx,
+            })),
         }))
     }
+}
+
+/// Shared handle to the [`UartPortInner`] state.
+///
+/// State is shared via this handle: the peripheral's [`UartImpl`] methods and
+/// the memory-mapped register hooks each hold a clone of the same `Arc`.
+#[derive(Clone)]
+pub struct UartPort {
+    pub(crate) inner: Arc<Mutex<UartPortInner>>,
 }
 
 impl UartPortInner {
@@ -168,42 +181,56 @@ impl UartPortInner {
     fn rx_valid(&self) -> bool {
         !self.rx_fifo.is_empty()
     }
+}
 
+impl UartPort {
     /// Connects all the MMIO registers belonging to the [`UartPortInner`]
     /// to the actual backend.
     fn register_mmio_hooks(&self, cpu: &mut dyn CpuBackend) -> Result<(), UnknownError> {
+        let base_address = self.inner.lock().unwrap().base_address;
+
         // C2
-        let c2_addr = offset_of!(UART_Type, C2) as u64 + self.base_address as u64;
+        let c2_addr = offset_of!(UART_Type, C2) as u64 + base_address as u64;
         cpu.mem_write_hook(
             c2_addr,
             c2_addr,
-            Box::new(UartC2Hook(self.interface_id.clone())),
+            Box::new(UartC2Hook {
+                inner: self.inner.clone(),
+            }),
         )?;
 
         // S1
-        let s1_addr = offset_of!(UART_Type, S1) as u64 + self.base_address as u64;
+        let s1_addr = offset_of!(UART_Type, S1) as u64 + base_address as u64;
         cpu.mem_write_hook(
             s1_addr,
             s1_addr,
-            Box::new(UartS1Hook(self.interface_id.clone())),
+            Box::new(UartS1Hook {
+                inner: self.inner.clone(),
+            }),
         )?;
         cpu.mem_read_hook(
             s1_addr,
             s1_addr,
-            Box::new(UartS1Hook(self.interface_id.clone())),
+            Box::new(UartS1Hook {
+                inner: self.inner.clone(),
+            }),
         )?;
 
         // D
-        let d_addr = offset_of!(UART_Type, D) as u64 + self.base_address as u64;
+        let d_addr = offset_of!(UART_Type, D) as u64 + base_address as u64;
         cpu.mem_write_hook(
             d_addr,
             d_addr,
-            Box::new(UartDHook(self.interface_id.clone())),
+            Box::new(UartDHook {
+                inner: self.inner.clone(),
+            }),
         )?;
         cpu.mem_read_hook(
             d_addr,
             d_addr,
-            Box::new(UartDHook(self.interface_id.clone())),
+            Box::new(UartDHook {
+                inner: self.inner.clone(),
+            }),
         )?;
 
         // Currently unimplemented
@@ -239,49 +266,41 @@ impl UartPortInner {
     }
 }
 
-impl UartImpl for UartPortInner {
+impl UartImpl for UartPort {
     fn init(
         &mut self,
         proc: &mut styx_core::prelude::BuildingProcessor,
     ) -> Result<(), UnknownError> {
-        self.register_mmio_hooks(proc.core.cpu.as_mut())?;
-        self.reset_state(&mut proc.core.mmu)?;
+        self.register_mmio_hooks(proc.vcpus[0].cpu.as_mut())?;
+        self.inner
+            .lock()
+            .unwrap()
+            .reset_state(&mut proc.vcpus[0].mmu)?;
 
-        Ok(())
-    }
-
-    fn post_event_hook(
-        &mut self,
-        _cpu: &mut dyn styx_core::prelude::CpuBackend,
-        _mmu: &mut styx_core::prelude::Mmu,
-        _event_controller: &mut dyn styx_core::prelude::EventControllerImpl,
-    ) -> Result<(), UnknownError> {
         Ok(())
     }
 
     fn irqs(&self) -> Vec<styx_core::prelude::ExceptionNumber> {
-        vec![self.error_irqn, self.tx_rx_irqn]
+        let inner = self.inner.lock().unwrap();
+        vec![inner.error_irqn, inner.tx_rx_irqn]
     }
 
-    fn tick(
-        &mut self,
-        _cpu: &mut dyn styx_core::prelude::CpuBackend,
-        _mmu: &mut styx_core::prelude::Mmu,
-        event_controller: &mut dyn styx_core::prelude::EventControllerImpl,
-    ) -> Result<(), UnknownError> {
+    fn tick(&mut self, _ctx: &PeripheralTickCtx<'_>) -> Result<RaisedIrqs, UnknownError> {
+        let mut raised = RaisedIrqs::none();
+        let mut inner = self.inner.lock().unwrap();
         // get bytes from mosi buffer
-        self.grab_bytes();
+        inner.grab_bytes();
 
         // latch interrupt if uart data is available
         // this will latch multiple times even if no uart data arrived but uart data is available
         // ... probably not an issue :D
-        if self.rx_valid() {
-            // now latch the event with the event controller
-            event_controller.latch(self.tx_rx_irqn).unwrap();
-            self.inner_hal.s1.set_rdrf(true.into());
+        if inner.rx_valid() {
+            // now raise the event for the event controller
+            raised.push(inner.tx_rx_irqn);
+            inner.inner_hal.s1.set_rdrf(true.into());
         }
 
-        Ok(())
+        Ok(raised)
     }
 }
 

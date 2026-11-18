@@ -25,6 +25,10 @@ harness = false
 name = "snapshots"
 harness = false
 
+[[bench]]
+name = "kinetis21_gpio"
+harness = false
+
 [dependencies]
 styx-integration-tests = { path = "./integration-tests", features = [
   "factory",

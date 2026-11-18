@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
 //! Machine definition for the Ppc4xx family.
 use styx_emulator::core::core::builder::BuildProcessorImplArgs;
+use styx_emulator::core::core::VcpuBundle;
 use styx_emulator::cpu::ExecutionReport;
 use styx_emulator::prelude::*;
 
@@ -85,7 +86,10 @@ fn main() -> Result<(), UnknownError> {
             let cpu = Box::new(CustomBackend {});
 
             Ok(ProcessorBundle {
-                cpu,
+                vcpus: vec![VcpuBundle {
+                    cpu,
+                    ..Default::default()
+                }],
                 ..Default::default()
             })
         });

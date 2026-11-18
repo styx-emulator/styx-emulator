@@ -293,6 +293,7 @@ pub struct BaseTraceEvent {
     pub pc: u32,
     pub param1: u32,
     pub param2: u32,
+    pub vcpu_id: u16,
 }
 
 impl From<&BinaryTraceEventType> for BaseTraceEvent {
@@ -333,7 +334,7 @@ impl TraceEventType {
 // makes serde::json deserialize slightly more meaningful
 bitflags_serde_shim::impl_serde_for_bitflags!(TraceEventType);
 
-/// Bag of trace-releated errors
+/// Bag of trace-related errors
 #[derive(Error, Debug)]
 pub enum TraceError {
     #[error("Unable to attach to buffer: `{0}`")]
@@ -636,9 +637,11 @@ pub struct InterruptEvent {
 mod tests {
     use super::*;
     use test_case::test_case;
+
     #[test]
     fn test_binary_serde_c() {
         let mut event = InsnFetchEvent::new();
+        event.vcpu_id = 0xcafe;
         event.reserved_u8 = 0b0101_0101;
         event.pc = 0xdead_beef;
         event.insn = 0xff00_00ff;
@@ -651,7 +654,7 @@ mod tests {
         assert_eq!(item_bytes.len(), std::mem::size_of::<InsnFetchEvent>());
 
         let deserialized_traceable_item = TraceableItem::from(unsafe {
-            std::mem::transmute::<[u8; 24], BaseTraceEvent>(*item_bytes)
+            std::mem::transmute::<[u8; TRACE_EVENT_SIZE], BaseTraceEvent>(*item_bytes)
         });
         if let TraceableItem::InsnFetchEvent(deser_event) = deserialized_traceable_item {
             assert_eq!(deser_event, orig_event, "Incorrect deserialize");
@@ -659,6 +662,7 @@ mod tests {
             panic!("Unexpected variant after deserialize")
         }
     }
+
     #[test_case(MemReadEvent::new().into(),
                 TraceEventType::MEM_READ  ;
                 "One type")]
@@ -668,6 +672,7 @@ mod tests {
     fn test_match(e: TraceableItem, mask: TraceEventType) {
         assert!(e.event_type().is_match(mask));
     }
+
     #[test_case(InsnExecEvent::new().into(),
                 TraceEventType::MEM_READ  ;
                 "One type no match")]
@@ -677,6 +682,7 @@ mod tests {
     fn test_no_match(e: TraceableItem, mask: TraceEventType) {
         assert!(!e.event_type().is_match(mask));
     }
+
     #[test]
     fn test_type_ok() {
         assert_eq!(MemReadEvent::new().etype, TraceEventType::MEM_READ);

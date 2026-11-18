@@ -7,7 +7,7 @@ use std::{
 use styx_core::{
     core::builder::ProcessorImpl,
     errors::UnknownError,
-    prelude::{log::trace, ExecutorImpl, UninitPlugin},
+    prelude::{log::trace, ExecutorKind, UninitPlugin},
 };
 use thiserror::Error;
 
@@ -85,7 +85,7 @@ impl<T> ComponentStore<T> {
 pub struct ProcessorComponentsStore {
     pub builders: ComponentStore<Box<dyn ProcessorImpl>>,
     pub plugins: ComponentStore<Box<dyn UninitPlugin>>,
-    pub executors: ComponentStore<Box<dyn ExecutorImpl>>,
+    pub executors: ComponentStore<ExecutorKind>,
 }
 
 impl ProcessorComponentsStore {

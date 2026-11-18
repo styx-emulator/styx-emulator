@@ -287,9 +287,9 @@ impl From<[u8; AtomicWord::WORD_SIZE_BYTES]> for AtomicWord {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use test_case::test_case;
+
+    use super::*;
 
     #[test_case(0, 0, true)]
     #[test_case(0, 8, true)]

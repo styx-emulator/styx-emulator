@@ -10,6 +10,8 @@ use bilge::prelude::*;
 use derivative::Derivative;
 use getset::Getters;
 use std::collections::VecDeque;
+use std::sync::{Arc, Mutex};
+use styx_core::event_controller::{EventControllerImpl, PeripheralTickCtx, RaisedIrqs};
 use styx_core::grpc::io;
 use styx_core::grpc::io::spi::{MasterChipSelectPacket, MasterPacket};
 use styx_core::prelude::*;
@@ -18,21 +20,6 @@ use tokio::sync::broadcast;
 use tokio::sync::broadcast::error::TryRecvError;
 
 mod hooks;
-
-const SPI2_END: u64 = 0x4000_3BFF;
-const SPI3_END: u64 = 0x4000_3FFF;
-
-/// Converts an address into the SPI port that it belongs to, as zero-indexed number.
-/// SPI1 has a higher address block compared to SPI2 and SPI3 which is why this function looks wrong.
-fn addr_to_spi_port(addr: u64) -> u32 {
-    if addr <= SPI2_END {
-        1
-    } else if addr <= SPI3_END {
-        2
-    } else {
-        0
-    }
-}
 
 pub struct StmSpiPrecursor {
     pub base_addr: u64,
@@ -62,22 +49,33 @@ impl IntoSpiImp for StmSpiPrecursor {
 
         port_id: u32,
     ) -> Result<Box<dyn styx_spi::SpiImpl>, UnknownError> {
-        Ok(Box::new(SPIPortInner {
-            port_num: port_id,
-            base_addr: self.base_addr,
-            inner_hal: Default::default(),
-            event_irqn: self.event_irqn,
-            byte_frame_size: true,
-            rx_fifo: VecDeque::with_capacity(RX_TX_FIFO_SIZE),
-            inbound_data: as_master_miso,
-            outbound_data: as_master_mosi,
-            outbound_csel: as_master_csel,
-            txeie: false,
-            rxneie: false,
-            errie: false,
-            selected: false,
+        Ok(Box::new(SPIPort {
+            inner: Arc::new(Mutex::new(SPIPortInner {
+                port_num: port_id,
+                base_addr: self.base_addr,
+                inner_hal: Default::default(),
+                event_irqn: self.event_irqn,
+                byte_frame_size: true,
+                rx_fifo: VecDeque::with_capacity(RX_TX_FIFO_SIZE),
+                inbound_data: as_master_miso,
+                outbound_data: as_master_mosi,
+                outbound_csel: as_master_csel,
+                txeie: false,
+                rxneie: false,
+                errie: false,
+                selected: false,
+            })),
         }))
     }
+}
+
+/// Shared handle to the [`SPIPortInner`] state.
+///
+/// State is shared via this handle: the peripheral's [`SpiImpl::tick`] and the
+/// memory-mapped register hooks each hold a clone of the same `Arc`.
+#[derive(Clone)]
+pub struct SPIPort {
+    pub(crate) inner: Arc<Mutex<SPIPortInner>>,
 }
 
 #[derive(Derivative)]
@@ -117,36 +115,47 @@ const SPI_CR2_OFFSET: u64 = 0x4;
 const SPI_SR_OFFSET: u64 = 0x8;
 const SPI_DR_OFFSET: u64 = 0xC;
 
-impl SpiImpl for SPIPortInner {
-    fn reset(&mut self, _cpu: &mut dyn CpuBackend, _mmu: &mut Mmu) -> Result<(), UnknownError> {
+impl SpiImpl for SPIPort {
+    fn reset(&mut self, _mmu: &mut Mmu) -> Result<(), UnknownError> {
         // reset the inner register state
-        self.inner_hal.reset();
+        self.inner.lock().unwrap().inner_hal.reset();
         Ok(())
     }
 
     /// sets up the required memory hooks
     fn init(&mut self, proc: &mut BuildingProcessor) -> Result<(), UnknownError> {
-        let cpu = proc.core.cpu.as_mut();
+        let base_addr = self.inner.lock().unwrap().base_addr;
+        let cpu = proc.vcpus[0].cpu.as_mut();
 
         cpu.add_hook(StyxHook::memory_write(
-            self.base_addr + SPI_CR1_OFFSET,
-            hooks::spi_cr1_w_hook,
+            base_addr + SPI_CR1_OFFSET,
+            hooks::SpiCr1WHook {
+                inner: self.inner.clone(),
+            },
         ))?;
         cpu.add_hook(StyxHook::memory_write(
-            self.base_addr + SPI_CR2_OFFSET,
-            hooks::spi_cr2_w_hook,
+            base_addr + SPI_CR2_OFFSET,
+            hooks::SpiCr2WHook {
+                inner: self.inner.clone(),
+            },
         ))?;
         cpu.add_hook(StyxHook::memory_write(
-            self.base_addr + SPI_DR_OFFSET,
-            hooks::spi_dr_w_hook,
+            base_addr + SPI_DR_OFFSET,
+            hooks::SpiDrWHook {
+                inner: self.inner.clone(),
+            },
         ))?;
         cpu.add_hook(StyxHook::memory_read(
-            self.base_addr + SPI_DR_OFFSET,
-            hooks::spi_dr_r_hook,
+            base_addr + SPI_DR_OFFSET,
+            hooks::SpiDrRHook {
+                inner: self.inner.clone(),
+            },
         ))?;
         cpu.add_hook(StyxHook::memory_read(
-            self.base_addr + SPI_SR_OFFSET,
-            hooks::spi_sr_r_hook,
+            base_addr + SPI_SR_OFFSET,
+            hooks::SpiSrRHook {
+                inner: self.inner.clone(),
+            },
         ))?;
 
         Ok(())
@@ -154,35 +163,11 @@ impl SpiImpl for SPIPortInner {
 
     /// Retrieves the IRQs belonging to this [`SPIPortInner`]
     fn irqs(&self) -> Vec<ExceptionNumber> {
-        vec![self.event_irqn]
+        vec![self.inner.lock().unwrap().event_irqn]
     }
 
-    fn tick(
-        &mut self,
-        _cpu: &mut dyn CpuBackend,
-        _mmu: &mut Mmu,
-        event_controller: &mut dyn EventControllerImpl,
-    ) -> Result<(), UnknownError> {
-        self.receive_data(event_controller)?;
-        Ok(())
-    }
-
-    fn pre_event_hook(
-        &mut self,
-        _cpu: &mut dyn CpuBackend,
-        _mmu: &mut Mmu,
-        _event_controller: &mut dyn EventControllerImpl,
-    ) -> Result<(), UnknownError> {
-        Ok(())
-    }
-
-    fn post_event_hook(
-        &mut self,
-        _cpu: &mut dyn CpuBackend,
-        _mmu: &mut Mmu,
-        _event_controller: &mut dyn EventControllerImpl,
-    ) -> Result<(), UnknownError> {
-        Ok(())
+    fn tick(&mut self, _ctx: &PeripheralTickCtx<'_>) -> Result<RaisedIrqs, UnknownError> {
+        self.inner.lock().unwrap().receive_data()
     }
 }
 
@@ -223,10 +208,8 @@ impl SPIPortInner {
         self.inner_hal.sr.set_txe(true.into());
     }
 
-    pub fn receive_data(
-        &mut self,
-        event_controller: &mut dyn EventControllerImpl,
-    ) -> Result<(), UnknownError> {
+    pub fn receive_data(&mut self) -> Result<RaisedIrqs, UnknownError> {
+        let mut raised = RaisedIrqs::none();
         let rx_fifo = &mut self.rx_fifo;
         while let Some(data) = try_recv(&mut self.inbound_data) {
             for data_byte in data {
@@ -234,22 +217,22 @@ impl SPIPortInner {
             }
         }
         if rx_fifo.is_empty() {
-            return Ok(());
+            return Ok(raised);
         }
         if !self.selected {
             // ignore data from device if we haven't selected it
             self.inner_hal.sr.set_rxne(false.into());
-            return Ok(());
+            return Ok(raised);
         }
         log::debug!("processing!!!! ");
 
         // trigger a RX buffer full interrupt event, if enabled
         if self.rxneie {
-            event_controller.latch(self.event_irqn).unwrap();
+            raised.push(self.event_irqn);
         }
         // set RXNE flag
         self.inner_hal.sr.set_rxne(true.into());
-        Ok(())
+        Ok(raised)
     }
 
     pub fn read_data(&mut self) -> u8 {

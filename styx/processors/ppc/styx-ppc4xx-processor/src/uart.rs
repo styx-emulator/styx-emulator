@@ -69,6 +69,7 @@
 //! overrun conditions will never happen while emulating. (or at least we pretend they won't)
 //!
 use styx_core::errors::UnknownError;
+use styx_core::event_controller::{PeripheralTickCtx, RaisedIrqs};
 use styx_core::prelude::*;
 use styx_peripherals::uart::{IntoUartImpl, UartImpl};
 use tokio::sync::broadcast;
@@ -78,6 +79,7 @@ mod hooks;
 use crate::core_event_controller::Event;
 use derivative::Derivative;
 use std::collections::VecDeque;
+use std::sync::{Arc, Mutex};
 
 const UART_BASE: u64 = 0x84000000;
 
@@ -86,7 +88,6 @@ const UART_BASE: u64 = 0x84000000;
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct UartPortInner {
-    interface_id: String,
     #[derivative(Debug = "ignore")]
     intr_enabled: bool,
     /// uart bytes that have come in from master but not read yet.
@@ -95,20 +96,30 @@ pub struct UartPortInner {
     mosi_stream: broadcast::Receiver<u8>,
 }
 
+/// Shared handle to the [`UartPortInner`] state.
+///
+/// State is shared via this handle: the peripheral's [`UartImpl::tick`] and the
+/// memory-mapped register hooks each hold a clone of the same `Arc`.
+#[derive(Clone)]
+pub struct UartPort {
+    inner: Arc<Mutex<UartPortInner>>,
+}
+
 pub struct NewUartPortInner;
 impl IntoUartImpl for NewUartPortInner {
     fn new(
         self,
         mosi: broadcast::Receiver<u8>,
         miso: broadcast::Sender<u8>,
-        interface_id: String,
+        _interface_id: String,
     ) -> Result<Box<dyn UartImpl>, UnknownError> {
-        Ok(Box::new(UartPortInner {
-            intr_enabled: false,
-            buffer: Default::default(),
-            miso_stream: miso,
-            mosi_stream: mosi,
-            interface_id,
+        Ok(Box::new(UartPort {
+            inner: Arc::new(Mutex::new(UartPortInner {
+                intr_enabled: false,
+                buffer: Default::default(),
+                miso_stream: miso,
+                mosi_stream: mosi,
+            })),
         }))
     }
 }
@@ -180,54 +191,32 @@ impl UartPortInner {
         }
     }
 }
-impl UartImpl for UartPortInner {
+impl UartImpl for UartPort {
     fn init(&mut self, proc: &mut BuildingProcessor) -> Result<(), UnknownError> {
-        proc.core
+        proc.vcpus[0]
             .cpu
             .mem_read_hook(
                 UART_BASE,
                 UART_BASE + 0xC,
                 Box::new(hooks::UartHook {
-                    interface_id: self.interface_id.clone(),
+                    inner: self.inner.clone(),
                 }),
             )
             .unwrap();
-        proc.core
+        proc.vcpus[0]
             .cpu
             .mem_write_hook(
                 UART_BASE,
                 UART_BASE + 0xC,
                 Box::new(hooks::UartHook {
-                    interface_id: self.interface_id.clone(),
+                    inner: self.inner.clone(),
                 }),
             )
             .unwrap();
-        self.reset_state(&mut proc.core.mmu)?;
-        Ok(())
-    }
-
-    // don't think we need this
-    fn post_event_hook(
-        &mut self,
-        _cpu: &mut dyn CpuBackend,
-        _mmu: &mut Mmu,
-        _event_controller: &mut dyn EventControllerImpl,
-    ) -> Result<(), UnknownError> {
-        trace!("UART got post_event_hook(irq:)");
-
-        // // if we still have data in the queue, do another event
-        // if !self.rx_fifo.lock().unwrap().is_empty() {
-        //     if self.intr_enabled.load(Ordering::Acquire) {
-        //         // now latch the event with the event controller
-        //         self.event_controller
-        //             .upgrade()
-        //             .unwrap()
-        //             .latch_event(Event::Uart.into())
-        //             .unwrap();
-        //     }
-        //     // set flag for rx_fifo full
-        //     self.rx_valid.store(true, Ordering::Release);
-        // }
+        self.inner
+            .lock()
+            .unwrap()
+            .reset_state(&mut proc.vcpus[0].mmu)?;
         Ok(())
     }
 
@@ -235,22 +224,20 @@ impl UartImpl for UartPortInner {
         vec![Event::Uart.into()]
     }
 
-    fn tick(
-        &mut self,
-        _cpu: &mut dyn CpuBackend,
-        _mmu: &mut Mmu,
-        event_controller: &mut dyn EventControllerImpl,
-    ) -> Result<(), UnknownError> {
-        // get bytes from mosi buffer
-        self.grab_bytes();
+    fn tick(&mut self, _ctx: &PeripheralTickCtx<'_>) -> Result<RaisedIrqs, UnknownError> {
+        let mut inner = self.inner.lock().unwrap();
 
-        // latch interrupt if uart data is available
-        // this will latch multiple times even if no uart data arrived but uart data is available
+        // get bytes from mosi buffer
+        inner.grab_bytes();
+
+        // raise interrupt if uart data is available
+        // this will raise multiple times even if no uart data arrived but uart data is available
         // ... probably not an issue :D
-        if self.intr_enabled && self.rx_valid() {
-            event_controller.latch(Event::Uart.into()).unwrap();
+        let mut raised = RaisedIrqs::none();
+        if inner.intr_enabled && inner.rx_valid() {
+            raised.push(Event::Uart.into());
         }
 
-        Ok(())
+        Ok(raised)
     }
 }

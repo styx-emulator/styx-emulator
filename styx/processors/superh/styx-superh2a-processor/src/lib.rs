@@ -4,8 +4,6 @@ use styx_core::core::builder::{BuildProcessorImplArgs, ProcessorImpl};
 use styx_core::cpu::arch::superh::SuperHVariants;
 use styx_core::cpu::arch::ArchEndian;
 use styx_core::cpu::PcodeBackend;
-use styx_core::event_controller::DummyEventController;
-use styx_core::memory::DummyTlb;
 use styx_core::prelude::*;
 
 /// Partial Implementation of a SuperH2a processor
@@ -27,30 +25,20 @@ impl SuperH2aBuilder {
 impl ProcessorImpl for SuperH2aBuilder {
     fn build(&self, args: &BuildProcessorImplArgs) -> Result<ProcessorBundle, UnknownError> {
         let cpu = if let Backend::Pcode = args.backend {
-            Box::new(PcodeBackend::new_engine_config(
+            PcodeBackend::new_engine_config(
                 SuperHVariants::SH2A,
                 ArchEndian::BigEndian,
                 &args.into(),
-            ))
+            )
         } else {
             return Err(anyhow!("sh2 processor only supports pcode backend"));
         };
 
-        let mut memory = MemoryBackend::new_region_store();
-        let tlb = DummyTlb::new();
-
-        self.setup_address_space(&mut memory)?;
-
-        let mut hints = LoaderHints::new();
-        hints.insert("arch".to_owned().into_boxed_str(), Box::new(Arch::SuperH));
-
-        Ok(ProcessorBundle {
-            cpu,
-            memory,
-            tlb,
-            event_controller: Box::new(DummyEventController::default()),
-            peripherals: Vec::new(),
-            loader_hints: hints,
-        })
+        Ok(ProcessorBundle::builder()
+            .with_memory(MemoryBackend::new_region_store())
+            .modify_memory(|m| self.setup_address_space(m))?
+            .with_vcpu(|v| v.with_cpu(cpu))
+            .with_arch_hint(Arch::SuperH)
+            .build()?)
     }
 }

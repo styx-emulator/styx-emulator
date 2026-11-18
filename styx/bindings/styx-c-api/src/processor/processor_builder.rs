@@ -111,7 +111,7 @@ extern "C" fn StyxProcessorBuilder_set_executor(
 ) -> StyxFFIErrorPtr {
     let this = this.as_mut()?;
     let tmp = std::mem::take(this);
-    let tmp = tmp.with_executor_box(executor.take()?);
+    let tmp = tmp.with_executor_kind(executor.take()?);
     *this = tmp;
     StyxFFIErrorPtr::Ok
 }

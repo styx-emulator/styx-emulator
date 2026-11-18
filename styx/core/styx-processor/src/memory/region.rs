@@ -1,10 +1,8 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use std::cmp::{max, min};
 
-use crate::memory::{
-    memory_region::MemoryRegion, AddRegionError, MemoryOperationError, MemoryPermissions,
-    UnmappedMemoryError,
-};
+use crate::memory::memory_region::MemoryRegion;
+use crate::memory::{AddRegionError, MemoryOperationError, MemoryPermissions, UnmappedMemoryError};
 
 mod region_walker;
 
@@ -16,10 +14,8 @@ use region_walker::{
 };
 use styx_errors::UnknownError;
 
-use super::{
-    physical::AtomicMemoryOperationError, CompareExchangeError, CompareExchangeResult,
-    MemoryRegionSize,
-};
+use super::physical::AtomicMemoryOperationError;
+use super::{CompareExchangeError, CompareExchangeResult, MemoryRegionSize};
 
 /// A region based memory implementation, memory is represented by zero or more
 /// unique, non-overlapping memory regions.
@@ -413,9 +409,8 @@ mod tests {
     use log::info;
     use styx_util::logging::init_logging;
 
-    use crate::memory::MemoryPermissions;
-
     use super::*;
+    use crate::memory::MemoryPermissions;
 
     /// Check mapping memory at u64::MAX.
     #[test]

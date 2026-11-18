@@ -4,9 +4,10 @@
 use log::debug;
 use styx_errors::UnknownError;
 
-use crate::{core::ProcessorCore, processor::BuildingProcessor};
-
 use super::{Plugin, UninitPlugin};
+use crate::core::{ProcessorCore, VcpuCore};
+use crate::executor::time::GlobalDelta;
+use crate::processor::{BuildingProcessor, PerVcpuSlice};
 
 /// Collection of plugins in the processor.
 pub struct PluginsContainer<T> {
@@ -51,25 +52,38 @@ impl PluginsContainer<Box<dyn Plugin>> {
     }
 
     /// Called on processor start. Called each time the processor is started after pause.
-    pub fn on_processor_start(&mut self, core: &mut ProcessorCore) -> Result<(), UnknownError> {
+    pub fn on_processor_start(
+        &mut self,
+        vcpus: &mut PerVcpuSlice<VcpuCore>,
+        core: &mut ProcessorCore,
+    ) -> Result<(), UnknownError> {
         for plugin in self.plugins.iter_mut() {
-            plugin.on_processor_start(core)?;
+            plugin.on_processor_start(vcpus, core)?;
         }
         Ok(())
     }
 
-    /// Called on processor stop. Called each time the processor is pause.
-    pub fn on_processor_stop(&mut self, core: &mut ProcessorCore) -> Result<(), UnknownError> {
+    /// Called on processor stop. Called each time the processor is paused.
+    pub fn on_processor_stop(
+        &mut self,
+        vcpus: &mut PerVcpuSlice<VcpuCore>,
+        core: &mut ProcessorCore,
+    ) -> Result<(), UnknownError> {
         for plugin in self.plugins.iter_mut() {
-            plugin.on_processor_stop(core)?;
+            plugin.on_processor_stop(vcpus, core)?;
         }
         Ok(())
     }
 
     /// Tick all plugins.
-    pub fn tick(&mut self, core: &mut ProcessorCore) -> Result<(), UnknownError> {
+    pub fn tick(
+        &mut self,
+        core: &mut ProcessorCore,
+        delta: &GlobalDelta,
+        vcpus: &mut PerVcpuSlice<VcpuCore>,
+    ) -> Result<(), UnknownError> {
         for plugin in self.plugins.iter_mut() {
-            plugin.tick(core)?;
+            plugin.tick(core, delta, vcpus)?;
         }
         Ok(())
     }

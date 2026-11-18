@@ -250,7 +250,7 @@ pub fn realize_processor_config(
             .executors
             .generate(executor)
             .with_context(|| format!("could not resolve executor from reference {executor:?}"))?;
-        proc_builder = proc_builder.with_executor_box(executor);
+        proc_builder = proc_builder.with_executor_kind(executor);
     }
 
     // plugins

@@ -11,7 +11,7 @@ use styx_core::memory::MemoryBackend;
 use styx_core::prelude::*;
 use styx_core::{
     cpu::arch::blackfin::BlackfinRegister,
-    event_controller::{ActivateIRQnError, InterruptExecuted, Peripherals},
+    event_controller::{ActivateIRQnError, EventControllerImpl, InterruptExecuted},
 };
 pub use system_interrupts::PeripheralId;
 pub use system_interrupts::*;
@@ -101,7 +101,6 @@ impl EventControllerImpl for CoreEventController {
         &mut self,
         cpu: &mut dyn CpuBackend,
         mmu: &mut Mmu,
-        _peripherals: &mut Peripherals,
     ) -> Result<InterruptExecuted, UnknownError> {
         let next_latched = self.exceptions.first_latched_and_enabled();
 
@@ -160,7 +159,12 @@ impl EventControllerImpl for CoreEventController {
         unimplemented!()
     }
 
-    fn tick(&mut self, _cpu: &mut dyn CpuBackend, _mmu: &mut Mmu) -> Result<(), UnknownError> {
+    fn tick(
+        &mut self,
+        _cpu: &mut dyn CpuBackend,
+        _mmu: &mut Mmu,
+        _delta: &Delta,
+    ) -> Result<(), UnknownError> {
         warn!("tick not fully implemented for blackfin event controller yet");
         Ok(())
     }

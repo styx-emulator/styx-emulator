@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use styx_errors::UnknownError;
 
-use crate::hooks::CoreHandle;
-
 use super::Resolution;
+use crate::hooks::CoreHandle;
 
 /// Callback for an invalid instruction hook.
 ///

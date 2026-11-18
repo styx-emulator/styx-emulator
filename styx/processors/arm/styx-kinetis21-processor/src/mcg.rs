@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use derivative::Derivative;
+use styx_core::event_controller::{PeripheralTickCtx, RaisedIrqs};
 use styx_core::prelude::*;
 use tracing::debug;
 
@@ -144,22 +145,16 @@ fn osc_cr_w_hook(
 }
 
 impl Peripheral for Mcg {
-    fn tick(
-        &mut self,
-        _cpu: &mut dyn CpuBackend,
-        _mmu: &mut Mmu,
-        _event_controller: &mut dyn EventControllerImpl,
-        _delta: &styx_core::executor::Delta,
-    ) -> Result<(), UnknownError> {
-        Ok(())
+    fn tick(&mut self, _ctx: &PeripheralTickCtx<'_>) -> Result<RaisedIrqs, UnknownError> {
+        Ok(RaisedIrqs::none())
     }
 
     fn init(&mut self, proc: &mut BuildingProcessor) -> Result<(), UnknownError> {
         // register hooks
-        proc.core
+        proc.vcpus[0]
             .cpu
             .mem_write_hook(MCG_BASE, MCG_C10, Box::new(mcg_w_hook))?;
-        proc.core
+        proc.vcpus[0]
             .cpu
             .mem_write_hook(OSC_CR, OSC_CR, Box::new(osc_cr_w_hook))?;
 
@@ -170,7 +165,7 @@ impl Peripheral for Mcg {
         "MCG"
     }
 
-    fn reset(&mut self, _cpu: &mut dyn CpuBackend, mmu: &mut Mmu) -> Result<(), UnknownError> {
+    fn reset(&mut self, mmu: &mut Mmu) -> Result<(), UnknownError> {
         // Register reset values
         // C1  = 0x4
         // C2  = 0x80

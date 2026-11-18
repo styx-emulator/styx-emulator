@@ -41,7 +41,7 @@ in many cases:
 .. code-block:: rust
     :linenos:
 
-    use styx_emulator::core::processor::executor::Executor;
+    use styx_emulator::plugins::tracing_plugins::ProcessorTracingPlugin;
     use styx_emulator::prelude::*;
     use styx_emulator::processors::arm::kinetis21::*;
     use tracing::info;
@@ -50,17 +50,17 @@ in many cases:
     const LOAD_YAML: &str = "load.yaml";
 
     fn main() -> Result<(), Box<dyn std::error::Error>> {
-        let proc = ProcessorBuilder::default()
+        let mut proc = ProcessorBuilder::default()
+            .with_builder(Kinetis21Builder::default())
             .with_backend(Backend::Pcode)
             .with_loader(ParameterizedLoader::default())
-            .with_executor(Executor::default())
-            .with_plugin(ProcessorTracingPlugin)
+            .add_plugin(ProcessorTracingPlugin)
             .with_target_program(LOAD_YAML)
-            .build::<Kinetis21Builder>()?;
+            .build()?;
 
         info!("Starting emulator");
 
-        proc.start()?;
+        proc.run(Forever)?;
 
         Ok(())
     }

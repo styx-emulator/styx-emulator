@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: BSD-2-Clause
+
 //! Debug Tools Plugins Module
 //!
 //! Provides some hooks that are useful when things are not working as expected
 //! and you need help figuring out where in the emulation stack things are borked.
 //!
+//! It also provides the [`shadow_stack`] and the [`loops`] detector plugins
+
 use styx_core::{
     hooks::{MemFaultData, ProtectionFaultHook, Resolution, UnmappedFaultHook},
     memory::MemoryPermissions,
@@ -11,6 +14,12 @@ use styx_core::{
 };
 use styx_sync::sync::Arc;
 use tracing::error;
+
+pub mod loops;
+pub mod shadow_stack;
+
+pub use loops::{LoopCallback, LoopCounters, LoopDetectionPlugin, LoopReport};
+pub use shadow_stack::{FrameTransitionType, ShadowStack, ShadowStackHandle, ShadowStackPlugin};
 
 struct HaltableHook {
     halt: bool,
@@ -33,7 +42,8 @@ impl UnmappedFaultHook for HaltableHook {
         fault_data: MemFaultData,
     ) -> Result<Resolution, UnknownError> {
         error!(
-            "[Unmapped Mem Fault] PC: `{:#x}` Address: `{:#x}`, size: `{:#x}`, {:?}",
+            "[Unmapped Mem Fault] VCPU: `{}` PC: `{:#x}` Address: `{:#x}`, size: `{:#x}`, {:?}",
+            proc.vcpu_id(),
             proc.cpu.pc()?,
             address,
             size,
@@ -56,7 +66,8 @@ impl ProtectionFaultHook for HaltableHook {
         fault_data: MemFaultData,
     ) -> Result<Resolution, UnknownError> {
         error!(
-            "[Unmapped Mem Fault] PC: `{:#x}` Address: `{:#x}`, size: `{:#x}`, Perms: `{}`, {:?}",
+            "[Protection Mem Fault] VCPU: `{}` PC: `{:#x}` Address: `{:#x}`, size: `{:#x}`, Perms: `{}`, {:?}",
+            proc.vcpu_id(),
             proc.cpu.pc()?,
             address,
             size,
@@ -103,11 +114,15 @@ impl UninitPlugin for UnmappedMemoryFaultPlugin {
         self: Box<Self>,
         proc: &mut BuildingProcessor,
     ) -> Result<Box<dyn Plugin>, UnknownError> {
-        // add our hook and call it a day
-        proc.core.cpu.add_hook(StyxHook::UnmappedFault(
-            (..).into(),
-            Box::new(HaltableHook { halt: self.halt }),
-        ))?;
+        // add our hook to all vcpus and call it a day
+        for vcpu in proc.vcpus.iter_mut() {
+            vcpu.cpu
+                .add_hook(StyxHook::unmapped_fault(
+                    ..,
+                    HaltableHook { halt: self.halt },
+                ))
+                .context("error adding debug memory fault hook")?;
+        }
 
         Ok(self)
     }
@@ -147,12 +162,15 @@ impl UninitPlugin for ProtectedMemoryFaultPlugin {
         self: Box<Self>,
         proc: &mut BuildingProcessor,
     ) -> Result<Box<dyn Plugin>, UnknownError> {
-        // add our hook and call it a day
-        proc.core.cpu.add_hook(StyxHook::ProtectionFault(
-            (..).into(),
-            Box::new(HaltableHook { halt: self.halt }),
-        ))?;
-
+        // add our hook to all vcpus and call it a day
+        for vcpu in proc.vcpus.iter_mut() {
+            vcpu.cpu
+                .add_hook(StyxHook::protection_fault(
+                    ..,
+                    HaltableHook { halt: self.halt },
+                ))
+                .context("error adding debug memory fault hook")?;
+        }
         Ok(self)
     }
 }

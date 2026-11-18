@@ -2,7 +2,9 @@
 use static_assertions::assert_obj_safe;
 use styx_errors::UnknownError;
 
-use crate::{core::ProcessorCore, processor::BuildingProcessor};
+use crate::core::{ProcessorCore, VcpuCore};
+use crate::executor::time::GlobalDelta;
+use crate::processor::{BuildingProcessor, PerVcpuSlice};
 
 assert_obj_safe!(UninitPlugin);
 
@@ -24,17 +26,20 @@ pub trait Plugin: Send {
     fn name(&self) -> &str;
 
     /// Called on processor start. Called each time the processor is started after pause.
-    fn on_processor_start(&mut self, _core: &mut ProcessorCore) -> Result<(), UnknownError> {
+    fn on_processor_start(
+        &mut self,
+        _vcpus: &mut PerVcpuSlice<VcpuCore>,
+        _core: &mut ProcessorCore,
+    ) -> Result<(), UnknownError> {
         Ok(())
     }
 
-    /// Called on processor stop. Called each time the processor is pause.
-    fn on_processor_stop(&mut self, _core: &mut ProcessorCore) -> Result<(), UnknownError> {
-        Ok(())
-    }
-
-    /// Called every so often to advance the plugin's state.
-    fn tick(&mut self, _core: &mut ProcessorCore) -> Result<(), UnknownError> {
+    /// Called on processor stop. Called each time the processor is paused.
+    fn on_processor_stop(
+        &mut self,
+        _vcpus: &mut PerVcpuSlice<VcpuCore>,
+        _core: &mut ProcessorCore,
+    ) -> Result<(), UnknownError> {
         Ok(())
     }
 
@@ -44,6 +49,20 @@ pub trait Plugin: Send {
     fn plugins_initialized_hook(
         &mut self,
         _proc: &mut BuildingProcessor,
+    ) -> Result<(), UnknownError> {
+        Ok(())
+    }
+
+    /// Called every "tick" to advance the plugin's state.
+    ///
+    /// Ticks are occur periodically during emulation, usually every ~1000
+    /// instructions but can be any amount of instructions or time.. `delta` is
+    /// used to track the time since the last tick.
+    fn tick(
+        &mut self,
+        _core: &mut ProcessorCore,
+        _delta: &GlobalDelta,
+        _vcpus: &mut PerVcpuSlice<VcpuCore>,
     ) -> Result<(), UnknownError> {
         Ok(())
     }

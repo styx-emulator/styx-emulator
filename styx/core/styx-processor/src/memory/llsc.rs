@@ -3,12 +3,10 @@
 use tap::Conv;
 use thiserror::Error;
 
+use super::atomic_word::AtomicWord;
+use super::physical::AtomicMemoryOperationError;
+use super::{CompareExchangeError, MemoryOperation, MemoryType, Mmu, TlbTranslateError};
 use crate::cpu::CpuBackend;
-
-use super::{
-    atomic_word::AtomicWord, physical::AtomicMemoryOperationError, CompareExchangeError,
-    MemoryOperation, MemoryType, Mmu, TlbTranslateError,
-};
 
 /// Returned from a Load Linked call to enable a Store Conditional.
 ///
@@ -41,7 +39,7 @@ impl Mmu {
     /// Loads and reserves `*paddr` in data memory in memory for future [`Mmu::store_conditional_data()`].
     ///
     /// Use the `code`/`data` variant that is most appropriate.
-    /// For Von Neumann architectures, `data` vs `code` has no effect.
+    /// For von Neumann architectures, `data` vs `code` has no effect.
     ///
     /// Refer to the [module documentation](crate::memory#load-linkstore-conditional)
     /// for detailed information and gotchas.
@@ -58,7 +56,7 @@ impl Mmu {
     /// Loads and reserves `*paddr` in code memory in memory for future [`Mmu::store_conditional_code()`].
     ///
     /// Use the `code`/`data` variant that is most appropriate.
-    /// For Von Neumann architectures, `data` vs `code` has no effect.
+    /// For von Neumann architectures, `data` vs `code` has no effect.
     ///
     /// Refer to the [module documentation](crate::memory#load-linkstore-conditional)
     /// for detailed information and gotchas.
@@ -75,7 +73,7 @@ impl Mmu {
     /// Loads and reserves `*vaddr` in data memory in memory for future [`Mmu::virt_store_conditional_data()`].
     ///
     /// Use the `code`/`data` variant that is most appropriate.
-    /// For Von Neumann architectures, `data` vs `code` has no effect.
+    /// For von Neumann architectures, `data` vs `code` has no effect.
     ///
     /// Refer to the [module documentation](crate::memory#load-linkstore-conditional)
     /// for detailed information and gotchas.
@@ -95,7 +93,7 @@ impl Mmu {
     /// Loads and reserves `*vaddr` in code memory in memory for future [`Mmu::virt_store_conditional_code()`].
     ///
     /// Use the `code`/`data` variant that is most appropriate.
-    /// For Von Neumann architectures, `data` vs `code` has no effect.
+    /// For von Neumann architectures, `data` vs `code` has no effect.
     ///
     /// Refer to the [module documentation](crate::memory#load-linkstore-conditional)
     /// for detailed information and gotchas.
@@ -284,9 +282,8 @@ fn check_load(address: u64, size: usize) -> Result<Load, AtomicMemoryOperationEr
 
 #[cfg(test)]
 mod tests {
-    use crate::memory::helpers::{ReadExt, WriteExt};
-
     use super::*;
+    use crate::memory::helpers::{ReadExt, WriteExt};
 
     #[test]
     fn test_ll_sc() {

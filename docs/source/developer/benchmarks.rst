@@ -38,7 +38,7 @@ Run the single benchmark:
 
 .. code-block:: console
 
-    $ cargo bench --bench kinetis21_gpio
+    $ cargo bench -p styx-emulator --bench kinetis21_gpio
 
        Finished bench [optimized] target(s) in 0.15s
         Running benches/kinetis21_gpio.rs (target/release/deps/kinetis21_gpio-5beb4b191b7fef4d)
@@ -56,7 +56,7 @@ Then, make your changes and run again:
 
 .. code-block:: console
 
-    $ cargo bench --bench kinetis21_gpio
+    $ cargo bench -p styx-emulator --bench kinetis21_gpio
 
        Finished bench [optimized] target(s) in 1m 11s
         Running benches/kinetis21_gpio.rs (target/release/deps/kinetis21_gpio-a196b6352116c122)
@@ -86,13 +86,13 @@ To save a baseline named `before`:
 
 .. code-block:: console
 
-    $ cargo bench --bench kinetis21_gpio -- --save-baseline before
+    $ cargo bench -p styx-emulator --bench kinetis21_gpio -- --save-baseline before
 
 Then to bench again and compare against the `before` baseline:
 
 .. code-block:: console
 
-    $ cargo bench --bench kinetis21_gpio -- --baseline before
+    $ cargo bench -p styx-emulator --bench kinetis21_gpio -- --baseline before
 
 
 Creating Benchmarks
@@ -178,8 +178,7 @@ Case Study - ``kinetis21_gpio``
 ===============================
 
 A useful example of using a benchmark to debug performance issues is the
-``kinetis21_gpio`` benchmark in ``./benches`` (code found at the end
-of this section).
+``kinetis21_gpio`` benchmark in ``./styx/benches``.
 
 After implementing bit-banding in the kinetis21 cpu, we noticed our example for
 this cpu was running much slower than before showing a roughly a 2-3x slowdown.
@@ -204,13 +203,13 @@ Using the benchmark was simple. Before making any changes create a baseline:
 
 .. code-block:: console
 
-    $ cargo bench --bench kinetis21_gpio -- --save-baseline bitband
+    $ cargo bench -p styx-emulator --bench kinetis21_gpio -- --save-baseline bitband
 
 Then after making our changes run again and compare our results:
 
 .. code-block:: console
 
-    $ cargo bench --bench kinetis21_gpio -- --baseline bitband
+    $ cargo bench -p styx-emulator --bench kinetis21_gpio -- --baseline bitband
 
 A non-obvious benefit of a whole system benchmark is that performance changes
 caught in a system benchmark are truly meaningful to the user. I could spend hours
@@ -218,50 +217,3 @@ tweaking assembly to get a 5x speed up of a function level benchmark that might 
 even impact system performance when running actual binaries. With a solid benchmark
 in place, we can be confident that our fix has a meaningful improvement on
 performance.
-
-Benchmark Code
-^^^^^^^^^^^^^^
-
-.. code-block:: rust
-    :caption: benches/benches/kinetis21_gpio.rs
-
-    //! Benchmark of full-system performance in a GPIO heavy application.
-    //!
-    //! The `led_output` test binary initializes GPIO and toggles
-    //! the GPIO ping twice before exiting.
-    use criterion::{criterion_group, criterion_main, Criterion};
-
-    use std::time::Duration;
-    use styx_cpu::arch::arm::ArmVariants;
-    use styx_cpu::ArchEndian;
-    use styx_loader::RawLoader;
-    use styx_machines::arm::nxp::kinetis_21::Kinetis21Cpu;
-    use styx_machines::processor_prelude::*;
-    use tracing::info;
-
-    const FW_PATH: &str = "../data/test-binaries/arm/kinetis_21/bin/led_output/led_output_debug.bin";
-
-    fn run() {
-        info!("Building processor.");
-        let builder = ProcessorBuilder::<Kinetis21Cpu>::default()
-            .with_endian(ArchEndian::LittleEndian)
-            .with_executor(Executor::default())
-            .with_loader(RawLoader)
-            .with_target_program(FW_PATH.to_owned())
-            .with_variant(ArmVariants::ArmCortexM4);
-
-        let proc = builder.build().unwrap();
-
-        info!("Starting emulator");
-        proc.start().unwrap();
-    }
-
-    fn criterion_benchmark(c: &mut Criterion) {
-        let mut group = c.benchmark_group("gpio-full");
-        group.sample_size(10).warm_up_time(Duration::from_secs(10));
-        group.bench_function("gpio-full", |b| b.iter(run));
-        group.finish();
-    }
-
-    criterion_group!(benches, criterion_benchmark);
-    criterion_main!(benches);

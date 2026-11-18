@@ -20,7 +20,7 @@ pub struct GDBOptions {
     ///
     /// This is analogous to qemu's `qqemu.sstep`.
     /// The default setting of [StepIRQs::Disabled] will not tick peripherals or call
-    /// [`EventControllerImpl::next()`](styx_core::event_controller::EventControllerImpl::next()).
+    /// the secondary event controller's tick method.
     /// Setting this to [StepIRQs::Enabled] will enable these during stepping.
     /// The frequency of ticking is set by [`GDBOptions::cpu_epoch`].
     pub step_irqs: StepIRQs,

@@ -12,6 +12,8 @@
 //! - [Technical Reference Manual](https://www.st.com/resource/en/reference_manual/rm0008-stm32f101xx-stm32f102xx-stm32f103xx-stm32f105xx-and-stm32f107xx-advanced-armbased-32bit-mcus-stmicroelectronics.pdf)
 use tracing::{debug, info};
 
+use std::sync::{Arc, Mutex};
+use styx_core::hooks::MemoryWriteHook;
 use styx_core::prelude::*;
 
 pub mod gpio_constants {
@@ -591,7 +593,11 @@ pub mod port {
 
         /// Register a callback with emulator for each register
         /// associated with this port
-        pub fn set_hooks(&self, emu: &mut dyn CpuBackend) {
+        pub fn set_hooks(
+            &self,
+            emu: &mut dyn CpuBackend,
+            inner: Arc<Mutex<super::Gpio>>,
+        ) -> Result<(), UnknownError> {
             info!("port set_hooks: {}", self.name);
 
             for reg in &[
@@ -609,11 +615,16 @@ pub mod port {
                     self.name, reg.name, addr
                 );
 
-                emu.add_hook(StyxHook::memory_write(addr..=addr, super::emu_mem_accessed))
-                    .unwrap();
+                emu.add_hook(StyxHook::memory_write(
+                    addr,
+                    super::GpioHook {
+                        inner: inner.clone(),
+                    },
+                ))?;
 
                 debug!("{s}")
             }
+            Ok(())
         }
 
         // Returs a Copy of the pin
@@ -881,8 +892,15 @@ impl Gpio {
     }
 
     /// Set R/W memory hooks for all ports/registers
-    fn set_all_hooks(&self, emu: &mut dyn CpuBackend) {
-        self.ports().into_iter().for_each(|p| p.set_hooks(emu));
+    fn set_all_hooks(
+        &self,
+        emu: &mut dyn CpuBackend,
+        inner: Arc<Mutex<Gpio>>,
+    ) -> Result<(), UnknownError> {
+        for p in self.ports() {
+            p.set_hooks(emu, inner.clone())?;
+        }
+        Ok(())
     }
 }
 
@@ -892,9 +910,35 @@ impl Default for Gpio {
     }
 }
 
-impl Peripheral for Gpio {
+/// Shared handle to the [`Gpio`] state.
+///
+/// State is shared via this handle: the peripheral's [`Peripheral`] impl and the
+/// memory-mapped register hooks each hold a clone of the same `Arc`.
+#[derive(Clone)]
+pub struct GpioPeripheral {
+    inner: Arc<Mutex<Gpio>>,
+}
+
+impl GpioPeripheral {
+    pub fn new() -> Self {
+        Self {
+            inner: Arc::new(Mutex::new(Gpio::new())),
+        }
+    }
+}
+
+impl Default for GpioPeripheral {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Peripheral for GpioPeripheral {
     fn init(&mut self, proc: &mut BuildingProcessor) -> Result<(), UnknownError> {
-        self.set_all_hooks(proc.core.cpu.as_mut());
+        self.inner
+            .lock()
+            .unwrap()
+            .set_all_hooks(proc.vcpus[0].cpu.as_mut(), self.inner.clone())?;
         Ok(())
     }
 
@@ -904,35 +948,42 @@ impl Peripheral for Gpio {
 }
 
 ///////////////////////////////////// CRATE  /////////////////////////////////////////////////////////
-/// Call back function for memory access to GPIO register. Based on the address,
-/// find the port its for and call it's instances mem_callback function.
-pub fn emu_mem_accessed(
-    proc: CoreHandle, // Emulator
-    address: u64,     // Accessed Address
-    size: u32,        // Number of bytes accessed
-    value: &[u8],     // Write Value
-) -> Result<(), UnknownError> {
-    let gpio = proc.event_controller.peripherals.get_expect::<Gpio>()?;
-    // If the port is in a valid PortA..PortG address range,
-    // find the port for this address
-    //   - Unicorn::emu callbacks insufficient
-    //   - HashMap<address, Port> leads to ownership issues
-    // Replace this with macro
+/// Call back for memory access to GPIO register. Based on the address,
+/// find the port it's for and call its instance's mem_callback function.
+pub(crate) struct GpioHook {
+    pub(crate) inner: Arc<Mutex<Gpio>>,
+}
 
-    // todo: need to <T> - pretty much hard-coded to u32
-    assert!(size == 4);
+impl MemoryWriteHook for GpioHook {
+    fn call(
+        &mut self,
+        _proc: CoreHandle, // Emulator
+        address: u64,      // Accessed Address
+        size: u32,         // Number of bytes accessed
+        value: &[u8],      // Write Value
+    ) -> Result<(), UnknownError> {
+        let mut gpio = self.inner.lock().unwrap();
+        // If the port is in a valid PortA..PortG address range,
+        // find the port for this address
+        //   - Unicorn::emu callbacks insufficient
+        //   - HashMap<address, Port> leads to ownership issues
+        // Replace this with macro
 
-    let msg: String = format!(
-        "GPIO memory access {:#08x}, value: {:#08x}",
-        address,
-        u32::from_le_bytes(value[0..4].try_into().unwrap())
-    );
-    debug!("{msg}");
+        // todo: need to <T> - pretty much hard-coded to u32
+        assert!(size == 4);
 
-    // get the port instance, then call it's mem_callback
-    gpio.get_guarded_port(address)
-        .mem_callback(address, size, value);
-    Ok(())
+        let msg: String = format!(
+            "GPIO memory access {:#08x}, value: {:#08x}",
+            address,
+            u32::from_le_bytes(value[0..4].try_into().unwrap())
+        );
+        debug!("{msg}");
+
+        // get the port instance, then call it's mem_callback
+        gpio.get_guarded_port(address)
+            .mem_callback(address, size, value);
+        Ok(())
+    }
 }
 
 ///////////////////////////////////// TESTS ////////////////////////////////////////////////////////

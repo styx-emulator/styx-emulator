@@ -36,7 +36,7 @@ use std::time::Duration;
 use styx_core::cpu::arch::arm::{ArmRegister, ArmVariants};
 use styx_core::cpu::{ArchEndian, TargetExitReason};
 use styx_core::errors::UnknownError;
-use styx_core::hooks::{CoreHandle, Hookable};
+use styx_core::hooks::CoreHandle;
 use styx_core::prelude::{CpuBackendExt, Forever, Processor, ProcessorBuilder};
 use styx_processors::RawProcessor;
 
@@ -65,13 +65,15 @@ fn build_backend(instructions: &str) -> Processor {
     let code = asm.bytes;
 
     // stop cpu on svc
-    proc.intr_hook(Box::new(|mut proc: CoreHandle, _irqn| {
-        proc.stop();
-        Ok(())
-    }))
-    .unwrap();
+    proc.vcpus[0]
+        .cpu
+        .intr_hook(Box::new(|mut proc: CoreHandle, _irqn| {
+            proc.stop();
+            Ok(())
+        }))
+        .unwrap();
 
-    proc.core.mmu.write_code(START_ADDRESS, &code).unwrap();
+    proc.core.memory.write_code(START_ADDRESS, &code).unwrap();
 
     proc
 }
@@ -92,19 +94,17 @@ const fn fibonacci(n: u32) -> u32 {
 
 fn run(backend: &mut Processor, fibonacci_iteration: u32) {
     // reset machine state to run the correct number of iterations
-    backend
-        .core
+    backend.vcpus[0]
         .cpu
         .write_register(ArmRegister::R5, fibonacci_iteration - 1)
         .unwrap();
 
-    backend.core.set_pc(START_ADDRESS + 1).unwrap();
+    backend.vcpus[0].cpu.set_pc(START_ADDRESS + 1).unwrap();
 
     let exit_report = backend.run(Forever).unwrap();
     assert_eq!(exit_report.exit_reason, TargetExitReason::HostStopRequest);
 
-    let r0 = backend
-        .core
+    let r0 = backend.vcpus[0]
         .cpu
         .read_register::<u32>(ArmRegister::R0)
         .unwrap();
@@ -188,7 +188,8 @@ fn criterion_benchmark(c: &mut Criterion) {
 
     // Do machine initialization before measurement.
     let mut backend = build_backend(FIB);
-    backend
+    backend.vcpus[0]
+        .cpu
         .code_hook(0x1000, 0x2000, Box::new(black_box_code_cb))
         .unwrap();
     group.bench_function("fibonacci-code-hook-hit", |b| {
@@ -198,10 +199,12 @@ fn criterion_benchmark(c: &mut Criterion) {
     // Do machine initialization before measurement.
     let mut backend = build_backend(FIB_MEMORY);
 
-    backend
+    backend.vcpus[0]
+        .cpu
         .mem_read_hook(0x0, 0x1000, Box::new(black_box_mem_read_cb))
         .unwrap();
-    backend
+    backend.vcpus[0]
+        .cpu
         .mem_write_hook(0x0, 0x1000, Box::new(black_box_mem_write_cb))
         .unwrap();
 
@@ -216,7 +219,8 @@ fn criterion_benchmark(c: &mut Criterion) {
             |b, h| {
                 let mut backend = build_backend(FIB);
                 for _ in 0..*h {
-                    backend
+                    backend.vcpus[0]
+                        .cpu
                         .code_hook(0x1000, 0x2000, Box::new(black_box_code_cb))
                         .unwrap();
                 }
@@ -230,7 +234,8 @@ fn criterion_benchmark(c: &mut Criterion) {
             |b, h| {
                 let mut backend = build_backend(FIB);
                 for _ in 0..*h {
-                    backend
+                    backend.vcpus[0]
+                        .cpu
                         .code_hook(0x9999, 0x9999, Box::new(black_box_code_cb))
                         .unwrap();
                 }
@@ -244,10 +249,12 @@ fn criterion_benchmark(c: &mut Criterion) {
             |b, h| {
                 let mut backend = build_backend(FIB_MEMORY);
                 for _ in 0..*h {
-                    backend
+                    backend.vcpus[0]
+                        .cpu
                         .mem_read_hook(0x0, 0x1000, Box::new(black_box_mem_read_cb))
                         .unwrap();
-                    backend
+                    backend.vcpus[0]
+                        .cpu
                         .mem_write_hook(0x0, 0x1000, Box::new(black_box_mem_write_cb))
                         .unwrap();
                 }
@@ -261,10 +268,12 @@ fn criterion_benchmark(c: &mut Criterion) {
             |b, h| {
                 let mut backend = build_backend(FIB_MEMORY);
                 for _ in 0..*h {
-                    backend
+                    backend.vcpus[0]
+                        .cpu
                         .mem_read_hook(0x9999, 0x9999, Box::new(black_box_mem_read_cb))
                         .unwrap();
-                    backend
+                    backend.vcpus[0]
+                        .cpu
                         .mem_write_hook(0x9999, 0x9999, Box::new(black_box_mem_write_cb))
                         .unwrap();
                 }

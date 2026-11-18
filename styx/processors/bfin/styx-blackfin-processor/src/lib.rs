@@ -73,9 +73,7 @@ impl ProcessorImpl for BlackfinBuilder {
         // initial_registers(cpu.as_mut())?;
         let cec = Box::new(CoreEventController::default());
 
-        let mut peripherals: Vec<Box<dyn Peripheral>> = Vec::new();
         let timers = Box::new(Timers::new(cec.get_sic()));
-        peripherals.push(timers);
         // populate dma sources
         let mut mapping = DmaSources::default();
 
@@ -87,22 +85,20 @@ impl ProcessorImpl for BlackfinBuilder {
             sin2,
         );
         let dma = Box::new(DmaController::new(cec.get_sic(), mapping));
-        peripherals.push(dma);
 
-        let mut hints = LoaderHints::new();
-        hints.insert(
-            "arch".to_string().into_boxed_str(),
-            Box::new(Arch::Blackfin),
-        );
-
-        Ok(ProcessorBundle {
-            cpu,
-            tlb,
-            memory,
-            event_controller: cec,
-            peripherals,
-            loader_hints: hints,
-        })
+        Ok(ProcessorBundle::builder()
+            .with_memory(memory)
+            .with_vcpu(|v| {
+                v.with_cpu_box(cpu)
+                    .with_tlb_box(tlb)
+                    .with_event_controller_box(cec)
+            })
+            // single vcpu, route raised peripheral interrupts to vcpu 0
+            .with_event_distributor(SingleVcpuEventDistributor::default())
+            .add_peripheral_box(timers)
+            .add_peripheral_box(dma)
+            .with_arch_hint(Arch::Blackfin)
+            .build()?)
     }
 }
 

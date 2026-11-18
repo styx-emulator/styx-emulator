@@ -41,7 +41,7 @@ fn generate_adr(base: &str, name: String) -> anyhow::Result<()> {
     let number = next_file_number(root);
     // form the new file name
     let file_name = format!("{}-{}.rst", number, name.to_case(Case::Kebab));
-    tracing::info!("Please add {file_name} to ./docs/source/adrs.rst");
+    println!("Please add {file_name} to ./docs/source/adrs.rst");
 
     // generate the new content
     let content = content_template(name, number);
@@ -87,7 +87,7 @@ fn content_template(name: String, number: u32) -> String {
     let title_name = name.to_case(Case::Title);
     let titled_line = format!("{number}. {title_name}");
     let title_under: String = vec!['#'; titled_line.len()].into_iter().collect();
-    let section_under: String = vec!['='; title_name.len()].into_iter().collect();
+    let section_under: String = vec!['*'; title_name.len()].into_iter().collect();
 
     format!(
         r#"

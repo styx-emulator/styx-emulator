@@ -24,11 +24,7 @@ impl CycloneVSDMMC {
 }
 
 impl Peripheral for CycloneVSDMMC {
-    fn reset(
-        &mut self,
-        _cpu: &mut dyn styx_core::prelude::CpuBackend,
-        mmu: &mut styx_core::prelude::Mmu,
-    ) -> Result<(), UnknownError> {
+    fn reset(&mut self, mmu: &mut styx_core::prelude::Mmu) -> Result<(), UnknownError> {
         self.paused = false;
 
         let mut memory_bytes = [0_u8; SDMMC_STRUCT_SIZE];
@@ -111,15 +107,16 @@ impl Peripheral for CycloneVSDMMC {
     ) -> Result<(), UnknownError> {
         // conditionally enable our debug hooks -- it can get verbose
         if log_enabled!(log::Level::Debug) {
+            let cpu = proc.vcpus[0].cpu.as_mut();
             // add our read hook
-            proc.core.cpu.mem_read_hook(
+            cpu.mem_read_hook(
                 SDMMC_BASE,
                 SDMMC_BASE + SDMMC_REGION_SIZE as u64,
                 Box::new(sd_mmc_hooks::sdmmc_region_read_debug_hook),
             )?;
 
             // add our write hook
-            proc.core.cpu.mem_write_hook(
+            cpu.mem_write_hook(
                 SDMMC_BASE,
                 SDMMC_BASE + SDMMC_REGION_SIZE as u64,
                 Box::new(sd_mmc_hooks::sdmmc_region_write_debug_hook),
@@ -166,7 +163,7 @@ mod tests {
     #[cfg_attr(miri, ignore)]
     #[cfg_attr(asan, ignore)]
     fn test_initial_memory_state_correct() {
-        let mut machine = TestMachine::new(); // initialize the machine
+        let machine = TestMachine::new(); // initialize the machine
 
         // this is the "correct" initial state of the in-memory struct
         // for the sd/mmc controller on the cyclone v hps
@@ -196,7 +193,12 @@ mod tests {
 
         // get memory
         let mut mem = [0_u8; SDMMC_STRUCT_SIZE];
-        machine.proc.core.read_data(SDMMC_BASE, &mut mem).unwrap();
+        machine
+            .proc
+            .core
+            .memory
+            .read_data(SDMMC_BASE, &mut mem)
+            .unwrap();
 
         assert_eq!(region, mem.to_vec(), "Initial memory is not correct");
     }

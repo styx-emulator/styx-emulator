@@ -26,6 +26,8 @@ arch_superh = ["styx-cpu/arch_superh"]
 arch_hexagon = ["styx-cpu/arch_hexagon"]
 pyo3_bindings = ["styx-grpc/pyo3_bindings"]
 unicorn-backend = ["styx-cpu/unicorn-backend"]
+# Currently just `executor::test_harness`.
+test-utils = ["styx-processor/test-utils"]
 
 [lints]
 workspace = true

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BSD-2-Clause
-use crate::memory::{
-    memory_region::MemoryRegion, physical::AtomicMemoryOperationError, MemoryOperationError,
-};
+use crate::memory::memory_region::MemoryRegion;
+use crate::memory::physical::AtomicMemoryOperationError;
+use crate::memory::MemoryOperationError;
 
 /// small enum used to keep track of state during region walk search
 #[derive(PartialEq, Eq, PartialOrd, Ord, Default, Clone, Copy)]

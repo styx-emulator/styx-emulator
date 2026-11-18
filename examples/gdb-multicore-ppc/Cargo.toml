@@ -1,0 +1,20 @@
+[package]
+name = "gdb-multicore-ppc"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+version.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+styx-emulator = { workspace = true }
+styx-workspace-hack = { version = "0.1", path = "../../styx/workspace-hack" }
+
+[build-dependencies]
+cc = { workspace = true }
+goblin = { workspace = true }
+
+[dev-dependencies]
+styx-integration-tests = { path = "../../styx/integration-tests" }

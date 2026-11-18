@@ -113,7 +113,8 @@ fn test_freertos() {
         .unwrap();
 
     {
-        processor
+        processor.vcpus[0]
+            .cpu
             .add_hook(StyxHook::MemoryWrite(
                 (PX_CURRENT_TCB..=PX_CURRENT_TCB).into(),
                 Box::new(move |_cpu: CoreHandle, _address, _size, data: &[u8]| {
@@ -132,7 +133,8 @@ fn test_freertos() {
     let math_succeed = Arc::new(Mutex::new(Test::new("Math")));
     {
         let math_succeed = math_succeed.clone();
-        processor
+        processor.vcpus[0]
+            .cpu
             .add_hook(StyxHook::Code(
                 (MATH_CHECK..=MATH_CHECK).into(),
                 Box::new(move |cpu: CoreHandle| {
@@ -155,7 +157,8 @@ fn test_freertos() {
     let led_succeed = Arc::new(Mutex::new(Test::new("Led")));
     {
         let led_succeed = led_succeed.clone();
-        processor
+        processor.vcpus[0]
+            .cpu
             .add_hook(StyxHook::Code(
                 (LED_RUN..=LED_RUN).into(),
                 Box::new(move |_cpu: CoreHandle| {
@@ -170,7 +173,8 @@ fn test_freertos() {
     let check_done = Arc::new(Mutex::new(Test::new("Final Check")));
     {
         let check_done = check_done.clone();
-        processor
+        processor.vcpus[0]
+            .cpu
             .add_hook(StyxHook::Code(
                 (CHECK_DONE..=CHECK_DONE).into(),
                 Box::new(move |cpu: CoreHandle| {
