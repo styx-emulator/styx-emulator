@@ -8,7 +8,7 @@ use bitbybit::bitfield;
 
 /// System Status Register
 /// Source: 11.9.3 "Trap" refers to SSR as "System Status Register."
-#[bitfield(u32)]
+#[bitfield(u32, debug)]
 pub struct Ssr {
     // Looks like bit 15 is reserved
     #[bits(0..=7, rw)]

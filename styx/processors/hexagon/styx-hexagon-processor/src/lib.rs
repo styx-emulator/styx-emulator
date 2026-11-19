@@ -23,6 +23,7 @@ mod angel;
 mod cfgtable;
 mod config;
 mod event_controller;
+mod exception;
 mod tlb;
 
 pub use cfgtable::*;
