@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: BSD-2-Clause
 use log::trace;
 use styx_cpu_type::arch::hexagon::HexagonRegister;
-use styx_errors::anyhow::Context;
 use styx_pcode::pcode::{Opcode, Pcode, SpaceName, VarnodeData};
 use styx_pcode_translator::ContextOption;
-use styx_processor::{cpu::CpuBackendExt, memory::Mmu};
+use styx_processor::{
+    cpu::CpuBackendExt,
+    memory::{Mmu, MmuOpError, TlbTranslateError},
+};
 
 use super::{
     decode_info::{DuplexInsClass, PktLoopParseBits},
@@ -20,6 +22,7 @@ use crate::{
         pkt_semantics::DEST_REG_OFFSET,
     },
     execute_pcode::PcodeHelpers,
+    get_pcode::GetPcodeError,
     memory::sized_value::SizedValue,
     pcode_gen::GeneratePcodeError,
     register_manager::RegisterManager,
@@ -319,11 +322,19 @@ impl HexagonExecutionHelper for DefaultHexagonExecutionHelper {
         // four instructions.
         //
         // NOTE: This may fail in the case of being at the end of the memory region
-        // that has the code in it.
+        // that has the code in it, or if the page this is in isn't mapped.
         let insn_data_wide = mmu
             .read_u128_le_virt_code(self.pc_varnode.offset, backend)
-            .with_context(|| "couldn't prefetch the next insn from MMU, maybe we are at the end of a memory region?")
-            .map_err(HexagonFetchDecodeError::Other)?;
+            // .with_context(|| "couldn't prefetch the next insn from MMU, maybe we are at the end of a memory region?")
+            .map_err(|e| match e.downcast::<TlbTranslateError>() {
+                Err(orig_e) => HexagonFetchDecodeError::Other(orig_e),
+                Ok(TlbTranslateError::Other(unk_err)) => HexagonFetchDecodeError::GetPcodeError(
+                    GetPcodeError::MmuOpErr(MmuOpError::Other(unk_err)),
+                ),
+                Ok(TlbTranslateError::Exception(exc_no)) => HexagonFetchDecodeError::GetPcodeError(
+                    GetPcodeError::MmuOpErr(MmuOpError::TlbException(exc_no)),
+                ),
+            })?;
 
         // Extract out the four instructions.
         let insn_data =
