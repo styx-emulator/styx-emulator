@@ -24,12 +24,12 @@ impl SuperH2aBuilder {
 
 impl ProcessorImpl for SuperH2aBuilder {
     fn build(&self, args: &BuildProcessorImplArgs) -> Result<ProcessorBundle, UnknownError> {
-        let cpu = if let Backend::Pcode = args.backend {
-            PcodeBackend::new_engine_config(
+        let cpu: Box<dyn CpuBackend> = if let Backend::Pcode = args.backend {
+            Box::new(PcodeBackend::new_engine_config(
                 SuperHVariants::SH2A,
                 ArchEndian::BigEndian,
                 &args.into(),
-            )
+            ))
         } else {
             return Err(anyhow!("sh2 processor only supports pcode backend"));
         };
@@ -37,7 +37,7 @@ impl ProcessorImpl for SuperH2aBuilder {
         Ok(ProcessorBundle::builder()
             .with_memory(MemoryBackend::new_region_store())
             .modify_memory(|m| self.setup_address_space(m))?
-            .with_vcpu(|v| v.with_cpu(cpu))
+            .with_vcpu(|v| v.with_cpu_box(cpu))
             .with_arch_hint(Arch::SuperH)
             .build()?)
     }

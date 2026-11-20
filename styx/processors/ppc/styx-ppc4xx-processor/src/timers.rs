@@ -45,7 +45,16 @@ const CPU_CLOCK_HZ: f64 = 400_000_000.;
 /// Timer clock speed in hertz.
 const TIMER_BASE_CLOCK_HZ: f64 = 1_666_666.;
 
-pub struct Timers;
+pub struct Timers {
+    inner: Arc<Mutex<TimersInner>>,
+}
+
+impl Timers {
+    pub fn new(cpu: &mut dyn CpuBackend) -> Self {
+        let inner = Arc::new(Mutex::new(TimersInner::new(cpu)));
+        Self { inner }
+    }
+}
 
 struct TimersInner {
     control: Register,
@@ -55,8 +64,7 @@ struct TimersInner {
 
 impl Peripheral for Timers {
     fn init(&mut self, proc: &mut BuildingProcessor) -> Result<(), UnknownError> {
-        let cpu = proc.vcpus.first_mut().cpu.as_mut();
-        let timers = Arc::new(Mutex::new(TimersInner::new(cpu)?));
+        let timers = self.inner.clone();
         let mut current_instruction = 0;
 
         log::debug!("timers initialized");
@@ -86,12 +94,12 @@ impl Peripheral for Timers {
 }
 
 impl TimersInner {
-    fn new(cpu: &mut dyn CpuBackend) -> Result<Self, UnknownError> {
-        Ok(Self {
+    fn new(cpu: &mut dyn CpuBackend) -> Self {
+        Self {
             control: Register::new(Ppc32Register::Tcr, cpu),
             _status: Register::new(Ppc32Register::Tsr, cpu),
-            pit: ProgrammableInterruptTimer::new(cpu)?,
-        })
+            pit: ProgrammableInterruptTimer::new(cpu),
+        }
     }
 
     fn code_hook(&mut self, proc: &mut CoreHandle) {
@@ -136,15 +144,15 @@ struct ProgrammableInterruptTimer {
     enabled: bool,
 }
 impl ProgrammableInterruptTimer {
-    fn new(cpu: &mut dyn CpuBackend) -> Result<Self, UnknownError> {
+    fn new(cpu: &mut dyn CpuBackend) -> Self {
         let top = 100000u32;
-        cpu.write_register(Ppc32Register::Pit, top)?;
+        cpu.write_register(Ppc32Register::Pit, top).unwrap();
         let last_value = top;
-        Ok(Self {
+        Self {
             auto_reload: top,
             last_value,
             enabled: false,
-        })
+        }
     }
 
     fn update(&mut self, proc: &mut CoreHandle, timer_clocks: u32) {

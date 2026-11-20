@@ -55,7 +55,7 @@ impl ProcessorImpl for BlackfinBuilder {
             ));
         }
 
-        let cpu = if let Backend::Pcode = args.backend {
+        let cpu: Box<dyn CpuBackend> = if let Backend::Pcode = args.backend {
             Box::new(PcodeBackend::new_engine_config(
                 self.variant,
                 ArchEndian::LittleEndian,

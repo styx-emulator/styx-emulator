@@ -93,8 +93,8 @@ impl ProcessorImpl for Stm32f107Builder {
     }
 
     fn init(&self, proc: &mut BuildingProcessor) -> Result<(), UnknownError> {
-        let vcpu = proc.vcpus.first_mut();
-        populate_default_registers(vcpu.cpu.as_mut(), &mut vcpu.mmu)?;
+        let vcpu_zero = &mut proc.vcpus[0];
+        populate_default_registers(vcpu_zero.cpu.as_mut(), &mut vcpu_zero.mmu)?;
 
         Ok(())
     }

@@ -21,8 +21,10 @@
 //! wrap and route calls to the underlying instruction emulation backend.
 mod backend;
 mod backend_ext;
+mod building;
 mod dummy;
 
 pub use backend::*;
 pub use backend_ext::CpuBackendExt;
+pub use building::{CpuBuilding, GlobalRegisterStore};
 pub use dummy::DummyBackend;

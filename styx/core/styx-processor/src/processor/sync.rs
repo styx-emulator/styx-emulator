@@ -361,12 +361,14 @@ mod tests {
     use super::*;
     use crate::core::builder::{BuildProcessorImplArgs, ProcessorImpl, VcpuBundle};
     use crate::core::ProcessorBundle;
-    use crate::cpu::{CpuBackend, ExecutionReport};
+    use crate::cpu::{CpuBackend, CpuBuilding, ExecutionReport};
     use crate::executor::Forever;
     use crate::hooks::Hookable;
 
     #[derive(Debug)]
     struct TestCpu(u64);
+
+    impl CpuBuilding for TestCpu {}
     impl CpuBackend for TestCpu {
         fn read_register_raw(
             &mut self,

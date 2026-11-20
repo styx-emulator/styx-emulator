@@ -132,6 +132,7 @@ create_basic_register_enums!(
 );
 
 create_special_register_enums!(SuperH);
+create_global_register_enums!(SuperH);
 
 #[cfg(test)]
 mod tests {

@@ -398,7 +398,8 @@ where
                     // ticks here once it crosses its own epoch boundary.
                     if action == ExecMode::Continue || should_step_irqs {
                         if let Err(e) = styx_core::executor::post_stride_processing(
-                            &mut self.vcpus[vcpu_idx],
+                            &mut self.vcpus,
+                            vcpu_idx,
                             &time_since_tick,
                         ) {
                             error!("post_stride_processing error: {e}");
