@@ -4,7 +4,10 @@ use styx_emulator::{
     cpu::{arch::hexagon::HexagonRegister, CpuBackendExt},
     errors::UnknownError,
     hooks::{CoreHandle, StyxHook},
-    prelude::{log::trace, Processor, WriteExt},
+    prelude::{
+        log::{info, trace},
+        Processor, WriteExt,
+    },
     processors::hexagon::hexagon::{HexagonConfigTable, HexagonProcessorConfig, QTimerConfig},
 };
 
