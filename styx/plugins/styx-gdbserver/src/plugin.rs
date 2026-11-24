@@ -42,7 +42,8 @@ use styx_core::core::{ProcessorCore, VcpuCore};
 use styx_core::executor::{CustomExecutor, ExecutionConstraintConcrete};
 use styx_core::plugins::Plugins;
 use styx_core::prelude::*;
-use styx_core::processor::EmulationReport;
+use styx_core::processor::core_configs::ConfigRequestedStrideLength;
+use styx_core::processor::{BuildingProcessor, EmulationReport};
 use styx_core::sync::sync::Arc;
 use tracing::{error, info, warn};
 
@@ -61,6 +62,9 @@ where
     /// socket
     port_in_use: u16,
     options: GDBOptions,
+    /// Instructions to run per epoch, read from [`ConfigRequestedStrideLength`] in
+    /// [`CustomExecutor::init`].
+    stride_length: u64,
     _unused: PhantomData<GdbArchImpl>,
 }
 
@@ -115,6 +119,7 @@ where
             params: Arc::new(params),
             port_in_use: port,
             options: GDBOptions::default(),
+            stride_length: ConfigRequestedStrideLength::default().preferred_stride_length,
             _unused: PhantomData::<GdbArchImpl> {},
         })
     }
@@ -139,6 +144,14 @@ where
     GdbArchImpl::Registers: styx_core::cpu::arch::GdbRegistersHelper,
     GdbArchImpl::RegId: super::GdbArchIdSupportTrait,
 {
+    fn init(&mut self, proc: &mut BuildingProcessor) -> Result<(), UnknownError> {
+        self.stride_length = proc
+            .config
+            .get_or_default::<ConfigRequestedStrideLength>()
+            .preferred_stride_length;
+        Ok(())
+    }
+
     fn execute(
         &mut self,
         vcpus: &mut PerVcpuSlice<VcpuCore>,
@@ -149,7 +162,8 @@ where
         let options = self.options.clone();
         let params = self.params.clone();
         // create a single handle to emulation
-        let mut emu = TargetImpl::<GdbArchImpl>::new(vcpus, core, plugins, options);
+        let mut emu =
+            TargetImpl::<GdbArchImpl>::new(vcpus, core, plugins, options, self.stride_length);
 
         // run loop, only exit's on error
         loop {

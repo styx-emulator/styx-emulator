@@ -9,6 +9,7 @@ use styx_core::arch::RegisterValue;
 use styx_core::core::builder::BuildProcessorImplArgs;
 use styx_core::core::VcpuBundle;
 use styx_core::prelude::*;
+use styx_core::processor::core_configs::ConfigRequestedStrideLength;
 use styx_plugins::gdb::{GDBOptions, StepIRQs};
 
 /// ArchitectureDef for the fake CPU to appease GDB.
@@ -106,29 +107,32 @@ fn step_advances_all_vcpus_by_one() {
         .collect();
     let counters_for_builder = counters.clone();
 
-    let proc = ProcessorBuilder::default().with_builder(move |_: &BuildProcessorImplArgs| {
-        let vcpus = counters_for_builder
-            .iter()
-            .map(|c| VcpuBundle {
-                cpu: Box::new(CountingCpu(c)),
+    let proc = ProcessorBuilder::default()
+        // Large epoch so a single step never crosses an epoch tick boundary.
+        .register_config(ConfigRequestedStrideLength {
+            preferred_stride_length: 1024,
+        })
+        .with_builder(move |_: &BuildProcessorImplArgs| {
+            let vcpus = counters_for_builder
+                .iter()
+                .map(|c| VcpuBundle {
+                    cpu: Box::new(CountingCpu(c)),
+                    ..Default::default()
+                })
+                .collect();
+            let bundle = ProcessorBundle {
+                vcpus,
                 ..Default::default()
-            })
-            .collect();
-        let bundle = ProcessorBundle {
-            vcpus,
-            ..Default::default()
-        };
-        Ok(bundle)
-    });
+            };
+            Ok(bundle)
+        });
 
-    // Large epoch so a single step never crosses an epoch tick boundary.
     let harness = ::styx_integration_tests::gdb_harness::GdbHarness::from_processor_builder_options::<
         Ppc4xxTargetDescription,
     >(
         proc,
         GDBOptions {
             step_irqs: StepIRQs::Disabled,
-            cpu_epoch: 1024,
         },
     );
 
