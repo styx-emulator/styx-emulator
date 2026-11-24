@@ -486,9 +486,9 @@ mod tests {
             .build()
             .unwrap();
 
-        proc.add_hook_to_all_vcpus(|_| StyxHook::code(FAIL_ADDR..=FAIL_ADDR | 1, fail))
+        proc.add_hooks(|_| StyxHook::code(FAIL_ADDR..=FAIL_ADDR | 1, fail))
             .unwrap();
-        proc.add_hook_to_all_vcpus(|_| StyxHook::code(PASS_ADDR..=PASS_ADDR | 1, pass))
+        proc.add_hooks(|_| StyxHook::code(PASS_ADDR..=PASS_ADDR | 1, pass))
             .unwrap();
 
         proc.run(Forever).unwrap();

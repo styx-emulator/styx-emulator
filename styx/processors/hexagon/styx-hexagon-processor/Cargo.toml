@@ -19,5 +19,6 @@ bitbybit = { workspace = true }
 arbitrary-int = { workspace = true }
 thiserror = { workspace = true }
 derivative = { workspace = true }
+as-any = { workspace = true }
 
 [features]

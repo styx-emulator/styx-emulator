@@ -8,7 +8,7 @@ use enum_dispatch::enum_dispatch;
 
 use variants::*;
 
-pub use registers::{BlackfinRegister, SpecialBlackfinRegister};
+pub use registers::{BlackfinRegister, GlobalBlackfinRegister, SpecialBlackfinRegister};
 
 #[enum_dispatch(ArchitectureVariant, ArchitectureDef)]
 #[derive(Debug, PartialEq, Eq, Clone, Copy, serde::Deserialize)]

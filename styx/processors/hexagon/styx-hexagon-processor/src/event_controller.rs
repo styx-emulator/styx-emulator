@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use styx_core::{
-    arch::hexagon::{register_fields::Ssr, HexagonRegister},
+    arch::hexagon::{register_fields::Ssr, GlobalHexagonRegister, HexagonRegister},
     cpu::{CpuBackend, CpuBackendExt},
     errors::UnknownError,
     event_controller::{ActivateIRQnError, EventControllerImpl, InterruptExecuted},
@@ -115,7 +115,7 @@ impl EventControllerImpl for HexagonEventController {
             // get evb which is the interrupt vector base
             let evb = handle
                 .cpu
-                .read_register::<u32>(HexagonRegister::Evb)
+                .read_register::<u32>(GlobalHexagonRegister::Evb)
                 .with_context(|| "couldn't read interrupt vector base")?;
             let jump_point = evb + (interrupt_number * 4) as u32;
 

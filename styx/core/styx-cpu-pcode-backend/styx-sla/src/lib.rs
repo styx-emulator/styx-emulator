@@ -478,8 +478,8 @@ mod hexagon {
     //! hexagon sla specifications
 
     use styx_cpu_type::arch::{
-        backends::{ArchRegister, BasicArchRegister},
-        hexagon::HexagonRegister,
+        backends::{ArchRegister, BasicArchRegister, GlobalArchRegister},
+        hexagon::{GlobalHexagonRegister, HexagonRegister},
         CpuRegister,
     };
 
@@ -490,6 +490,9 @@ mod hexagon {
             match variant {
                 ArchRegister::Basic(BasicArchRegister::Hexagon(reg)) => {
                     hexagon_basic(register, reg)
+                }
+                ArchRegister::Global(GlobalArchRegister::Hexagon(reg)) => {
+                    hexagon_global(register, reg)
                 }
                 _ => "".to_owned().into_boxed_str(),
             }
@@ -572,136 +575,14 @@ mod hexagon {
             HexagonRegister::S13 => "S13",
             HexagonRegister::S14 => "S14",
             HexagonRegister::S15 => "S15",
-            HexagonRegister::Evb => "S16",
-            HexagonRegister::ModeCtl => "S17",
-            HexagonRegister::SysCfg => "S18",
-            HexagonRegister::Segment => "S19",
-            HexagonRegister::Ipendad => "S20",
-            HexagonRegister::Vid => "S21",
-            HexagonRegister::Vid1 => "S22",
-            HexagonRegister::BestWait => "S23",
-            HexagonRegister::S24 => "S24",
-            HexagonRegister::SchedCfg => "S25",
-            HexagonRegister::S26 => "S26",
-            HexagonRegister::CfgBase => "S27",
-            HexagonRegister::Diag => "S28",
-            HexagonRegister::Rev => "S29",
-            HexagonRegister::PcycleLo => "S30",
-            HexagonRegister::PcycleHi => "S31",
-            HexagonRegister::IsdbSt => "S32",
-            HexagonRegister::IsdbCfg0 => "S33",
-            HexagonRegister::IsdbCfg1 => "S34",
-            HexagonRegister::Livelock => "S35",
-            HexagonRegister::BrkptPc0 => "S36",
-            HexagonRegister::BrkptCfg0 => "S37",
-            HexagonRegister::BrkptPc1 => "S38",
-            HexagonRegister::BrkptCfg1 => "S39",
-            HexagonRegister::IsdbMbxIn => "S40",
-            HexagonRegister::IsdbMbxOut => "S41",
-            HexagonRegister::IsdbEn => "S42",
-            HexagonRegister::IsdbGpr => "S43",
-            HexagonRegister::PmuCnt4 => "S44",
-            HexagonRegister::PmuCnt5 => "S45",
-            HexagonRegister::PmuCnt6 => "S46",
-            HexagonRegister::PmuCnt7 => "S47",
-            HexagonRegister::PmuCnt0 => "S48",
-            HexagonRegister::PmuCnt1 => "S49",
-            HexagonRegister::PmuCnt2 => "S50",
-            HexagonRegister::PmuCnt3 => "S51",
-            HexagonRegister::PmuEvtCfg => "S52",
-            HexagonRegister::PmuStId0 => "S53",
-            HexagonRegister::PmuEvtCfg1 => "S54",
-            HexagonRegister::PmuStId1 => "S55",
-            HexagonRegister::TimerLo => "S56",
-            HexagonRegister::TimerHi => "S57",
-            HexagonRegister::PmuCfg => "S58",
-            HexagonRegister::Rgdr2 => "S59",
-            HexagonRegister::Rgdr => "S60",
-            HexagonRegister::Turkey => "S61",
-            HexagonRegister::Duck => "S62",
-            HexagonRegister::Chicken => "S63",
-            HexagonRegister::Commit1t => "S64",
-            HexagonRegister::Commit2t => "S65",
-            HexagonRegister::Commit3t => "S66",
-            HexagonRegister::Commit4t => "S67",
-            HexagonRegister::Commit5t => "S68",
-            HexagonRegister::Commit6t => "S69",
-            HexagonRegister::Pcycle1t => "S70",
-            HexagonRegister::Pcycle2t => "S71",
-            HexagonRegister::Pcycle3t => "S72",
-            HexagonRegister::Pcycle4t => "S73",
-            HexagonRegister::Pcycle5t => "S74",
-            HexagonRegister::Pcycle6t => "S75",
-            HexagonRegister::StfInst => "S76",
-            HexagonRegister::IsdbCmd => "S77",
-            HexagonRegister::IsdbVer => "S78",
-            HexagonRegister::BrkptInfo => "S79",
-            HexagonRegister::Rgdr3 => "S80",
-            HexagonRegister::Commit7t => "S81",
-            HexagonRegister::Commit8t => "S82",
-            HexagonRegister::Pcycle7t => "S83",
-            HexagonRegister::Pcycle8t => "S84",
-            HexagonRegister::Commit9t => "S85",
-            HexagonRegister::Commit10t => "S86",
-            HexagonRegister::Commit11t => "S87",
-            HexagonRegister::Commit12t => "S88",
-            HexagonRegister::Commit13t => "S89",
-            HexagonRegister::Commit14t => "S90",
-            HexagonRegister::Commit15t => "S91",
-            HexagonRegister::Commit16t => "S92",
-            HexagonRegister::Pcycle9t => "S93",
-            HexagonRegister::Pcycle10t => "S94",
-            HexagonRegister::Pcycle11t => "S95",
-            HexagonRegister::Pcycle12t => "S96",
-            HexagonRegister::Pcycle13t => "S97",
-            HexagonRegister::Pcycle14t => "S98",
-            HexagonRegister::Pcycle15t => "S99",
-            HexagonRegister::Pcycle16t => "S100",
-            HexagonRegister::Ipend => "S101",
-            HexagonRegister::Iad => "S102",
-            HexagonRegister::IsdbSt1 => "S103",
-            HexagonRegister::IsdbSt2 => "S104",
-            HexagonRegister::BrkptInfo1 => "S105",
             HexagonRegister::SGP1SGP0 => "SGP1SGP0",
-            HexagonRegister::Timer => "S57S56",
-            HexagonRegister::Pcycle => "S31S30",
             HexagonRegister::S3S2
             | HexagonRegister::S5S4
             | HexagonRegister::S7S6
             | HexagonRegister::S9S8
             | HexagonRegister::S11S10
             | HexagonRegister::S13S12
-            | HexagonRegister::S15S14
-            | HexagonRegister::S17S16
-            | HexagonRegister::S19S18
-            | HexagonRegister::S21S20
-            | HexagonRegister::S23S22
-            | HexagonRegister::S25S24
-            | HexagonRegister::S27S26
-            | HexagonRegister::S29S28
-            | HexagonRegister::S33S32
-            | HexagonRegister::S35S34
-            | HexagonRegister::S37S36
-            | HexagonRegister::S39S38
-            | HexagonRegister::S41S40
-            | HexagonRegister::S43S42
-            | HexagonRegister::S45S44
-            | HexagonRegister::S47S46
-            | HexagonRegister::S49S48
-            | HexagonRegister::S51S50
-            | HexagonRegister::S53S52
-            | HexagonRegister::S55S54
-            | HexagonRegister::S59S58
-            | HexagonRegister::S61S60
-            | HexagonRegister::S63S62
-            | HexagonRegister::S65S64
-            | HexagonRegister::S67S66
-            | HexagonRegister::S69S68
-            | HexagonRegister::S71S70
-            | HexagonRegister::S73S72
-            | HexagonRegister::S75S74
-            | HexagonRegister::S77S76
-            | HexagonRegister::S79S78 => default_name,
+            | HexagonRegister::S15S14 => default_name,
             HexagonRegister::Gelr => "G0",
             HexagonRegister::Gsr => "G1",
             HexagonRegister::Gosp => "G2",
@@ -753,6 +634,140 @@ mod hexagon {
         })
         .to_owned()
         .into_boxed_str()
+    }
+
+    pub fn hexagon_global_reg_to_str(hex_reg: &GlobalHexagonRegister) -> Box<str> {
+        let default_name = &hex_reg.to_string();
+
+        (match hex_reg {
+            GlobalHexagonRegister::Evb => "S16",
+            GlobalHexagonRegister::ModeCtl => "S17",
+            GlobalHexagonRegister::SysCfg => "S18",
+            GlobalHexagonRegister::Segment => "S19",
+            GlobalHexagonRegister::Ipendad => "S20",
+            GlobalHexagonRegister::Vid => "S21",
+            GlobalHexagonRegister::Vid1 => "S22",
+            GlobalHexagonRegister::BestWait => "S23",
+            GlobalHexagonRegister::S24 => "S24",
+            GlobalHexagonRegister::SchedCfg => "S25",
+            GlobalHexagonRegister::S26 => "S26",
+            GlobalHexagonRegister::CfgBase => "S27",
+            GlobalHexagonRegister::Diag => "S28",
+            GlobalHexagonRegister::Rev => "S29",
+            GlobalHexagonRegister::PcycleLo => "S30",
+            GlobalHexagonRegister::PcycleHi => "S31",
+            GlobalHexagonRegister::IsdbSt => "S32",
+            GlobalHexagonRegister::IsdbCfg0 => "S33",
+            GlobalHexagonRegister::IsdbCfg1 => "S34",
+            GlobalHexagonRegister::Livelock => "S35",
+            GlobalHexagonRegister::BrkptPc0 => "S36",
+            GlobalHexagonRegister::BrkptCfg0 => "S37",
+            GlobalHexagonRegister::BrkptPc1 => "S38",
+            GlobalHexagonRegister::BrkptCfg1 => "S39",
+            GlobalHexagonRegister::IsdbMbxIn => "S40",
+            GlobalHexagonRegister::IsdbMbxOut => "S41",
+            GlobalHexagonRegister::IsdbEn => "S42",
+            GlobalHexagonRegister::IsdbGpr => "S43",
+            GlobalHexagonRegister::PmuCnt4 => "S44",
+            GlobalHexagonRegister::PmuCnt5 => "S45",
+            GlobalHexagonRegister::PmuCnt6 => "S46",
+            GlobalHexagonRegister::PmuCnt7 => "S47",
+            GlobalHexagonRegister::PmuCnt0 => "S48",
+            GlobalHexagonRegister::PmuCnt1 => "S49",
+            GlobalHexagonRegister::PmuCnt2 => "S50",
+            GlobalHexagonRegister::PmuCnt3 => "S51",
+            GlobalHexagonRegister::PmuEvtCfg => "S52",
+            GlobalHexagonRegister::PmuStId0 => "S53",
+            GlobalHexagonRegister::PmuEvtCfg1 => "S54",
+            GlobalHexagonRegister::PmuStId1 => "S55",
+            GlobalHexagonRegister::TimerLo => "S56",
+            GlobalHexagonRegister::TimerHi => "S57",
+            GlobalHexagonRegister::PmuCfg => "S58",
+            GlobalHexagonRegister::Rgdr2 => "S59",
+            GlobalHexagonRegister::Rgdr => "S60",
+            GlobalHexagonRegister::Turkey => "S61",
+            GlobalHexagonRegister::Duck => "S62",
+            GlobalHexagonRegister::Chicken => "S63",
+            GlobalHexagonRegister::Commit1t => "S64",
+            GlobalHexagonRegister::Commit2t => "S65",
+            GlobalHexagonRegister::Commit3t => "S66",
+            GlobalHexagonRegister::Commit4t => "S67",
+            GlobalHexagonRegister::Commit5t => "S68",
+            GlobalHexagonRegister::Commit6t => "S69",
+            GlobalHexagonRegister::Pcycle1t => "S70",
+            GlobalHexagonRegister::Pcycle2t => "S71",
+            GlobalHexagonRegister::Pcycle3t => "S72",
+            GlobalHexagonRegister::Pcycle4t => "S73",
+            GlobalHexagonRegister::Pcycle5t => "S74",
+            GlobalHexagonRegister::Pcycle6t => "S75",
+            GlobalHexagonRegister::StfInst => "S76",
+            GlobalHexagonRegister::IsdbCmd => "S77",
+            GlobalHexagonRegister::IsdbVer => "S78",
+            GlobalHexagonRegister::BrkptInfo => "S79",
+            GlobalHexagonRegister::Rgdr3 => "S80",
+            GlobalHexagonRegister::Commit7t => "S81",
+            GlobalHexagonRegister::Commit8t => "S82",
+            GlobalHexagonRegister::Pcycle7t => "S83",
+            GlobalHexagonRegister::Pcycle8t => "S84",
+            GlobalHexagonRegister::Commit9t => "S85",
+            GlobalHexagonRegister::Commit10t => "S86",
+            GlobalHexagonRegister::Commit11t => "S87",
+            GlobalHexagonRegister::Commit12t => "S88",
+            GlobalHexagonRegister::Commit13t => "S89",
+            GlobalHexagonRegister::Commit14t => "S90",
+            GlobalHexagonRegister::Commit15t => "S91",
+            GlobalHexagonRegister::Commit16t => "S92",
+            GlobalHexagonRegister::Pcycle9t => "S93",
+            GlobalHexagonRegister::Pcycle10t => "S94",
+            GlobalHexagonRegister::Pcycle11t => "S95",
+            GlobalHexagonRegister::Pcycle12t => "S96",
+            GlobalHexagonRegister::Pcycle13t => "S97",
+            GlobalHexagonRegister::Pcycle14t => "S98",
+            GlobalHexagonRegister::Pcycle15t => "S99",
+            GlobalHexagonRegister::Pcycle16t => "S100",
+            GlobalHexagonRegister::Ipend => "S101",
+            GlobalHexagonRegister::Iad => "S102",
+            GlobalHexagonRegister::IsdbSt1 => "S103",
+            GlobalHexagonRegister::IsdbSt2 => "S104",
+            GlobalHexagonRegister::BrkptInfo1 => "S105",
+            GlobalHexagonRegister::Timer => "S57S56",
+            GlobalHexagonRegister::Pcycle => "S31S30",
+            GlobalHexagonRegister::S17S16
+            | GlobalHexagonRegister::S19S18
+            | GlobalHexagonRegister::S21S20
+            | GlobalHexagonRegister::S23S22
+            | GlobalHexagonRegister::S25S24
+            | GlobalHexagonRegister::S27S26
+            | GlobalHexagonRegister::S29S28
+            | GlobalHexagonRegister::S33S32
+            | GlobalHexagonRegister::S35S34
+            | GlobalHexagonRegister::S37S36
+            | GlobalHexagonRegister::S39S38
+            | GlobalHexagonRegister::S41S40
+            | GlobalHexagonRegister::S43S42
+            | GlobalHexagonRegister::S45S44
+            | GlobalHexagonRegister::S47S46
+            | GlobalHexagonRegister::S49S48
+            | GlobalHexagonRegister::S51S50
+            | GlobalHexagonRegister::S53S52
+            | GlobalHexagonRegister::S55S54
+            | GlobalHexagonRegister::S59S58
+            | GlobalHexagonRegister::S61S60
+            | GlobalHexagonRegister::S63S62
+            | GlobalHexagonRegister::S65S64
+            | GlobalHexagonRegister::S67S66
+            | GlobalHexagonRegister::S69S68
+            | GlobalHexagonRegister::S71S70
+            | GlobalHexagonRegister::S73S72
+            | GlobalHexagonRegister::S75S74
+            | GlobalHexagonRegister::S77S76
+            | GlobalHexagonRegister::S79S78 => default_name,
+        })
+        .to_owned()
+        .into_boxed_str()
+    }
+    fn hexagon_global(_register: &CpuRegister, hex_reg: GlobalHexagonRegister) -> Box<str> {
+        hexagon_global_reg_to_str(&hex_reg)
     }
 
     fn hexagon_basic(_register: &CpuRegister, hex_reg: HexagonRegister) -> Box<str> {

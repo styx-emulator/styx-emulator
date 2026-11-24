@@ -194,7 +194,7 @@ impl DefaultHexagonExecutionHelper {
         // we can clear it at the start of the next packet (see SavedContextOptions
         // to understand the PacketLocation semantics).
         match HardwareLoopStatus::parse(lc0, lc1, parse_now, parse_next) {
-            Some(loop_status) if loop_status != HardwareLoopStatus::NotLastInLoop => {
+            loop_status if loop_status != HardwareLoopStatus::NotLastInLoop => {
                 backend.update_context(
                     PacketLocation::PktEnd,
                     ContextOption::HexagonEndloop(loop_status as u32),

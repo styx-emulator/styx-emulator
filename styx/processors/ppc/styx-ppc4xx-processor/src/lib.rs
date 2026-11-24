@@ -64,7 +64,7 @@ impl ProcessorImpl for PowerPC405Builder {
             .map(|a| a.0)
             .unwrap_or(args.backend);
 
-        let mut cpu = if let Backend::Pcode = backend {
+        let mut cpu: Box<dyn CpuBackend> = if let Backend::Pcode = backend {
             Box::new(PcodeBackend::new_engine_config(
                 Ppc32Variants::Ppc405,
                 ArchEndian::BigEndian,
@@ -84,7 +84,10 @@ impl ProcessorImpl for PowerPC405Builder {
 
         let cec = CoreEventController::new(cpu.as_mut(), args.runtime.clone());
 
-        let timers = Timers;
+        // Construct peripherals while the cpu is still available.
+        // Timers specifically initialize registers.
+        // TODO: this should probably be in the peripheral init.
+        let timers = Timers::new(cpu.as_mut());
         let uart = UartController::new(vec![UartInterface::new("0".into(), NewUartPortInner)]);
         let ethernet = EthernetController::new();
 
