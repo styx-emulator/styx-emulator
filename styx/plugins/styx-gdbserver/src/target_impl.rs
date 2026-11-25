@@ -59,10 +59,14 @@ use crate::{
     GDBOptions, StepIRQs,
 };
 use gdbstub::{
-    common::{Signal, Tid},
+    common::{Endianness, Pid, Signal, Tid},
     target::{
         self,
-        ext::breakpoints::{HwWatchpointOps, SwBreakpointOps, WatchKind},
+        ext::{
+            breakpoints::{HwWatchpointOps, SwBreakpointOps, WatchKind},
+            host_info::{HostInfo, HostInfoOps, HostInfoResponse},
+            process_info::{ProcessInfo, ProcessInfoOps, ProcessInfoResponse},
+        },
         TargetError, TargetResult,
     },
 };
@@ -74,7 +78,7 @@ use styx_core::{
     core::VcpuCore,
     cpu::{
         arch::{CpuRegister, GdbRegistersHelper},
-        ArchEndian, TargetExitReason,
+        Arch, ArchEndian, TargetExitReason,
     },
     executor::time::GlobalDelta,
     hooks::CodeHook,
@@ -84,6 +88,35 @@ use styx_core::{executor::time::VcpuTime, prelude::*};
 use tracing::{debug, error, info, trace, warn};
 
 use super::breakpoint_manager::BreakpointManager;
+
+// gdbstub uses its private synthetic PID of 1 for thread IDs and stop replies
+// when extended mode is disabled. Report that same PID in qProcessInfo.
+// QEMU system emulation also assigns debugger PIDs to CPU clusters, and
+// WebKit's Wasm stub explicitly returns a synthetic PID of 1 in qProcessInfo.
+// https://github.com/qemu/qemu/blob/master/gdbstub/system.c#L263-L281
+// https://github.com/WebKit/WebKit/blob/main/Source/JavaScriptCore/wasm/debugger/WasmQueryHandler.cpp#L90-L108
+// Possibly in the future we can support custom pid reporting.
+const SYNTHETIC_PID: Pid = Pid::new(1).unwrap();
+
+fn guest_triple(arch: Arch, endian: ArchEndian) -> Option<&'static str> {
+    let little = endian.is_little();
+    Some(match arch {
+        Arch::Aarch64 if little => "aarch64-unknown-none",
+        Arch::Aarch64 => "aarch64_be-unknown-none",
+        Arch::Arm if little => "arm-unknown-none",
+        Arch::Arm => "armeb-unknown-none",
+        Arch::Hexagon => "hexagon-unknown-none",
+        Arch::Mips32 if little => "mipsel-unknown-none",
+        Arch::Mips32 => "mips-unknown-none",
+        Arch::Mips64 if little => "mips64el-unknown-none",
+        Arch::Mips64 => "mips64-unknown-none",
+        Arch::Msp430 => "msp430-unknown-none",
+        Arch::Ppc32 if little => "powerpcle-unknown-none",
+        Arch::Ppc32 => "powerpc-unknown-none",
+        // Omit the triple for architectures without a known LLDB target triple.
+        _ => return None,
+    })
+}
 
 /// This method is called via target emulation hooks when a code breakpoint
 /// is hit via target software.
@@ -220,6 +253,18 @@ where
             current_vcpu: None,
             _unused: PhantomData::<GdbArchImpl> {},
         }
+    }
+
+    fn guest_metadata(&self) -> (Option<&'static str>, Endianness, usize) {
+        let cpu = &self.vcpus[0].cpu;
+        let arch = cpu.architecture();
+        let endian = cpu.endian();
+        let triple = guest_triple(arch.architecture(), endian);
+        let endian = match endian {
+            ArchEndian::BigEndian => Endianness::Big,
+            ArchEndian::LittleEndian => Endianness::Little,
+        };
+        (triple, endian, arch.usize().div_ceil(8))
     }
 
     /// Run `stride` instructions on a vCPU, recording the stride against its
@@ -543,6 +588,16 @@ where
         target::ext::base::BaseOps::MultiThread(self)
     }
 
+    #[inline(always)]
+    fn support_host_info(&mut self) -> Option<HostInfoOps<'_, Self>> {
+        Some(self)
+    }
+
+    #[inline(always)]
+    fn support_process_info(&mut self) -> Option<ProcessInfoOps<'_, Self>> {
+        Some(self)
+    }
+
     /// Breakpoint support. This is an example of IDET. This one happens to be
     /// nested, so it's more complicated.
     ///
@@ -647,6 +702,47 @@ where
     fn support_auxv(&mut self) -> Option<target::ext::auxv::AuxvOps<'_, Self>> {
         // Not implemented
         None
+    }
+}
+
+impl<GdbArchImpl> HostInfo for TargetImpl<'_, GdbArchImpl>
+where
+    GdbArchImpl: gdbstub::arch::Arch,
+    GdbArchImpl::Registers: GdbRegistersHelper,
+    GdbArchImpl::RegId: super::GdbArchIdSupportTrait,
+{
+    fn host_info(
+        &self,
+        write_item: &mut dyn FnMut(&HostInfoResponse<'_>),
+    ) -> Result<(), Self::Error> {
+        let (triple, endian, pointer_size) = self.guest_metadata();
+        if let Some(triple) = triple {
+            write_item(&HostInfoResponse::Triple(triple));
+        }
+        write_item(&HostInfoResponse::PointerSize(pointer_size));
+        write_item(&HostInfoResponse::Endianness(endian));
+        Ok(())
+    }
+}
+
+impl<GdbArchImpl> ProcessInfo for TargetImpl<'_, GdbArchImpl>
+where
+    GdbArchImpl: gdbstub::arch::Arch,
+    GdbArchImpl::Registers: GdbRegistersHelper,
+    GdbArchImpl::RegId: super::GdbArchIdSupportTrait,
+{
+    fn process_info(
+        &self,
+        write_item: &mut dyn FnMut(&ProcessInfoResponse<'_>),
+    ) -> Result<(), Self::Error> {
+        let (triple, endian, pointer_size) = self.guest_metadata();
+        write_item(&ProcessInfoResponse::Pid(SYNTHETIC_PID));
+        if let Some(triple) = triple {
+            write_item(&ProcessInfoResponse::Triple(triple));
+        }
+        write_item(&ProcessInfoResponse::PointerSize(pointer_size));
+        write_item(&ProcessInfoResponse::Endianness(endian));
+        Ok(())
     }
 }
 
